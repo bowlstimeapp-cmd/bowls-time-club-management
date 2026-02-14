@@ -60,8 +60,9 @@ export default function SelectionView() {
   });
 
   const getMemberName = (email) => {
+    if (!email) return 'TBD';
     const member = members.find(m => m.user_email === email);
-    return member?.user_name || email || 'TBD';
+    return member?.user_name || email;
   };
 
   if (isLoading) {

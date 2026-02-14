@@ -11,8 +11,9 @@ import {
   Plus, 
   Eye, 
   Users,
-  ShieldAlert,
-  Calendar
+  Calendar,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -23,6 +24,7 @@ export default function Selection() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('published');
 
@@ -58,6 +60,21 @@ export default function Selection() {
     enabled: !!clubId,
   });
 
+  const { data: myAvailabilities = [] } = useQuery({
+    queryKey: ['myAvailabilities', clubId, user?.email],
+    queryFn: () => base44.entities.MemberAvailability.filter({ 
+      club_id: clubId, 
+      user_email: user.email 
+    }),
+    enabled: !!clubId && !!user?.email,
+  });
+
+  const { data: allAvailabilities = [] } = useQuery({
+    queryKey: ['allAvailabilities', clubId],
+    queryFn: () => base44.entities.MemberAvailability.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
   const { data: club } = useQuery({
     queryKey: ['club', clubId],
     queryFn: async () => {
@@ -67,10 +84,48 @@ export default function Selection() {
     enabled: !!clubId,
   });
 
+  const { data: members = [] } = useQuery({
+    queryKey: ['clubMembers', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ 
+      club_id: clubId, 
+      status: 'approved' 
+    }),
+    enabled: !!clubId,
+  });
+
+  const setAvailabilityMutation = useMutation({
+    mutationFn: async ({ selectionId, isAvailable }) => {
+      const existing = myAvailabilities.find(a => a.selection_id === selectionId);
+      if (existing) {
+        return base44.entities.MemberAvailability.update(existing.id, { is_available: isAvailable });
+      } else {
+        return base44.entities.MemberAvailability.create({
+          club_id: clubId,
+          selection_id: selectionId,
+          user_email: user.email,
+          is_available: isAvailable
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myAvailabilities'] });
+      queryClient.invalidateQueries({ queryKey: ['allAvailabilities'] });
+    },
+  });
+
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
 
   const publishedSelections = selections.filter(s => s.status === 'published');
   const draftSelections = selections.filter(s => s.status === 'draft');
+
+  const getMyAvailability = (selectionId) => {
+    const availability = myAvailabilities.find(a => a.selection_id === selectionId);
+    return availability?.is_available;
+  };
+
+  const getAvailabilityForSelection = (selectionId) => {
+    return allAvailabilities.filter(a => a.selection_id === selectionId);
+  };
 
   const EmptyState = ({ title, description }) => (
     <div className="text-center py-12">
@@ -95,7 +150,7 @@ export default function Selection() {
               Team Selection
             </h1>
             <p className="text-gray-600">
-              {club?.name} • View team selections for competitions
+              {club?.name} • View team selections and set your availability
             </p>
           </div>
           {isSelector && (
@@ -114,7 +169,7 @@ export default function Selection() {
           transition={{ delay: 0.1 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className={`grid w-full mb-6 ${isSelector ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <TabsTrigger value="published" className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
                 Published ({publishedSelections.length})
@@ -142,6 +197,13 @@ export default function Selection() {
                       selection={selection} 
                       isSelector={isSelector}
                       clubId={clubId}
+                      myAvailability={getMyAvailability(selection.id)}
+                      onSetAvailability={(isAvailable) => 
+                        setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
+                      }
+                      isSettingAvailability={setAvailabilityMutation.isPending}
+                      availabilities={getAvailabilityForSelection(selection.id)}
+                      members={members}
                     />
                   ))}
                 </div>

@@ -40,7 +40,11 @@ const TOP_CLUB_EVENTS = [
 export default function TopClubSelectionGrid({ members, selections, selectedEmails, onSelectionChange }) {
   const getPositionKey = (eventId, position) => `${eventId}_${position}`;
 
-  const getMemberName = (email) => {
+  const getMemberName = (member) => {
+    return member?.user_name || member?.user_email || 'Unknown';
+  };
+
+  const getMemberNameByEmail = (email) => {
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
   };
@@ -78,7 +82,7 @@ export default function TopClubSelectionGrid({ members, selections, selectedEmai
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select">
-                          {selectedMember ? getMemberName(selectedMember) : 'Select'}
+                          {selectedMember ? getMemberNameByEmail(selectedMember) : 'Select'}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -94,7 +98,7 @@ export default function TopClubSelectionGrid({ members, selections, selectedEmai
                             >
                               <div className="flex items-center gap-2">
                                 <User className="w-4 h-4" />
-                                {member.user_name}
+                                {getMemberName(member)}
                                 {!available && ' (selected)'}
                               </div>
                             </SelectItem>
