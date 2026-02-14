@@ -74,6 +74,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
     { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
     { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: Trophy },
+    { name: 'Competitions', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
   ];
 
   const isActive = (href) => {

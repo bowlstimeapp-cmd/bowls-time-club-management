@@ -6,13 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const RINK_POSITIONS = ['Lead', '2', '3', 'Skip'];
-const RINKS = [1, 2, 3, 4];
+const RINKS = [
+  { number: 1, tag: 'Home' },
+  { number: 2, tag: 'Home' },
+  { number: 3, tag: 'Away' },
+  { number: 4, tag: 'Away' },
+];
 
 const TOP_CLUB_EVENTS = [
   { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
@@ -179,20 +184,23 @@ export default function SelectionView() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {RINKS.map(rink => (
-                <Card key={rink}>
+                <Card key={rink.number}>
                   <CardHeader className="bg-emerald-50 py-3">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Users className="w-5 h-5 text-emerald-600" />
-                      Rink {rink}
+                      Rink {rink.number}
+                      <Badge variant="outline" className={rink.tag === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-orange-50 text-orange-700 border-orange-200'}>
+                        {rink.tag}
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       {RINK_POSITIONS.map(position => {
-                        const positionKey = `rink${rink}_${position}`;
+                        const positionKey = `rink${rink.number}_${position}`;
                         const memberEmail = selections[positionKey];
                         return (
-                          <div key={position} className="flex items-center justify-between py-2 border-b last:border-0">
+                        <div key={position} className="flex items-center justify-between py-2 border-b last:border-0">
                             <span className="text-sm font-medium text-gray-500 w-12">{position}</span>
                             <span className="font-medium flex items-center gap-2">
                               {getAvailability(memberEmail) === true ? (

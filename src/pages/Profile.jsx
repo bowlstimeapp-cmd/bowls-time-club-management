@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, User, Save } from 'lucide-react';
+import { Loader2, User, Save, Calendar, Trash2, Plus } from 'lucide-react';
 import { toast } from "sonner";
+import { format, parseISO } from 'date-fns';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -24,10 +27,33 @@ export default function Profile() {
       setFirstName(currentUser.first_name || '');
       setSurname(currentUser.surname || '');
       setPhone(currentUser.phone || '');
-      setAddress(currentUser.address || '');
     };
     loadUser();
   }, []);
+
+  const { data: unavailabilities = [], isLoading: loadingUnavailabilities } = useQuery({
+    queryKey: ['myUnavailabilities', user?.email],
+    queryFn: () => base44.entities.UserUnavailability.filter({ user_email: user.email }, 'start_date'),
+    enabled: !!user?.email,
+  });
+
+  const addUnavailabilityMutation = useMutation({
+    mutationFn: (data) => base44.entities.UserUnavailability.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myUnavailabilities'] });
+      toast.success('Unavailability added');
+      setStartDate('');
+      setEndDate('');
+    },
+  });
+
+  const deleteUnavailabilityMutation = useMutation({
+    mutationFn: (id) => base44.entities.UserUnavailability.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myUnavailabilities'] });
+      toast.success('Unavailability removed');
+    },
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,11 +66,26 @@ export default function Profile() {
     await base44.auth.updateMe({
       first_name: firstName.trim(),
       surname: surname.trim(),
-      phone: phone.trim(),
-      address: address.trim()
+      phone: phone.trim()
     });
     toast.success('Profile updated successfully!');
     setIsLoading(false);
+  };
+
+  const handleAddUnavailability = () => {
+    if (!startDate || !endDate) {
+      toast.error('Please select both start and end dates');
+      return;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      toast.error('End date must be after start date');
+      return;
+    }
+    addUnavailabilityMutation.mutate({
+      user_email: user.email,
+      start_date: startDate,
+      end_date: endDate
+    });
   };
 
   if (!user) {
@@ -71,6 +112,7 @@ export default function Profile() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="space-y-6"
         >
           <Card className="shadow-lg">
             <CardHeader>
@@ -118,16 +160,6 @@ export default function Profile() {
                     placeholder="07123 456789"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter your address"
-                    rows={3}
-                  />
-                </div>
                 <Button 
                   type="submit" 
                   className="w-full bg-emerald-600 hover:bg-emerald-700"
@@ -146,6 +178,82 @@ export default function Profile() {
                   )}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-600" />
+                Unavailability
+              </CardTitle>
+              <CardDescription>
+                Add dates when you're not available for selection (e.g., holidays)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={handleAddUnavailability}
+                    disabled={addUnavailabilityMutation.isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              {loadingUnavailabilities ? (
+                <div className="text-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                </div>
+              ) : unavailabilities.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No unavailability dates set
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {unavailabilities.map(item => (
+                    <div 
+                      key={item.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <span className="text-sm">
+                        {format(parseISO(item.start_date), 'd MMM yyyy')}
+                        {item.start_date !== item.end_date && (
+                          <> — {format(parseISO(item.end_date), 'd MMM yyyy')}</>
+                        )}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteUnavailabilityMutation.mutate(item.id)}
+                        className="text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

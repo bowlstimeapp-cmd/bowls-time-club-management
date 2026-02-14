@@ -59,6 +59,9 @@ import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
 import Profile from './pages/Profile';
 import ClubSettings from './pages/ClubSettings';
+import ClubTournaments from './pages/ClubTournaments';
+import TournamentEditor from './pages/TournamentEditor';
+import TournamentView from './pages/TournamentView';
 import __Layout from './Layout.jsx';
 
 
@@ -75,6 +78,9 @@ export const PAGES = {
     "SelectionView": SelectionView,
     "Profile": Profile,
     "ClubSettings": ClubSettings,
+    "ClubTournaments": ClubTournaments,
+    "TournamentEditor": TournamentEditor,
+    "TournamentView": TournamentView,
 }
 
 export const pagesConfig = {

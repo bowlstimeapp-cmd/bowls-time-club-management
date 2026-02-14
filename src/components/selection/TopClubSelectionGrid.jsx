@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User, Trophy } from 'lucide-react';
+import { parseISO, isWithinInterval } from 'date-fns';
 
 const TOP_CLUB_EVENTS = [
   { 
@@ -37,7 +38,7 @@ const TOP_CLUB_EVENTS = [
   },
 ];
 
-export default function TopClubSelectionGrid({ members, selections, selectedEmails, onSelectionChange }) {
+export default function TopClubSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [] }) {
   const getPositionKey = (eventId, position) => `${eventId}_${position}`;
 
   const getMemberName = (member) => {
@@ -53,6 +54,18 @@ export default function TopClubSelectionGrid({ members, selections, selectedEmai
     const currentValue = selections[currentPosition];
     if (currentValue === memberEmail) return true;
     return !selectedEmails.includes(memberEmail);
+  };
+
+  const isUnavailableOnDate = (memberEmail) => {
+    if (!matchDate) return false;
+    const date = typeof matchDate === 'string' ? parseISO(matchDate) : matchDate;
+    return unavailabilities.some(u => 
+      u.user_email === memberEmail &&
+      isWithinInterval(date, {
+        start: parseISO(u.start_date),
+        end: parseISO(u.end_date)
+      })
+    );
   };
 
   return (
@@ -89,6 +102,7 @@ export default function TopClubSelectionGrid({ members, selections, selectedEmai
                         <SelectItem value={null}>-- Clear --</SelectItem>
                         {members.map(member => {
                           const available = isAvailable(member.user_email, positionKey);
+                          const unavailableDate = isUnavailableOnDate(member.user_email);
                           return (
                             <SelectItem 
                               key={member.id} 
@@ -97,7 +111,11 @@ export default function TopClubSelectionGrid({ members, selections, selectedEmai
                               className={!available ? 'opacity-50' : ''}
                             >
                               <div className="flex items-center gap-2">
-                                <User className="w-4 h-4" />
+                                {unavailableDate ? (
+                                  <span className="text-red-600 font-bold text-xs">NA</span>
+                                ) : (
+                                  <User className="w-4 h-4" />
+                                )}
                                 {getMemberName(member)}
                                 {!available && ' (selected)'}
                               </div>

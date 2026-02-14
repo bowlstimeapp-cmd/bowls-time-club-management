@@ -77,7 +77,6 @@ export default function SelectionEditor() {
     enabled: !!selectionId,
   });
 
-  // Load existing selection data
   useEffect(() => {
     if (existingSelection) {
       setCompetition(existingSelection.competition);
@@ -94,6 +93,11 @@ export default function SelectionEditor() {
       status: 'approved' 
     }),
     enabled: !!clubId,
+  });
+
+  const { data: unavailabilities = [] } = useQuery({
+    queryKey: ['allUnavailabilities'],
+    queryFn: () => base44.entities.UserUnavailability.list(),
   });
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
@@ -149,7 +153,6 @@ export default function SelectionEditor() {
     }));
   };
 
-  // Get already selected members for this selection
   const selectedEmails = Object.values(selections).filter(Boolean);
 
   if (!isSelector && user) {
@@ -199,7 +202,6 @@ export default function SelectionEditor() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Settings Panel */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -263,7 +265,6 @@ export default function SelectionEditor() {
             </Card>
           </motion.div>
 
-          {/* Selection Grid */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -277,6 +278,8 @@ export default function SelectionEditor() {
                   selections={selections}
                   selectedEmails={selectedEmails}
                   onSelectionChange={handleSelectionChange}
+                  matchDate={matchDate}
+                  unavailabilities={unavailabilities}
                 />
               ) : (
                 <RinkSelectionGrid
@@ -284,6 +287,8 @@ export default function SelectionEditor() {
                   selections={selections}
                   selectedEmails={selectedEmails}
                   onSelectionChange={handleSelectionChange}
+                  matchDate={matchDate}
+                  unavailabilities={unavailabilities}
                 />
               )
             ) : (
