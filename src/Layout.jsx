@@ -21,7 +21,8 @@ import {
   X,
   Building2,
   Users,
-  Settings
+  Settings,
+  Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -62,6 +63,7 @@ export default function Layout({ children, currentPageName }) {
   });
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const isSelector = (membership?.role === 'selector' || membership?.role === 'admin') && membership?.status === 'approved';
   const isPlatformAdmin = user?.role === 'admin';
 
   // Pages that don't need club context
@@ -71,6 +73,7 @@ export default function Layout({ children, currentPageName }) {
   const clubNavigation = [
     { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
     { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
+    { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: Trophy },
   ];
 
   const isActive = (href) => {

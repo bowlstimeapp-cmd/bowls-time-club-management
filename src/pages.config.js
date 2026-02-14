@@ -49,20 +49,28 @@
  */
 import AdminBookings from './pages/AdminBookings';
 import BookRink from './pages/BookRink';
-import MyBookings from './pages/MyBookings';
-import ClubSelector from './pages/ClubSelector';
-import PlatformAdmin from './pages/PlatformAdmin';
 import ClubAdmin from './pages/ClubAdmin';
+import ClubSelector from './pages/ClubSelector';
+import MyBookings from './pages/MyBookings';
+import PlatformAdmin from './pages/PlatformAdmin';
+import ProfileSetup from './pages/ProfileSetup';
+import Selection from './pages/Selection';
+import SelectionEditor from './pages/SelectionEditor';
+import SelectionView from './pages/SelectionView';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AdminBookings": AdminBookings,
     "BookRink": BookRink,
-    "MyBookings": MyBookings,
-    "ClubSelector": ClubSelector,
-    "PlatformAdmin": PlatformAdmin,
     "ClubAdmin": ClubAdmin,
+    "ClubSelector": ClubSelector,
+    "MyBookings": MyBookings,
+    "PlatformAdmin": PlatformAdmin,
+    "ProfileSetup": ProfileSetup,
+    "Selection": Selection,
+    "SelectionEditor": SelectionEditor,
+    "SelectionView": SelectionView,
 }
 
 export const pagesConfig = {

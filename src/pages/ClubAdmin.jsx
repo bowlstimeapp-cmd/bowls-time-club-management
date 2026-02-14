@@ -342,6 +342,11 @@ export default function ClubAdmin() {
                                     Admin
                                   </Badge>
                                 )}
+                                {member.role === 'selector' && (
+                                  <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                                    Selector
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-sm text-gray-500">{member.user_email}</p>
                             </div>
@@ -391,6 +396,7 @@ export default function ClubAdmin() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="selector">Selector</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

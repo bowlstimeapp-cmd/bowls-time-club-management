@@ -106,7 +106,7 @@ export default function BookRink() {
       start_time: selectedSlot.slot.start,
       end_time: selectedSlot.slot.end,
       status: 'pending',
-      booker_name: user.full_name || user.email,
+      booker_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : (user.full_name || user.email),
       booker_email: user.email,
       notes: notes || '',
     });

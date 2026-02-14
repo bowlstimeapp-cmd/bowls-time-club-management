@@ -27,9 +27,14 @@ export default function ClubSelector() {
     const loadUser = async () => {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
+      // Redirect to profile setup if name not set
+      if (!currentUser.first_name || !currentUser.surname) {
+        navigate(createPageUrl('ProfileSetup'));
+        return;
+      }
     };
     loadUser();
-  }, []);
+  }, [navigate]);
 
   const { data: clubs = [], isLoading: clubsLoading } = useQuery({
     queryKey: ['clubs'],
@@ -46,7 +51,7 @@ export default function ClubSelector() {
     mutationFn: (clubId) => base44.entities.ClubMembership.create({
       club_id: clubId,
       user_email: user.email,
-      user_name: user.full_name || user.email,
+      user_name: `${user.first_name} ${user.surname}`,
       role: 'member',
       status: 'pending'
     }),
