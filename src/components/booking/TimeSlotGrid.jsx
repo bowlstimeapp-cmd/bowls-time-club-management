@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, User, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -9,15 +9,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const TIME_SLOTS = [
-  { start: '10:00', end: '12:00', label: '10am - 12pm' },
-  { start: '12:00', end: '14:00', label: '12pm - 2pm' },
-  { start: '14:00', end: '16:00', label: '2pm - 4pm' },
-  { start: '16:00', end: '18:00', label: '4pm - 6pm' },
-  { start: '18:00', end: '20:00', label: '6pm - 8pm' },
-];
-
-const RINKS = [1, 2, 3, 4, 5, 6];
+const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duration = 2) => {
+  const slots = [];
+  const [openHour] = openingTime.split(':').map(Number);
+  const [closeHour] = closingTime.split(':').map(Number);
+  
+  for (let hour = openHour; hour + duration <= closeHour; hour += duration) {
+    const startHour = hour;
+    const endHour = hour + duration;
+    const formatHour = (h) => h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+    
+    slots.push({
+      start: `${String(startHour).padStart(2, '0')}:00`,
+      end: `${String(endHour).padStart(2, '0')}:00`,
+      label: `${formatHour(startHour)} - ${formatHour(endHour)}`
+    });
+  }
+  return slots;
+};
 
 const statusStyles = {
   approved: 'bg-emerald-500 text-white border-emerald-600',
@@ -33,7 +42,15 @@ const statusIcons = {
   cancelled: XCircle,
 };
 
-export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, currentUserEmail }) {
+export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, currentUserEmail, club }) {
+  const TIME_SLOTS = generateTimeSlots(
+    club?.opening_time,
+    club?.closing_time,
+    club?.session_duration
+  );
+  
+  const RINKS = Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1);
+
   const getBookingForSlot = (rink, startTime) => {
     return bookings.find(
       b => b.rink_number === rink && 
@@ -53,7 +70,7 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
       <div className="overflow-x-auto">
         <div className="min-w-[700px]">
           {/* Header */}
-          <div className="grid grid-cols-7 gap-2 mb-3">
+          <div className={`grid gap-2 mb-3`} style={{ gridTemplateColumns: `1fr repeat(${RINKS.length}, 1fr)` }}>
             <div className="p-3 text-sm font-medium text-gray-500 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               Time
@@ -73,7 +90,8 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: slotIndex * 0.05 }}
-                className="grid grid-cols-7 gap-2"
+                className="grid gap-2"
+                style={{ gridTemplateColumns: `1fr repeat(${RINKS.length}, 1fr)` }}
               >
                 <div className="p-3 text-sm text-gray-600 font-medium flex items-center">
                   {slot.label}
@@ -141,5 +159,3 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
     </TooltipProvider>
   );
 }
-
-export { TIME_SLOTS, RINKS };

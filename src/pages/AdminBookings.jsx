@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   Clock, 
   CheckCircle, 
@@ -18,19 +19,22 @@ import {
 } from 'lucide-react';
 import { toast } from "sonner";
 import { parseISO, isBefore, startOfToday } from 'date-fns';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import BookingCard from '@/components/booking/BookingCard';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 
 export default function AdminBookings() {
+  const [searchParams] = useSearchParams();
+  const clubId = searchParams.get('clubId');
+  const navigate = useNavigate();
+  
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -46,19 +50,73 @@ export default function AdminBookings() {
     loadUser();
   }, []);
 
+  useEffect(() => {
+    if (!clubId) {
+      navigate(createPageUrl('ClubSelector'));
+    }
+  }, [clubId, navigate]);
+
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
+  const { data: myMembership, isLoading: membershipLoading } = useQuery({
+    queryKey: ['myClubMembership', clubId, user?.email],
+    queryFn: async () => {
+      const memberships = await base44.entities.ClubMembership.filter({ 
+        club_id: clubId, 
+        user_email: user.email 
+      });
+      return memberships[0];
+    },
+    enabled: !!clubId && !!user?.email,
+  });
+
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['allBookings'],
-    queryFn: () => base44.entities.Booking.list('-created_date'),
+    queryKey: ['clubBookings', clubId],
+    queryFn: () => base44.entities.Booking.filter({ club_id: clubId }, '-created_date'),
+    enabled: !!clubId,
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Booking.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['myBookings'] });
     },
   });
+
+  const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
+
+  // Check if user is club admin
+  if (!membershipLoading && user && !isClubAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center p-8"
+        >
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center">
+            <ShieldAlert className="w-10 h-10 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">You need club admin privileges to access this page.</p>
+          <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">
+              Go to Bookings
+            </Button>
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   const handleApprove = async (booking) => {
     await updateMutation.mutateAsync({ id: booking.id, data: { status: 'approved' } });
@@ -86,30 +144,6 @@ export default function AdminBookings() {
     }
   };
 
-  // Check if user is admin
-  if (user && user.role !== 'admin') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-8"
-        >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center">
-            <ShieldAlert className="w-10 h-10 text-red-500" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-6">You need admin privileges to access this page.</p>
-          <Link to={createPageUrl('BookRink')}>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
-              Go to Bookings
-            </Button>
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
-
   const today = startOfToday();
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const upcomingApproved = bookings.filter(b => 
@@ -134,6 +168,8 @@ export default function AdminBookings() {
     </motion.div>
   );
 
+  if (!clubId) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -143,10 +179,10 @@ export default function AdminBookings() {
           className="mb-8"
         >
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Admin Dashboard
+            Booking Management
           </h1>
           <p className="text-gray-600">
-            Manage all booking requests and approvals
+            {club?.name} • Manage booking requests and approvals
           </p>
         </motion.div>
 
@@ -157,8 +193,8 @@ export default function AdminBookings() {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
         >
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-amber-100">
-            <div className="flex items-center gap-3">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-amber-100">
                 <Clock className="w-5 h-5 text-amber-600" />
               </div>
@@ -166,10 +202,10 @@ export default function AdminBookings() {
                 <p className="text-2xl font-bold text-gray-900">{pendingBookings.length}</p>
                 <p className="text-sm text-gray-500">Pending Approval</p>
               </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100">
-            <div className="flex items-center gap-3">
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-100">
                 <CheckCircle className="w-5 h-5 text-emerald-600" />
               </div>
@@ -177,10 +213,10 @@ export default function AdminBookings() {
                 <p className="text-2xl font-bold text-gray-900">{upcomingApproved.length}</p>
                 <p className="text-sm text-gray-500">Upcoming Approved</p>
               </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gray-100">
                 <CalendarClock className="w-5 h-5 text-gray-600" />
               </div>
@@ -188,8 +224,8 @@ export default function AdminBookings() {
                 <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
                 <p className="text-sm text-gray-500">Total Bookings</p>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         <motion.div
@@ -320,12 +356,9 @@ export default function AdminBookings() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Reject Booking</DialogTitle>
-              <DialogDescription>
-                Provide a reason for rejecting this booking (optional)
-              </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <Label htmlFor="reason">Reason</Label>
+              <Label htmlFor="reason">Reason (optional)</Label>
               <Textarea
                 id="reason"
                 placeholder="e.g., Rink maintenance scheduled..."

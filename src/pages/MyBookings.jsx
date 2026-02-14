@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarX, CalendarCheck, Clock, Calendar } from 'lucide-react';
 import { toast } from "sonner";
-import { format, parseISO, isBefore, startOfToday } from 'date-fns';
+import { parseISO, isBefore, startOfToday } from 'date-fns';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import BookingCard from '@/components/booking/BookingCard';
 import {
   AlertDialog,
@@ -21,6 +22,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function MyBookings() {
+  const [searchParams] = useSearchParams();
+  const clubId = searchParams.get('clubId');
+  const navigate = useNavigate();
+  
   const [user, setUser] = useState(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState(null);
@@ -34,10 +39,28 @@ export default function MyBookings() {
     loadUser();
   }, []);
 
+  useEffect(() => {
+    if (!clubId) {
+      navigate(createPageUrl('ClubSelector'));
+    }
+  }, [clubId, navigate]);
+
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['myBookings', user?.email],
-    queryFn: () => base44.entities.Booking.filter({ booker_email: user.email }, '-date'),
-    enabled: !!user?.email,
+    queryKey: ['myBookings', clubId, user?.email],
+    queryFn: () => base44.entities.Booking.filter({ 
+      club_id: clubId, 
+      booker_email: user.email 
+    }, '-date'),
+    enabled: !!user?.email && !!clubId,
   });
 
   const cancelMutation = useMutation({
@@ -87,6 +110,8 @@ export default function MyBookings() {
     </motion.div>
   );
 
+  if (!clubId) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -99,7 +124,7 @@ export default function MyBookings() {
             My Bookings
           </h1>
           <p className="text-gray-600">
-            View and manage your rink bookings
+            {club?.name} • View and manage your rink bookings
           </p>
         </motion.div>
 

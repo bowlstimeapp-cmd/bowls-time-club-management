@@ -6,11 +6,17 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import DateSelector from '@/components/booking/DateSelector';
 import BookingModal from '@/components/booking/BookingModal';
 
 export default function BookRink() {
+  const [searchParams] = useSearchParams();
+  const clubId = searchParams.get('clubId');
+  const navigate = useNavigate();
+  
   const [selectedDate, setSelectedDate] = useState(startOfToday());
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -26,11 +32,50 @@ export default function BookRink() {
     loadUser();
   }, []);
 
+  // Redirect to club selector if no club selected
+  useEffect(() => {
+    if (!clubId) {
+      navigate(createPageUrl('ClubSelector'));
+    }
+  }, [clubId, navigate]);
+
+  // Check membership
+  const { data: membership, isLoading: membershipLoading } = useQuery({
+    queryKey: ['myMembership', clubId, user?.email],
+    queryFn: async () => {
+      const memberships = await base44.entities.ClubMembership.filter({ 
+        club_id: clubId, 
+        user_email: user.email 
+      });
+      return memberships[0];
+    },
+    enabled: !!clubId && !!user?.email,
+  });
+
+  // Redirect if not approved member
+  useEffect(() => {
+    if (!membershipLoading && user && !membership?.status) {
+      navigate(createPageUrl('ClubSelector'));
+    } else if (!membershipLoading && membership && membership.status !== 'approved') {
+      navigate(createPageUrl('ClubSelector'));
+    }
+  }, [membership, membershipLoading, user, navigate]);
+
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
   const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['bookings', dateString],
-    queryFn: () => base44.entities.Booking.filter({ date: dateString }),
+    queryKey: ['bookings', clubId, dateString],
+    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: dateString }),
+    enabled: !!clubId,
   });
 
   const createBookingMutation = useMutation({
@@ -52,9 +97,10 @@ export default function BookRink() {
   };
 
   const handleConfirmBooking = (notes) => {
-    if (!user || !selectedSlot) return;
+    if (!user || !selectedSlot || !clubId) return;
 
     createBookingMutation.mutate({
+      club_id: clubId,
       rink_number: selectedSlot.rink,
       date: dateString,
       start_time: selectedSlot.slot.start,
@@ -65,6 +111,17 @@ export default function BookRink() {
       notes: notes || '',
     });
   };
+
+  if (!clubId || membershipLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <Skeleton className="h-12 w-64 mb-4" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -78,7 +135,7 @@ export default function BookRink() {
             Book a Rink
           </h1>
           <p className="text-gray-600">
-            Select a date and available time slot to request a booking
+            {club?.name} • Select a date and available time slot to request a booking
           </p>
         </motion.div>
 
@@ -107,6 +164,7 @@ export default function BookRink() {
                   selectedDate={selectedDate}
                   onSlotClick={handleSlotClick}
                   currentUserEmail={user?.email}
+                  club={club}
                 />
               )}
             </CardContent>

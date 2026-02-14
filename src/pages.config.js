@@ -47,16 +47,22 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AdminBookings from './pages/AdminBookings';
 import BookRink from './pages/BookRink';
 import MyBookings from './pages/MyBookings';
-import AdminBookings from './pages/AdminBookings';
+import ClubSelector from './pages/ClubSelector';
+import PlatformAdmin from './pages/PlatformAdmin';
+import ClubAdmin from './pages/ClubAdmin';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AdminBookings": AdminBookings,
     "BookRink": BookRink,
     "MyBookings": MyBookings,
-    "AdminBookings": AdminBookings,
+    "ClubSelector": ClubSelector,
+    "PlatformAdmin": PlatformAdmin,
+    "ClubAdmin": ClubAdmin,
 }
 
 export const pagesConfig = {
