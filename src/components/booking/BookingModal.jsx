@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,19 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar, Clock, MapPin, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+
+const COMPETITION_TYPES = ['Club', 'County', 'National', 'Other'];
 
 export default function BookingModal({ 
   open, 
@@ -22,14 +32,20 @@ export default function BookingModal({
   isLoading 
 }) {
   const [notes, setNotes] = useState('');
+  const [competitionType, setCompetitionType] = useState('Club');
+  const [competitionOther, setCompetitionOther] = useState('');
 
   const handleConfirm = () => {
-    onConfirm(notes);
+    onConfirm(notes, competitionType, competitionOther);
     setNotes('');
+    setCompetitionType('Club');
+    setCompetitionOther('');
   };
 
   const handleClose = () => {
     setNotes('');
+    setCompetitionType('Club');
+    setCompetitionOther('');
     onClose();
   };
 
@@ -64,6 +80,31 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
+            <Label>Competition Type *</Label>
+            <Select value={competitionType} onValueChange={setCompetitionType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPETITION_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {competitionType === 'Other' && (
+            <div className="space-y-2">
+              <Label>Please specify</Label>
+              <Input
+                value={competitionOther}
+                onChange={(e) => setCompetitionOther(e.target.value)}
+                placeholder="Enter game type..."
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
             <Label htmlFor="notes" className="text-gray-700">
               Notes (optional)
             </Label>
@@ -84,7 +125,7 @@ export default function BookingModal({
           </Button>
           <Button 
             onClick={handleConfirm} 
-            disabled={isLoading}
+            disabled={isLoading || (competitionType === 'Other' && !competitionOther.trim())}
             className="bg-emerald-600 hover:bg-emerald-700"
           >
             {isLoading ? (

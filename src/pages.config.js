@@ -57,6 +57,8 @@ import ProfileSetup from './pages/ProfileSetup';
 import Selection from './pages/Selection';
 import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
+import Profile from './pages/Profile';
+import ClubSettings from './pages/ClubSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -71,6 +73,8 @@ export const PAGES = {
     "Selection": Selection,
     "SelectionEditor": SelectionEditor,
     "SelectionView": SelectionView,
+    "Profile": Profile,
+    "ClubSettings": ClubSettings,
 }
 
 export const pagesConfig = {
