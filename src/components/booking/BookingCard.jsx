@@ -11,7 +11,8 @@ import {
   CheckCircle, 
   XCircle, 
   Loader2,
-  MessageSquare 
+  MessageSquare,
+  Trophy
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -108,6 +109,12 @@ export default function BookingCard({
                       <Clock className="w-4 h-4 text-emerald-600" />
                       {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                     </span>
+                    {booking.competition_type && (
+                      <span className="flex items-center gap-1.5">
+                        <Trophy className="w-4 h-4 text-emerald-600" />
+                        {booking.competition_type === 'Other' ? booking.competition_other : booking.competition_type}
+                      </span>
+                    )}
                   </div>
 
                   {isAdmin && (

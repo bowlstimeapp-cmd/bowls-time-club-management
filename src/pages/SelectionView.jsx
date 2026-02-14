@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Trophy, User, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -59,10 +59,22 @@ export default function SelectionView() {
     enabled: !!clubId,
   });
 
+  const { data: availabilities = [] } = useQuery({
+    queryKey: ['selectionAvailabilities', selectionId],
+    queryFn: () => base44.entities.MemberAvailability.filter({ selection_id: selectionId }),
+    enabled: !!selectionId,
+  });
+
   const getMemberName = (email) => {
     if (!email) return 'TBD';
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
+  };
+
+  const getAvailability = (email) => {
+    if (!email) return null;
+    const availability = availabilities.find(a => a.user_email === email);
+    return availability?.is_available;
   };
 
   if (isLoading) {
@@ -147,7 +159,13 @@ export default function SelectionView() {
                           <div key={position} className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
                             <span className="text-sm font-medium text-gray-500">{position}:</span>
                             <span className="font-medium flex items-center gap-1">
-                              <User className="w-4 h-4 text-emerald-600" />
+                              {getAvailability(memberEmail) === true ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              ) : getAvailability(memberEmail) === false ? (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <User className="w-4 h-4 text-gray-400" />
+                              )}
                               {getMemberName(memberEmail)}
                             </span>
                           </div>
@@ -177,7 +195,13 @@ export default function SelectionView() {
                           <div key={position} className="flex items-center justify-between py-2 border-b last:border-0">
                             <span className="text-sm font-medium text-gray-500 w-12">{position}</span>
                             <span className="font-medium flex items-center gap-2">
-                              <User className="w-4 h-4 text-emerald-600" />
+                              {getAvailability(memberEmail) === true ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              ) : getAvailability(memberEmail) === false ? (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <User className="w-4 h-4 text-gray-400" />
+                              )}
                               {getMemberName(memberEmail)}
                             </span>
                           </div>

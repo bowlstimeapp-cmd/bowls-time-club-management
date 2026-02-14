@@ -80,11 +80,14 @@ export default function BookRink() {
 
   const createBookingMutation = useMutation({
     mutationFn: (bookingData) => base44.entities.Booking.create(bookingData),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       setModalOpen(false);
       setSelectedSlot(null);
-      toast.success('Booking request submitted! Awaiting approval.');
+      const message = variables.status === 'approved' 
+        ? 'Booking confirmed!' 
+        : 'Booking request submitted! Awaiting approval.';
+      toast.success(message);
     },
     onError: () => {
       toast.error('Failed to create booking. Please try again.');
@@ -96,8 +99,13 @@ export default function BookRink() {
     setModalOpen(true);
   };
 
-  const handleConfirmBooking = (notes) => {
+  const handleConfirmBooking = (notes, competitionType, competitionOther) => {
     if (!user || !selectedSlot || !clubId) return;
+
+    const status = club?.auto_approve_bookings ? 'approved' : 'pending';
+    const successMessage = club?.auto_approve_bookings 
+      ? 'Booking confirmed!' 
+      : 'Booking request submitted! Awaiting approval.';
 
     createBookingMutation.mutate({
       club_id: clubId,
@@ -105,7 +113,9 @@ export default function BookRink() {
       date: dateString,
       start_time: selectedSlot.slot.start,
       end_time: selectedSlot.slot.end,
-      status: 'pending',
+      status,
+      competition_type: competitionType,
+      competition_other: competitionType === 'Other' ? competitionOther : '',
       booker_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : (user.full_name || user.email),
       booker_email: user.email,
       notes: notes || '',

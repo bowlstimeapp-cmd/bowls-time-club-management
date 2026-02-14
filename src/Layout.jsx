@@ -167,7 +167,9 @@ export default function Layout({ children, currentPageName }) {
                       <User className="w-4 h-4 text-emerald-700" />
                     </div>
                     <span className="hidden sm:block text-sm font-medium text-gray-700">
-                      {user?.full_name || user?.email?.split('@')[0]}
+                      {user?.first_name && user?.surname 
+                        ? `${user.first_name} ${user.surname}` 
+                        : (user?.full_name || user?.email?.split('@')[0])}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -176,17 +178,29 @@ export default function Layout({ children, currentPageName }) {
                     {user?.email}
                   </div>
                   <DropdownMenuSeparator />
-                  {isPlatformAdmin && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link to={createPageUrl('PlatformAdmin')} className="cursor-pointer">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Platform Admin
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl('Profile')} className="cursor-pointer">
+                      <User className="w-4 h-4 mr-2" />
+                      My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  {isClubAdmin && clubId && (
+                    <DropdownMenuItem asChild>
+                      <Link to={createPageUrl('ClubSettings') + `?clubId=${clubId}`} className="cursor-pointer">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Club Settings
+                      </Link>
+                    </DropdownMenuItem>
                   )}
+                  {isPlatformAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to={createPageUrl('PlatformAdmin')} className="cursor-pointer">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Platform Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => base44.auth.logout()}
                     className="text-red-600 cursor-pointer"
