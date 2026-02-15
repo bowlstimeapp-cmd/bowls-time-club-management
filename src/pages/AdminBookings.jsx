@@ -16,7 +16,9 @@ import {
   Search,
   ShieldAlert,
   CalendarClock,
-  Pencil
+  Pencil,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { toast } from "sonner";
 import { parseISO, isBefore, startOfToday } from 'date-fns';
@@ -43,6 +45,8 @@ export default function AdminBookings() {
   const [bookingToReject, setBookingToReject] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [editBooking, setEditBooking] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -92,6 +96,16 @@ export default function AdminBookings() {
       queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['myBookings'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Booking.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['myBookings'] });
+      toast.success('Booking deleted');
     },
   });
 
@@ -154,6 +168,19 @@ export default function AdminBookings() {
     });
     toast.success('Booking updated');
     setEditBooking(null);
+  };
+
+  const handleDeleteClick = (booking) => {
+    setBookingToDelete(booking);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (bookingToDelete) {
+      await deleteMutation.mutateAsync(bookingToDelete.id);
+      setDeleteDialogOpen(false);
+      setBookingToDelete(null);
+    }
   };
 
   const today = startOfToday();
@@ -278,7 +305,8 @@ export default function AdminBookings() {
                         isAdmin={true}
                         onApprove={handleApprove}
                         onReject={handleRejectClick}
-                        isLoading={updateMutation.isPending}
+                        onDelete={handleDeleteClick}
+                        isLoading={updateMutation.isPending || deleteMutation.isPending}
                       />
                     ))}
                   </AnimatePresence>
@@ -308,6 +336,8 @@ export default function AdminBookings() {
                         booking={booking}
                         isAdmin={true}
                         onEdit={() => setEditBooking(booking)}
+                        onDelete={handleDeleteClick}
+                        isLoading={deleteMutation.isPending}
                       />
                     ))}
                   </AnimatePresence>
@@ -350,7 +380,8 @@ export default function AdminBookings() {
                         onApprove={handleApprove}
                         onReject={handleRejectClick}
                         onEdit={() => setEditBooking(booking)}
-                        isLoading={updateMutation.isPending}
+                        onDelete={handleDeleteClick}
+                        isLoading={updateMutation.isPending || deleteMutation.isPending}
                       />
                     ))}
                   </AnimatePresence>
@@ -371,6 +402,7 @@ export default function AdminBookings() {
           onClose={() => setEditBooking(null)}
           booking={editBooking}
           club={club}
+          allBookings={bookings}
           onSave={handleEditBooking}
           isLoading={updateMutation.isPending}
         />
@@ -401,6 +433,43 @@ export default function AdminBookings() {
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Reject Booking
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Booking</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete this booking? This action cannot be undone.
+              </p>
+              {bookingToDelete && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm">
+                  <p><span className="font-medium">Rink:</span> {bookingToDelete.rink_number}</p>
+                  <p><span className="font-medium">Date:</span> {bookingToDelete.date}</p>
+                  <p><span className="font-medium">Booked by:</span> {bookingToDelete.booker_name}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmDelete}
+                disabled={deleteMutation.isPending}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Delete Booking
               </Button>
             </DialogFooter>
           </DialogContent>
