@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Clock, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -140,11 +139,8 @@ export default function TimeSlotGrid({
           {/* Time Slots */}
           <div className="space-y-2">
             {TIME_SLOTS.map((slot, slotIndex) => (
-              <motion.div
+              <div
                 key={slot.start}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: slotIndex * 0.05 }}
                 className="grid gap-2"
                 style={{ gridTemplateColumns: `1fr repeat(${RINKS.length}, 1fr)` }}
               >
@@ -162,15 +158,13 @@ export default function TimeSlotGrid({
                   return (
                     <Tooltip key={rink}>
                       <TooltipTrigger asChild>
-                        <motion.button
-                          whileHover={{ scale: available ? 1.02 : 1 }}
-                          whileTap={{ scale: available ? 0.98 : 1 }}
+                        <button
                           onClick={() => handleSlotClick(rink, slot, slotIndex)}
                           disabled={!available}
                           className={cn(
                             "p-3 rounded-xl border-2 transition-all duration-200 min-h-[60px] relative",
                             available && !selected
-                              ? "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer"
+                              ? "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.02]"
                               : available && selected
                               ? "bg-emerald-100 border-emerald-500 cursor-pointer"
                               : cn(statusStyles[booking?.status], "cursor-default"),
@@ -202,7 +196,7 @@ export default function TimeSlotGrid({
                               )}
                             </div>
                           )}
-                        </motion.button>
+                        </button>
                       </TooltipTrigger>
                       <TooltipContent>
                         {available ? (
@@ -223,7 +217,7 @@ export default function TimeSlotGrid({
                     </Tooltip>
                   );
                 })}
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
