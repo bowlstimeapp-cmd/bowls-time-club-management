@@ -149,15 +149,21 @@ export default function LiveScoring() {
   const getRinks = () => {
     if (!selection?.selections) return [];
     const rinks = [];
-    const selectedRinks = selection.selected_rinks?.map(r => parseInt(r)) || [1, 2];
+    const selectedRinks = selection.selected_rinks?.map(r => parseInt(r)) || [1, 2, 3, 4];
+    const homeRinksCount = selection.home_rinks || 2;
     
-    for (const rinkNum of selectedRinks) {
+    for (let i = 0; i < selectedRinks.length; i++) {
+      const rinkNum = selectedRinks[i];
       const rinkPositions = {};
       for (const pos of POSITIONS) {
         const key = `rink${rinkNum}_${pos}`;
         rinkPositions[pos] = selection.selections[key];
       }
-      rinks.push({ number: rinkNum, positions: rinkPositions });
+      rinks.push({ 
+        number: rinkNum, 
+        positions: rinkPositions,
+        isHome: i < homeRinksCount
+      });
     }
     return rinks;
   };
@@ -288,7 +294,7 @@ export default function LiveScoring() {
                                   <React.Fragment key={pos}>
                                     <Input
                                       placeholder={pos}
-                                      className={`h-7 text-xs ${pos === 'Skip' ? 'w-24 font-bold' : 'w-20'}`}
+                                      className={`h-7 ${pos === 'Skip' ? 'w-28 font-bold text-sm' : 'w-20 text-xs'}`}
                                       value={oppositionPlayers[posKey] || ''}
                                       onChange={(e) => setOppositionPlayers(prev => ({
                                         ...prev,
@@ -306,7 +312,7 @@ export default function LiveScoring() {
                         
                         return (
                           <div className="text-sm">
-                            <span className="font-bold">{names[0]}</span>
+                            <span className="font-bold text-base">{names[0]}</span>
                             {names.slice(1).filter(Boolean).length > 0 && (
                               <span className="text-gray-600">, {names.slice(1).filter(Boolean).join(', ')}</span>
                             )}
@@ -316,7 +322,12 @@ export default function LiveScoring() {
 
                       return (
                         <tr key={rink.number} className="border-b last:border-0">
-                          <td className="py-3 px-2 text-sm font-medium text-gray-600">{rink.number}</td>
+                          <td className="py-3 px-2">
+                            <div className="text-sm font-medium text-gray-600">{rink.number}</div>
+                            <Badge className={`text-xs mt-1 ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {rink.isHome ? 'Home' : 'Away'}
+                            </Badge>
+                          </td>
                           <td className="py-3 px-2">
                             {getTeamDisplay(rink.positions, false)}
                           </td>
