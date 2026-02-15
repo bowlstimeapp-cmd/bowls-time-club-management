@@ -12,7 +12,8 @@ import {
   XCircle, 
   Loader2,
   MessageSquare,
-  Trophy
+  Trophy,
+  Pencil
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -48,7 +49,8 @@ export default function BookingCard({
   booking, 
   onCancel, 
   onApprove, 
-  onReject, 
+  onReject,
+  onEdit,
   isAdmin = false,
   isOwn = false,
   isLoading = false 
@@ -160,6 +162,18 @@ export default function BookingCard({
                         Reject
                       </Button>
                     </>
+                  )}
+                  
+                  {isAdmin && onEdit && (booking.status === 'approved' || booking.status === 'pending') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onEdit(booking)}
+                      disabled={isLoading}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
                   )}
                   
                   {isOwn && (booking.status === 'pending' || booking.status === 'approved') && (

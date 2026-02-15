@@ -15,7 +15,8 @@ import {
   XCircle, 
   Search,
   ShieldAlert,
-  CalendarClock
+  CalendarClock,
+  Pencil
 } from 'lucide-react';
 import { toast } from "sonner";
 import { parseISO, isBefore, startOfToday } from 'date-fns';
@@ -29,6 +30,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import EditBookingModal from '@/components/booking/EditBookingModal';
 
 export default function AdminBookings() {
   const [searchParams] = useSearchParams();
@@ -40,6 +42,7 @@ export default function AdminBookings() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [bookingToReject, setBookingToReject] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [editBooking, setEditBooking] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -142,6 +145,15 @@ export default function AdminBookings() {
       setRejectDialogOpen(false);
       setBookingToReject(null);
     }
+  };
+
+  const handleEditBooking = async (updates) => {
+    await updateMutation.mutateAsync({ 
+      id: editBooking.id, 
+      data: updates 
+    });
+    toast.success('Booking updated');
+    setEditBooking(null);
   };
 
   const today = startOfToday();
@@ -295,6 +307,7 @@ export default function AdminBookings() {
                         key={booking.id}
                         booking={booking}
                         isAdmin={true}
+                        onEdit={() => setEditBooking(booking)}
                       />
                     ))}
                   </AnimatePresence>
@@ -336,6 +349,7 @@ export default function AdminBookings() {
                         isAdmin={true}
                         onApprove={handleApprove}
                         onReject={handleRejectClick}
+                        onEdit={() => setEditBooking(booking)}
                         isLoading={updateMutation.isPending}
                       />
                     ))}
@@ -351,6 +365,15 @@ export default function AdminBookings() {
             </TabsContent>
           </Tabs>
         </motion.div>
+
+        <EditBookingModal
+          open={!!editBooking}
+          onClose={() => setEditBooking(null)}
+          booking={editBooking}
+          club={club}
+          onSave={handleEditBooking}
+          isLoading={updateMutation.isPending}
+        />
 
         <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
           <DialogContent>

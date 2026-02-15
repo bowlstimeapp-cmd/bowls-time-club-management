@@ -1,28 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from 'framer-motion';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { 
   Users, 
   UserPlus, 
@@ -30,22 +14,30 @@ import {
   CheckCircle,
   XCircle,
   ShieldAlert,
-  Loader2,
-  Mail,
   Shield,
-  User
+  User,
+  History
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import MemberDetailModal from '@/components/member/MemberDetailModal';
+import AddMemberModal from '@/components/member/AddMemberModal';
+
+const membershipColors = {
+  'Winter Indoor Member': 'bg-blue-100 text-blue-800 border-blue-200',
+  'Summer Indoor Member': 'bg-orange-100 text-orange-800 border-orange-200',
+  'Outdoor Member': 'bg-green-100 text-green-800 border-green-200',
+  'Social Member': 'bg-purple-100 text-purple-800 border-purple-200',
+};
 
 export default function ClubAdmin() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
   const [user, setUser] = useState(null);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState('member');
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [activeTab, setActiveTab] = useState('pending');
 
   const queryClient = useQueryClient();
 
@@ -84,6 +76,12 @@ export default function ClubAdmin() {
     enabled: !!clubId && !!user?.email,
   });
 
+  const { data: auditLogs = [] } = useQuery({
+    queryKey: ['auditLogs', clubId],
+    queryFn: () => base44.entities.AuditLog.filter({ club_id: clubId }, '-created_date', 50),
+    enabled: !!clubId,
+  });
+
   const updateMembershipMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ClubMembership.update(id, data),
     onSuccess: () => {
@@ -92,13 +90,18 @@ export default function ClubAdmin() {
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: (data) => base44.entities.ClubMembership.create(data),
+    mutationFn: (data) => base44.entities.ClubMembership.create({ ...data, club_id: clubId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member added successfully');
       setAddMemberOpen(false);
-      setNewMemberEmail('');
-      setNewMemberRole('member');
+    },
+  });
+
+  const createAuditLogMutation = useMutation({
+    mutationFn: (data) => base44.entities.AuditLog.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auditLogs'] });
     },
   });
 
@@ -159,19 +162,33 @@ export default function ClubAdmin() {
     toast.success(`${membership.user_name || membership.user_email} rejected`);
   };
 
-  const handleAddMember = (e) => {
-    e.preventDefault();
-    addMemberMutation.mutate({
-      club_id: clubId,
-      user_email: newMemberEmail,
-      user_name: newMemberEmail,
-      role: newMemberRole,
-      status: 'approved'
+  const handleUpdateRole = async (memberId, newRole, oldRole) => {
+    const member = memberships.find(m => m.id === memberId);
+    await updateMembershipMutation.mutateAsync({ 
+      id: memberId, 
+      data: { role: newRole } 
     });
+    
+    await createAuditLogMutation.mutateAsync({
+      club_id: clubId,
+      action: 'role_change',
+      target_email: member.user_email,
+      target_name: member.user_name,
+      performed_by_email: user.email,
+      performed_by_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : user.email,
+      old_value: oldRole,
+      new_value: newRole,
+      details: `Role changed from ${oldRole} to ${newRole}`
+    });
+
+    toast.success(`Role updated to ${newRole}`);
+    setSelectedMember(null);
   };
 
   const pendingMembers = memberships.filter(m => m.status === 'pending');
   const approvedMembers = memberships.filter(m => m.status === 'approved');
+
+  const membershipTypes = club?.membership_types || ['Winter Indoor Member', 'Summer Indoor Member', 'Outdoor Member', 'Social Member'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -242,8 +259,8 @@ export default function ClubAdmin() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Tabs defaultValue="pending">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="pending" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Pending ({pendingMembers.length})
@@ -251,6 +268,10 @@ export default function ClubAdmin() {
               <TabsTrigger value="members" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Members ({approvedMembers.length})
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Audit Log
               </TabsTrigger>
             </TabsList>
 
@@ -327,7 +348,11 @@ export default function ClubAdmin() {
               ) : (
                 <div className="space-y-3">
                   {approvedMembers.map(member => (
-                    <Card key={member.id}>
+                    <Card 
+                      key={member.id} 
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setSelectedMember(member)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -335,7 +360,7 @@ export default function ClubAdmin() {
                               <User className="w-5 h-5 text-emerald-600" />
                             </div>
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-medium">{member.user_name || member.user_email}</p>
                                 {member.role === 'admin' && (
                                   <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">
@@ -347,6 +372,11 @@ export default function ClubAdmin() {
                                     Selector
                                   </Badge>
                                 )}
+                                {member.membership_groups?.map(group => (
+                                  <Badge key={group} className={membershipColors[group] || 'bg-gray-100'}>
+                                    {group.replace(' Member', '')}
+                                  </Badge>
+                                ))}
                               </div>
                               <p className="text-sm text-gray-500">{member.user_email}</p>
                             </div>
@@ -355,7 +385,10 @@ export default function ClubAdmin() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => deleteMembershipMutation.mutate(member.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteMembershipMutation.mutate(member.id);
+                              }}
                               className="text-red-600 hover:bg-red-50"
                             >
                               Remove
@@ -368,55 +401,58 @@ export default function ClubAdmin() {
                 </div>
               )}
             </TabsContent>
+
+            <TabsContent value="audit">
+              {auditLogs.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <History className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-gray-500">No audit logs yet</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.map(log => (
+                    <Card key={log.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium">
+                              {log.action === 'role_change' && 'Role Change'}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {log.target_name || log.target_email}: {log.details}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              By {log.performed_by_name || log.performed_by_email} • {new Date(log.created_date).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
         </motion.div>
 
-        {/* Add Member Dialog */}
-        <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Member</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddMember} className="space-y-4">
-              <div>
-                <Label>Email Address</Label>
-                <Input
-                  type="email"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  placeholder="member@example.com"
-                  required
-                />
-              </div>
-              <div>
-                <Label>Role</Label>
-                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="selector">Selector</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setAddMemberOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                  disabled={addMemberMutation.isPending}
-                >
-                  {addMemberMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Add Member
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <AddMemberModal
+          open={addMemberOpen}
+          onClose={() => setAddMemberOpen(false)}
+          onSubmit={(data) => addMemberMutation.mutate(data)}
+          isLoading={addMemberMutation.isPending}
+          membershipTypes={membershipTypes}
+        />
+
+        <MemberDetailModal
+          open={!!selectedMember}
+          onClose={() => setSelectedMember(null)}
+          member={selectedMember}
+          onUpdateRole={handleUpdateRole}
+          isUpdating={updateMembershipMutation.isPending}
+          isAdmin={true}
+        />
       </div>
     </div>
   );

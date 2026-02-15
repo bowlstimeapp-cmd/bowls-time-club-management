@@ -51,15 +51,15 @@ import AdminBookings from './pages/AdminBookings';
 import BookRink from './pages/BookRink';
 import ClubAdmin from './pages/ClubAdmin';
 import ClubSelector from './pages/ClubSelector';
+import ClubSettings from './pages/ClubSettings';
+import ClubTournaments from './pages/ClubTournaments';
 import MyBookings from './pages/MyBookings';
 import PlatformAdmin from './pages/PlatformAdmin';
+import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
 import Selection from './pages/Selection';
 import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
-import Profile from './pages/Profile';
-import ClubSettings from './pages/ClubSettings';
-import ClubTournaments from './pages/ClubTournaments';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import __Layout from './Layout.jsx';
@@ -70,15 +70,15 @@ export const PAGES = {
     "BookRink": BookRink,
     "ClubAdmin": ClubAdmin,
     "ClubSelector": ClubSelector,
+    "ClubSettings": ClubSettings,
+    "ClubTournaments": ClubTournaments,
     "MyBookings": MyBookings,
     "PlatformAdmin": PlatformAdmin,
+    "Profile": Profile,
     "ProfileSetup": ProfileSetup,
     "Selection": Selection,
     "SelectionEditor": SelectionEditor,
     "SelectionView": SelectionView,
-    "Profile": Profile,
-    "ClubSettings": ClubSettings,
-    "ClubTournaments": ClubTournaments,
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
 }

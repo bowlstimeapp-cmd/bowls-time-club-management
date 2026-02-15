@@ -8,10 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings, Loader2, Save, ShieldAlert } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings, Loader2, Save, ShieldAlert, Users } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+
+const ALL_MEMBERSHIP_TYPES = [
+  'Winter Indoor Member',
+  'Summer Indoor Member',
+  'Outdoor Member',
+  'Social Member'
+];
 
 export default function ClubSettings() {
   const [searchParams] = useSearchParams();
@@ -25,6 +33,7 @@ export default function ClubSettings() {
   const [closingTime, setClosingTime] = useState('21:00');
   const [sessionDuration, setSessionDuration] = useState(2);
   const [autoApprove, setAutoApprove] = useState(false);
+  const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -68,6 +77,7 @@ export default function ClubSettings() {
       setClosingTime(club.closing_time || '21:00');
       setSessionDuration(club.session_duration || 2);
       setAutoApprove(club.auto_approve_bookings || false);
+      setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
     }
   }, [club]);
 
@@ -106,6 +116,14 @@ export default function ClubSettings() {
     );
   }
 
+  const toggleMembershipType = (type) => {
+    if (membershipTypes.includes(type)) {
+      setMembershipTypes(membershipTypes.filter(t => t !== type));
+    } else {
+      setMembershipTypes([...membershipTypes, type]);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     updateMutation.mutate({
@@ -113,7 +131,8 @@ export default function ClubSettings() {
       opening_time: openingTime,
       closing_time: closingTime,
       session_duration: parseInt(sessionDuration),
-      auto_approve_bookings: autoApprove
+      auto_approve_bookings: autoApprove,
+      membership_types: membershipTypes
     });
   };
 
@@ -217,6 +236,35 @@ export default function ClubSettings() {
                     checked={autoApprove}
                     onCheckedChange={setAutoApprove}
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Membership Types
+                </CardTitle>
+                <CardDescription>
+                  Select which membership types are available for your club
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {ALL_MEMBERSHIP_TYPES.map(type => (
+                    <div 
+                      key={type}
+                      className="flex items-center gap-3 cursor-pointer"
+                      onClick={() => toggleMembershipType(type)}
+                    >
+                      <Checkbox 
+                        checked={membershipTypes.includes(type)}
+                        onCheckedChange={() => toggleMembershipType(type)}
+                      />
+                      <span>{type}</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
