@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Loader2, Trophy, Calendar, Pencil } from 'lucide-react';
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -473,11 +474,12 @@ export default function LiveScoring() {
                         <div key={pos}>
                           <Label className="text-xs text-gray-500">{pos}</Label>
                           <Select
-                            value={selection?.selections?.[posKey] || ''}
+                            value={editedSelections[posKey] || ''}
                             onValueChange={(value) => {
-                              // Update the selection locally - this would need to persist
-                              const newSelections = { ...selection.selections, [posKey]: value };
-                              // For now just update local state - would need mutation to persist
+                              setEditedSelections(prev => ({
+                                ...prev,
+                                [posKey]: value || undefined
+                              }));
                             }}
                           >
                             <SelectTrigger className="h-8">
@@ -502,7 +504,19 @@ export default function LiveScoring() {
               ))}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setEditTeamOpen(false)}>
-                  Close
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveTeamEdit}
+                  disabled={updateSelectionMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {updateSelectionMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Changes
                 </Button>
               </div>
             </div>
