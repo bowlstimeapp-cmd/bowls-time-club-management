@@ -150,10 +150,8 @@ export default function SelectionEditor() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.TeamSelection.create(data),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selections'] });
-      toast.success('Selection saved as draft');
-      navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${data.id}`);
     },
   });
 
@@ -205,7 +203,14 @@ export default function SelectionEditor() {
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       }
     } else {
-      createMutation.mutate(data);
+      const result = await createMutation.mutateAsync(data);
+      if (publish) {
+        toast.success('Selection published!');
+        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+      } else {
+        toast.success('Selection saved as draft');
+        navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${result.id}`);
+      }
     }
   };
 
