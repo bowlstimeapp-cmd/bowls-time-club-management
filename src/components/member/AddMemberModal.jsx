@@ -139,17 +139,16 @@ export default function AddMemberModal({
             <Label className="mb-2 block">Membership Groups</Label>
             <div className="space-y-2 border rounded-lg p-3">
               {membershipTypes.map(group => (
-                <div 
+                <label 
                   key={group}
                   className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => toggleGroup(group)}
                 >
                   <Checkbox 
                     checked={selectedGroups.includes(group)}
                     onCheckedChange={() => toggleGroup(group)}
                   />
                   <span className="text-sm">{group}</span>
-                </div>
+                </label>
               ))}
             </div>
           </div>
