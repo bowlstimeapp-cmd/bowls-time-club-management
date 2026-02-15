@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,13 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Plus, 
   Eye, 
   Users,
   Calendar,
   CheckCircle,
-  XCircle
+  XCircle,
+  User,
+  Filter
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -27,6 +36,7 @@ export default function Selection() {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('published');
+  const [competitionFilter, setCompetitionFilter] = useState('all');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -56,7 +66,7 @@ export default function Selection() {
 
   const { data: selections = [], isLoading } = useQuery({
     queryKey: ['selections', clubId],
-    queryFn: () => base44.entities.TeamSelection.filter({ club_id: clubId }, '-match_date'),
+    queryFn: () => base44.entities.TeamSelection.filter({ club_id: clubId }, '-created_date'),
     enabled: !!clubId,
   });
 
@@ -115,8 +125,38 @@ export default function Selection() {
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
 
-  const publishedSelections = selections.filter(s => s.status === 'published');
-  const draftSelections = selections.filter(s => s.status === 'draft');
+  // Check if user is selected for a match
+  const isUserSelectedForMatch = (selection) => {
+    if (!selection.selections || !user?.email) return false;
+    return Object.values(selection.selections).includes(user.email);
+  };
+
+  // Filter selections based on competition type
+  const filterByCompetition = (selectionsList) => {
+    if (competitionFilter === 'all') return selectionsList;
+    return selectionsList.filter(s => s.competition === competitionFilter);
+  };
+
+  const publishedSelections = useMemo(() => 
+    filterByCompetition(selections.filter(s => s.status === 'published')),
+    [selections, competitionFilter]
+  );
+  
+  const draftSelections = useMemo(() => 
+    filterByCompetition(selections.filter(s => s.status === 'draft')),
+    [selections, competitionFilter]
+  );
+  
+  const mySelections = useMemo(() => 
+    filterByCompetition(selections.filter(s => s.status === 'published' && isUserSelectedForMatch(s))),
+    [selections, competitionFilter, user?.email]
+  );
+
+  // Get unique competition types from selections
+  const competitionTypes = useMemo(() => {
+    const types = [...new Set(selections.map(s => s.competition).filter(Boolean))];
+    return types;
+  }, [selections]);
 
   const getMyAvailability = (selectionId) => {
     const availability = myAvailabilities.find(a => a.selection_id === selectionId);
@@ -163,16 +203,43 @@ export default function Selection() {
           )}
         </motion.div>
 
+        {/* Competition Filter */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-4"
+        >
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <Select value={competitionFilter} onValueChange={setCompetitionFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by competition" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Competitions</SelectItem>
+                {competitionTypes.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`grid w-full mb-6 ${isSelector ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <TabsList className={`grid w-full mb-6 ${isSelector ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="published" className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
                 Published ({publishedSelections.length})
+              </TabsTrigger>
+              <TabsTrigger value="myselections" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                My Matches ({mySelections.length})
               </TabsTrigger>
               {isSelector && (
                 <TabsTrigger value="drafts" className="flex items-center gap-2">
@@ -211,6 +278,39 @@ export default function Selection() {
                 <EmptyState 
                   title="No published selections" 
                   description="Team selections will appear here once published"
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="myselections">
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : mySelections.length > 0 ? (
+                <div className="space-y-4">
+                  {mySelections.map(selection => (
+                    <SelectionCard 
+                      key={selection.id} 
+                      selection={selection} 
+                      isSelector={isSelector}
+                      clubId={clubId}
+                      myAvailability={getMyAvailability(selection.id)}
+                      onSetAvailability={(isAvailable) => 
+                        setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
+                      }
+                      isSettingAvailability={setAvailabilityMutation.isPending}
+                      availabilities={getAvailabilityForSelection(selection.id)}
+                      members={members}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState 
+                  title="No matches found" 
+                  description="You haven't been selected for any matches yet"
                 />
               )}
             </TabsContent>
