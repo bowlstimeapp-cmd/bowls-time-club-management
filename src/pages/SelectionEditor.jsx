@@ -30,6 +30,8 @@ import { format } from 'date-fns';
 import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
 
+const APP_BASE_URL = window.location.origin;
+
 const COMPETITIONS = ['Bramley', 'Wessex League', 'Denny', 'Top Club'];
 
 export default function SelectionEditor() {
@@ -176,6 +178,68 @@ export default function SelectionEditor() {
     return slots;
   };
 
+  const sendSelectionEmails = async (savedSelectionId) => {
+    // Check if club has email notifications enabled
+    if (!club?.email_member_notifications) return;
+
+    // Get all selected player emails
+    const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+    
+    // Get members who have email notifications enabled
+    const eligibleMembers = members.filter(m => 
+      selectedPlayerEmails.includes(m.user_email) && 
+      m.email_notifications !== false
+    );
+
+    if (eligibleMembers.length === 0) return;
+
+    // Build team list
+    const teamList = Object.entries(selections)
+      .filter(([_, email]) => email)
+      .map(([pos, email]) => {
+        const member = members.find(m => m.user_email === email);
+        const name = member?.first_name && member?.surname 
+          ? `${member.first_name} ${member.surname}` 
+          : member?.user_name || email;
+        return `${pos.replace('rink', 'Rink ').replace('_', ' ')}: ${name}`;
+      })
+      .join('\n');
+
+    const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
+    
+    // Send emails to eligible members
+    for (const member of eligibleMembers) {
+      const emailBody = `
+Dear ${member.first_name || 'Member'},
+
+You have been selected to play in an upcoming match!
+
+Match Details:
+- Competition: ${competition}
+- Date: ${format(new Date(matchDate), 'd MMMM yyyy')}
+${matchName ? `- Match: ${matchName}` : ''}
+${matchStartTime ? `- Time: ${matchStartTime} - ${matchEndTime}` : ''}
+
+Team Selection:
+${teamList}
+
+Please confirm your availability by visiting:
+${matchUrl}
+
+Best regards,
+${club?.name || 'Your Bowls Club'}
+      `.trim();
+
+      await base44.integrations.Core.SendEmail({
+        to: member.user_email,
+        subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+        body: emailBody
+      });
+    }
+
+    toast.success(`Notification emails sent to ${eligibleMembers.length} players`);
+  };
+
   const handleSave = async (publish = false) => {
     if (!competition) {
       toast.error('Please select a competition');
@@ -200,12 +264,14 @@ export default function SelectionEditor() {
       await updateMutation.mutateAsync({ id: selectionId, data });
       toast.success(publish ? 'Selection published!' : 'Selection saved');
       if (publish) {
+        await sendSelectionEmails(selectionId);
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       }
     } else {
       const result = await createMutation.mutateAsync(data);
       if (publish) {
         toast.success('Selection published!');
+        await sendSelectionEmails(result.id);
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       } else {
         toast.success('Selection saved as draft');

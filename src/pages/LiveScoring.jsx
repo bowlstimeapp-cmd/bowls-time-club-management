@@ -40,6 +40,7 @@ export default function LiveScoring() {
   const [oppositionScores, setOppositionScores] = useState({});
   const [ends, setEnds] = useState({});
   const [editTeamOpen, setEditTeamOpen] = useState(false);
+  const [editedSelections, setEditedSelections] = useState({});
 
   useEffect(() => {
     const loadUser = async () => {
@@ -112,6 +113,12 @@ export default function LiveScoring() {
     }
   }, [matchScore]);
 
+  useEffect(() => {
+    if (selection?.selections) {
+      setEditedSelections(selection.selections);
+    }
+  }, [selection]);
+
   const createScoreMutation = useMutation({
     mutationFn: (data) => base44.entities.MatchScore.create(data),
     onSuccess: () => {
@@ -125,6 +132,22 @@ export default function LiveScoring() {
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
     },
   });
+
+  const updateSelectionMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.TeamSelection.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['selection', selectionId] });
+      toast.success('Team selection updated');
+      setEditTeamOpen(false);
+    },
+  });
+
+  const handleSaveTeamEdit = () => {
+    updateSelectionMutation.mutate({
+      id: selectionId,
+      data: { selections: editedSelections }
+    });
+  };
 
   const canEdit = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
 
