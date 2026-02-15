@@ -19,7 +19,8 @@ import {
   ArrowLeft,
   Loader2,
   ShieldAlert,
-  Home
+  Home,
+  CalendarPlus
 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -45,6 +46,8 @@ export default function SelectionEditor() {
   const [selections, setSelections] = useState({});
   const [homeRinks, setHomeRinks] = useState(2);
   const [selectedRinks, setSelectedRinks] = useState([1, 2]);
+  const [matchStartTime, setMatchStartTime] = useState('10:00');
+  const [matchEndTime, setMatchEndTime] = useState('14:00');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -89,6 +92,8 @@ export default function SelectionEditor() {
       setSelections(existingSelection.selections || {});
       setHomeRinks(existingSelection.home_rinks || 2);
       setSelectedRinks(existingSelection.selected_rinks || [1, 2]);
+      setMatchStartTime(existingSelection.match_start_time || '10:00');
+      setMatchEndTime(existingSelection.match_end_time || '14:00');
     }
   }, [existingSelection]);
 
@@ -138,6 +143,19 @@ export default function SelectionEditor() {
     },
   });
 
+  const generateTimeSlots = () => {
+    if (!club) return [];
+    const slots = [];
+    const [openHour] = (club.opening_time || '10:00').split(':').map(Number);
+    const [closeHour] = (club.closing_time || '21:00').split(':').map(Number);
+    const duration = club.session_duration || 2;
+    
+    for (let hour = openHour; hour + duration <= closeHour; hour += duration) {
+      slots.push(`${String(hour).padStart(2, '0')}:00`);
+    }
+    return slots;
+  };
+
   const handleSave = async (publish = false) => {
     if (!competition) {
       toast.error('Please select a competition');
@@ -152,6 +170,8 @@ export default function SelectionEditor() {
       selections,
       home_rinks: homeRinks,
       selected_rinks: selectedRinks,
+      match_start_time: matchStartTime,
+      match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
       selector_email: user.email
     };
@@ -165,6 +185,58 @@ export default function SelectionEditor() {
     } else {
       createMutation.mutate(data);
     }
+  };
+
+  const handleBookRinks = async () => {
+    if (!competition || selectedRinks.length === 0 || !matchStartTime || !matchEndTime) {
+      toast.error('Please fill in all match details first');
+      return;
+    }
+
+    const duration = club?.session_duration || 2;
+    const [startHour] = matchStartTime.split(':').map(Number);
+    const [endHour] = matchEndTime.split(':').map(Number);
+    
+    const bookerName = `${competition}${matchName ? ` - ${matchName}` : ''}`;
+    const bookingsToCreate = [];
+
+    for (const rinkNum of selectedRinks) {
+      for (let hour = startHour; hour < endHour; hour += duration) {
+        const slotStart = `${String(hour).padStart(2, '0')}:00`;
+        const slotEnd = `${String(hour + duration).padStart(2, '0')}:00`;
+        
+        // Check if slot is already booked
+        const existingBooking = existingBookings.find(
+          b => b.rink_number === rinkNum && 
+               b.start_time === slotStart && 
+               b.status !== 'cancelled' && 
+               b.status !== 'rejected'
+        );
+        
+        if (!existingBooking) {
+          bookingsToCreate.push({
+            club_id: clubId,
+            rink_number: rinkNum,
+            date: matchDate,
+            start_time: slotStart,
+            end_time: slotEnd,
+            status: 'approved',
+            competition_type: 'Club',
+            booker_name: bookerName,
+            booker_email: user.email,
+            notes: `Match booking for ${competition}`,
+          });
+        }
+      }
+    }
+
+    if (bookingsToCreate.length === 0) {
+      toast.error('All selected slots are already booked');
+      return;
+    }
+
+    await Promise.all(bookingsToCreate.map(b => createBookingMutation.mutateAsync(b)));
+    toast.success(`${bookingsToCreate.length} booking(s) created for the match`);
   };
 
   const handleSelectionChange = (position, memberEmail) => {
@@ -331,6 +403,59 @@ export default function SelectionEditor() {
                         ))}
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Start Time</Label>
+                        <Select value={matchStartTime} onValueChange={setMatchStartTime}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {generateTimeSlots().map(time => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>End Time</Label>
+                        <Select value={matchEndTime} onValueChange={setMatchEndTime}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {generateTimeSlots().filter(t => t > matchStartTime).map(time => {
+                              const duration = club?.session_duration || 2;
+                              const [hour] = time.split(':').map(Number);
+                              const endTime = `${String(hour + duration).padStart(2, '0')}:00`;
+                              return (
+                                <SelectItem key={endTime} value={endTime}>{endTime}</SelectItem>
+                              );
+                            })}
+                            {/* Add final end time option */}
+                            {club && (
+                              <SelectItem value={club.closing_time || '21:00'}>
+                                {club.closing_time || '21:00'}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleBookRinks}
+                      disabled={createBookingMutation.isPending || selectedRinks.length === 0}
+                    >
+                      {createBookingMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <CalendarPlus className="w-4 h-4 mr-2" />
+                      )}
+                      Book Rinks for Match
+                    </Button>
                   </>
                 )}
 
