@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -22,7 +22,8 @@ const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duratio
     slots.push({
       start: `${String(startHour).padStart(2, '0')}:00`,
       end: `${String(endHour).padStart(2, '0')}:00`,
-      label: `${formatHour(startHour)} - ${formatHour(endHour)}`
+      label: `${formatHour(startHour)} - ${formatHour(endHour)}`,
+      index: slots.length
     });
   }
   return slots;
@@ -42,7 +43,15 @@ const statusIcons = {
   cancelled: XCircle,
 };
 
-export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, currentUserEmail, club }) {
+export default function TimeSlotGrid({ 
+  bookings, 
+  selectedDate, 
+  onSlotClick, 
+  currentUserEmail, 
+  club,
+  selectedSlots = [],
+  onMultiSlotSelect
+}) {
   const TIME_SLOTS = generateTimeSlots(
     club?.opening_time,
     club?.closing_time,
@@ -63,6 +72,52 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
   const isSlotAvailable = (rink, startTime) => {
     const booking = getBookingForSlot(rink, startTime);
     return !booking || booking.status === 'rejected' || booking.status === 'cancelled';
+  };
+
+  const isSlotSelected = (rink, slotIndex) => {
+    return selectedSlots.some(s => s.rink === rink && s.slotIndex === slotIndex);
+  };
+
+  const canSelectSlot = (rink, slotIndex) => {
+    if (selectedSlots.length === 0) return true;
+    
+    // Must be same rink
+    const sameRinkSelected = selectedSlots.filter(s => s.rink === rink);
+    if (sameRinkSelected.length === 0 && selectedSlots.length > 0) return false;
+    
+    // Must be adjacent
+    const selectedIndices = sameRinkSelected.map(s => s.slotIndex);
+    const minIndex = Math.min(...selectedIndices);
+    const maxIndex = Math.max(...selectedIndices);
+    
+    return slotIndex === minIndex - 1 || slotIndex === maxIndex + 1;
+  };
+
+  const handleSlotClick = (rink, slot, slotIndex) => {
+    if (!isSlotAvailable(rink, slot.start)) return;
+    
+    if (onMultiSlotSelect) {
+      const isSelected = isSlotSelected(rink, slotIndex);
+      
+      if (isSelected) {
+        // Can only deselect if it's at the edge
+        const sameRinkSelected = selectedSlots.filter(s => s.rink === rink);
+        const selectedIndices = sameRinkSelected.map(s => s.slotIndex);
+        const minIndex = Math.min(...selectedIndices);
+        const maxIndex = Math.max(...selectedIndices);
+        
+        if (slotIndex === minIndex || slotIndex === maxIndex) {
+          onMultiSlotSelect(selectedSlots.filter(s => !(s.rink === rink && s.slotIndex === slotIndex)));
+        }
+      } else if (canSelectSlot(rink, slotIndex)) {
+        onMultiSlotSelect([...selectedSlots, { rink, slot, slotIndex }]);
+      } else if (selectedSlots.length > 0 && selectedSlots[0].rink !== rink) {
+        // Starting fresh on a new rink
+        onMultiSlotSelect([{ rink, slot, slotIndex }]);
+      }
+    } else {
+      onSlotClick(rink, slot);
+    }
   };
 
   return (
@@ -101,6 +156,8 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
                   const available = isSlotAvailable(rink, slot.start);
                   const isOwnBooking = booking?.booker_email === currentUserEmail;
                   const StatusIcon = booking ? statusIcons[booking.status] : null;
+                  const selected = isSlotSelected(rink, slotIndex);
+                  const canSelect = available && (selectedSlots.length === 0 || canSelectSlot(rink, slotIndex) || selectedSlots[0].rink !== rink);
 
                   return (
                     <Tooltip key={rink}>
@@ -108,18 +165,27 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
                         <motion.button
                           whileHover={{ scale: available ? 1.02 : 1 }}
                           whileTap={{ scale: available ? 0.98 : 1 }}
-                          onClick={() => available && onSlotClick(rink, slot)}
+                          onClick={() => handleSlotClick(rink, slot, slotIndex)}
                           disabled={!available}
                           className={cn(
                             "p-3 rounded-xl border-2 transition-all duration-200 min-h-[60px] relative",
-                            available
+                            available && !selected
                               ? "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer"
+                              : available && selected
+                              ? "bg-emerald-100 border-emerald-500 cursor-pointer"
                               : cn(statusStyles[booking?.status], "cursor-default"),
-                            available && "hover:shadow-md"
+                            available && canSelect && "hover:shadow-md",
+                            available && !canSelect && selectedSlots.length > 0 && "opacity-50"
                           )}
                         >
                           {available ? (
-                            <span className="text-xs font-medium text-emerald-600">Available</span>
+                            selected ? (
+                              <div className="flex items-center justify-center">
+                                <Check className="w-5 h-5 text-emerald-700" />
+                              </div>
+                            ) : (
+                              <span className="text-xs font-medium text-emerald-600">Available</span>
+                            )
                           ) : (
                             <div className="flex flex-col items-center gap-1">
                               {StatusIcon && (
@@ -140,7 +206,13 @@ export default function TimeSlotGrid({ bookings, selectedDate, onSlotClick, curr
                       </TooltipTrigger>
                       <TooltipContent>
                         {available ? (
-                          <p>Click to book Rink {rink} at {slot.label}</p>
+                          selected ? (
+                            <p>Click to deselect</p>
+                          ) : canSelect ? (
+                            <p>Click to select Rink {rink} at {slot.label}</p>
+                          ) : (
+                            <p>Select adjacent slots only</p>
+                          )
                         ) : (
                           <div className="text-center">
                             <p className="font-medium">{booking?.booker_name}</p>

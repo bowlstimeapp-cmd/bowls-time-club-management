@@ -26,7 +26,7 @@ const COMPETITION_TYPES = ['Club', 'County', 'National', 'Other'];
 export default function BookingModal({ 
   open, 
   onClose, 
-  selectedSlot, 
+  selectedSlots = [],
   selectedDate, 
   onConfirm, 
   isLoading 
@@ -49,7 +49,23 @@ export default function BookingModal({
     onClose();
   };
 
-  if (!selectedSlot) return null;
+  if (!selectedSlots || selectedSlots.length === 0) return null;
+
+  // Sort slots by index to get time range
+  const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
+  const firstSlot = sortedSlots[0];
+  const lastSlot = sortedSlots[sortedSlots.length - 1];
+  const rink = firstSlot.rink;
+
+  const formatHour = (time) => {
+    const [hours] = time.split(':');
+    const hour = parseInt(hours);
+    return hour < 12 ? `${hour}am` : hour === 12 ? '12pm' : `${hour - 12}pm`;
+  };
+
+  const timeRangeLabel = selectedSlots.length === 1 
+    ? firstSlot.slot.label
+    : `${formatHour(firstSlot.slot.start)} - ${formatHour(lastSlot.slot.end)}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -59,7 +75,9 @@ export default function BookingModal({
             Request Booking
           </DialogTitle>
           <DialogDescription className="text-gray-500">
-            Your booking will be sent for approval
+            {selectedSlots.length > 1 
+              ? `Booking ${selectedSlots.length} consecutive slots`
+              : 'Your booking will be sent for approval'}
           </DialogDescription>
         </DialogHeader>
 
@@ -67,7 +85,7 @@ export default function BookingModal({
           <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-3 text-gray-700">
               <MapPin className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">Rink {selectedSlot.rink}</span>
+              <span className="font-medium">Rink {rink}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-700">
               <Calendar className="w-5 h-5 text-emerald-600" />
@@ -75,7 +93,7 @@ export default function BookingModal({
             </div>
             <div className="flex items-center gap-3 text-gray-700">
               <Clock className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">{selectedSlot.slot.label}</span>
+              <span className="font-medium">{timeRangeLabel}</span>
             </div>
           </div>
 

@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfToday } from 'date-fns';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -18,7 +19,7 @@ export default function BookRink() {
   const navigate = useNavigate();
   
   const [selectedDate, setSelectedDate] = useState(startOfToday());
-  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [selectedSlots, setSelectedSlots] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -80,47 +81,63 @@ export default function BookRink() {
 
   const createBookingMutation = useMutation({
     mutationFn: (bookingData) => base44.entities.Booking.create(bookingData),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      setModalOpen(false);
-      setSelectedSlot(null);
-      const message = variables.status === 'approved' 
-        ? 'Booking confirmed!' 
-        : 'Booking request submitted! Awaiting approval.';
-      toast.success(message);
     },
     onError: () => {
       toast.error('Failed to create booking. Please try again.');
     },
   });
 
-  const handleSlotClick = (rink, slot) => {
-    setSelectedSlot({ rink, slot });
-    setModalOpen(true);
-  };
-
-  const handleConfirmBooking = (notes, competitionType, competitionOther) => {
-    if (!user || !selectedSlot || !clubId) return;
+  const handleConfirmBooking = async (notes, competitionType, competitionOther) => {
+    if (!user || selectedSlots.length === 0 || !clubId) return;
 
     const status = club?.auto_approve_bookings ? 'approved' : 'pending';
-    const successMessage = club?.auto_approve_bookings 
-      ? 'Booking confirmed!' 
-      : 'Booking request submitted! Awaiting approval.';
+    const bookerName = user.first_name && user.surname 
+      ? `${user.first_name} ${user.surname}` 
+      : (user.full_name || user.email);
 
-    createBookingMutation.mutate({
-      club_id: clubId,
-      rink_number: selectedSlot.rink,
-      date: dateString,
-      start_time: selectedSlot.slot.start,
-      end_time: selectedSlot.slot.end,
-      status,
-      competition_type: competitionType,
-      competition_other: competitionType === 'Other' ? competitionOther : '',
-      booker_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : (user.full_name || user.email),
-      booker_email: user.email,
-      notes: notes || '',
-    });
+    // Sort slots by index
+    const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
+    
+    // Create a booking for each slot
+    const bookingPromises = sortedSlots.map(slotData => 
+      createBookingMutation.mutateAsync({
+        club_id: clubId,
+        rink_number: slotData.rink,
+        date: dateString,
+        start_time: slotData.slot.start,
+        end_time: slotData.slot.end,
+        status,
+        competition_type: competitionType,
+        competition_other: competitionType === 'Other' ? competitionOther : '',
+        booker_name: bookerName,
+        booker_email: user.email,
+        notes: notes || '',
+      })
+    );
+
+    await Promise.all(bookingPromises);
+    
+    setModalOpen(false);
+    setSelectedSlots([]);
+    
+    const message = status === 'approved' 
+      ? `${sortedSlots.length} booking(s) confirmed!` 
+      : `${sortedSlots.length} booking request(s) submitted! Awaiting approval.`;
+    toast.success(message);
   };
+
+  const handleBookSelected = () => {
+    if (selectedSlots.length > 0) {
+      setModalOpen(true);
+    }
+  };
+
+  // Clear selection when date changes
+  useEffect(() => {
+    setSelectedSlots([]);
+  }, [selectedDate]);
 
   if (!clubId || membershipLoading) {
     return (
@@ -145,7 +162,7 @@ export default function BookRink() {
             Book a Rink
           </h1>
           <p className="text-gray-600">
-            {club?.name} • Select a date and available time slot to request a booking
+            {club?.name} • Select consecutive time slots on the same rink
           </p>
         </motion.div>
 
@@ -156,10 +173,20 @@ export default function BookRink() {
         >
           <Card className="shadow-lg border-0">
             <CardHeader className="border-b bg-white/50">
-              <DateSelector 
-                selectedDate={selectedDate} 
-                onDateChange={setSelectedDate} 
-              />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <DateSelector 
+                  selectedDate={selectedDate} 
+                  onDateChange={setSelectedDate} 
+                />
+                {selectedSlots.length > 0 && (
+                  <Button 
+                    onClick={handleBookSelected}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    Book {selectedSlots.length} Slot{selectedSlots.length > 1 ? 's' : ''}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-6">
               {isLoading ? (
@@ -172,9 +199,10 @@ export default function BookRink() {
                 <TimeSlotGrid
                   bookings={bookings}
                   selectedDate={selectedDate}
-                  onSlotClick={handleSlotClick}
                   currentUserEmail={user?.email}
                   club={club}
+                  selectedSlots={selectedSlots}
+                  onMultiSlotSelect={setSelectedSlots}
                 />
               )}
             </CardContent>
@@ -192,6 +220,10 @@ export default function BookRink() {
             <span>Available</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-emerald-100 border-2 border-emerald-500" />
+            <span>Selected</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-amber-100 border-2 border-amber-300" />
             <span>Pending</span>
           </div>
@@ -205,9 +237,8 @@ export default function BookRink() {
           open={modalOpen}
           onClose={() => {
             setModalOpen(false);
-            setSelectedSlot(null);
           }}
-          selectedSlot={selectedSlot}
+          selectedSlots={selectedSlots}
           selectedDate={selectedDate}
           onConfirm={handleConfirmBooking}
           isLoading={createBookingMutation.isPending}
