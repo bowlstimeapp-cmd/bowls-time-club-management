@@ -33,6 +33,7 @@ export default function ClubSettings() {
   const [closingTime, setClosingTime] = useState('21:00');
   const [sessionDuration, setSessionDuration] = useState(2);
   const [autoApprove, setAutoApprove] = useState(false);
+  const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
   const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function ClubSettings() {
       setClosingTime(club.closing_time || '21:00');
       setSessionDuration(club.session_duration || 2);
       setAutoApprove(club.auto_approve_bookings || false);
+      setEmailMemberNotifications(club.email_member_notifications !== false);
       setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
     }
   }, [club]);
@@ -132,6 +134,7 @@ export default function ClubSettings() {
       closing_time: closingTime,
       session_duration: parseInt(sessionDuration),
       auto_approve_bookings: autoApprove,
+      email_member_notifications: emailMemberNotifications,
       membership_types: membershipTypes
     });
   };
@@ -235,6 +238,29 @@ export default function ClubSettings() {
                   <Switch
                     checked={autoApprove}
                     onCheckedChange={setAutoApprove}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Settings</CardTitle>
+                <CardDescription>
+                  Configure email notifications for members
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Email Member Notifications</Label>
+                    <p className="text-sm text-gray-500">
+                      Send email notifications to members when they are selected for matches
+                    </p>
+                  </div>
+                  <Switch
+                    checked={emailMemberNotifications}
+                    onCheckedChange={setEmailMemberNotifications}
                   />
                 </div>
               </CardContent>

@@ -6,11 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, User, Save, Calendar, Trash2, Plus } from 'lucide-react';
+import { Loader2, User, Save, Calendar, Trash2, Plus, Bell } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Profile() {
+  const [searchParams] = useSearchParams();
+  const clubId = searchParams.get('clubId');
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
@@ -18,6 +22,7 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -36,6 +41,42 @@ export default function Profile() {
     queryFn: () => base44.entities.UserUnavailability.filter({ user_email: user.email }, 'start_date'),
     enabled: !!user?.email,
   });
+
+  const { data: membership } = useQuery({
+    queryKey: ['myMembership', clubId, user?.email],
+    queryFn: async () => {
+      const memberships = await base44.entities.ClubMembership.filter({ 
+        club_id: clubId, 
+        user_email: user.email 
+      });
+      return memberships[0];
+    },
+    enabled: !!clubId && !!user?.email,
+  });
+
+  useEffect(() => {
+    if (membership) {
+      setEmailNotifications(membership.email_notifications !== false);
+    }
+  }, [membership]);
+
+  const updateMembershipMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.ClubMembership.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myMembership'] });
+      toast.success('Notification preferences updated');
+    },
+  });
+
+  const handleEmailNotificationsChange = (checked) => {
+    setEmailNotifications(checked);
+    if (membership) {
+      updateMembershipMutation.mutate({ 
+        id: membership.id, 
+        data: { email_notifications: checked } 
+      });
+    }
+  };
 
   const addUnavailabilityMutation = useMutation({
     mutationFn: (data) => base44.entities.UserUnavailability.create(data),
@@ -180,6 +221,34 @@ export default function Profile() {
               </form>
             </CardContent>
           </Card>
+
+          {clubId && membership && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-emerald-600" />
+                  Notification Preferences
+                </CardTitle>
+                <CardDescription>
+                  Manage how you receive notifications from the club
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Email Notifications</Label>
+                    <p className="text-sm text-gray-500">
+                      Receive emails when you are selected for matches
+                    </p>
+                  </div>
+                  <Switch
+                    checked={emailNotifications}
+                    onCheckedChange={handleEmailNotificationsChange}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="shadow-lg">
             <CardHeader>

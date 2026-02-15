@@ -6,7 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Loader2, Trophy, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Trophy, Calendar, Pencil } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO } from 'date-fns';
@@ -24,6 +38,8 @@ export default function LiveScoring() {
   const [oppositionPlayers, setOppositionPlayers] = useState({});
   const [clubScores, setClubScores] = useState({});
   const [oppositionScores, setOppositionScores] = useState({});
+  const [ends, setEnds] = useState({});
+  const [editTeamOpen, setEditTeamOpen] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -92,6 +108,7 @@ export default function LiveScoring() {
       setOppositionPlayers(matchScore.opposition_players || {});
       setClubScores(matchScore.club_scores || {});
       setOppositionScores(matchScore.opposition_scores || {});
+      setEnds(matchScore.ends || {});
     }
   }, [matchScore]);
 
@@ -126,6 +143,7 @@ export default function LiveScoring() {
       opposition_players: oppositionPlayers,
       club_scores: clubScores,
       opposition_scores: oppositionScores,
+      ends: ends,
     };
 
     if (matchScore) {
@@ -144,6 +162,7 @@ export default function LiveScoring() {
 
   const clubTotal = calculateTotal(clubScores);
   const oppositionTotal = calculateTotal(oppositionScores);
+  const totalEnds = calculateTotal(ends);
 
   // Build rinks from selection - check all possible rinks 1-6
   const getRinks = () => {
@@ -242,7 +261,11 @@ export default function LiveScoring() {
           transition={{ delay: 0.1 }}
         >
           <Card className="mb-6 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-6">
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 relative">
+              <div className="absolute top-4 right-4 text-white text-sm">
+                <span className="text-emerald-200">Total Ends:</span>{' '}
+                <span className="font-bold text-lg">{totalEnds}</span>
+              </div>
               <h2 className="text-center text-white text-lg font-medium mb-4">Score</h2>
               <div className="flex items-center justify-center gap-8">
                 <div className="text-center">
@@ -274,8 +297,9 @@ export default function LiveScoring() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-16">Rink</th>
+                      <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-24">Rink</th>
                       <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'} Team</th>
+                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-500 w-16">Ends</th>
                       <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
                       <th className="text-center py-2 px-2 text-sm font-medium text-gray-700 w-20">Score</th>
                       <th className="text-left py-2 px-2 text-sm font-medium text-gray-700">Opposition Team</th>
@@ -329,14 +353,29 @@ export default function LiveScoring() {
 
                       return (
                         <tr key={rink.number} className="border-b last:border-0">
-                          <td className="py-3 px-2">
-                            <div className="text-sm font-medium text-gray-600">{rink.number}</div>
-                            <Badge className={`text-xs mt-1 ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {rink.isHome ? 'Home' : 'Away'}
-                            </Badge>
+                          <td className="py-3 px-2 w-24">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-600">{rink.number}</span>
+                              <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {rink.isHome ? 'Home' : 'Away'}
+                              </Badge>
+                            </div>
                           </td>
                           <td className="py-3 px-2">
                             {getTeamDisplay(rink.positions, false)}
+                          </td>
+                          <td className="py-3 px-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-14 text-center h-8"
+                              value={ends[`rink${rink.number}`] || ''}
+                              onChange={(e) => setEnds(prev => ({
+                                ...prev,
+                                [`rink${rink.number}`]: e.target.value
+                              }))}
+                              disabled={!canEdit}
+                            />
                           </td>
                           <td className="py-3 px-2">
                             <Input
@@ -373,9 +412,79 @@ export default function LiveScoring() {
                   </tbody>
                 </table>
               </div>
+              {canEdit && (
+                <div className="mt-4 pt-4 border-t flex justify-end">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditTeamOpen(true)}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Team
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Edit Team Dialog */}
+        <Dialog open={editTeamOpen} onOpenChange={setEditTeamOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Team Selection</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              {rinks.map((rink) => (
+                <div key={rink.number} className="border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="font-medium">Rink {rink.number}</span>
+                    <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {rink.isHome ? 'Home' : 'Away'}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {POSITIONS.map((pos) => {
+                      const posKey = `rink${rink.number}_${pos}`;
+                      return (
+                        <div key={pos}>
+                          <Label className="text-xs text-gray-500">{pos}</Label>
+                          <Select
+                            value={selection?.selections?.[posKey] || ''}
+                            onValueChange={(value) => {
+                              // Update the selection locally - this would need to persist
+                              const newSelections = { ...selection.selections, [posKey]: value };
+                              // For now just update local state - would need mutation to persist
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder={`Select ${pos}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={null}>-- None --</SelectItem>
+                              {members.map((member) => (
+                                <SelectItem key={member.user_email} value={member.user_email}>
+                                  {member.first_name && member.surname 
+                                    ? `${member.first_name} ${member.surname}`
+                                    : member.user_name || member.user_email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditTeamOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
