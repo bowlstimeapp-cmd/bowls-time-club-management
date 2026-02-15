@@ -135,9 +135,10 @@ export default function BookRink() {
   };
 
   // Clear selection when date changes
+  const dateString2 = format(selectedDate, 'yyyy-MM-dd');
   useEffect(() => {
     setSelectedSlots([]);
-  }, [selectedDate]);
+  }, [dateString2]);
 
   if (!clubId || membershipLoading) {
     return (

@@ -115,7 +115,7 @@ export default function TimeSlotGrid({
         // Starting fresh on a new rink
         onMultiSlotSelect([{ rink, slot, slotIndex }]);
       }
-    } else {
+    } else if (onSlotClick) {
       onSlotClick(rink, slot);
     }
   };
