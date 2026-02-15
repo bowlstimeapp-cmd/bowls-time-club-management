@@ -129,6 +129,7 @@ export default function AddMemberModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="live_scorer">Live Scorer</SelectItem>
                 <SelectItem value="selector">Selector</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
