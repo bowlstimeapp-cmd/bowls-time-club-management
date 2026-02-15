@@ -16,13 +16,15 @@ import {
   ShieldAlert,
   Shield,
   User,
-  History
+  History,
+  Upload
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import MemberDetailModal from '@/components/member/MemberDetailModal';
 import AddMemberModal from '@/components/member/AddMemberModal';
+import BulkUploadModal from '@/components/member/BulkUploadModal';
 
 const membershipColors = {
   'Winter Indoor Member': 'bg-blue-100 text-blue-800 border-blue-200',
@@ -36,6 +38,7 @@ export default function ClubAdmin() {
   const clubId = searchParams.get('clubId');
   const [user, setUser] = useState(null);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
 
@@ -207,10 +210,16 @@ export default function ClubAdmin() {
             </h1>
             <p className="text-gray-600">Manage club membership and requests</p>
           </div>
-          <Button onClick={() => setAddMemberOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add Member
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Bulk Upload
+            </Button>
+            <Button onClick={() => setAddMemberOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add Member
+            </Button>
+          </div>
         </motion.div>
 
         {/* Stats */}
@@ -456,6 +465,13 @@ export default function ClubAdmin() {
           isUpdating={updateMembershipMutation.isPending}
           isAdmin={true}
           membershipTypes={membershipTypes}
+        />
+
+        <BulkUploadModal
+          open={bulkUploadOpen}
+          onClose={() => setBulkUploadOpen(false)}
+          clubId={clubId}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] })}
         />
       </div>
     </div>

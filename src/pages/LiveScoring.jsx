@@ -11,7 +11,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO } from 'date-fns';
 
-const POSITIONS = ['Skip', 'Lead', '2', '3'];
+const POSITIONS = ['Skip', '3', '2', 'Lead'];
 
 export default function LiveScoring() {
   const [searchParams] = useSearchParams();
@@ -145,25 +145,32 @@ export default function LiveScoring() {
   const clubTotal = calculateTotal(clubScores);
   const oppositionTotal = calculateTotal(oppositionScores);
 
-  // Build rinks from selection
+  // Build rinks from selection - check all possible rinks 1-6
   const getRinks = () => {
     if (!selection?.selections) return [];
     const rinks = [];
-    const selectedRinks = selection.selected_rinks?.map(r => parseInt(r)) || [1, 2, 3, 4];
     const homeRinksCount = selection.home_rinks || 2;
     
-    for (let i = 0; i < selectedRinks.length; i++) {
-      const rinkNum = selectedRinks[i];
+    // Check all possible rink numbers 1-6 to find which ones have players assigned
+    for (let rinkNum = 1; rinkNum <= 6; rinkNum++) {
       const rinkPositions = {};
+      let hasPlayers = false;
+      
       for (const pos of POSITIONS) {
         const key = `rink${rinkNum}_${pos}`;
+        if (selection.selections[key]) {
+          hasPlayers = true;
+        }
         rinkPositions[pos] = selection.selections[key];
       }
-      rinks.push({ 
-        number: rinkNum, 
-        positions: rinkPositions,
-        isHome: i < homeRinksCount
-      });
+      
+      if (hasPlayers) {
+        rinks.push({ 
+          number: rinkNum, 
+          positions: rinkPositions,
+          isHome: rinks.length < homeRinksCount
+        });
+      }
     }
     return rinks;
   };
@@ -294,7 +301,7 @@ export default function LiveScoring() {
                                   <React.Fragment key={pos}>
                                     <Input
                                       placeholder={pos}
-                                      className={`h-7 ${pos === 'Skip' ? 'w-28 font-bold text-sm' : 'w-20 text-xs'}`}
+                                      className={`h-7 ${pos === 'Skip' ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
                                       value={oppositionPlayers[posKey] || ''}
                                       onChange={(e) => setOppositionPlayers(prev => ({
                                         ...prev,
@@ -312,7 +319,7 @@ export default function LiveScoring() {
                         
                         return (
                           <div className="text-sm">
-                            <span className="font-bold text-base">{names[0]}</span>
+                            <span className="font-bold text-base uppercase">{names[0]}</span>
                             {names.slice(1).filter(Boolean).length > 0 && (
                               <span className="text-gray-600">, {names.slice(1).filter(Boolean).join(', ')}</span>
                             )}
