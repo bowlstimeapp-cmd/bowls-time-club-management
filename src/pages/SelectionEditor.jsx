@@ -18,8 +18,10 @@ import {
   Send, 
   ArrowLeft,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  Home
 } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -41,6 +43,8 @@ export default function SelectionEditor() {
   const [matchDate, setMatchDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [matchName, setMatchName] = useState('');
   const [selections, setSelections] = useState({});
+  const [homeRinks, setHomeRinks] = useState(2);
+  const [selectedRinks, setSelectedRinks] = useState([1, 2]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -83,6 +87,8 @@ export default function SelectionEditor() {
       setMatchDate(existingSelection.match_date);
       setMatchName(existingSelection.match_name || '');
       setSelections(existingSelection.selections || {});
+      setHomeRinks(existingSelection.home_rinks || 2);
+      setSelectedRinks(existingSelection.selected_rinks || [1, 2]);
     }
   }, [existingSelection]);
 
@@ -98,6 +104,19 @@ export default function SelectionEditor() {
   const { data: unavailabilities = [] } = useQuery({
     queryKey: ['allUnavailabilities'],
     queryFn: () => base44.entities.UserUnavailability.list(),
+  });
+
+  const { data: existingAvailabilities = [] } = useQuery({
+    queryKey: ['selectionAvailabilities', selectionId],
+    queryFn: () => base44.entities.MemberAvailability.filter({ selection_id: selectionId }),
+    enabled: !!selectionId,
+  });
+
+  const deleteAvailabilityMutation = useMutation({
+    mutationFn: (id) => base44.entities.MemberAvailability.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['selectionAvailabilities'] });
+    },
   });
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
@@ -131,6 +150,8 @@ export default function SelectionEditor() {
       match_date: matchDate,
       match_name: matchName,
       selections,
+      home_rinks: homeRinks,
+      selected_rinks: selectedRinks,
       status: publish ? 'published' : 'draft',
       selector_email: user.email
     };
@@ -147,10 +168,41 @@ export default function SelectionEditor() {
   };
 
   const handleSelectionChange = (position, memberEmail) => {
+    const previousEmail = selections[position];
+    
+    // If removing a player, delete their availability record
+    if (previousEmail && !memberEmail) {
+      const availabilityRecord = existingAvailabilities.find(a => a.user_email === previousEmail);
+      if (availabilityRecord) {
+        deleteAvailabilityMutation.mutate(availabilityRecord.id);
+      }
+    }
+    
     setSelections(prev => ({
       ...prev,
       [position]: memberEmail
     }));
+  };
+
+  const handleHomeRinksChange = (value) => {
+    const numRinks = parseInt(value);
+    setHomeRinks(numRinks);
+    // Auto-select first N rinks as home rinks
+    const newSelectedRinks = [];
+    for (let i = 1; i <= numRinks; i++) {
+      newSelectedRinks.push(i);
+    }
+    setSelectedRinks(newSelectedRinks);
+  };
+
+  const toggleRinkSelection = (rinkNum) => {
+    if (selectedRinks.includes(rinkNum)) {
+      if (selectedRinks.length > 1) {
+        setSelectedRinks(selectedRinks.filter(r => r !== rinkNum));
+      }
+    } else if (selectedRinks.length < homeRinks) {
+      setSelectedRinks([...selectedRinks, rinkNum].sort((a, b) => a - b));
+    }
   };
 
   const selectedEmails = Object.values(selections).filter(Boolean);
@@ -241,6 +293,46 @@ export default function SelectionEditor() {
                     placeholder="e.g., vs Springfield BC"
                   />
                 </div>
+
+                {competition && competition !== 'Top Club' && (
+                  <>
+                    <div>
+                      <Label>Number of Home Rinks</Label>
+                      <Select value={String(homeRinks)} onValueChange={handleHomeRinksChange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 Rink</SelectItem>
+                          <SelectItem value="2">2 Rinks</SelectItem>
+                          <SelectItem value="3">3 Rinks</SelectItem>
+                          <SelectItem value="4">4 Rinks</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <Home className="w-4 h-4" />
+                        Select Rinks ({selectedRinks.length}/{homeRinks})
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[1, 2, 3, 4].map(rink => (
+                          <div 
+                            key={rink}
+                            className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
+                            onClick={() => toggleRinkSelection(rink)}
+                          >
+                            <Checkbox 
+                              checked={selectedRinks.includes(rink)}
+                              onCheckedChange={() => toggleRinkSelection(rink)}
+                            />
+                            <span className="text-sm">Rink {rink}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="pt-4 space-y-2">
                   <Button 
