@@ -51,6 +51,7 @@ export default function BookingCard({
   onApprove, 
   onReject,
   onEdit,
+  onDelete,
   isAdmin = false,
   isOwn = false,
   isLoading = false 
@@ -173,6 +174,19 @@ export default function BookingCard({
                     >
                       <Pencil className="w-4 h-4 mr-1" />
                       Edit
+                    </Button>
+                  )}
+                  
+                  {isAdmin && onDelete && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDelete(booking)}
+                      disabled={isLoading}
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
                     </Button>
                   )}
                   
