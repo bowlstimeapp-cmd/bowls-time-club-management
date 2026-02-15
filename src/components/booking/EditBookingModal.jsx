@@ -16,25 +16,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, AlertTriangle } from 'lucide-react';
 
 export default function EditBookingModal({ 
   open, 
   onClose, 
   booking, 
   club,
+  allBookings = [],
   onSave, 
   isLoading 
 }) {
   const [rinkNumber, setRinkNumber] = useState(booking?.rink_number || 1);
   const [date, setDate] = useState(booking?.date || '');
   const [startTime, setStartTime] = useState(booking?.start_time || '');
+  const [conflictError, setConflictError] = useState(false);
 
   useEffect(() => {
     if (booking) {
       setRinkNumber(booking.rink_number);
       setDate(booking.date);
       setStartTime(booking.start_time);
+      setConflictError(false);
     }
   }, [booking]);
 
@@ -51,11 +54,30 @@ export default function EditBookingModal({
     return slots;
   };
 
+  const checkForConflict = () => {
+    // Check if there's already a booking for this rink, date, and time
+    const conflict = allBookings.find(b => 
+      b.id !== booking?.id && // Not the current booking
+      b.rink_number === parseInt(rinkNumber) &&
+      b.date === date &&
+      b.start_time === startTime &&
+      (b.status === 'approved' || b.status === 'pending')
+    );
+    return conflict;
+  };
+
   const handleSave = () => {
+    const conflict = checkForConflict();
+    if (conflict) {
+      setConflictError(true);
+      return;
+    }
+    
     const duration = club?.session_duration || 2;
     const [startHour] = startTime.split(':').map(Number);
     const endTime = `${String(startHour + duration).padStart(2, '0')}:00`;
     
+    setConflictError(false);
     onSave({
       rink_number: parseInt(rinkNumber),
       date,
@@ -63,6 +85,11 @@ export default function EditBookingModal({
       end_time: endTime
     });
   };
+
+  // Clear conflict error when user changes selection
+  useEffect(() => {
+    setConflictError(false);
+  }, [rinkNumber, date, startTime]);
 
   if (!booking) return null;
 
@@ -125,6 +152,16 @@ export default function EditBookingModal({
             <p><span className="font-medium">Booked by:</span> {booking.booker_name}</p>
             <p><span className="font-medium">Email:</span> {booking.booker_email}</p>
           </div>
+
+          {conflictError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Rink already booked at this time</p>
+                <p className="text-sm text-red-600">Please choose another time or rink.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
