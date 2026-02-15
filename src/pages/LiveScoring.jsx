@@ -11,7 +11,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO } from 'date-fns';
 
-const POSITIONS = ['Lead', '2', '3', 'Skip'];
+const POSITIONS = ['Skip', 'Lead', '2', '3'];
 
 export default function LiveScoring() {
   const [searchParams] = useSearchParams();
@@ -246,93 +246,118 @@ export default function LiveScoring() {
           </Card>
         </motion.div>
 
-        {/* Rinks Scoring */}
-        <div className="space-y-6">
-          {rinks.map((rink, index) => (
-            <motion.div
-              key={rink.number}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + index * 0.05 }}
-            >
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Rink {rink.number}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-20">Position</th>
-                          <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'}</th>
-                          <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
-                          <th className="text-center py-2 px-2 text-sm font-medium text-gray-700 w-20">Score</th>
-                          <th className="text-left py-2 px-2 text-sm font-medium text-gray-700">Opposition</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {POSITIONS.map((pos) => {
-                          const posKey = `rink${rink.number}_${pos}`;
+        {/* Rinks Scoring - Condensed Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Rink Scores</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-16">Rink</th>
+                      <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'} Team</th>
+                      <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
+                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-700 w-20">Score</th>
+                      <th className="text-left py-2 px-2 text-sm font-medium text-gray-700">Opposition Team</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rinks.map((rink) => {
+                      const getTeamDisplay = (positions, isOpposition = false) => {
+                        const names = POSITIONS.map((pos, idx) => {
+                          if (isOpposition) {
+                            const posKey = `rink${rink.number}_${pos}`;
+                            return oppositionPlayers[posKey] || '';
+                          }
+                          return getMemberName(positions[pos]);
+                        });
+                        
+                        if (isOpposition) {
                           return (
-                            <tr key={pos} className="border-b last:border-0">
-                              <td className="py-3 px-2 text-sm font-medium text-gray-600">{pos}</td>
-                              <td className="py-3 px-2 text-sm text-gray-900">
-                                {getMemberName(rink.positions[pos])}
-                              </td>
-                              <td className="py-3 px-2">
-                                {pos === 'Skip' && (
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    className="w-16 text-center h-8"
-                                    value={clubScores[`rink${rink.number}`] || ''}
-                                    onChange={(e) => setClubScores(prev => ({
-                                      ...prev,
-                                      [`rink${rink.number}`]: e.target.value
-                                    }))}
-                                    disabled={!canEdit}
-                                  />
-                                )}
-                              </td>
-                              <td className="py-3 px-2">
-                                {pos === 'Skip' && (
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    className="w-16 text-center h-8"
-                                    value={oppositionScores[`rink${rink.number}`] || ''}
-                                    onChange={(e) => setOppositionScores(prev => ({
-                                      ...prev,
-                                      [`rink${rink.number}`]: e.target.value
-                                    }))}
-                                    disabled={!canEdit}
-                                  />
-                                )}
-                              </td>
-                              <td className="py-3 px-2">
-                                <Input
-                                  placeholder={`Opposition ${pos}`}
-                                  className="h-8"
-                                  value={oppositionPlayers[posKey] || ''}
-                                  onChange={(e) => setOppositionPlayers(prev => ({
-                                    ...prev,
-                                    [posKey]: e.target.value
-                                  }))}
-                                  disabled={!canEdit}
-                                />
-                              </td>
-                            </tr>
+                            <div className="flex flex-wrap gap-1 items-center">
+                              {POSITIONS.map((pos, idx) => {
+                                const posKey = `rink${rink.number}_${pos}`;
+                                return (
+                                  <React.Fragment key={pos}>
+                                    <Input
+                                      placeholder={pos}
+                                      className={`h-7 text-xs ${pos === 'Skip' ? 'w-24 font-bold' : 'w-20'}`}
+                                      value={oppositionPlayers[posKey] || ''}
+                                      onChange={(e) => setOppositionPlayers(prev => ({
+                                        ...prev,
+                                        [posKey]: e.target.value
+                                      }))}
+                                      disabled={!canEdit}
+                                    />
+                                    {idx < POSITIONS.length - 1 && <span className="text-gray-300">•</span>}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
                           );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                        }
+                        
+                        return (
+                          <div className="text-sm">
+                            <span className="font-bold">{names[0]}</span>
+                            {names.slice(1).filter(Boolean).length > 0 && (
+                              <span className="text-gray-600">, {names.slice(1).filter(Boolean).join(', ')}</span>
+                            )}
+                          </div>
+                        );
+                      };
+
+                      return (
+                        <tr key={rink.number} className="border-b last:border-0">
+                          <td className="py-3 px-2 text-sm font-medium text-gray-600">{rink.number}</td>
+                          <td className="py-3 px-2">
+                            {getTeamDisplay(rink.positions, false)}
+                          </td>
+                          <td className="py-3 px-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-16 text-center h-8"
+                              value={clubScores[`rink${rink.number}`] || ''}
+                              onChange={(e) => setClubScores(prev => ({
+                                ...prev,
+                                [`rink${rink.number}`]: e.target.value
+                              }))}
+                              disabled={!canEdit}
+                            />
+                          </td>
+                          <td className="py-3 px-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-16 text-center h-8"
+                              value={oppositionScores[`rink${rink.number}`] || ''}
+                              onChange={(e) => setOppositionScores(prev => ({
+                                ...prev,
+                                [`rink${rink.number}`]: e.target.value
+                              }))}
+                              disabled={!canEdit}
+                            />
+                          </td>
+                          <td className="py-3 px-2">
+                            {getTeamDisplay(rink.positions, true)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );
