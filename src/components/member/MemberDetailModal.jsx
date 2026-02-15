@@ -23,6 +23,7 @@ import { User, Mail, Phone, Shield, Loader2, Save, Pencil } from 'lucide-react';
 const roleColors = {
   admin: 'bg-indigo-100 text-indigo-800 border-indigo-200',
   selector: 'bg-amber-100 text-amber-800 border-amber-200',
+  live_scorer: 'bg-teal-100 text-teal-800 border-teal-200',
   member: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
@@ -161,6 +162,7 @@ export default function MemberDetailModal({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="live_scorer">Live Scorer</SelectItem>
                     <SelectItem value="selector">Selector</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
