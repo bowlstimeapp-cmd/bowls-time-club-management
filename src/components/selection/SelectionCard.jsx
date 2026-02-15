@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, User, ClipboardList } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -85,6 +85,14 @@ export default function SelectionCard({
                     View
                   </Button>
                 </Link>
+                {selection.status === 'published' && (
+                  <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                    <Button variant="outline" size="sm">
+                      <ClipboardList className="w-4 h-4 mr-1" />
+                      Live Scoring
+                    </Button>
+                  </Link>
+                )}
                 {isSelector && (
                   <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
                     <Button variant="outline" size="sm">
