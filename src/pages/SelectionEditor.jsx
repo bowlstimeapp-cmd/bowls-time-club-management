@@ -106,6 +106,28 @@ export default function SelectionEditor() {
     enabled: !!clubId,
   });
 
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
+  const { data: existingBookings = [] } = useQuery({
+    queryKey: ['bookings', clubId, matchDate],
+    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: matchDate }),
+    enabled: !!clubId && !!matchDate,
+  });
+
+  const createBookingMutation = useMutation({
+    mutationFn: (data) => base44.entities.Booking.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+
   const { data: unavailabilities = [] } = useQuery({
     queryKey: ['allUnavailabilities'],
     queryFn: () => base44.entities.UserUnavailability.list(),
