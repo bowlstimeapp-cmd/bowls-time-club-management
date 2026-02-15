@@ -162,26 +162,29 @@ export default function ClubAdmin() {
     toast.success(`${membership.user_name || membership.user_email} rejected`);
   };
 
-  const handleUpdateRole = async (memberId, newRole, oldRole) => {
+  const handleUpdateMember = async (memberId, updates, oldRole) => {
     const member = memberships.find(m => m.id === memberId);
     await updateMembershipMutation.mutateAsync({ 
       id: memberId, 
-      data: { role: newRole } 
+      data: updates 
     });
     
-    await createAuditLogMutation.mutateAsync({
-      club_id: clubId,
-      action: 'role_change',
-      target_email: member.user_email,
-      target_name: member.user_name,
-      performed_by_email: user.email,
-      performed_by_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : user.email,
-      old_value: oldRole,
-      new_value: newRole,
-      details: `Role changed from ${oldRole} to ${newRole}`
-    });
+    // Log role change if role was changed
+    if (oldRole && updates.role !== oldRole) {
+      await createAuditLogMutation.mutateAsync({
+        club_id: clubId,
+        action: 'role_change',
+        target_email: member.user_email,
+        target_name: updates.user_name || member.user_name,
+        performed_by_email: user.email,
+        performed_by_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : user.email,
+        old_value: oldRole,
+        new_value: updates.role,
+        details: `Role changed from ${oldRole} to ${updates.role}`
+      });
+    }
 
-    toast.success(`Role updated to ${newRole}`);
+    toast.success('Member updated successfully');
     setSelectedMember(null);
   };
 
@@ -449,9 +452,10 @@ export default function ClubAdmin() {
           open={!!selectedMember}
           onClose={() => setSelectedMember(null)}
           member={selectedMember}
-          onUpdateRole={handleUpdateRole}
+          onUpdateMember={handleUpdateMember}
           isUpdating={updateMembershipMutation.isPending}
           isAdmin={true}
+          membershipTypes={membershipTypes}
         />
       </div>
     </div>
