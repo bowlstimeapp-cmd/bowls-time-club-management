@@ -189,7 +189,7 @@ export default function SelectionEditor() {
       match_name: matchName,
       selections,
       home_rinks: homeRinks,
-      selected_rinks: selectedRinks,
+      selected_rinks: selectedRinks.map(r => String(r)),
       match_start_time: matchStartTime,
       match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
