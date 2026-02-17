@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -27,7 +27,10 @@ import {
   Loader2,
   UserCircle,
   Trash2,
-  Calendar
+  Calendar,
+  Zap,
+  Printer,
+  Table
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -39,11 +42,15 @@ export default function MyLeagueTeam() {
   const clubId = searchParams.get('clubId');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const printRef = useRef();
 
   const [user, setUser] = useState(null);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [rotaDialogOpen, setRotaDialogOpen] = useState(false);
+  const [viewingRotaTeam, setViewingRotaTeam] = useState(null);
+  const [generatingRota, setGeneratingRota] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -144,6 +151,89 @@ export default function MyLeagueTeam() {
     setAddPlayerOpen(true);
   };
 
+  const handleGenerateRota = async (team) => {
+    const league = leagues.find(l => l.id === team.league_id);
+    const teamFixtures = fixtures
+      .filter(f => f.home_team_id === team.id || f.away_team_id === team.id)
+      .sort((a, b) => a.match_date.localeCompare(b.match_date));
+    
+    const players = team.players || [];
+    
+    if (players.length === 0) {
+      toast.error('Add players to your team first');
+      return;
+    }
+    
+    const playersPerGame = league?.format === 'triples' ? 3 : 4;
+    
+    if (players.length < playersPerGame) {
+      toast.error(`Need at least ${playersPerGame} players for ${league?.format || 'fours'} format`);
+      return;
+    }
+    
+    setGeneratingRota(true);
+    
+    // Track how many games each player has been assigned
+    const playerGameCount = {};
+    players.forEach(p => playerGameCount[p] = 0);
+    
+    const rota = {};
+    
+    for (const fixture of teamFixtures) {
+      // Sort players by least games played
+      const sortedPlayers = [...players].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+      
+      // Select top N players
+      const selectedPlayers = sortedPlayers.slice(0, playersPerGame);
+      
+      // Update game counts
+      selectedPlayers.forEach(p => playerGameCount[p]++);
+      
+      rota[fixture.id] = selectedPlayers;
+    }
+    
+    // Save rota to team
+    await base44.entities.LeagueTeam.update(team.id, { fixture_rota: rota });
+    queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
+    
+    setGeneratingRota(false);
+    toast.success('Rota generated');
+  };
+
+  const openRotaView = (team) => {
+    setViewingRotaTeam(team);
+    setRotaDialogOpen(true);
+  };
+
+  const handlePrint = () => {
+    const printContent = printRef.current;
+    if (!printContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${viewingRotaTeam?.name} - Player Rota</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { font-size: 18px; margin-bottom: 10px; }
+            h2 { font-size: 14px; margin-bottom: 20px; color: #666; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+            th { background: #f5f5f5; font-weight: bold; }
+            .fixture-cell { text-align: left; white-space: nowrap; }
+            .x-mark { font-weight: bold; color: #059669; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -180,6 +270,7 @@ export default function MyLeagueTeam() {
                 .filter(f => f.home_team_id === team.id || f.away_team_id === team.id)
                 .sort((a, b) => a.match_date.localeCompare(b.match_date));
               const players = team.players || [];
+              const hasRota = team.fixture_rota && Object.keys(team.fixture_rota).length > 0;
               
               return (
                 <motion.div
@@ -195,8 +286,13 @@ export default function MyLeagueTeam() {
                             <Trophy className="w-5 h-5 text-emerald-600" />
                             {team.name}
                           </CardTitle>
-                          <CardDescription>
+                          <CardDescription className="flex items-center gap-2">
                             {league?.name || 'Unknown League'}
+                            {league?.format && (
+                              <Badge variant="outline" className="text-xs">
+                                {league.format === 'triples' ? 'Triples' : 'Fours'}
+                              </Badge>
+                            )}
                           </CardDescription>
                         </div>
                         <Badge className="bg-emerald-100 text-emerald-700">
@@ -249,36 +345,91 @@ export default function MyLeagueTeam() {
                         )}
                       </div>
 
+                      {/* Rota Section */}
+                      {teamFixtures.length > 0 && players.length > 0 && (
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                              <Table className="w-4 h-4" />
+                              Player Rota
+                            </h4>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleGenerateRota(team)}
+                                disabled={generatingRota}
+                              >
+                                {generatingRota ? (
+                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Zap className="w-4 h-4 mr-1" />
+                                )}
+                                {hasRota ? 'Regenerate' : 'Generate'} Rota
+                              </Button>
+                              {hasRota && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => openRotaView(team)}
+                                >
+                                  <Printer className="w-4 h-4 mr-1" />
+                                  View & Print
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          {!hasRota && (
+                            <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
+                              Generate a rota to evenly distribute players across fixtures
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Upcoming Fixtures */}
                       {teamFixtures.length > 0 && (
                         <div>
                           <h4 className="font-medium text-gray-700 flex items-center gap-2 mb-3">
                             <Calendar className="w-4 h-4" />
-                            Fixtures
+                            Fixtures ({teamFixtures.length})
                           </h4>
                           <div className="space-y-2">
                             {teamFixtures.slice(0, 5).map(fixture => {
                               const homeTeam = teams.find(t => t.id === fixture.home_team_id);
                               const awayTeam = teams.find(t => t.id === fixture.away_team_id);
                               const isHome = fixture.home_team_id === team.id;
+                              const rotaPlayers = team.fixture_rota?.[fixture.id] || [];
                               return (
-                                <div key={fixture.id} className="flex items-center justify-between p-2 border rounded-lg text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-gray-500 w-20">
-                                      {format(parseISO(fixture.match_date), 'd MMM')}
-                                    </span>
-                                    <span className={isHome ? 'font-medium' : ''}>
-                                      {homeTeam?.name}
-                                    </span>
-                                    <span className="text-gray-400">vs</span>
-                                    <span className={!isHome ? 'font-medium' : ''}>
-                                      {awayTeam?.name}
-                                    </span>
+                                <div key={fixture.id} className="p-2 border rounded-lg text-sm">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-500 w-20">
+                                        {format(parseISO(fixture.match_date), 'd MMM')}
+                                      </span>
+                                      <span className={isHome ? 'font-medium' : ''}>
+                                        {homeTeam?.name}
+                                      </span>
+                                      <span className="text-gray-400">vs</span>
+                                      <span className={!isHome ? 'font-medium' : ''}>
+                                        {awayTeam?.name}
+                                      </span>
+                                    </div>
+                                    <Badge variant="outline">Rink {fixture.rink_number}</Badge>
                                   </div>
-                                  <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+                                  {rotaPlayers.length > 0 && (
+                                    <div className="mt-1 text-xs text-gray-500">
+                                      Playing: {rotaPlayers.map(p => getMemberName(p)).join(', ')}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
+                            {teamFixtures.length > 5 && (
+                              <p className="text-xs text-gray-400 text-center">
+                                + {teamFixtures.length - 5} more fixtures
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -330,6 +481,103 @@ export default function MyLeagueTeam() {
                 Add Player
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rota View Dialog */}
+        <Dialog open={rotaDialogOpen} onOpenChange={() => setRotaDialogOpen(false)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>{viewingRotaTeam?.name} - Player Rota</span>
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div ref={printRef}>
+              {viewingRotaTeam && (() => {
+                const league = leagues.find(l => l.id === viewingRotaTeam.league_id);
+                const teamFixtures = fixtures
+                  .filter(f => f.home_team_id === viewingRotaTeam.id || f.away_team_id === viewingRotaTeam.id)
+                  .sort((a, b) => a.match_date.localeCompare(b.match_date));
+                const players = viewingRotaTeam.players || [];
+                const rota = viewingRotaTeam.fixture_rota || {};
+                
+                return (
+                  <>
+                    <h1>{viewingRotaTeam.name}</h1>
+                    <h2>{league?.name} - {league?.format === 'triples' ? 'Triples' : 'Fours'}</h2>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr>
+                            <th className="border p-2 bg-gray-50 text-left">Fixture</th>
+                            <th className="border p-2 bg-gray-50 text-left">Date</th>
+                            <th className="border p-2 bg-gray-50">Rink</th>
+                            {players.map(player => (
+                              <th key={player} className="border p-2 bg-gray-50 text-center whitespace-nowrap">
+                                {getMemberName(player).split(' ').map(n => n[0]).join('')}
+                                <div className="text-xs font-normal text-gray-500">
+                                  {getMemberName(player)}
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamFixtures.map(fixture => {
+                            const homeTeam = teams.find(t => t.id === fixture.home_team_id);
+                            const awayTeam = teams.find(t => t.id === fixture.away_team_id);
+                            const isHome = fixture.home_team_id === viewingRotaTeam.id;
+                            const opponent = isHome ? awayTeam : homeTeam;
+                            const rotaPlayers = rota[fixture.id] || [];
+                            
+                            return (
+                              <tr key={fixture.id}>
+                                <td className="border p-2 fixture-cell">
+                                  vs {opponent?.name}
+                                </td>
+                                <td className="border p-2 whitespace-nowrap">
+                                  {format(parseISO(fixture.match_date), 'd MMM')}
+                                </td>
+                                <td className="border p-2 text-center">
+                                  {fixture.rink_number}
+                                </td>
+                                {players.map(player => (
+                                  <td key={player} className="border p-2 text-center">
+                                    {rotaPlayers.includes(player) && (
+                                      <span className="x-mark text-emerald-600 font-bold">X</span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
+                          {/* Totals row */}
+                          <tr className="font-medium bg-gray-50">
+                            <td className="border p-2" colSpan={3}>Total Games</td>
+                            {players.map(player => {
+                              const count = teamFixtures.filter(f => 
+                                (rota[f.id] || []).includes(player)
+                              ).length;
+                              return (
+                                <td key={player} className="border p-2 text-center">
+                                  {count}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </DialogContent>
         </Dialog>
       </div>

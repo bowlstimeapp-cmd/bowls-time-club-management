@@ -75,7 +75,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
     { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: Trophy },
     { name: 'Competitions', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
-    ...(isClubAdmin ? [{ name: 'Leagues', href: createPageUrl('LeagueAdmin') + `?clubId=${clubId}`, icon: Trophy }] : []),
+    { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Trophy },
     { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
   ];
 
