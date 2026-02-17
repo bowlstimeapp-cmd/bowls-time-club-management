@@ -64,6 +64,7 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import LeagueAdmin from './pages/LeagueAdmin';
+import MyLeagueTeam from './pages/MyLeagueTeam';
 import __Layout from './Layout.jsx';
 
 
@@ -85,6 +86,7 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "LeagueAdmin": LeagueAdmin,
+    "MyLeagueTeam": MyLeagueTeam,
 }
 
 export const pagesConfig = {
