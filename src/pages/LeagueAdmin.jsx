@@ -44,7 +44,8 @@ import {
   Calendar,
   Clock,
   Zap,
-  List
+  List,
+  CalendarCheck
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -73,6 +74,7 @@ export default function LeagueAdmin() {
   const [leagueEndDate, setLeagueEndDate] = useState('');
   const [leagueStartTime, setLeagueStartTime] = useState('18:00');
   const [leagueEndTime, setLeagueEndTime] = useState('21:00');
+  const [leagueFormat, setLeagueFormat] = useState('fours');
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
@@ -80,6 +82,7 @@ export default function LeagueAdmin() {
   const [generatingFixtures, setGeneratingFixtures] = useState(false);
   const [fixturesDialogOpen, setFixturesDialogOpen] = useState(false);
   const [viewingLeague, setViewingLeague] = useState(null);
+  const [bookingRinks, setBookingRinks] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -211,6 +214,7 @@ export default function LeagueAdmin() {
     setLeagueEndDate('');
     setLeagueStartTime('18:00');
     setLeagueEndTime('21:00');
+    setLeagueFormat('fours');
   };
 
   const resetTeamForm = () => {
@@ -229,6 +233,7 @@ export default function LeagueAdmin() {
     setLeagueEndDate(league.end_date || '');
     setLeagueStartTime(league.start_time || '18:00');
     setLeagueEndTime(league.end_time || '21:00');
+    setLeagueFormat(league.format || 'fours');
     setLeagueDialogOpen(true);
   };
 
@@ -255,6 +260,7 @@ export default function LeagueAdmin() {
       end_date: leagueEndDate || null,
       start_time: leagueStartTime || null,
       end_time: leagueEndTime || null,
+      format: leagueFormat,
     };
 
     if (editingLeague) {
@@ -333,10 +339,11 @@ export default function LeagueAdmin() {
     const availableWeeks = weeks.length;
     const repetitions = Math.floor(availableWeeks / totalRounds);
     
-    // Flatten all matches with dates and rinks
+    // Flatten all matches with dates and rinks - only 1 match per rink per day
     const rinkCount = club?.rink_count || 6;
     const allFixtures = [];
     const rinkUsage = {}; // Track rink usage per team
+    const dateRinkUsage = {}; // Track which rinks are used on each date
     
     leagueTeams.forEach(team => {
       rinkUsage[team.id] = {};
@@ -350,14 +357,23 @@ export default function LeagueAdmin() {
       for (let roundIdx = 0; roundIdx < rounds.length && weekIndex < availableWeeks; roundIdx++) {
         const round = rounds[roundIdx];
         const matchDate = weeks[weekIndex];
+        const dateKey = format(matchDate, 'yyyy-MM-dd');
         
-        // Assign rinks to matches, balancing usage
-        const matchesThisWeek = round.map((match, matchIdx) => {
-          // Find the best rink for this match (least used by both teams)
-          let bestRink = 1;
+        if (!dateRinkUsage[dateKey]) {
+          dateRinkUsage[dateKey] = new Set();
+        }
+        
+        // Assign rinks to matches, ensuring no rink is used twice on same day
+        const matchesThisWeek = [];
+        for (const match of round) {
+          // Find the best available rink for this match
+          let bestRink = null;
           let lowestUsage = Infinity;
           
           for (let r = 1; r <= rinkCount; r++) {
+            // Skip if rink already used on this date
+            if (dateRinkUsage[dateKey].has(r)) continue;
+            
             const totalUsage = (rinkUsage[match.home_team_id][r] || 0) + 
                               (rinkUsage[match.away_team_id][r] || 0);
             if (totalUsage < lowestUsage) {
@@ -366,66 +382,89 @@ export default function LeagueAdmin() {
             }
           }
           
-          // Update usage
+          // If no rink available, skip this match (will need more weeks)
+          if (bestRink === null) continue;
+          
+          // Mark rink as used on this date
+          dateRinkUsage[dateKey].add(bestRink);
+          
+          // Update team usage
           rinkUsage[match.home_team_id][bestRink]++;
           rinkUsage[match.away_team_id][bestRink]++;
           
-          return {
+          matchesThisWeek.push({
             league_id: league.id,
             club_id: clubId,
             home_team_id: match.home_team_id,
             away_team_id: match.away_team_id,
-            match_date: format(matchDate, 'yyyy-MM-dd'),
+            match_date: dateKey,
             rink_number: bestRink,
             status: 'scheduled',
-          };
-        });
+          });
+        }
         
         allFixtures.push(...matchesThisWeek);
         weekIndex++;
       }
     }
     
-    // Create fixtures and bookings
-    const bookingsToCreate = [];
-    
-    for (const fixture of allFixtures) {
-      // Create booking for the rink
-      bookingsToCreate.push({
-        club_id: clubId,
-        rink_number: fixture.rink_number,
-        date: fixture.match_date,
-        start_time: league.start_time || '18:00',
-        end_time: league.end_time || '21:00',
-        status: 'approved',
-        competition_type: 'Club',
-        booker_name: `${league.name} - League Match`,
-        booker_email: user.email,
-        notes: `League fixture: ${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
-      });
-    }
-    
-    // Bulk create bookings
-    const createdBookings = await base44.entities.Booking.bulkCreate(bookingsToCreate);
-    
-    // Add booking IDs to fixtures
-    const fixturesWithBookings = allFixtures.map((fixture, idx) => ({
-      ...fixture,
-      booking_id: createdBookings[idx]?.id || null,
-    }));
-    
-    // Bulk create fixtures
-    await base44.entities.LeagueFixture.bulkCreate(fixturesWithBookings);
+    // Bulk create fixtures (no bookings yet - separate action)
+    await base44.entities.LeagueFixture.bulkCreate(allFixtures);
     
     // Update league to mark fixtures as generated
     await base44.entities.League.update(league.id, { fixtures_generated: true });
     
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
-    queryClient.invalidateQueries({ queryKey: ['bookings'] });
     
     setGeneratingFixtures(false);
-    toast.success(`Generated ${allFixtures.length} fixtures and created rink bookings`);
+    toast.success(`Generated ${allFixtures.length} fixtures`);
+  };
+
+  const handleBookRinks = async (league) => {
+    const leagueFixtures = fixtures.filter(f => f.league_id === league.id);
+    const leagueTeams = teams.filter(t => t.league_id === league.id);
+    
+    if (leagueFixtures.length === 0) {
+      toast.error('No fixtures to book');
+      return;
+    }
+    
+    setBookingRinks(true);
+    
+    const bookingsToCreate = leagueFixtures.map(fixture => ({
+      club_id: clubId,
+      rink_number: fixture.rink_number,
+      date: fixture.match_date,
+      start_time: league.start_time || '18:00',
+      end_time: league.end_time || '21:00',
+      status: 'approved',
+      competition_type: 'Club',
+      booker_name: `${league.name} - League Match`,
+      booker_email: user.email,
+      notes: `League fixture: ${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
+    }));
+    
+    const createdBookings = await base44.entities.Booking.bulkCreate(bookingsToCreate);
+    
+    // Update fixtures with booking IDs
+    for (let i = 0; i < leagueFixtures.length; i++) {
+      if (createdBookings[i]?.id) {
+        await base44.entities.LeagueFixture.update(leagueFixtures[i].id, {
+          booking_id: createdBookings[i].id
+        });
+      }
+    }
+    
+    // Mark league as having bookings created
+    await base44.entities.League.update(league.id, { bookings_created: true });
+    
+    queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+    queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    
+    setBookingRinks(false);
+    toast.success(`Created ${createdBookings.length} rink bookings`);
   };
 
   const viewFixtures = (league) => {
@@ -562,6 +601,11 @@ export default function LeagueAdmin() {
                               <Badge className={statusColors[league.status || 'draft']}>
                                 {league.status || 'draft'}
                               </Badge>
+                              {league.format && (
+                                <Badge variant="outline">
+                                  {league.format === 'triples' ? 'Triples' : 'Fours'}
+                                </Badge>
+                              )}
                             </CardTitle>
                             {league.description && (
                               <CardDescription>{league.description}</CardDescription>
@@ -582,7 +626,7 @@ export default function LeagueAdmin() {
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           {!league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
                             <Button 
                               variant="outline" 
@@ -597,6 +641,22 @@ export default function LeagueAdmin() {
                                 <Zap className="w-4 h-4" />
                               )}
                               <span className="ml-1 hidden sm:inline">Generate</span>
+                            </Button>
+                          )}
+                          {league.fixtures_generated && !league.bookings_created && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleBookRinks(league)}
+                              disabled={bookingRinks}
+                              className="text-blue-600 hover:bg-blue-50"
+                            >
+                              {bookingRinks ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <CalendarCheck className="w-4 h-4" />
+                              )}
+                              <span className="ml-1 hidden sm:inline">Book Rinks</span>
                             </Button>
                           )}
                           {league.fixtures_generated && (
@@ -756,18 +816,32 @@ export default function LeagueAdmin() {
                   />
                 </div>
               </div>
-              <div>
-                <Label>Status</Label>
-                <Select value={leagueStatus} onValueChange={setLeagueStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Format</Label>
+                  <Select value={leagueFormat} onValueChange={setLeagueFormat}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="triples">Triples (3 players)</SelectItem>
+                      <SelectItem value="fours">Fours (4 players)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Select value={leagueStatus} onValueChange={setLeagueStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <DialogFooter>
