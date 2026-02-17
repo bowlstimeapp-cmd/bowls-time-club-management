@@ -317,6 +317,8 @@ export default function MyLeagueTeam() {
     const printContent = printRef.current;
     if (!printContent) return;
     
+    const league = viewingRotaTeam ? leagues.find(l => l.id === viewingRotaTeam.league_id) : null;
+    
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
@@ -324,6 +326,8 @@ export default function MyLeagueTeam() {
           <title>${viewingRotaTeam?.name} - Player Rota</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .logo { max-height: 60px; margin-bottom: 10px; }
             h1 { font-size: 18px; margin-bottom: 10px; }
             h2 { font-size: 14px; margin-bottom: 20px; color: #666; }
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -334,6 +338,10 @@ export default function MyLeagueTeam() {
           </style>
         </head>
         <body>
+          <div class="header">
+            ${club?.logo_url ? `<img src="${club.logo_url}" class="logo" alt="${club?.name}" />` : ''}
+            <div>${club?.name || ''}</div>
+          </div>
           ${printContent.innerHTML}
         </body>
       </html>

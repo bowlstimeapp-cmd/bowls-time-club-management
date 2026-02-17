@@ -585,6 +585,8 @@ export default function LeagueAdmin() {
           <title>${viewingTableLeague?.name} - League Table</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .logo { max-height: 60px; margin-bottom: 10px; }
             h1 { font-size: 20px; margin-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
@@ -594,6 +596,10 @@ export default function LeagueAdmin() {
           </style>
         </head>
         <body>
+          <div class="header">
+            ${club?.logo_url ? `<img src="${club.logo_url}" class="logo" alt="${club?.name}" />` : ''}
+            <div>${club?.name || ''}</div>
+          </div>
           ${printContent.innerHTML}
         </body>
       </html>

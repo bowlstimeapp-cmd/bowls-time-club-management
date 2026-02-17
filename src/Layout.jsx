@@ -155,29 +155,33 @@ export default function Layout({ children, currentPageName }) {
 
             {/* User Menu */}
             <div className="flex items-center gap-3">
-              {needsClub && clubId && (
-                <Link 
-                  to={createPageUrl('ClubSelector')}
-                  className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
-                >
-                  <Building2 className="w-4 h-4" />
-                  Switch Club
-                </Link>
-              )}
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
+            {needsClub && clubId && (
+              <Link 
+                to={createPageUrl('ClubSelector')}
+                className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <Building2 className="w-4 h-4" />
+                Switch Club
+              </Link>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2">
+                  {club?.logo_url ? (
+                    <img src={club.logo_url} alt={club.name} className="w-8 h-8 rounded-full object-contain bg-white border" />
+                  ) : (
                     <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
                       <User className="w-4 h-4 text-emerald-700" />
                     </div>
-                    <span className="hidden sm:block text-sm font-medium text-gray-700">
-                      {user?.first_name && user?.surname 
-                        ? `${user.first_name} ${user.surname}` 
-                        : (user?.full_name || user?.email?.split('@')[0])}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
+                  )}
+                  <span className="hidden sm:block text-sm font-medium text-gray-700">
+                    {user?.first_name && user?.surname 
+                      ? `${user.first_name} ${user.surname}` 
+                      : (user?.full_name || user?.email?.split('@')[0])}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <div className="px-2 py-1.5 text-sm text-gray-500">
                     {user?.email}

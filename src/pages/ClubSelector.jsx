@@ -143,7 +143,7 @@ export default function ClubSelector() {
                                 <img 
                                   src={club.logo_url} 
                                   alt={club.name}
-                                  className="w-12 h-12 rounded-lg object-cover"
+                                  className="w-12 h-12 rounded-lg object-contain bg-white border"
                                 />
                               ) : (
                                 <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
