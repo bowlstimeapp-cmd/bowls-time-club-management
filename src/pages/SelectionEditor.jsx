@@ -290,7 +290,7 @@ ${club?.name || 'Your Bowls Club'}
     const [startHour] = matchStartTime.split(':').map(Number);
     const [endHour] = matchEndTime.split(':').map(Number);
     
-    const bookerName = `${competition}${matchName ? ` - ${matchName}` : ''}`;
+    const bookerName = club?.name || `${competition}${matchName ? ` - ${matchName}` : ''}`;
     const bookingsToCreate = [];
 
     for (const rinkNum of selectedRinks) {
@@ -317,7 +317,7 @@ ${club?.name || 'Your Bowls Club'}
             competition_type: 'Club',
             booker_name: bookerName,
             booker_email: user.email,
-            notes: `Match booking for ${competition}`,
+            notes: `${competition}${matchName ? ` - ${matchName}` : ''}`,
           });
         }
       }
