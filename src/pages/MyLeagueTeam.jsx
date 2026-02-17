@@ -55,6 +55,8 @@ export default function MyLeagueTeam() {
   const [rotaDialogOpen, setRotaDialogOpen] = useState(false);
   const [viewingRotaTeam, setViewingRotaTeam] = useState(null);
   const [generatingRota, setGeneratingRota] = useState(false);
+  const [editRotaDialogOpen, setEditRotaDialogOpen] = useState(false);
+  const [editingRotaTeam, setEditingRotaTeam] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -106,8 +108,19 @@ export default function MyLeagueTeam() {
     enabled: !!clubId,
   });
 
-  // Find teams where user is captain
-  const myTeams = teams.filter(t => t.captain_email === user?.email);
+  // Find teams where user is captain or a player
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState('all');
+  
+  const captainTeams = teams.filter(t => t.captain_email === user?.email);
+  const playerTeams = teams.filter(t => 
+    t.captain_email !== user?.email && 
+    (t.players || []).includes(user?.email)
+  );
+  const myTeams = [...captainTeams, ...playerTeams];
+  
+  const filteredTeams = selectedTeamFilter === 'all' 
+    ? myTeams 
+    : myTeams.filter(t => t.id === selectedTeamFilter);
 
   const updateTeamMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
@@ -284,6 +297,13 @@ export default function MyLeagueTeam() {
     setRotaDialogOpen(true);
   };
 
+  const openRotaEdit = (team) => {
+    setEditingRotaTeam(team);
+    setEditRotaDialogOpen(true);
+  };
+
+  const isCaptain = (team) => team.captain_email === user?.email;
+
   const handlePrint = () => {
     const printContent = printRef.current;
     if (!printContent) return;
@@ -329,8 +349,25 @@ export default function MyLeagueTeam() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My League Teams</h1>
-          <p className="text-gray-600">{club?.name} • Manage your teams</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">My League Teams</h1>
+              <p className="text-gray-600">{club?.name} • View your teams</p>
+            </div>
+            {myTeams.length > 1 && (
+              <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams ({myTeams.length})</SelectItem>
+                  {myTeams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </motion.div>
 
         {myTeams.length === 0 ? (
@@ -338,12 +375,13 @@ export default function MyLeagueTeam() {
             <CardContent className="py-12 text-center">
               <Trophy className="w-12 h-12 mx-auto text-gray-300 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No teams</h3>
-              <p className="text-gray-500">You are not a captain of any league teams</p>
+              <p className="text-gray-500">You are not part of any league teams</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
-            {myTeams.map((team) => {
+            {filteredTeams.map((team) => {
+              const userIsCaptain = isCaptain(team);
               const league = leagues.find(l => l.id === team.league_id);
               const teamFixtures = fixtures
                 .filter(f => f.home_team_id === team.id || f.away_team_id === team.id)
@@ -374,10 +412,17 @@ export default function MyLeagueTeam() {
                             )}
                           </CardDescription>
                         </div>
-                        <Badge className="bg-emerald-100 text-emerald-700">
-                          <UserCircle className="w-3 h-3 mr-1" />
-                          Captain
-                        </Badge>
+                        {userIsCaptain ? (
+                          <Badge className="bg-emerald-100 text-emerald-700">
+                            <UserCircle className="w-3 h-3 mr-1" />
+                            Captain
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            <Users className="w-3 h-3 mr-1" />
+                            Player
+                          </Badge>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -388,19 +433,21 @@ export default function MyLeagueTeam() {
                             <Users className="w-4 h-4" />
                             Team Players ({players.length})
                           </h4>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => openAddPlayer(team)}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add Player
-                          </Button>
+                          {userIsCaptain && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openAddPlayer(team)}
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add Player
+                            </Button>
+                          )}
                         </div>
                         
                         {players.length === 0 ? (
                           <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
-                            No players added yet. Add players to your team.
+                            No players added yet.
                           </p>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -410,14 +457,16 @@ export default function MyLeagueTeam() {
                                 className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
                               >
                                 <span className="text-sm">{getMemberName(playerEmail)}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
-                                  onClick={() => handleRemovePlayer(team, playerEmail)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
+                                {userIsCaptain && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                                    onClick={() => handleRemovePlayer(team, playerEmail)}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -432,20 +481,34 @@ export default function MyLeagueTeam() {
                               <Table className="w-4 h-4" />
                               Player Rota
                             </h4>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleGenerateRota(team)}
-                                disabled={generatingRota}
-                              >
-                                {generatingRota ? (
-                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                                ) : (
-                                  <Zap className="w-4 h-4 mr-1" />
-                                )}
-                                {hasRota ? 'Regenerate' : 'Generate'} Rota
-                              </Button>
+                            <div className="flex gap-2 flex-wrap">
+                              {userIsCaptain && (
+                                <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleGenerateRota(team)}
+                                    disabled={generatingRota}
+                                  >
+                                    {generatingRota ? (
+                                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                    ) : (
+                                      <Zap className="w-4 h-4 mr-1" />
+                                    )}
+                                    {hasRota ? 'Regenerate' : 'Generate'}
+                                  </Button>
+                                  {hasRota && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => openRotaEdit(team)}
+                                    >
+                                      <Pencil className="w-4 h-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                  )}
+                                </>
+                              )}
                               {hasRota && (
                                 <Button 
                                   variant="outline" 
@@ -460,7 +523,7 @@ export default function MyLeagueTeam() {
                           </div>
                           {!hasRota && (
                             <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
-                              Generate a rota to evenly distribute players across fixtures
+                              {userIsCaptain ? 'Generate a rota to evenly distribute players across fixtures' : 'No rota generated yet'}
                             </p>
                           )}
                         </div>
@@ -676,11 +739,9 @@ export default function MyLeagueTeam() {
                                 </td>
                                 {players.map(player => (
                                   <td key={player} className="border p-2 text-center">
-                                    <Checkbox
-                                      checked={rotaPlayers.includes(player)}
-                                      onCheckedChange={() => handleToggleRotaPlayer(viewingRotaTeam, fixture.id, player)}
-                                      className="mx-auto"
-                                    />
+                                    {rotaPlayers.includes(player) && (
+                                      <span className="text-emerald-600 font-bold">X</span>
+                                    )}
                                   </td>
                                 ))}
                               </tr>
@@ -707,6 +768,97 @@ export default function MyLeagueTeam() {
                 );
               })()}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Rota Dialog */}
+        <Dialog open={editRotaDialogOpen} onOpenChange={() => setEditRotaDialogOpen(false)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingRotaTeam?.name} - Edit Rota</DialogTitle>
+            </DialogHeader>
+            
+            {editingRotaTeam && (() => {
+              const league = leagues.find(l => l.id === editingRotaTeam.league_id);
+              const teamFixtures = fixtures
+                .filter(f => f.home_team_id === editingRotaTeam.id || f.away_team_id === editingRotaTeam.id)
+                .sort((a, b) => a.match_date.localeCompare(b.match_date));
+              const players = editingRotaTeam.players || [];
+              const rota = editingRotaTeam.fixture_rota || {};
+              
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="border p-2 bg-gray-50 text-left">Fixture</th>
+                        <th className="border p-2 bg-gray-50 text-left">Date</th>
+                        <th className="border p-2 bg-gray-50">Rink</th>
+                        {players.map(player => (
+                          <th key={player} className="border p-2 bg-gray-50 text-center whitespace-nowrap">
+                            <div className="text-xs">
+                              {getMemberName(player)}
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamFixtures.map(fixture => {
+                        const homeTeam = teams.find(t => t.id === fixture.home_team_id);
+                        const awayTeam = teams.find(t => t.id === fixture.away_team_id);
+                        const isHome = fixture.home_team_id === editingRotaTeam.id;
+                        const opponent = isHome ? awayTeam : homeTeam;
+                        const rotaPlayers = rota[fixture.id] || [];
+                        
+                        return (
+                          <tr key={fixture.id}>
+                            <td className="border p-2">
+                              vs {opponent?.name}
+                            </td>
+                            <td className="border p-2 whitespace-nowrap">
+                              {format(parseISO(fixture.match_date), 'd MMM')}
+                            </td>
+                            <td className="border p-2 text-center">
+                              {fixture.rink_number}
+                            </td>
+                            {players.map(player => (
+                              <td key={player} className="border p-2 text-center">
+                                <Checkbox
+                                  checked={rotaPlayers.includes(player)}
+                                  onCheckedChange={() => handleToggleRotaPlayer(editingRotaTeam, fixture.id, player)}
+                                  className="mx-auto"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                      {/* Totals row */}
+                      <tr className="font-medium bg-gray-50">
+                        <td className="border p-2" colSpan={3}>Total Games</td>
+                        {players.map(player => {
+                          const count = teamFixtures.filter(f => 
+                            (rota[f.id] || []).includes(player)
+                          ).length;
+                          return (
+                            <td key={player} className="border p-2 text-center">
+                              {count}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+            
+            <DialogFooter>
+              <Button onClick={() => setEditRotaDialogOpen(false)} className="bg-emerald-600 hover:bg-emerald-700">
+                Done
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
