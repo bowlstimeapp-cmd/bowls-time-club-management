@@ -43,7 +43,11 @@ export default function PlatformAdmin() {
     closing_time: '21:00',
     session_duration: 2,
     primary_admin_email: '',
-    is_active: true
+    is_active: true,
+    module_rink_booking: true,
+    module_selection: true,
+    module_competitions: true,
+    module_leagues: true
   });
 
   const queryClient = useQueryClient();
@@ -133,7 +137,11 @@ export default function PlatformAdmin() {
       closing_time: '21:00',
       session_duration: 2,
       primary_admin_email: '',
-      is_active: true
+      is_active: true,
+      module_rink_booking: true,
+      module_selection: true,
+      module_competitions: true,
+      module_leagues: true
     });
     setDialogOpen(true);
   };
@@ -149,7 +157,11 @@ export default function PlatformAdmin() {
       closing_time: club.closing_time || '21:00',
       session_duration: club.session_duration || 2,
       primary_admin_email: club.primary_admin_email,
-      is_active: club.is_active !== false
+      is_active: club.is_active !== false,
+      module_rink_booking: club.module_rink_booking !== false,
+      module_selection: club.module_selection !== false,
+      module_competitions: club.module_competitions !== false,
+      module_leagues: club.module_leagues !== false
     });
     setDialogOpen(true);
   };
@@ -403,6 +415,40 @@ export default function PlatformAdmin() {
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
+                </div>
+                
+                <div className="col-span-2 pt-4 border-t">
+                  <Label className="text-base font-medium mb-3 block">Enabled Modules</Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-normal">Rink Booking</Label>
+                      <Switch
+                        checked={formData.module_rink_booking}
+                        onCheckedChange={(checked) => setFormData({ ...formData, module_rink_booking: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="font-normal">Match Selection</Label>
+                      <Switch
+                        checked={formData.module_selection}
+                        onCheckedChange={(checked) => setFormData({ ...formData, module_selection: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="font-normal">Competitions</Label>
+                      <Switch
+                        checked={formData.module_competitions}
+                        onCheckedChange={(checked) => setFormData({ ...formData, module_competitions: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="font-normal">Leagues</Label>
+                      <Switch
+                        checked={formData.module_leagues}
+                        onCheckedChange={(checked) => setFormData({ ...formData, module_leagues: checked })}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
