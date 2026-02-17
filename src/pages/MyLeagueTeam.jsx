@@ -30,8 +30,12 @@ import {
   Calendar,
   Zap,
   Printer,
-  Table
+  Table,
+  Phone,
+  Pencil,
+  BarChart3
 } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -144,6 +148,81 @@ export default function MyLeagueTeam() {
       return `${member.first_name} ${member.surname}`;
     }
     return member?.user_name || email;
+  };
+
+  const getMemberPhone = (email) => {
+    const member = members.find(m => m.user_email === email);
+    return member?.phone || '';
+  };
+
+  const calculateLeagueTable = (league) => {
+    const leagueTeams = teams.filter(t => t.league_id === league.id);
+    const leagueFixtures = fixtures.filter(f => f.league_id === league.id && f.status === 'completed');
+    
+    const table = leagueTeams.map(team => ({
+      team,
+      played: 0,
+      won: 0,
+      lost: 0,
+      drawn: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointsDiff: 0,
+      points: 0
+    }));
+    
+    leagueFixtures.forEach(fixture => {
+      const homeEntry = table.find(t => t.team.id === fixture.home_team_id);
+      const awayEntry = table.find(t => t.team.id === fixture.away_team_id);
+      
+      if (homeEntry && awayEntry && fixture.home_score !== undefined && fixture.away_score !== undefined) {
+        homeEntry.played++;
+        awayEntry.played++;
+        homeEntry.pointsFor += fixture.home_score;
+        homeEntry.pointsAgainst += fixture.away_score;
+        awayEntry.pointsFor += fixture.away_score;
+        awayEntry.pointsAgainst += fixture.home_score;
+        
+        if (fixture.home_score > fixture.away_score) {
+          homeEntry.won++;
+          homeEntry.points += 2;
+          awayEntry.lost++;
+        } else if (fixture.away_score > fixture.home_score) {
+          awayEntry.won++;
+          awayEntry.points += 2;
+          homeEntry.lost++;
+        } else {
+          homeEntry.drawn++;
+          awayEntry.drawn++;
+          homeEntry.points += 1;
+          awayEntry.points += 1;
+        }
+      }
+    });
+    
+    table.forEach(entry => {
+      entry.pointsDiff = entry.pointsFor - entry.pointsAgainst;
+    });
+    
+    return table.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.pointsDiff !== a.pointsDiff) return b.pointsDiff - a.pointsDiff;
+      return b.pointsFor - a.pointsFor;
+    });
+  };
+
+  const handleToggleRotaPlayer = async (team, fixtureId, playerEmail) => {
+    const rota = { ...(team.fixture_rota || {}) };
+    const currentPlayers = rota[fixtureId] || [];
+    
+    if (currentPlayers.includes(playerEmail)) {
+      rota[fixtureId] = currentPlayers.filter(p => p !== playerEmail);
+    } else {
+      rota[fixtureId] = [...currentPlayers, playerEmail];
+    }
+    
+    await base44.entities.LeagueTeam.update(team.id, { fixture_rota: rota });
+    queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
   };
 
   const openAddPlayer = (team) => {
@@ -387,7 +466,47 @@ export default function MyLeagueTeam() {
                         </div>
                       )}
 
-                      {/* Upcoming Fixtures */}
+                      {/* League Table */}
+                      {league && (
+                        <div>
+                          <h4 className="font-medium text-gray-700 flex items-center gap-2 mb-3">
+                            <BarChart3 className="w-4 h-4" />
+                            League Table
+                          </h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-xs">
+                              <thead>
+                                <tr>
+                                  <th className="border p-1.5 bg-gray-50">#</th>
+                                  <th className="border p-1.5 bg-gray-50 text-left">Team</th>
+                                  <th className="border p-1.5 bg-gray-50">P</th>
+                                  <th className="border p-1.5 bg-gray-50">W</th>
+                                  <th className="border p-1.5 bg-gray-50">D</th>
+                                  <th className="border p-1.5 bg-gray-50">L</th>
+                                  <th className="border p-1.5 bg-gray-50">+/-</th>
+                                  <th className="border p-1.5 bg-gray-50">Pts</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {calculateLeagueTable(league).map((entry, idx) => (
+                                  <tr key={entry.team.id} className={entry.team.id === team.id ? 'bg-emerald-50' : ''}>
+                                    <td className="border p-1.5 text-center">{idx + 1}</td>
+                                    <td className="border p-1.5 font-medium">{entry.team.name}</td>
+                                    <td className="border p-1.5 text-center">{entry.played}</td>
+                                    <td className="border p-1.5 text-center">{entry.won}</td>
+                                    <td className="border p-1.5 text-center">{entry.drawn}</td>
+                                    <td className="border p-1.5 text-center">{entry.lost}</td>
+                                    <td className="border p-1.5 text-center">{entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}</td>
+                                    <td className="border p-1.5 text-center font-bold">{entry.points}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fixtures */}
                       {teamFixtures.length > 0 && (
                         <div>
                           <h4 className="font-medium text-gray-700 flex items-center gap-2 mb-3">
@@ -395,7 +514,7 @@ export default function MyLeagueTeam() {
                             Fixtures ({teamFixtures.length})
                           </h4>
                           <div className="space-y-2">
-                            {teamFixtures.slice(0, 5).map(fixture => {
+                            {teamFixtures.map(fixture => {
                               const homeTeam = teams.find(t => t.id === fixture.home_team_id);
                               const awayTeam = teams.find(t => t.id === fixture.away_team_id);
                               const isHome = fixture.home_team_id === team.id;
@@ -415,7 +534,14 @@ export default function MyLeagueTeam() {
                                         {awayTeam?.name}
                                       </span>
                                     </div>
-                                    <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+                                    <div className="flex items-center gap-2">
+                                      {fixture.status === 'completed' && (
+                                        <Badge className="bg-emerald-100 text-emerald-700">
+                                          {fixture.home_score} - {fixture.away_score}
+                                        </Badge>
+                                      )}
+                                      <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+                                    </div>
                                   </div>
                                   {rotaPlayers.length > 0 && (
                                     <div className="mt-1 text-xs text-gray-500">
@@ -425,11 +551,6 @@ export default function MyLeagueTeam() {
                                 </div>
                               );
                             })}
-                            {teamFixtures.length > 5 && (
-                              <p className="text-xs text-gray-400 text-center">
-                                + {teamFixtures.length - 5} more fixtures
-                              </p>
-                            )}
                           </div>
                         </div>
                       )}
@@ -524,6 +645,12 @@ export default function MyLeagueTeam() {
                                 <div className="text-xs font-normal text-gray-500">
                                   {getMemberName(player)}
                                 </div>
+                                {getMemberPhone(player) && (
+                                  <div className="text-xs font-normal text-gray-400 flex items-center justify-center gap-1">
+                                    <Phone className="w-2 h-2" />
+                                    {getMemberPhone(player)}
+                                  </div>
+                                )}
                               </th>
                             ))}
                           </tr>
@@ -549,9 +676,11 @@ export default function MyLeagueTeam() {
                                 </td>
                                 {players.map(player => (
                                   <td key={player} className="border p-2 text-center">
-                                    {rotaPlayers.includes(player) && (
-                                      <span className="x-mark text-emerald-600 font-bold">X</span>
-                                    )}
+                                    <Checkbox
+                                      checked={rotaPlayers.includes(player)}
+                                      onCheckedChange={() => handleToggleRotaPlayer(viewingRotaTeam, fixture.id, player)}
+                                      className="mx-auto"
+                                    />
                                   </td>
                                 ))}
                               </tr>
