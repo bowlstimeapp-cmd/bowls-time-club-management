@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane } from 'lucide-react';
+import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane, Printer } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -39,6 +39,7 @@ export default function SelectionView() {
   const clubId = searchParams.get('clubId');
   const selectionId = searchParams.get('selectionId');
   const navigate = useNavigate();
+  const printRef = React.useRef();
 
   useEffect(() => {
     if (!clubId || !selectionId) {
@@ -69,6 +70,52 @@ export default function SelectionView() {
     queryFn: () => base44.entities.MemberAvailability.filter({ selection_id: selectionId }),
     enabled: !!selectionId,
   });
+
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
+  const handlePrint = () => {
+    const printContent = printRef.current;
+    if (!printContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${selection?.competition} - ${selection?.match_name || 'Team Selection'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .logo { max-height: 80px; margin-bottom: 10px; }
+            h1 { font-size: 20px; margin-bottom: 5px; }
+            h2 { font-size: 16px; color: #666; margin-bottom: 20px; }
+            .rink-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .rink { border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+            .rink-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+            .position { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
+            .position:last-child { border-bottom: none; }
+            .position-label { color: #666; font-size: 12px; }
+            .position-name { font-weight: 500; }
+            .event { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+            .event-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; }
+            .players { display: flex; flex-wrap: wrap; gap: 10px; }
+            .player { background: #f5f5f5; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const getMemberName = (email) => {
     if (!email) return 'TBD';
@@ -137,6 +184,10 @@ export default function SelectionView() {
                 {format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}
               </p>
             </div>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Print
+            </Button>
           </div>
         </motion.div>
 
@@ -145,6 +196,15 @@ export default function SelectionView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
+          <div ref={printRef} className="print-content">
+            <div className="header hidden print:block text-center mb-4">
+              {club?.logo_url && (
+                <img src={club.logo_url} alt={club.name} className="logo mx-auto max-h-20 mb-2" />
+              )}
+              <h1 className="text-xl font-bold">{club?.name}</h1>
+              <h2 className="text-lg">{selection.competition} - {selection.match_name || 'Team Selection'}</h2>
+              <p>{format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}</p>
+            </div>
           {isTopClub ? (
             <div className="space-y-4">
               {TOP_CLUB_EVENTS.map(event => (
@@ -221,6 +281,7 @@ export default function SelectionView() {
               ))}
             </div>
           )}
+          </div>
         </motion.div>
       </div>
     </div>

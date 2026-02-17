@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Loader2, Save, ShieldAlert, Users } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -35,6 +35,8 @@ export default function ClubSettings() {
   const [autoApprove, setAutoApprove] = useState(false);
   const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
   const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -80,8 +82,20 @@ export default function ClubSettings() {
       setAutoApprove(club.auto_approve_bookings || false);
       setEmailMemberNotifications(club.email_member_notifications !== false);
       setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
+      setLogoUrl(club.logo_url || '');
     }
   }, [club]);
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingLogo(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setLogoUrl(file_url);
+    setUploadingLogo(false);
+    toast.success('Logo uploaded');
+  };
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Club.update(clubId, data),
@@ -135,7 +149,8 @@ export default function ClubSettings() {
       session_duration: parseInt(sessionDuration),
       auto_approve_bookings: autoApprove,
       email_member_notifications: emailMemberNotifications,
-      membership_types: membershipTypes
+      membership_types: membershipTypes,
+      logo_url: logoUrl
     });
   };
 
@@ -168,6 +183,60 @@ export default function ClubSettings() {
           transition={{ delay: 0.1 }}
         >
           <form onSubmit={handleSubmit} className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="w-5 h-5" />
+                  Club Logo
+                </CardTitle>
+                <CardDescription>
+                  Upload a logo for your club (appears on printable documents)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Club logo" className="w-20 h-20 object-contain rounded-lg border" />
+                  ) : (
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Image className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                  <div>
+                    <Label htmlFor="logo-upload" className="cursor-pointer">
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        {uploadingLogo ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        {logoUrl ? 'Change Logo' : 'Upload Logo'}
+                      </div>
+                    </Label>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                      disabled={uploadingLogo}
+                    />
+                    {logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 text-red-600"
+                        onClick={() => setLogoUrl('')}
+                      >
+                        Remove Logo
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

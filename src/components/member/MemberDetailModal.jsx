@@ -54,6 +54,7 @@ export default function MemberDetailModal({
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
   const [phone, setPhone] = useState('');
+  const [lockerNumber, setLockerNumber] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
   const [selectedGroups, setSelectedGroups] = useState([]);
 
@@ -62,6 +63,7 @@ export default function MemberDetailModal({
       setFirstName(member.first_name || '');
       setSurname(member.surname || '');
       setPhone(member.phone || '');
+      setLockerNumber(member.locker_number || '');
       setSelectedRole(member.role || 'member');
       setSelectedGroups(member.membership_groups || []);
       setIsEditing(false);
@@ -84,6 +86,7 @@ export default function MemberDetailModal({
       surname: surname.trim(),
       user_name: `${firstName.trim()} ${surname.trim()}`,
       phone: phone.trim(),
+      locker_number: lockerNumber.trim(),
       role: selectedRole,
       membership_groups: selectedGroups
     };
@@ -94,6 +97,7 @@ export default function MemberDetailModal({
     firstName !== (member.first_name || '') ||
     surname !== (member.surname || '') ||
     phone !== (member.phone || '') ||
+    lockerNumber !== (member.locker_number || '') ||
     selectedRole !== member.role ||
     JSON.stringify(selectedGroups.sort()) !== JSON.stringify((member.membership_groups || []).sort());
 
@@ -155,6 +159,15 @@ export default function MemberDetailModal({
               </div>
 
               <div>
+                <Label>Locker Number</Label>
+                <Input
+                  value={lockerNumber}
+                  onChange={(e) => setLockerNumber(e.target.value)}
+                  placeholder="e.g., 42"
+                />
+              </div>
+
+              <div>
                 <Label>Role</Label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
@@ -212,6 +225,11 @@ export default function MemberDetailModal({
                   <Phone className="w-3 h-3" /> Phone
                 </Label>
                 <p className="font-medium">{member.phone || '-'}</p>
+              </div>
+
+              <div>
+                <Label className="text-gray-500 text-xs">Locker Number</Label>
+                <p className="font-medium">{member.locker_number || '-'}</p>
               </div>
 
               <div>

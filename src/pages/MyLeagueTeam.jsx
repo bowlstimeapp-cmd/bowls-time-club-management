@@ -109,7 +109,7 @@ export default function MyLeagueTeam() {
   });
 
   // Find teams where user is captain or a player
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState('all');
+  const [selectedLeagueFilter, setSelectedLeagueFilter] = useState('all');
   
   const captainTeams = teams.filter(t => t.captain_email === user?.email);
   const playerTeams = teams.filter(t => 
@@ -118,9 +118,13 @@ export default function MyLeagueTeam() {
   );
   const myTeams = [...captainTeams, ...playerTeams];
   
-  const filteredTeams = selectedTeamFilter === 'all' 
+  // Get unique leagues from my teams
+  const myLeagueIds = [...new Set(myTeams.map(t => t.league_id))];
+  const myLeagues = leagues.filter(l => myLeagueIds.includes(l.id));
+  
+  const filteredTeams = selectedLeagueFilter === 'all' 
     ? myTeams 
-    : myTeams.filter(t => t.id === selectedTeamFilter);
+    : myTeams.filter(t => t.league_id === selectedLeagueFilter);
 
   const updateTeamMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
@@ -225,8 +229,12 @@ export default function MyLeagueTeam() {
   };
 
   const handleToggleRotaPlayer = async (team, fixtureId, playerEmail) => {
-    const rota = { ...(team.fixture_rota || {}) };
-    const currentPlayers = rota[fixtureId] || [];
+    // Refetch the latest team data to avoid stale state
+    const latestTeams = await base44.entities.LeagueTeam.filter({ id: team.id });
+    const latestTeam = latestTeams[0];
+    
+    const rota = { ...(latestTeam?.fixture_rota || {}) };
+    const currentPlayers = [...(rota[fixtureId] || [])];
     
     if (currentPlayers.includes(playerEmail)) {
       rota[fixtureId] = currentPlayers.filter(p => p !== playerEmail);
@@ -275,13 +283,14 @@ export default function MyLeagueTeam() {
       // Sort players by least games played
       const sortedPlayers = [...players].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
       
-      // Select top N players
+      // Select exactly playersPerGame players (3 for triples, 4 for fours)
       const selectedPlayers = sortedPlayers.slice(0, playersPerGame);
       
       // Update game counts
       selectedPlayers.forEach(p => playerGameCount[p]++);
       
-      rota[fixture.id] = selectedPlayers;
+      // Only assign exactly the required number of players
+      rota[fixture.id] = selectedPlayers.slice(0, playersPerGame);
     }
     
     // Save rota to team
@@ -354,15 +363,15 @@ export default function MyLeagueTeam() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">My League Teams</h1>
               <p className="text-gray-600">{club?.name} • View your teams</p>
             </div>
-            {myTeams.length > 1 && (
-              <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
+            {myLeagues.length > 1 && (
+              <Select value={selectedLeagueFilter} onValueChange={setSelectedLeagueFilter}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter teams" />
+                  <SelectValue placeholder="Filter by league" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Teams ({myTeams.length})</SelectItem>
-                  {myTeams.map(team => (
-                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  <SelectItem value="all">All Leagues ({myLeagues.length})</SelectItem>
+                  {myLeagues.map(league => (
+                    <SelectItem key={league.id} value={league.id}>{league.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
