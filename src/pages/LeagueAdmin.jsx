@@ -456,9 +456,9 @@ export default function LeagueAdmin() {
       end_time: league.end_time || '21:00',
       status: 'approved',
       competition_type: 'Club',
-      booker_name: `${league.name} - League Match`,
+      booker_name: club?.name || 'Club',
       booker_email: user.email,
-      notes: `League fixture: ${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
+      notes: `${league.name}: ${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
     }));
     
     const createdBookings = await base44.entities.Booking.bulkCreate(bookingsToCreate);
