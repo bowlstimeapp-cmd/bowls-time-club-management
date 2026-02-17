@@ -53,8 +53,10 @@ import ClubAdmin from './pages/ClubAdmin';
 import ClubSelector from './pages/ClubSelector';
 import ClubSettings from './pages/ClubSettings';
 import ClubTournaments from './pages/ClubTournaments';
+import LeagueAdmin from './pages/LeagueAdmin';
 import LiveScoring from './pages/LiveScoring';
 import MyBookings from './pages/MyBookings';
+import MyLeagueTeam from './pages/MyLeagueTeam';
 import PlatformAdmin from './pages/PlatformAdmin';
 import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
@@ -63,8 +65,7 @@ import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
-import LeagueAdmin from './pages/LeagueAdmin';
-import MyLeagueTeam from './pages/MyLeagueTeam';
+import LeagueView from './pages/LeagueView';
 import __Layout from './Layout.jsx';
 
 
@@ -75,8 +76,10 @@ export const PAGES = {
     "ClubSelector": ClubSelector,
     "ClubSettings": ClubSettings,
     "ClubTournaments": ClubTournaments,
+    "LeagueAdmin": LeagueAdmin,
     "LiveScoring": LiveScoring,
     "MyBookings": MyBookings,
+    "MyLeagueTeam": MyLeagueTeam,
     "PlatformAdmin": PlatformAdmin,
     "Profile": Profile,
     "ProfileSetup": ProfileSetup,
@@ -85,8 +88,7 @@ export const PAGES = {
     "SelectionView": SelectionView,
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
-    "LeagueAdmin": LeagueAdmin,
-    "MyLeagueTeam": MyLeagueTeam,
+    "LeagueView": LeagueView,
 }
 
 export const pagesConfig = {
