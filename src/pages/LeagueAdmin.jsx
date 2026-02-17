@@ -40,11 +40,16 @@ import {
   ShieldAlert,
   Pencil,
   Trash2,
-  UserCircle
+  UserCircle,
+  Calendar,
+  Clock,
+  Zap,
+  List
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { format, parseISO, addDays, eachWeekOfInterval, isBefore } from 'date-fns';
 
 export default function LeagueAdmin() {
   const [searchParams] = useSearchParams();
@@ -64,9 +69,17 @@ export default function LeagueAdmin() {
   const [leagueName, setLeagueName] = useState('');
   const [leagueDescription, setLeagueDescription] = useState('');
   const [leagueStatus, setLeagueStatus] = useState('draft');
+  const [leagueStartDate, setLeagueStartDate] = useState('');
+  const [leagueEndDate, setLeagueEndDate] = useState('');
+  const [leagueStartTime, setLeagueStartTime] = useState('18:00');
+  const [leagueEndTime, setLeagueEndTime] = useState('21:00');
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
+
+  const [generatingFixtures, setGeneratingFixtures] = useState(false);
+  const [fixturesDialogOpen, setFixturesDialogOpen] = useState(false);
+  const [viewingLeague, setViewingLeague] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -121,6 +134,12 @@ export default function LeagueAdmin() {
       club_id: clubId, 
       status: 'approved' 
     }),
+    enabled: !!clubId,
+  });
+
+  const { data: fixtures = [] } = useQuery({
+    queryKey: ['leagueFixtures', clubId],
+    queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId }),
     enabled: !!clubId,
   });
 
@@ -188,6 +207,10 @@ export default function LeagueAdmin() {
     setLeagueName('');
     setLeagueDescription('');
     setLeagueStatus('draft');
+    setLeagueStartDate('');
+    setLeagueEndDate('');
+    setLeagueStartTime('18:00');
+    setLeagueEndTime('21:00');
   };
 
   const resetTeamForm = () => {
@@ -202,6 +225,10 @@ export default function LeagueAdmin() {
     setLeagueName(league.name);
     setLeagueDescription(league.description || '');
     setLeagueStatus(league.status || 'draft');
+    setLeagueStartDate(league.start_date || '');
+    setLeagueEndDate(league.end_date || '');
+    setLeagueStartTime(league.start_time || '18:00');
+    setLeagueEndTime(league.end_time || '21:00');
     setLeagueDialogOpen(true);
   };
 
@@ -224,6 +251,10 @@ export default function LeagueAdmin() {
       name: leagueName.trim(),
       description: leagueDescription.trim(),
       status: leagueStatus,
+      start_date: leagueStartDate || null,
+      end_date: leagueEndDate || null,
+      start_time: leagueStartTime || null,
+      end_time: leagueEndTime || null,
     };
 
     if (editingLeague) {
@@ -231,6 +262,175 @@ export default function LeagueAdmin() {
     } else {
       createLeagueMutation.mutate(data);
     }
+  };
+
+  const generateRoundRobinFixtures = (leagueTeams) => {
+    const numTeams = leagueTeams.length;
+    if (numTeams < 2) return [];
+    
+    // Add bye if odd number of teams
+    const teamsList = [...leagueTeams];
+    if (numTeams % 2 !== 0) {
+      teamsList.push({ id: 'BYE', name: 'BYE' });
+    }
+    
+    const n = teamsList.length;
+    const rounds = [];
+    
+    // Round robin algorithm
+    for (let round = 0; round < n - 1; round++) {
+      const roundMatches = [];
+      for (let match = 0; match < n / 2; match++) {
+        const home = (round + match) % (n - 1);
+        let away = (n - 1 - match + round) % (n - 1);
+        
+        if (match === 0) {
+          away = n - 1;
+        }
+        
+        const homeTeam = teamsList[home];
+        const awayTeam = teamsList[away];
+        
+        // Skip matches with BYE
+        if (homeTeam.id !== 'BYE' && awayTeam.id !== 'BYE') {
+          roundMatches.push({
+            home_team_id: homeTeam.id,
+            away_team_id: awayTeam.id,
+          });
+        }
+      }
+      rounds.push(roundMatches);
+    }
+    
+    return rounds;
+  };
+
+  const handleGenerateFixtures = async (league) => {
+    const leagueTeams = teams.filter(t => t.league_id === league.id);
+    
+    if (leagueTeams.length < 2) {
+      toast.error('Need at least 2 teams to generate fixtures');
+      return;
+    }
+    
+    if (!league.start_date || !league.end_date) {
+      toast.error('Please set league start and end dates first');
+      return;
+    }
+    
+    setGeneratingFixtures(true);
+    
+    // Get available weeks
+    const startDate = parseISO(league.start_date);
+    const endDate = parseISO(league.end_date);
+    const weeks = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 });
+    
+    // Generate round robin schedule
+    const rounds = generateRoundRobinFixtures(leagueTeams);
+    
+    // Calculate how many times to repeat the schedule
+    const totalRounds = rounds.length;
+    const availableWeeks = weeks.length;
+    const repetitions = Math.floor(availableWeeks / totalRounds);
+    
+    // Flatten all matches with dates and rinks
+    const rinkCount = club?.rink_count || 6;
+    const allFixtures = [];
+    const rinkUsage = {}; // Track rink usage per team
+    
+    leagueTeams.forEach(team => {
+      rinkUsage[team.id] = {};
+      for (let r = 1; r <= rinkCount; r++) {
+        rinkUsage[team.id][r] = 0;
+      }
+    });
+    
+    let weekIndex = 0;
+    for (let rep = 0; rep < repetitions && weekIndex < availableWeeks; rep++) {
+      for (let roundIdx = 0; roundIdx < rounds.length && weekIndex < availableWeeks; roundIdx++) {
+        const round = rounds[roundIdx];
+        const matchDate = weeks[weekIndex];
+        
+        // Assign rinks to matches, balancing usage
+        const matchesThisWeek = round.map((match, matchIdx) => {
+          // Find the best rink for this match (least used by both teams)
+          let bestRink = 1;
+          let lowestUsage = Infinity;
+          
+          for (let r = 1; r <= rinkCount; r++) {
+            const totalUsage = (rinkUsage[match.home_team_id][r] || 0) + 
+                              (rinkUsage[match.away_team_id][r] || 0);
+            if (totalUsage < lowestUsage) {
+              lowestUsage = totalUsage;
+              bestRink = r;
+            }
+          }
+          
+          // Update usage
+          rinkUsage[match.home_team_id][bestRink]++;
+          rinkUsage[match.away_team_id][bestRink]++;
+          
+          return {
+            league_id: league.id,
+            club_id: clubId,
+            home_team_id: match.home_team_id,
+            away_team_id: match.away_team_id,
+            match_date: format(matchDate, 'yyyy-MM-dd'),
+            rink_number: bestRink,
+            status: 'scheduled',
+          };
+        });
+        
+        allFixtures.push(...matchesThisWeek);
+        weekIndex++;
+      }
+    }
+    
+    // Create fixtures and bookings
+    const bookingsToCreate = [];
+    
+    for (const fixture of allFixtures) {
+      // Create booking for the rink
+      bookingsToCreate.push({
+        club_id: clubId,
+        rink_number: fixture.rink_number,
+        date: fixture.match_date,
+        start_time: league.start_time || '18:00',
+        end_time: league.end_time || '21:00',
+        status: 'approved',
+        competition_type: 'Club',
+        booker_name: `${league.name} - League Match`,
+        booker_email: user.email,
+        notes: `League fixture: ${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
+      });
+    }
+    
+    // Bulk create bookings
+    const createdBookings = await base44.entities.Booking.bulkCreate(bookingsToCreate);
+    
+    // Add booking IDs to fixtures
+    const fixturesWithBookings = allFixtures.map((fixture, idx) => ({
+      ...fixture,
+      booking_id: createdBookings[idx]?.id || null,
+    }));
+    
+    // Bulk create fixtures
+    await base44.entities.LeagueFixture.bulkCreate(fixturesWithBookings);
+    
+    // Update league to mark fixtures as generated
+    await base44.entities.League.update(league.id, { fixtures_generated: true });
+    
+    queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+    queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    
+    setGeneratingFixtures(false);
+    toast.success(`Generated ${allFixtures.length} fixtures and created rink bookings`);
+  };
+
+  const viewFixtures = (league) => {
+    setViewingLeague(league);
+    setFixturesDialogOpen(true);
   };
 
   const handleSaveTeam = () => {
@@ -366,9 +566,49 @@ export default function LeagueAdmin() {
                             {league.description && (
                               <CardDescription>{league.description}</CardDescription>
                             )}
+                            {league.start_date && league.end_date && (
+                              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {format(parseISO(league.start_date), 'd MMM')} - {format(parseISO(league.end_date), 'd MMM yyyy')}
+                                </span>
+                                {league.start_time && league.end_time && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {league.start_time} - {league.end_time}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          {!league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleGenerateFixtures(league)}
+                              disabled={generatingFixtures}
+                              className="text-emerald-600 hover:bg-emerald-50"
+                            >
+                              {generatingFixtures ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Zap className="w-4 h-4" />
+                              )}
+                              <span className="ml-1 hidden sm:inline">Generate</span>
+                            </Button>
+                          )}
+                          {league.fixtures_generated && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => viewFixtures(league)}
+                            >
+                              <List className="w-4 h-4" />
+                              <span className="ml-1 hidden sm:inline">Fixtures</span>
+                            </Button>
+                          )}
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -479,6 +719,42 @@ export default function LeagueAdmin() {
                   onChange={(e) => setLeagueDescription(e.target.value)}
                   placeholder="Optional description"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={leagueStartDate}
+                    onChange={(e) => setLeagueStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={leagueEndDate}
+                    onChange={(e) => setLeagueEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Match Start Time</Label>
+                  <Input
+                    type="time"
+                    value={leagueStartTime}
+                    onChange={(e) => setLeagueStartTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Match End Time</Label>
+                  <Input
+                    type="time"
+                    value={leagueEndTime}
+                    onChange={(e) => setLeagueEndTime(e.target.value)}
+                  />
+                </div>
               </div>
               <div>
                 <Label>Status</Label>
@@ -603,6 +879,49 @@ export default function LeagueAdmin() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Fixtures Dialog */}
+        <Dialog open={fixturesDialogOpen} onOpenChange={() => setFixturesDialogOpen(false)}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{viewingLeague?.name} - Fixtures</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {viewingLeague && fixtures
+                .filter(f => f.league_id === viewingLeague.id)
+                .sort((a, b) => a.match_date.localeCompare(b.match_date))
+                .map(fixture => {
+                  const homeTeam = teams.find(t => t.id === fixture.home_team_id);
+                  const awayTeam = teams.find(t => t.id === fixture.away_team_id);
+                  return (
+                    <div key={fixture.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm text-gray-500 w-24">
+                          {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{homeTeam?.name || 'Unknown'}</span>
+                          <span className="text-gray-400">vs</span>
+                          <span className="font-medium">{awayTeam?.name || 'Unknown'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+                        {fixture.status === 'completed' && (
+                          <Badge className="bg-emerald-100 text-emerald-700">
+                            {fixture.home_score} - {fixture.away_score}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              {viewingLeague && fixtures.filter(f => f.league_id === viewingLeague.id).length === 0 && (
+                <p className="text-center text-gray-500 py-4">No fixtures generated yet</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
