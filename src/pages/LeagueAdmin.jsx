@@ -45,7 +45,9 @@ import {
   Clock,
   Zap,
   List,
-  CalendarCheck
+  CalendarCheck,
+  BarChart3,
+  Printer
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -83,6 +85,13 @@ export default function LeagueAdmin() {
   const [fixturesDialogOpen, setFixturesDialogOpen] = useState(false);
   const [viewingLeague, setViewingLeague] = useState(null);
   const [bookingRinks, setBookingRinks] = useState(false);
+  const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
+  const [editingFixture, setEditingFixture] = useState(null);
+  const [homeScore, setHomeScore] = useState('');
+  const [awayScore, setAwayScore] = useState('');
+  const [tableDialogOpen, setTableDialogOpen] = useState(false);
+  const [viewingTableLeague, setViewingTableLeague] = useState(null);
+  const tableRef = React.useRef();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -326,10 +335,17 @@ export default function LeagueAdmin() {
     
     setGeneratingFixtures(true);
     
-    // Get available weeks
+    // Get available weeks starting from the exact start date
     const startDate = parseISO(league.start_date);
     const endDate = parseISO(league.end_date);
-    const weeks = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 });
+    
+    // Generate weekly dates starting from the actual start date
+    const weeks = [];
+    let currentDate = startDate;
+    while (isBefore(currentDate, endDate) || format(currentDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
+      weeks.push(currentDate);
+      currentDate = addDays(currentDate, 7);
+    }
     
     // Generate round robin schedule
     const rounds = generateRoundRobinFixtures(leagueTeams);
@@ -472,6 +488,120 @@ export default function LeagueAdmin() {
     setFixturesDialogOpen(true);
   };
 
+  const openScoreDialog = (fixture) => {
+    setEditingFixture(fixture);
+    setHomeScore(fixture.home_score?.toString() || '');
+    setAwayScore(fixture.away_score?.toString() || '');
+    setScoreDialogOpen(true);
+  };
+
+  const handleSaveScore = async () => {
+    if (homeScore === '' || awayScore === '') {
+      toast.error('Please enter both scores');
+      return;
+    }
+    
+    await base44.entities.LeagueFixture.update(editingFixture.id, {
+      home_score: parseInt(homeScore),
+      away_score: parseInt(awayScore),
+      status: 'completed'
+    });
+    
+    queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+    setScoreDialogOpen(false);
+    setEditingFixture(null);
+    toast.success('Score saved');
+  };
+
+  const viewLeagueTable = (league) => {
+    setViewingTableLeague(league);
+    setTableDialogOpen(true);
+  };
+
+  const calculateLeagueTable = (league) => {
+    const leagueTeams = teams.filter(t => t.league_id === league.id);
+    const leagueFixtures = fixtures.filter(f => f.league_id === league.id && f.status === 'completed');
+    
+    const table = leagueTeams.map(team => ({
+      team,
+      played: 0,
+      won: 0,
+      lost: 0,
+      drawn: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointsDiff: 0,
+      points: 0
+    }));
+    
+    leagueFixtures.forEach(fixture => {
+      const homeEntry = table.find(t => t.team.id === fixture.home_team_id);
+      const awayEntry = table.find(t => t.team.id === fixture.away_team_id);
+      
+      if (homeEntry && awayEntry && fixture.home_score !== undefined && fixture.away_score !== undefined) {
+        homeEntry.played++;
+        awayEntry.played++;
+        homeEntry.pointsFor += fixture.home_score;
+        homeEntry.pointsAgainst += fixture.away_score;
+        awayEntry.pointsFor += fixture.away_score;
+        awayEntry.pointsAgainst += fixture.home_score;
+        
+        if (fixture.home_score > fixture.away_score) {
+          homeEntry.won++;
+          homeEntry.points += 2;
+          awayEntry.lost++;
+        } else if (fixture.away_score > fixture.home_score) {
+          awayEntry.won++;
+          awayEntry.points += 2;
+          homeEntry.lost++;
+        } else {
+          homeEntry.drawn++;
+          awayEntry.drawn++;
+          homeEntry.points += 1;
+          awayEntry.points += 1;
+        }
+      }
+    });
+    
+    table.forEach(entry => {
+      entry.pointsDiff = entry.pointsFor - entry.pointsAgainst;
+    });
+    
+    return table.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.pointsDiff !== a.pointsDiff) return b.pointsDiff - a.pointsDiff;
+      return b.pointsFor - a.pointsFor;
+    });
+  };
+
+  const handlePrintTable = () => {
+    const printContent = tableRef.current;
+    if (!printContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${viewingTableLeague?.name} - League Table</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { font-size: 20px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+            th { background: #f5f5f5; font-weight: bold; }
+            .team-name { text-align: left; font-weight: 500; }
+            .position { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const handleSaveTeam = () => {
     if (!teamName.trim()) {
       toast.error('Please enter a team name');
@@ -487,12 +617,16 @@ export default function LeagueAdmin() {
       ? (captain.first_name && captain.surname ? `${captain.first_name} ${captain.surname}` : captain.user_name || captain.user_email)
       : '';
 
+    // Add captain as default player if not editing
+    const initialPlayers = captainEmail && !editingTeam ? [captainEmail] : undefined;
+
     const data = {
       league_id: selectedLeague.id,
       club_id: clubId,
       name: teamName.trim(),
       captain_email: captainEmail || null,
       captain_name: captainName || null,
+      ...(initialPlayers && { players: initialPlayers }),
     };
 
     if (editingTeam) {
@@ -660,14 +794,24 @@ export default function LeagueAdmin() {
                             </Button>
                           )}
                           {league.fixtures_generated && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => viewFixtures(league)}
-                            >
-                              <List className="w-4 h-4" />
-                              <span className="ml-1 hidden sm:inline">Fixtures</span>
-                            </Button>
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => viewFixtures(league)}
+                              >
+                                <List className="w-4 h-4" />
+                                <span className="ml-1 hidden sm:inline">Fixtures</span>
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => viewLeagueTable(league)}
+                              >
+                                <BarChart3 className="w-4 h-4" />
+                                <span className="ml-1 hidden sm:inline">Table</span>
+                              </Button>
+                            </>
                           )}
                           <Button 
                             variant="outline" 
@@ -981,11 +1125,18 @@ export default function LeagueAdmin() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">Rink {fixture.rink_number}</Badge>
-                        {fixture.status === 'completed' && (
+                        {fixture.status === 'completed' ? (
                           <Badge className="bg-emerald-100 text-emerald-700">
                             {fixture.home_score} - {fixture.away_score}
                           </Badge>
-                        )}
+                        ) : null}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openScoreDialog(fixture)}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -993,6 +1144,110 @@ export default function LeagueAdmin() {
               {viewingLeague && fixtures.filter(f => f.league_id === viewingLeague.id).length === 0 && (
                 <p className="text-center text-gray-500 py-4">No fixtures generated yet</p>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Score Dialog */}
+        <Dialog open={scoreDialogOpen} onOpenChange={() => setScoreDialogOpen(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enter Score</DialogTitle>
+            </DialogHeader>
+            {editingFixture && (
+              <div className="space-y-4">
+                <div className="text-center text-sm text-gray-500 mb-4">
+                  {format(parseISO(editingFixture.match_date), 'd MMM yyyy')}
+                </div>
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  <div className="text-right">
+                    <Label className="block mb-2">{teams.find(t => t.id === editingFixture.home_team_id)?.name}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={homeScore}
+                      onChange={(e) => setHomeScore(e.target.value)}
+                      className="text-center"
+                    />
+                  </div>
+                  <div className="text-center text-gray-400 pt-6">vs</div>
+                  <div className="text-left">
+                    <Label className="block mb-2">{teams.find(t => t.id === editingFixture.away_team_id)?.name}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={awayScore}
+                      onChange={(e) => setAwayScore(e.target.value)}
+                      className="text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setScoreDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveScore} className="bg-emerald-600 hover:bg-emerald-700">
+                Save Score
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* League Table Dialog */}
+        <Dialog open={tableDialogOpen} onOpenChange={() => setTableDialogOpen(false)}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>{viewingTableLeague?.name} - League Table</span>
+                <Button variant="outline" size="sm" onClick={handlePrintTable}>
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div ref={tableRef}>
+              {viewingTableLeague && (() => {
+                const table = calculateLeagueTable(viewingTableLeague);
+                return (
+                  <>
+                    <h1>{viewingTableLeague.name}</h1>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr>
+                            <th className="border p-2 bg-gray-50">Pos</th>
+                            <th className="border p-2 bg-gray-50 text-left">Team</th>
+                            <th className="border p-2 bg-gray-50">P</th>
+                            <th className="border p-2 bg-gray-50">W</th>
+                            <th className="border p-2 bg-gray-50">D</th>
+                            <th className="border p-2 bg-gray-50">L</th>
+                            <th className="border p-2 bg-gray-50">PF</th>
+                            <th className="border p-2 bg-gray-50">PA</th>
+                            <th className="border p-2 bg-gray-50">+/-</th>
+                            <th className="border p-2 bg-gray-50">Pts</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {table.map((entry, idx) => (
+                            <tr key={entry.team.id}>
+                              <td className="border p-2 text-center font-medium">{idx + 1}</td>
+                              <td className="border p-2 font-medium">{entry.team.name}</td>
+                              <td className="border p-2 text-center">{entry.played}</td>
+                              <td className="border p-2 text-center">{entry.won}</td>
+                              <td className="border p-2 text-center">{entry.drawn}</td>
+                              <td className="border p-2 text-center">{entry.lost}</td>
+                              <td className="border p-2 text-center">{entry.pointsFor}</td>
+                              <td className="border p-2 text-center">{entry.pointsAgainst}</td>
+                              <td className="border p-2 text-center">{entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}</td>
+                              <td className="border p-2 text-center font-bold">{entry.points}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>
