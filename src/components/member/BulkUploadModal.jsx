@@ -123,7 +123,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
           <DialogTitle>Bulk Upload Members</DialogTitle>
           <DialogDescription>

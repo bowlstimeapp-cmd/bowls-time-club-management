@@ -140,7 +140,7 @@ export default function BookingCard({
                   )}
                 </div>
 
-                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                <div className="flex gap-2 flex-wrap shrink-0">
                   {isAdmin && booking.status === 'pending' && (
                     <>
                       <Button
@@ -149,8 +149,8 @@ export default function BookingCard({
                         disabled={isLoading}
                         className="bg-emerald-600 hover:bg-emerald-700"
                       >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Approve
+                        <CheckCircle className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Approve</span>
                       </Button>
                       <Button
                         size="sm"
@@ -159,8 +159,8 @@ export default function BookingCard({
                         disabled={isLoading}
                         className="border-red-200 text-red-600 hover:bg-red-50"
                       >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
+                        <XCircle className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Reject</span>
                       </Button>
                     </>
                   )}
@@ -172,8 +172,8 @@ export default function BookingCard({
                       onClick={() => onEdit(booking)}
                       disabled={isLoading}
                     >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit
+                      <Pencil className="w-4 h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Edit</span>
                     </Button>
                   )}
                   
@@ -185,8 +185,8 @@ export default function BookingCard({
                       disabled={isLoading}
                       className="border-red-200 text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
+                      <Trash2 className="w-4 h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Delete</span>
                     </Button>
                   )}
                   
@@ -198,8 +198,8 @@ export default function BookingCard({
                       disabled={isLoading}
                       className="border-red-200 text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Cancel
+                      <Trash2 className="w-4 h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Cancel</span>
                     </Button>
                   )}
                 </div>

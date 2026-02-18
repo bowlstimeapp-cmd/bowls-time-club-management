@@ -78,29 +78,29 @@ export default function SelectionCard({
                 </p>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
-                <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+              <div className="flex gap-2 flex-wrap shrink-0">
+              <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                <Button variant="outline" size="sm">
+                  <Eye className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">View</span>
+                </Button>
+              </Link>
+              {selection.status === 'published' && (
+                <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
                   <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
+                    <ClipboardList className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Live Scoring</span>
                   </Button>
                 </Link>
-                {selection.status === 'published' && (
-                  <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                    <Button variant="outline" size="sm">
-                      <ClipboardList className="w-4 h-4 mr-1" />
-                      Live Scoring
-                    </Button>
-                  </Link>
-                )}
-                {isSelector && (
-                  <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                    <Button variant="outline" size="sm">
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </Link>
-                )}
+              )}
+              {isSelector && (
+                <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                  <Button variant="outline" size="sm">
+                    <Pencil className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                </Link>
+              )}
               </div>
             </div>
 
