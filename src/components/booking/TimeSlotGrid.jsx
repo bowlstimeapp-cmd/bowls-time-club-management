@@ -121,8 +121,8 @@ export default function TimeSlotGrid({
 
   return (
     <TooltipProvider>
-      <div className="overflow-x-auto">
-        <div className="min-w-[700px]">
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[600px]">
           {/* Header */}
           <div className={`grid gap-2 mb-3`} style={{ gridTemplateColumns: `1fr repeat(${RINKS.length}, 1fr)` }}>
             <div className="p-3 text-sm font-medium text-gray-500 flex items-center gap-2">

@@ -232,7 +232,7 @@ export default function Selection() {
           transition={{ delay: 0.1 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`grid w-full mb-6 ${isSelector ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <TabsList className={`grid w-full mb-6 h-auto ${isSelector ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="published" className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
                 Published ({publishedSelections.length})

@@ -273,7 +273,7 @@ export default function AdminBookings() {
           transition={{ delay: 0.2 }}
         >
           <Tabs defaultValue="pending" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6 h-auto flex-wrap">
               <TabsTrigger value="pending" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Pending ({pendingBookings.length})
@@ -408,7 +408,7 @@ export default function AdminBookings() {
         />
 
         <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader>
               <DialogTitle>Reject Booking</DialogTitle>
             </DialogHeader>
@@ -439,7 +439,7 @@ export default function AdminBookings() {
         </Dialog>
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader>
               <DialogTitle>Delete Booking</DialogTitle>
             </DialogHeader>

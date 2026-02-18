@@ -272,7 +272,7 @@ export default function ClubAdmin() {
           transition={{ delay: 0.2 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6 h-auto">
               <TabsTrigger value="pending" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Pending ({pendingMembers.length})
@@ -306,24 +306,24 @@ export default function ClubAdmin() {
                   {pendingMembers.map(member => (
                     <Card key={member.id}>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                               <User className="w-5 h-5 text-gray-500" />
                             </div>
-                            <div>
-                              <p className="font-medium">{member.user_name || member.user_email}</p>
-                              <p className="text-sm text-gray-500">{member.user_email}</p>
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{member.user_name || member.user_email}</p>
+                              <p className="text-sm text-gray-500 truncate">{member.user_email}</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-shrink-0">
                             <Button
                               size="sm"
                               onClick={() => handleApprove(member)}
                               className="bg-emerald-600 hover:bg-emerald-700"
                             >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
+                              <CheckCircle className="w-4 h-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Approve</span>
                             </Button>
                             <Button
                               size="sm"
@@ -331,8 +331,8 @@ export default function ClubAdmin() {
                               onClick={() => handleReject(member)}
                               className="border-red-200 text-red-600 hover:bg-red-50"
                             >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
+                              <XCircle className="w-4 h-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Reject</span>
                             </Button>
                           </div>
                         </div>

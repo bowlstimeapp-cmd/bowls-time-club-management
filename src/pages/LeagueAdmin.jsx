@@ -909,7 +909,7 @@ export default function LeagueAdmin() {
 
         {/* League Dialog */}
         <Dialog open={leagueDialogOpen} onOpenChange={resetLeagueForm}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader>
               <DialogTitle>{editingLeague ? 'Edit League' : 'Create League'}</DialogTitle>
             </DialogHeader>
@@ -1012,7 +1012,7 @@ export default function LeagueAdmin() {
 
         {/* Team Dialog */}
         <Dialog open={teamDialogOpen} onOpenChange={resetTeamForm}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingTeam ? 'Edit Team' : `Add Team to ${selectedLeague?.name}`}
@@ -1106,7 +1106,7 @@ export default function LeagueAdmin() {
 
         {/* Fixtures Dialog */}
         <Dialog open={fixturesDialogOpen} onOpenChange={() => setFixturesDialogOpen(false)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
             <DialogHeader>
               <DialogTitle>{viewingLeague?.name} - Fixtures</DialogTitle>
             </DialogHeader>
@@ -1156,7 +1156,7 @@ export default function LeagueAdmin() {
 
         {/* Score Dialog */}
         <Dialog open={scoreDialogOpen} onOpenChange={() => setScoreDialogOpen(false)}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader>
               <DialogTitle>Enter Score</DialogTitle>
             </DialogHeader>
@@ -1201,7 +1201,7 @@ export default function LeagueAdmin() {
 
         {/* League Table Dialog */}
         <Dialog open={tableDialogOpen} onOpenChange={() => setTableDialogOpen(false)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <span>{viewingTableLeague?.name} - League Table</span>

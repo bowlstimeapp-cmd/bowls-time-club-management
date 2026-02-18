@@ -206,7 +206,7 @@ export default function MyBookings() {
         </motion.div>
 
         <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full max-w-lg">
             <AlertDialogHeader>
               <AlertDialogTitle>Cancel Booking?</AlertDialogTitle>
               <AlertDialogDescription>

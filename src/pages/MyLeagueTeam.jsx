@@ -644,7 +644,7 @@ export default function MyLeagueTeam() {
 
         {/* Add Player Dialog */}
         <Dialog open={addPlayerOpen} onOpenChange={setAddPlayerOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
             <DialogHeader>
               <DialogTitle>Add Player to {selectedTeam?.name}</DialogTitle>
             </DialogHeader>
@@ -687,7 +687,7 @@ export default function MyLeagueTeam() {
 
         {/* Rota View Dialog */}
         <Dialog open={rotaDialogOpen} onOpenChange={() => setRotaDialogOpen(false)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <span>{viewingRotaTeam?.name} - Player Rota</span>
@@ -790,7 +790,7 @@ export default function MyLeagueTeam() {
 
         {/* Edit Rota Dialog */}
         <Dialog open={editRotaDialogOpen} onOpenChange={() => setEditRotaDialogOpen(false)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
             <DialogHeader>
               <DialogTitle>{editingRotaTeam?.name} - Edit Rota</DialogTitle>
             </DialogHeader>

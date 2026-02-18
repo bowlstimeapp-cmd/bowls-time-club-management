@@ -229,7 +229,7 @@ export default function LeagueView() {
 
         {/* Fixtures Dialog */}
         <Dialog open={fixturesDialogOpen} onOpenChange={() => setFixturesDialogOpen(false)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
             <DialogHeader>
               <DialogTitle>{viewingLeague?.name} - Fixtures</DialogTitle>
             </DialogHeader>
