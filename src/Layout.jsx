@@ -27,6 +27,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import NotificationDropdown from '@/components/NotificationDropdown';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
@@ -172,6 +173,8 @@ export default function Layout({ children, currentPageName }) {
                 Switch Club
               </Link>
             )}
+
+            {user?.email && <NotificationDropdown userEmail={user.email} />}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
