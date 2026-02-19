@@ -153,16 +153,26 @@ export default function TournamentEditor() {
     const bracketSize = Math.pow(2, Math.ceil(Math.log2(playerCount)));
     const byeCount = bracketSize - playerCount;
     
-    // Create first round matches
+    // Create first round matches with fair bye distribution
     const rounds = [];
     const firstRound = [];
-    let playerIndex = 0;
     
+    // Distribute byes evenly throughout the bracket (not bottom-loaded)
+    const playersWithByes = [...shuffled];
+    const byeInterval = playerCount > 0 ? Math.floor(bracketSize / (byeCount || 1)) : 0;
+    
+    // Insert null (bye) slots at even intervals
+    for (let i = 0; i < byeCount; i++) {
+      const position = Math.min((i + 1) * byeInterval - 1, playersWithByes.length);
+      playersWithByes.splice(position, 0, null);
+    }
+    
+    // Create matches
     for (let i = 0; i < bracketSize / 2; i++) {
       const match = {
         id: `r1_m${i}`,
-        player1: shuffled[playerIndex] || null,
-        player2: shuffled[playerIndex + 1] || null,
+        player1: playersWithByes[i * 2] || null,
+        player2: playersWithByes[i * 2 + 1] || null,
         winner: null
       };
       
@@ -174,7 +184,6 @@ export default function TournamentEditor() {
       }
       
       firstRound.push(match);
-      playerIndex += 2;
     }
     rounds.push(firstRound);
     
