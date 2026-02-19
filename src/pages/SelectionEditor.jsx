@@ -277,6 +277,18 @@ ${club?.name || 'Your Bowls Club'}
       await updateMutation.mutateAsync({ id: selectionId, data });
       toast.success(publish ? 'Selection published!' : 'Selection saved');
       if (publish) {
+        // Create notifications for selected players
+        const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+        const notificationsToCreate = selectedPlayerEmails.map(email => ({
+          user_email: email,
+          type: 'team_selection',
+          title: 'Selected for Match',
+          message: `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+          link_page: 'SelectionView',
+          link_params: `?clubId=${clubId}&selectionId=${selectionId}`,
+          related_id: selectionId
+        }));
+        await base44.entities.Notification.bulkCreate(notificationsToCreate);
         await sendSelectionEmails(selectionId);
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       }
@@ -284,6 +296,18 @@ ${club?.name || 'Your Bowls Club'}
       const result = await createMutation.mutateAsync(data);
       if (publish) {
         toast.success('Selection published!');
+        // Create notifications for selected players
+        const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+        const notificationsToCreate = selectedPlayerEmails.map(email => ({
+          user_email: email,
+          type: 'team_selection',
+          title: 'Selected for Match',
+          message: `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+          link_page: 'SelectionView',
+          link_params: `?clubId=${clubId}&selectionId=${result.id}`,
+          related_id: result.id
+        }));
+        await base44.entities.Notification.bulkCreate(notificationsToCreate);
         await sendSelectionEmails(result.id);
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       } else {

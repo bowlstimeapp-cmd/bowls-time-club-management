@@ -137,6 +137,16 @@ export default function AdminBookings() {
 
   const handleApprove = async (booking) => {
     await updateMutation.mutateAsync({ id: booking.id, data: { status: 'approved' } });
+    // Create notification
+    await base44.entities.Notification.create({
+      user_email: booking.booker_email,
+      type: 'booking_accepted',
+      title: 'Booking Approved',
+      message: `Your booking for Rink ${booking.rink_number} on ${booking.date} at ${booking.start_time} has been approved`,
+      link_page: 'MyBookings',
+      link_params: `?clubId=${clubId}`,
+      related_id: booking.id
+    });
     toast.success(`Booking for ${booking.booker_name} approved`);
   };
 
@@ -148,12 +158,23 @@ export default function AdminBookings() {
 
   const handleConfirmReject = async () => {
     if (bookingToReject) {
+      const notes = rejectReason || 'Booking rejected by admin';
       await updateMutation.mutateAsync({ 
         id: bookingToReject.id, 
         data: { 
           status: 'rejected',
-          admin_notes: rejectReason || 'Booking rejected by admin'
+          admin_notes: notes
         } 
+      });
+      // Create notification
+      await base44.entities.Notification.create({
+        user_email: bookingToReject.booker_email,
+        type: 'booking_rejected',
+        title: 'Booking Rejected',
+        message: `Your booking for Rink ${bookingToReject.rink_number} on ${bookingToReject.date} at ${bookingToReject.start_time} has been rejected${rejectReason ? ': ' + rejectReason : ''}`,
+        link_page: 'MyBookings',
+        link_params: `?clubId=${clubId}`,
+        related_id: bookingToReject.id
       });
       toast.success(`Booking for ${bookingToReject.booker_name} rejected`);
       setRejectDialogOpen(false);
@@ -162,10 +183,29 @@ export default function AdminBookings() {
   };
 
   const handleEditBooking = async (updates) => {
+    const hasChanged = 
+      updates.rink_number !== editBooking.rink_number ||
+      updates.date !== editBooking.date ||
+      updates.start_time !== editBooking.start_time;
+    
     await updateMutation.mutateAsync({ 
       id: editBooking.id, 
       data: updates 
     });
+    
+    // Create notification if booking was moved
+    if (hasChanged) {
+      await base44.entities.Notification.create({
+        user_email: editBooking.booker_email,
+        type: 'booking_moved',
+        title: 'Booking Updated',
+        message: `Your booking has been moved to Rink ${updates.rink_number} on ${updates.date} at ${updates.start_time}`,
+        link_page: 'MyBookings',
+        link_params: `?clubId=${clubId}`,
+        related_id: editBooking.id
+      });
+    }
+    
     toast.success('Booking updated');
     setEditBooking(null);
   };
