@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,7 +13,8 @@ import {
   Clock, 
   CheckCircle,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Search
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useNavigate } from 'react-router-dom';
@@ -20,6 +22,7 @@ import { createPageUrl } from '@/utils';
 
 export default function ClubSelector() {
   const [user, setUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -83,6 +86,11 @@ export default function ClubSelector() {
   }, [approvedMemberships, membershipsLoading, navigate]);
 
   const isLoading = clubsLoading || membershipsLoading;
+  
+  // Filter clubs by search query
+  const filteredClubs = clubs.filter(club =>
+    club.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -95,9 +103,24 @@ export default function ClubSelector() {
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
             Select Your Club
           </h1>
-          <p className="text-gray-600 max-w-md mx-auto">
+          <p className="text-gray-600 max-w-md mx-auto mb-6">
             Choose the lawn bowls club you belong to, or request to join a new club
           </p>
+          
+          {/* Search Input */}
+          {clubs.length > 0 && (
+            <div className="max-w-md mx-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  placeholder="Search clubs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {isLoading ? (
@@ -116,10 +139,20 @@ export default function ClubSelector() {
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Clubs Available</h3>
             <p className="text-gray-500">Please contact the platform administrator.</p>
           </motion.div>
+        ) : filteredClubs.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No clubs found</h3>
+            <p className="text-gray-500">Try a different search term</p>
+          </motion.div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <AnimatePresence>
-              {clubs.map((club, index) => {
+              {filteredClubs.map((club, index) => {
                 const membership = getMembershipStatus(club.id);
                 const isPending = membership?.status === 'pending';
                 const isApproved = membership?.status === 'approved';

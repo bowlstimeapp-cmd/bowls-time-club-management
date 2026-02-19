@@ -43,6 +43,8 @@ export default function PlatformAdmin() {
     closing_time: '21:00',
     session_duration: 2,
     primary_admin_email: '',
+    admin_first_name: '',
+    admin_surname: '',
     is_active: true,
     module_rink_booking: true,
     module_selection: true,
@@ -67,12 +69,20 @@ export default function PlatformAdmin() {
 
   const createClubMutation = useMutation({
     mutationFn: async (clubData) => {
-      const club = await base44.entities.Club.create(clubData);
+      const { admin_first_name, admin_surname, ...clubFields } = clubData;
+      const club = await base44.entities.Club.create(clubFields);
+      
       // Auto-create admin membership for primary admin
+      const adminName = admin_first_name && admin_surname 
+        ? `${admin_first_name} ${admin_surname}` 
+        : clubData.primary_admin_email;
+      
       await base44.entities.ClubMembership.create({
         club_id: club.id,
         user_email: clubData.primary_admin_email,
-        user_name: clubData.primary_admin_email,
+        user_name: adminName,
+        first_name: admin_first_name || '',
+        surname: admin_surname || '',
         role: 'admin',
         status: 'approved'
       });
@@ -137,6 +147,8 @@ export default function PlatformAdmin() {
       closing_time: '21:00',
       session_duration: 2,
       primary_admin_email: '',
+      admin_first_name: '',
+      admin_surname: '',
       is_active: true,
       module_rink_booking: true,
       module_selection: true,
@@ -157,6 +169,8 @@ export default function PlatformAdmin() {
       closing_time: club.closing_time || '21:00',
       session_duration: club.session_duration || 2,
       primary_admin_email: club.primary_admin_email,
+      admin_first_name: '',
+      admin_surname: '',
       is_active: club.is_active !== false,
       module_rink_booking: club.module_rink_booking !== false,
       module_selection: club.module_selection !== false,
@@ -363,6 +377,24 @@ export default function PlatformAdmin() {
                   <p className="text-xs text-gray-500 mt-1">
                     This user will have admin rights for this club
                   </p>
+                </div>
+                <div>
+                  <Label>Admin First Name *</Label>
+                  <Input
+                    value={formData.admin_first_name || ''}
+                    onChange={(e) => setFormData({ ...formData, admin_first_name: e.target.value })}
+                    placeholder="John"
+                    required={!editingClub}
+                  />
+                </div>
+                <div>
+                  <Label>Admin Surname *</Label>
+                  <Input
+                    value={formData.admin_surname || ''}
+                    onChange={(e) => setFormData({ ...formData, admin_surname: e.target.value })}
+                    placeholder="Smith"
+                    required={!editingClub}
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label>Description</Label>

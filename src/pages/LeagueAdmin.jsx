@@ -776,11 +776,12 @@ export default function LeagueAdmin() {
                               className="text-emerald-600 hover:bg-emerald-50"
                             >
                               {generatingFixtures ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                               ) : (
-                                <Zap className="w-4 h-4" />
+                                <Zap className="w-4 h-4 mr-1" />
                               )}
-                              <span className="ml-1 hidden sm:inline">Generate</span>
+                              <span className="hidden sm:inline">Generate Fixtures</span>
+                              <span className="sm:hidden">Generate</span>
                             </Button>
                           )}
                           {league.fixtures_generated && !league.bookings_created && (
@@ -792,11 +793,12 @@ export default function LeagueAdmin() {
                               className="text-blue-600 hover:bg-blue-50"
                             >
                               {bookingRinks ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                               ) : (
-                                <CalendarCheck className="w-4 h-4" />
+                                <CalendarCheck className="w-4 h-4 mr-1" />
                               )}
-                              <span className="ml-1 hidden sm:inline">Book Rinks</span>
+                              <span className="hidden sm:inline">Book Rinks & Fixtures</span>
+                              <span className="sm:hidden">Book Rinks</span>
                             </Button>
                           )}
                           {league.fixtures_generated && (
