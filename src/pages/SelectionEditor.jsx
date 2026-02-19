@@ -179,12 +179,25 @@ export default function SelectionEditor() {
   };
 
   const sendSelectionEmails = async (savedSelectionId) => {
-    // Check if club has email notifications enabled
-    if (!club?.email_member_notifications) return;
-
     // Get all selected player emails
     const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
     
+    // Create notifications for all selected players
+    const notificationsToCreate = selectedPlayerEmails.map(email => ({
+      user_email: email,
+      type: 'team_selection',
+      title: 'Selected for Match',
+      message: `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+      link_page: 'SelectionView',
+      link_params: `?clubId=${clubId}&selectionId=${savedSelectionId}`,
+      related_id: savedSelectionId
+    }));
+    
+    await base44.entities.Notification.bulkCreate(notificationsToCreate);
+    
+    // Check if club has email notifications enabled
+    if (!club?.email_member_notifications) return;
+
     // Get members who have email notifications enabled
     const eligibleMembers = members.filter(m => 
       selectedPlayerEmails.includes(m.user_email) && 
