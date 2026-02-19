@@ -47,8 +47,10 @@ import {
   List,
   CalendarCheck,
   BarChart3,
-  Printer
+  Printer,
+  CalendarX
 } from 'lucide-react';
+import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -92,6 +94,8 @@ export default function LeagueAdmin() {
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
   const tableRef = React.useRef();
+  const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
+  const [blacklistLeague, setBlacklistLeague] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -339,11 +343,22 @@ export default function LeagueAdmin() {
     const startDate = parseISO(league.start_date);
     const endDate = parseISO(league.end_date);
     
-    // Generate weekly dates starting from the actual start date
+    // Get blacklisted dates
+    const blacklisted = league.blacklisted_dates || [];
+    const isDateBlacklisted = (date) => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      return blacklisted.some(bl => {
+        return dateStr >= bl.start_date && dateStr <= bl.end_date;
+      });
+    };
+    
+    // Generate weekly dates starting from the actual start date, excluding blacklisted dates
     const weeks = [];
     let currentDate = startDate;
     while (isBefore(currentDate, endDate) || format(currentDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
-      weeks.push(currentDate);
+      if (!isDateBlacklisted(currentDate)) {
+        weeks.push(currentDate);
+      }
       currentDate = addDays(currentDate, 7);
     }
     
@@ -824,6 +839,17 @@ export default function LeagueAdmin() {
                           <Button 
                             variant="outline" 
                             size="sm"
+                            onClick={() => {
+                              setBlacklistLeague(league);
+                              setBlacklistDialogOpen(true);
+                            }}
+                            title="Blacklist dates"
+                          >
+                            <CalendarX className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
                             onClick={() => handleEditLeague(league)}
                           >
                             <Pencil className="w-4 h-4" />
@@ -1200,6 +1226,13 @@ export default function LeagueAdmin() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Blacklist Dates Dialog */}
+        <BlacklistDatesDialog
+          open={blacklistDialogOpen}
+          onClose={() => setBlacklistDialogOpen(false)}
+          league={blacklistLeague}
+        />
 
         {/* League Table Dialog */}
         <Dialog open={tableDialogOpen} onOpenChange={() => setTableDialogOpen(false)}>

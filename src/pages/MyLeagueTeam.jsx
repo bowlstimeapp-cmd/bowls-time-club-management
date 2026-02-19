@@ -33,8 +33,10 @@ import {
   Table,
   Phone,
   Pencil,
-  BarChart3
+  BarChart3,
+  CalendarX
 } from 'lucide-react';
+import PlayerAvailabilityDialog from '@/components/teams/PlayerAvailabilityDialog';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -57,6 +59,8 @@ export default function MyLeagueTeam() {
   const [generatingRota, setGeneratingRota] = useState(false);
   const [editRotaDialogOpen, setEditRotaDialogOpen] = useState(false);
   const [editingRotaTeam, setEditingRotaTeam] = useState(null);
+  const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
+  const [availabilityTeam, setAvailabilityTeam] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -258,6 +262,7 @@ export default function MyLeagueTeam() {
       .sort((a, b) => a.match_date.localeCompare(b.match_date));
     
     const players = team.players || [];
+    const unavailability = team.player_unavailability || {};
     
     if (players.length === 0) {
       toast.error('Add players to your team first');
@@ -277,20 +282,72 @@ export default function MyLeagueTeam() {
     const playerGameCount = {};
     players.forEach(p => playerGameCount[p] = 0);
     
+    // Track previous match groupings to ensure variety
+    const previousGroupings = {};
+    players.forEach(p => previousGroupings[p] = new Set());
+    
     const rota = {};
     
     for (const fixture of teamFixtures) {
-      // Sort players by least games played
-      const sortedPlayers = [...players].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+      const fixtureDate = fixture.match_date;
       
-      // Select exactly playersPerGame players (3 for triples, 4 for fours)
-      const selectedPlayers = sortedPlayers.slice(0, playersPerGame);
+      // Get available players for this date
+      const availablePlayers = players.filter(player => {
+        const playerUnavailability = unavailability[player] || [];
+        return !playerUnavailability.includes(fixtureDate);
+      });
       
-      // Update game counts
-      selectedPlayers.forEach(p => playerGameCount[p]++);
+      if (availablePlayers.length < playersPerGame) {
+        // Not enough available players - select best available
+        const sortedAvailable = [...availablePlayers].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
+        rota[fixture.id] = sortedAvailable;
+        sortedAvailable.forEach(p => playerGameCount[p]++);
+        continue;
+      }
       
-      // Only assign exactly the required number of players
-      rota[fixture.id] = selectedPlayers.slice(0, playersPerGame);
+      // Try to select players with variety in groupings and low game count
+      let selectedPlayers = [];
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (selectedPlayers.length < playersPerGame && attempts < maxAttempts) {
+        attempts++;
+        
+        // Score each player based on: game count (lower is better) + grouping variety
+        const playerScores = availablePlayers.map(player => {
+          const gamesPlayed = playerGameCount[player];
+          const groupingScore = selectedPlayers.reduce((sum, selected) => {
+            return sum + (previousGroupings[player].has(selected) ? 1 : 0);
+          }, 0);
+          
+          return {
+            player,
+            score: gamesPlayed * 10 + groupingScore * 5 // Prioritize low game count, then grouping variety
+          };
+        });
+        
+        // Sort by score and pick the best available player not yet selected
+        playerScores.sort((a, b) => a.score - b.score);
+        
+        for (const { player } of playerScores) {
+          if (!selectedPlayers.includes(player)) {
+            selectedPlayers.push(player);
+            break;
+          }
+        }
+      }
+      
+      // Update game counts and grouping records
+      selectedPlayers.forEach(p => {
+        playerGameCount[p]++;
+        selectedPlayers.forEach(other => {
+          if (p !== other) {
+            previousGroupings[p].add(other);
+          }
+        });
+      });
+      
+      rota[fixture.id] = selectedPlayers;
     }
     
     // Save rota to team
@@ -501,6 +558,17 @@ export default function MyLeagueTeam() {
                             <div className="flex gap-2 flex-wrap">
                               {userIsCaptain && (
                                 <>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setAvailabilityTeam(team);
+                                      setAvailabilityDialogOpen(true);
+                                    }}
+                                  >
+                                    <CalendarX className="w-4 h-4 mr-1" />
+                                    Availability
+                                  </Button>
                                   <Button 
                                     variant="outline" 
                                     size="sm"
@@ -787,6 +855,14 @@ export default function MyLeagueTeam() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Player Availability Dialog */}
+        <PlayerAvailabilityDialog
+          open={availabilityDialogOpen}
+          onClose={() => setAvailabilityDialogOpen(false)}
+          team={availabilityTeam}
+          getMemberName={getMemberName}
+        />
 
         {/* Edit Rota Dialog */}
         <Dialog open={editRotaDialogOpen} onOpenChange={() => setEditRotaDialogOpen(false)}>
