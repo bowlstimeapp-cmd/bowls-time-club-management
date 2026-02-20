@@ -208,14 +208,26 @@ export default function ClubSelector() {
                             </span>
                           </div>
 
-                          {isApproved ? (
-                            <Button 
-                              onClick={() => handleEnterClub(club.id)}
-                              className="w-full bg-emerald-600 hover:bg-emerald-700"
-                            >
-                              Enter Club
-                              <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
+                          <div className="space-y-2">
+                           {user?.role === 'admin' && (
+                             <Button
+                               onClick={() => navigate(createPageUrl('PlatformAdmin') + `?manageAdmins=${club.id}`)}
+                               variant="outline"
+                               size="sm"
+                               className="w-full"
+                             >
+                               <Users className="w-4 h-4 mr-2" />
+                               Manage Admins
+                             </Button>
+                           )}
+                           {isApproved ? (
+                             <Button 
+                               onClick={() => handleEnterClub(club.id)}
+                               className="w-full bg-emerald-600 hover:bg-emerald-700"
+                             >
+                               Enter Club
+                               <ArrowRight className="w-4 h-4 ml-2" />
+                             </Button>
                           ) : isPending ? (
                             <Button disabled className="w-full" variant="outline">
                               <Clock className="w-4 h-4 mr-2" />
@@ -240,6 +252,7 @@ export default function ClubSelector() {
                               Request to Join
                             </Button>
                           )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
