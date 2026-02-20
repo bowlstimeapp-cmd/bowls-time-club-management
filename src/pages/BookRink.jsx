@@ -12,6 +12,8 @@ import { createPageUrl } from '@/utils';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import DateSelector from '@/components/booking/DateSelector';
 import BookingModal from '@/components/booking/BookingModal';
+import BulkBookingModal from '@/components/booking/BulkBookingModal';
+import { CalendarRange } from 'lucide-react';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -21,6 +23,7 @@ export default function BookRink() {
   const [selectedDate, setSelectedDate] = useState(startOfToday());
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [user, setUser] = useState(null);
 
   const queryClient = useQueryClient();
@@ -134,6 +137,40 @@ export default function BookRink() {
     }
   };
 
+  const handleBulkBooking = async (bulkData) => {
+    if (!user || !clubId) return;
+
+    const status = club?.auto_approve_bookings ? 'approved' : 'pending';
+    const bookerName = user.first_name && user.surname 
+      ? `${user.first_name} ${user.surname}` 
+      : (user.full_name || user.email);
+
+    const bookingPromises = bulkData.rinks.map(rinkNumber =>
+      createBookingMutation.mutateAsync({
+        club_id: clubId,
+        rink_number: rinkNumber,
+        date: dateString,
+        start_time: bulkData.startTime,
+        end_time: bulkData.endTime,
+        status,
+        competition_type: bulkData.competitionType,
+        competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
+        booker_name: bookerName,
+        booker_email: user.email,
+        notes: bulkData.notes || '',
+      })
+    );
+
+    await Promise.all(bookingPromises);
+    
+    setBulkModalOpen(false);
+    
+    const message = status === 'approved' 
+      ? `${bulkData.rinks.length} rink(s) booked!` 
+      : `${bulkData.rinks.length} booking request(s) submitted! Awaiting approval.`;
+    toast.success(message);
+  };
+
   // Clear selection when date changes
   const dateString2 = format(selectedDate, 'yyyy-MM-dd');
   useEffect(() => {
@@ -179,14 +216,26 @@ export default function BookRink() {
                   selectedDate={selectedDate} 
                   onDateChange={setSelectedDate} 
                 />
-                {selectedSlots.length > 0 && (
-                  <Button 
-                    onClick={handleBookSelected}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    Book {selectedSlots.length} Slot{selectedSlots.length > 1 ? 's' : ''}
-                  </Button>
-                )}
+                <div className="flex gap-2 flex-wrap">
+                  {membership?.role === 'admin' && (
+                    <Button 
+                      onClick={() => setBulkModalOpen(true)}
+                      variant="outline"
+                      className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                    >
+                      <CalendarRange className="w-4 h-4 mr-2" />
+                      Bulk Booking
+                    </Button>
+                  )}
+                  {selectedSlots.length > 0 && (
+                    <Button 
+                      onClick={handleBookSelected}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      Book {selectedSlots.length} Slot{selectedSlots.length > 1 ? 's' : ''}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -242,6 +291,15 @@ export default function BookRink() {
           selectedSlots={selectedSlots}
           selectedDate={selectedDate}
           onConfirm={handleConfirmBooking}
+          isLoading={createBookingMutation.isPending}
+        />
+
+        <BulkBookingModal
+          open={bulkModalOpen}
+          onClose={() => setBulkModalOpen(false)}
+          selectedDate={selectedDate}
+          club={club}
+          onConfirm={handleBulkBooking}
           isLoading={createBookingMutation.isPending}
         />
       </div>

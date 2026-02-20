@@ -104,6 +104,7 @@ export default function PlayerAvailabilityDialog({ open, onClose, team, getMembe
                 type="date"
                 value={unavailableDate}
                 onChange={(e) => setUnavailableDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
               />
               <Button 
                 onClick={handleAddUnavailability}

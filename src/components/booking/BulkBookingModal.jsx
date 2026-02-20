@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -18,100 +19,146 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Loader2 } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 const COMPETITION_TYPES = ['Club', 'County', 'National', 'Other'];
 
-export default function BookingModal({ 
+export default function BulkBookingModal({ 
   open, 
   onClose, 
-  selectedSlots = [],
-  selectedDate, 
+  selectedDate,
+  club,
   onConfirm, 
   isLoading 
 }) {
   const [notes, setNotes] = useState('');
   const [competitionType, setCompetitionType] = useState('Club');
   const [competitionOther, setCompetitionOther] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [selectedRinks, setSelectedRinks] = useState([]);
 
   const handleConfirm = () => {
+    if (selectedRinks.length === 0) {
+      toast.error('Please select at least one rink');
+      return;
+    }
+    if (!startTime || !endTime) {
+      toast.error('Please select start and end times');
+      return;
+    }
+    if (endTime <= startTime) {
+      toast.error('End time must be after start time');
+      return;
+    }
+
     // Validate booking is not in the past
-    if (!selectedSlots || selectedSlots.length === 0) return;
-    
     const now = new Date();
-    const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
-    const firstSlot = sortedSlots[0];
-    
-    // Combine selected date with start time to create full datetime
     const bookingDateTime = new Date(selectedDate);
-    const [hours, minutes] = firstSlot.slot.start.split(':');
+    const [hours, minutes] = startTime.split(':');
     bookingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
     if (bookingDateTime <= now) {
       toast.error('Cannot create bookings in the past');
       return;
     }
+
+    onConfirm({
+      notes,
+      competitionType,
+      competitionOther,
+      startTime,
+      endTime,
+      rinks: selectedRinks
+    });
     
-    onConfirm(notes, competitionType, competitionOther);
+    // Reset form
     setNotes('');
     setCompetitionType('Club');
     setCompetitionOther('');
+    setStartTime('');
+    setEndTime('');
+    setSelectedRinks([]);
   };
 
   const handleClose = () => {
     setNotes('');
     setCompetitionType('Club');
     setCompetitionOther('');
+    setStartTime('');
+    setEndTime('');
+    setSelectedRinks([]);
     onClose();
   };
 
-  if (!selectedSlots || selectedSlots.length === 0) return null;
-
-  // Sort slots by index to get time range
-  const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
-  const firstSlot = sortedSlots[0];
-  const lastSlot = sortedSlots[sortedSlots.length - 1];
-  const rink = firstSlot.rink;
-
-  const formatHour = (time) => {
-    const [hours] = time.split(':');
-    const hour = parseInt(hours);
-    return hour < 12 ? `${hour}am` : hour === 12 ? '12pm' : `${hour - 12}pm`;
+  const toggleRink = (rinkNumber) => {
+    setSelectedRinks(prev => 
+      prev.includes(rinkNumber) 
+        ? prev.filter(r => r !== rinkNumber)
+        : [...prev, rinkNumber].sort((a, b) => a - b)
+    );
   };
 
-  const timeRangeLabel = selectedSlots.length === 1 
-    ? firstSlot.slot.label
-    : `${formatHour(firstSlot.slot.start)} - ${formatHour(lastSlot.slot.end)}`;
+  const rinkCount = club?.rink_count || 6;
+  const rinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            Request Booking
+            Bulk Booking Request
           </DialogTitle>
           <DialogDescription className="text-gray-500">
-            {selectedSlots.length > 1 
-              ? `Booking ${selectedSlots.length} consecutive slots`
-              : 'Your booking will be sent for approval'}
+            Book multiple rinks for the same time period
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-3 text-gray-700">
-              <MapPin className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">Rink {rink}</span>
-            </div>
+          <div className="bg-emerald-50 rounded-xl p-4">
             <div className="flex items-center gap-3 text-gray-700">
               <Calendar className="w-5 h-5 text-emerald-600" />
               <span className="font-medium">{format(selectedDate, 'EEEE, d MMMM yyyy')}</span>
             </div>
-            <div className="flex items-center gap-3 text-gray-700">
-              <Clock className="w-5 h-5 text-emerald-600" />
-              <span className="font-medium">{timeRangeLabel}</span>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Select Rinks *</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {rinks.map(rinkNumber => (
+                <div
+                  key={rinkNumber}
+                  className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleRink(rinkNumber)}
+                >
+                  <Checkbox 
+                    checked={selectedRinks.includes(rinkNumber)}
+                    onCheckedChange={() => toggleRink(rinkNumber)}
+                  />
+                  <span className="text-sm">Rink {rinkNumber}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Start Time *</Label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>End Time *</Label>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
             </div>
           </div>
 
@@ -170,7 +217,7 @@ export default function BookingModal({
                 Submitting...
               </>
             ) : (
-              'Submit Request'
+              `Book ${selectedRinks.length} Rink${selectedRinks.length !== 1 ? 's' : ''}`
             )}
           </Button>
         </DialogFooter>

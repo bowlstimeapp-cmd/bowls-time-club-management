@@ -795,8 +795,7 @@ export default function LeagueAdmin() {
                               ) : (
                                 <Zap className="w-4 h-4 mr-1" />
                               )}
-                              <span className="hidden sm:inline">Generate Fixtures</span>
-                              <span className="sm:hidden">Generate</span>
+                              Generate Fixtures
                             </Button>
                           )}
                           {league.fixtures_generated && !league.bookings_created && (
@@ -812,8 +811,7 @@ export default function LeagueAdmin() {
                               ) : (
                                 <CalendarCheck className="w-4 h-4 mr-1" />
                               )}
-                              <span className="hidden sm:inline">Book Rinks & Fixtures</span>
-                              <span className="sm:hidden">Book Rinks</span>
+                              Book Rinks
                             </Button>
                           )}
                           {league.fixtures_generated && (
@@ -823,16 +821,16 @@ export default function LeagueAdmin() {
                                 size="sm"
                                 onClick={() => viewFixtures(league)}
                               >
-                                <List className="w-4 h-4" />
-                                <span className="ml-1 hidden sm:inline">Fixtures</span>
+                                <List className="w-4 h-4 mr-1" />
+                                Fixtures
                               </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => viewLeagueTable(league)}
                               >
-                                <BarChart3 className="w-4 h-4" />
-                                <span className="ml-1 hidden sm:inline">Table</span>
+                                <BarChart3 className="w-4 h-4 mr-1" />
+                                Table
                               </Button>
                             </>
                           )}
@@ -845,7 +843,8 @@ export default function LeagueAdmin() {
                             }}
                             title="Blacklist dates"
                           >
-                            <CalendarX className="w-4 h-4" />
+                            <CalendarX className="w-4 h-4 mr-1" />
+                            <span className="hidden md:inline">Blacklist</span>
                           </Button>
                           <Button 
                             variant="outline" 

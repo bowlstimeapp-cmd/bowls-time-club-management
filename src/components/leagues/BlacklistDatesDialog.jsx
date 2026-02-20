@@ -24,7 +24,7 @@ export default function BlacklistDatesDialog({ open, onClose, league }) {
 
   const updateLeagueMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.League.update(id, data),
-    onSuccess: () => {
+    onSuccess: (updatedLeague) => {
       queryClient.invalidateQueries({ queryKey: ['leagues'] });
       toast.success('Blacklisted dates updated');
       setStartDate('');
@@ -33,14 +33,14 @@ export default function BlacklistDatesDialog({ open, onClose, league }) {
     },
   });
 
-  const handleAddBlacklist = () => {
+  const handleAddBlacklist = async () => {
     if (!startDate || !endDate) {
       toast.error('Please select start and end dates');
       return;
     }
 
-    if (startDate > endDate) {
-      toast.error('Start date must be before end date');
+    if (endDate < startDate) {
+      toast.error('End date must be after start date');
       return;
     }
 
@@ -51,20 +51,28 @@ export default function BlacklistDatesDialog({ open, onClose, league }) {
       reason: reason.trim() || 'Unavailable'
     };
 
-    updateLeagueMutation.mutate({
-      id: league.id,
-      data: { blacklisted_dates: [...blacklisted, newEntry] }
-    });
+    try {
+      await updateLeagueMutation.mutateAsync({
+        id: league.id,
+        data: { blacklisted_dates: [...blacklisted, newEntry] }
+      });
+    } catch (error) {
+      toast.error('Failed to add blacklisted dates');
+    }
   };
 
-  const handleRemoveBlacklist = (index) => {
+  const handleRemoveBlacklist = async (index) => {
     const blacklisted = league?.blacklisted_dates || [];
     const updated = blacklisted.filter((_, i) => i !== index);
 
-    updateLeagueMutation.mutate({
-      id: league.id,
-      data: { blacklisted_dates: updated }
-    });
+    try {
+      await updateLeagueMutation.mutateAsync({
+        id: league.id,
+        data: { blacklisted_dates: updated }
+      });
+    } catch (error) {
+      toast.error('Failed to remove blacklisted dates');
+    }
   };
 
   if (!league) return null;
@@ -97,6 +105,7 @@ export default function BlacklistDatesDialog({ open, onClose, league }) {
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || undefined}
                 />
               </div>
             </div>
