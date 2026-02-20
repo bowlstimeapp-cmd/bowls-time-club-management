@@ -132,42 +132,87 @@ export default function BookRink() {
   };
 
   const handleBookSelected = () => {
-    if (selectedSlots.length > 0) {
-      setModalOpen(true);
+    if (selectedSlots.length === 0) return;
+    
+    // Validate booking is not in the past
+    const now = new Date();
+    const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
+    const firstSlot = sortedSlots[0];
+    
+    const bookingDateTime = new Date(selectedDate);
+    const [hours, minutes] = firstSlot.slot.start.split(':');
+    bookingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    
+    if (bookingDateTime <= now) {
+      toast.error('This date and time is in the past and cannot be booked');
+      return;
     }
+    
+    setModalOpen(true);
   };
 
   const handleBulkBooking = async (bulkData) => {
-    if (!user || !clubId) return;
+    if (!user || !clubId || !club) return;
 
     const status = club?.auto_approve_bookings ? 'approved' : 'pending';
     const bookerName = user.first_name && user.surname 
       ? `${user.first_name} ${user.surname}` 
       : (user.full_name || user.email);
 
-    const bookingPromises = bulkData.rinks.map(rinkNumber =>
-      createBookingMutation.mutateAsync({
-        club_id: clubId,
-        rink_number: rinkNumber,
-        date: dateString,
-        start_time: bulkData.startTime,
-        end_time: bulkData.endTime,
-        status,
-        competition_type: bulkData.competitionType,
-        competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
-        booker_name: bookerName,
-        booker_email: user.email,
-        notes: bulkData.notes || '',
-      })
-    );
+    // Generate time slots between start and end time
+    const sessionDuration = club.session_duration || 2;
+    const slots = [];
+    
+    const [startHour, startMin] = bulkData.startTime.split(':').map(Number);
+    const [endHour, endMin] = bulkData.endTime.split(':').map(Number);
+    
+    let currentHour = startHour;
+    let currentMin = startMin;
+    
+    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+      const nextHour = currentHour + sessionDuration;
+      const nextMin = currentMin;
+      
+      if (nextHour > endHour || (nextHour === endHour && nextMin > endMin)) break;
+      
+      const slotStart = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+      const slotEnd = `${String(nextHour).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`;
+      
+      slots.push({ start_time: slotStart, end_time: slotEnd });
+      
+      currentHour = nextHour;
+      currentMin = nextMin;
+    }
+
+    // Create bookings for all rinks and all time slots
+    const bookingPromises = [];
+    for (const rinkNumber of bulkData.rinks) {
+      for (const slot of slots) {
+        bookingPromises.push(
+          createBookingMutation.mutateAsync({
+            club_id: clubId,
+            rink_number: rinkNumber,
+            date: dateString,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            status,
+            competition_type: bulkData.competitionType,
+            competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
+            booker_name: bookerName,
+            booker_email: user.email,
+            notes: bulkData.notes || '',
+          })
+        );
+      }
+    }
 
     await Promise.all(bookingPromises);
     
     setBulkModalOpen(false);
     
     const message = status === 'approved' 
-      ? `${bulkData.rinks.length} rink(s) booked!` 
-      : `${bulkData.rinks.length} booking request(s) submitted! Awaiting approval.`;
+      ? `${bookingPromises.length} booking(s) created for ${bulkData.rinks.length} rink(s)!` 
+      : `${bookingPromises.length} booking request(s) submitted! Awaiting approval.`;
     toast.success(message);
   };
 

@@ -916,13 +916,14 @@ export default function MyLeagueTeam() {
                               {fixture.rink_number}
                             </td>
                             {players.map(player => (
-                              <td key={player} className="border p-2 text-center">
-                                <Checkbox
-                                  checked={rotaPlayers.includes(player)}
-                                  onCheckedChange={() => handleToggleRotaPlayer(editingRotaTeam, fixture.id, player)}
-                                  className="mx-auto"
-                                />
-                              </td>
+                             <td key={player} className="border p-2 text-center">
+                               <div className="flex justify-center">
+                                 <Checkbox
+                                   checked={rotaPlayers.includes(player)}
+                                   onCheckedChange={() => handleToggleRotaPlayer(editingRotaTeam, fixture.id, player)}
+                                 />
+                               </div>
+                             </td>
                             ))}
                           </tr>
                         );

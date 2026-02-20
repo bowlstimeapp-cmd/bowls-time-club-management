@@ -24,16 +24,23 @@ import {
   Users,
   ShieldAlert,
   Loader2,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from "sonner";
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
 
 export default function PlatformAdmin() {
+  const [searchParams] = useSearchParams();
+  const manageAdminsClubId = searchParams.get('manageAdmins');
+  
   const [user, setUser] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState(null);
+  const [manageAdminsDialogOpen, setManageAdminsDialogOpen] = useState(false);
+  const [managingAdminsClub, setManagingAdminsClub] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -66,6 +73,16 @@ export default function PlatformAdmin() {
     queryKey: ['allClubs'],
     queryFn: () => base44.entities.Club.list('-created_date'),
   });
+
+  useEffect(() => {
+    if (manageAdminsClubId && clubs.length > 0) {
+      const club = clubs.find(c => c.id === manageAdminsClubId);
+      if (club) {
+        setManagingAdminsClub(club);
+        setManageAdminsDialogOpen(true);
+      }
+    }
+  }, [manageAdminsClubId, clubs]);
 
   const createClubMutation = useMutation({
     mutationFn: async (clubData) => {
@@ -312,6 +329,17 @@ export default function PlatformAdmin() {
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={() => {
+                            setManagingAdminsClub(club);
+                            setManageAdminsDialogOpen(true);
+                          }}
+                        >
+                          <ShieldCheck className="w-4 h-4 mr-1" />
+                          Admins
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
                           onClick={() => handleOpenEdit(club)}
                         >
                           <Pencil className="w-4 h-4 mr-1" />
@@ -333,6 +361,16 @@ export default function PlatformAdmin() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Manage Admins Dialog */}
+        <ManageClubAdminsDialog
+          open={manageAdminsDialogOpen}
+          onClose={() => {
+            setManageAdminsDialogOpen(false);
+            setManagingAdminsClub(null);
+          }}
+          club={managingAdminsClub}
+        />
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
