@@ -13,6 +13,8 @@ import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import DateSelector from '@/components/booking/DateSelector';
 import BookingModal from '@/components/booking/BookingModal';
 import BulkBookingModal from '@/components/booking/BulkBookingModal';
+import BookingDetailModal from '@/components/booking/BookingDetailModal';
+import InfoTooltip from '@/components/InfoTooltip';
 import { CalendarRange } from 'lucide-react';
 import {
   Dialog,
@@ -32,6 +34,8 @@ export default function BookRink() {
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [pastDateErrorOpen, setPastDateErrorOpen] = useState(false);
+  const [bookingDetailOpen, setBookingDetailOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const [user, setUser] = useState(null);
 
   const queryClient = useQueryClient();
@@ -314,6 +318,10 @@ useEffect(() => {
                   club={club}
                   selectedSlots={selectedSlots}
                   onMultiSlotSelect={setSelectedSlots}
+                  onBookingClick={(booking) => {
+                    setSelectedBooking(booking);
+                    setBookingDetailOpen(true);
+                  }}
                 />
               )}
             </CardContent>
@@ -380,6 +388,15 @@ useEffect(() => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <BookingDetailModal
+          booking={selectedBooking}
+          open={bookingDetailOpen}
+          onClose={() => {
+            setBookingDetailOpen(false);
+            setSelectedBooking(null);
+          }}
+        />
       </div>
     </div>
   );
