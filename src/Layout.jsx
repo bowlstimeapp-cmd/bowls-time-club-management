@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
+import LiveMatchBanner from '@/components/LiveMatchBanner';
+import { MessageSquare } from 'lucide-react';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
@@ -97,6 +99,9 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* Live Match Banner */}
+      <LiveMatchBanner clubId={clubId} />
+      
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -199,9 +204,15 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to={createPageUrl('Profile')} className="cursor-pointer">
+                    <Link to={createPageUrl('Profile') + (clubId ? `?clubId=${clubId}` : '')} className="cursor-pointer">
                       <User className="w-4 h-4 mr-2" />
                       My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl('Feedback')} className="cursor-pointer">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Feedback
                     </Link>
                   </DropdownMenuItem>
                   {isClubAdmin && clubId && (
