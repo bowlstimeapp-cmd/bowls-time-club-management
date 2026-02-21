@@ -871,13 +871,14 @@ const handleGenerateRota = async (team) => {
               <DialogTitle>{editingRotaTeam?.name} - Edit Rota</DialogTitle>
             </DialogHeader>
             
-            {editingRotaTeam && (() => {
-              const league = leagues.find(l => l.id === editingRotaTeam.league_id);
-              const teamFixtures = fixtures
-                .filter(f => f.home_team_id === editingRotaTeam.id || f.away_team_id === editingRotaTeam.id)
-                .sort((a, b) => a.match_date.localeCompare(b.match_date));
-              const players = editingRotaTeam.players || [];
-              const rota = editingRotaTeam.fixture_rota || {};
+{editingRotaTeam && (() => {
+  const liveEditingTeam = teams.find(t => t.id === editingRotaTeam.id) || editingRotaTeam;
+  const league = leagues.find(l => l.id === liveEditingTeam.league_id);
+  const teamFixtures = fixtures
+    .filter(f => f.home_team_id === liveEditingTeam.id || f.away_team_id === liveEditingTeam.id)
+    .sort((a, b) => a.match_date.localeCompare(b.match_date));
+  const players = liveEditingTeam.players || [];
+  const rota = liveEditingTeam.fixture_rota || {};
               
               return (
                 <div className="overflow-x-auto">
@@ -900,7 +901,7 @@ const handleGenerateRota = async (team) => {
                       {teamFixtures.map(fixture => {
                         const homeTeam = teams.find(t => t.id === fixture.home_team_id);
                         const awayTeam = teams.find(t => t.id === fixture.away_team_id);
-                        const isHome = fixture.home_team_id === editingRotaTeam.id;
+const isHome = fixture.home_team_id === liveEditingTeam.id;
                         const opponent = isHome ? awayTeam : homeTeam;
                         const rotaPlayers = rota[fixture.id] || [];
                         
@@ -920,8 +921,7 @@ const handleGenerateRota = async (team) => {
                                <div className="flex justify-center">
                                  <Checkbox
                                    checked={rotaPlayers.includes(player)}
-                                   onCheckedChange={() => handleToggleRotaPlayer(editingRotaTeam, fixture.id, player)}
-                                 />
+onCheckedChange={() => handleToggleRotaPlayer(liveEditingTeam, fixture.id, player)}                                 />
                                </div>
                              </td>
                             ))}
