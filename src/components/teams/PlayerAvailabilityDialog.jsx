@@ -18,62 +18,53 @@ import { format, parseISO } from 'date-fns';
 
 export default function PlayerAvailabilityDialog({ open, onClose, team, getMemberName }) {
   const queryClient = useQueryClient();
-  const [selectedPlayer, setSelectedPlayer] = useState('');
-  const [unavailableDate, setUnavailableDate] = useState('');
+const [selectedPlayer, setSelectedPlayer] = useState('');
+const [unavailableDate, setUnavailableDate] = useState('');
+const [localUnavailability, setLocalUnavailability] = useState(team?.player_unavailability || {});
+
+React.useEffect(() => {
+  setLocalUnavailability(team?.player_unavailability || {});
+}, [team]);
 
 const updateTeamMutation = useMutation({
   mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['leagueTeams'] });
     toast.success('Availability updated');
-    setUnavailableDate('');
   },
 });
 
-  const handleAddUnavailability = () => {
-    if (!selectedPlayer || !unavailableDate) {
-      toast.error('Please select a player and date');
-      return;
-    }
+const handleAddUnavailability = () => {
+  if (!selectedPlayer || !unavailableDate) {
+    toast.error('Please select a player and date');
+    return;
+  }
 
-    const unavailability = team?.player_unavailability || {};
-    const playerDates = unavailability[selectedPlayer] || [];
+  const playerDates = localUnavailability[selectedPlayer] || [];
+  if (playerDates.includes(unavailableDate)) {
+    toast.error('Date already marked unavailable');
+    return;
+  }
 
-    if (playerDates.includes(unavailableDate)) {
-      toast.error('Date already marked unavailable');
-      return;
-    }
-
-    const updated = {
-      ...unavailability,
-      [selectedPlayer]: [...playerDates, unavailableDate].sort()
-    };
-
-    updateTeamMutation.mutate({
-      id: team.id,
-      data: { player_unavailability: updated }
-    });
+  const updated = {
+    ...localUnavailability,
+    [selectedPlayer]: [...playerDates, unavailableDate].sort()
   };
 
-  const handleRemoveUnavailability = (playerEmail, date) => {
-    const unavailability = team?.player_unavailability || {};
-    const playerDates = (unavailability[playerEmail] || []).filter(d => d !== date);
+  setLocalUnavailability(updated);
+  setUnavailableDate('');
+  updateTeamMutation.mutate({ id: team.id, data: { player_unavailability: updated } });
+};
 
-    const updated = {
-      ...unavailability,
-      [playerEmail]: playerDates
-    };
+const handleRemoveUnavailability = (playerEmail, date) => {
+  const playerDates = (localUnavailability[playerEmail] || []).filter(d => d !== date);
+  const updated = { ...localUnavailability, [playerEmail]: playerDates };
+  setLocalUnavailability(updated);
+  updateTeamMutation.mutate({ id: team.id, data: { player_unavailability: updated } });
+};
 
-    updateTeamMutation.mutate({
-      id: team.id,
-      data: { player_unavailability: updated }
-    });
-  };
-
-  if (!team) return null;
-
-  const players = team.players || [];
-  const unavailability = team.player_unavailability || {};
+if (!team) return null;
+const players = team.players || [];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -130,7 +121,7 @@ const updateTeamMutation = useMutation({
             ) : (
               <div className="space-y-3">
                 {players.map(playerEmail => {
-                  const dates = unavailability[playerEmail] || [];
+const dates = localUnavailability[playerEmail] || [];
                   return (
                     <div key={playerEmail} className="border rounded-lg p-3">
                       <div className="font-medium text-sm mb-2">
