@@ -262,7 +262,7 @@ useEffect(() => {
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
               Book a Rink
             </h1>
-            <InfoTooltip content="Select available time slots on the grid below. Click on a slot to book it, or click on an existing booking to view its details." />
+            <InfoTooltip content="Click an available slot to select it. You can select multiple consecutive slots on the same rink for a longer session. Booked slots can be clicked to view booking details. Once happy with your selection, press 'Book Slots' to confirm." />
           </div>
           <p className="text-gray-600">
             {club?.name} • Select consecutive time slots on the same rink
