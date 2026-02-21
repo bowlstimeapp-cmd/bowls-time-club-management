@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
   const [searchParams] = useSearchParams();
@@ -72,6 +73,11 @@ export default function PlatformAdmin() {
   const { data: clubs = [], isLoading } = useQuery({
     queryKey: ['allClubs'],
     queryFn: () => base44.entities.Club.list('-created_date'),
+  });
+
+  const { data: feedbacks = [], isLoading: feedbacksLoading } = useQuery({
+    queryKey: ['allFeedback'],
+    queryFn: () => base44.entities.Feedback.list('-created_date'),
   });
 
   useEffect(() => {
@@ -280,13 +286,20 @@ export default function PlatformAdmin() {
           </Card>
         </motion.div>
 
-        {/* Club List */}
+        {/* Tabs for Clubs and Feedback */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card>
+          <Tabs defaultValue="clubs" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="clubs">Clubs</TabsTrigger>
+              <TabsTrigger value="feedback">Feedback ({feedbacks.length})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="clubs">
+              <Card>
             <CardHeader>
               <CardTitle>All Clubs</CardTitle>
             </CardHeader>
@@ -360,6 +373,70 @@ export default function PlatformAdmin() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="feedback">
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Feedback</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {feedbacksLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-20 w-full" />
+                      ))}
+                    </div>
+                  ) : feedbacks.length === 0 ? (
+                    <div className="text-center py-12">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-gray-500">No feedback submitted yet</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Category</th>
+                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Title</th>
+                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">User</th>
+                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Description</th>
+                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {feedbacks.map(feedback => (
+                            <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50">
+                              <td className="py-3 px-2">
+                                <Badge variant={
+                                  feedback.category === 'bug' ? 'destructive' :
+                                  feedback.category === 'feature' ? 'default' :
+                                  'secondary'
+                                }>
+                                  {feedback.category}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-2 font-medium">{feedback.title}</td>
+                              <td className="py-3 px-2 text-sm">
+                                <div>{feedback.user_name}</div>
+                                <div className="text-xs text-gray-500">{feedback.user_email}</div>
+                              </td>
+                              <td className="py-3 px-2 text-sm max-w-md">
+                                <p className="line-clamp-2">{feedback.description}</p>
+                              </td>
+                              <td className="py-3 px-2 text-sm text-gray-500">
+                                {new Date(feedback.created_date).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </motion.div>
 
         {/* Manage Admins Dialog */}
