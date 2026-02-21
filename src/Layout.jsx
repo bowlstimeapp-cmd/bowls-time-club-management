@@ -113,7 +113,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
               <div className="hidden sm:block">
                 <span className="font-semibold text-gray-900">
-                  {club?.name || 'Lawn Bowls Bookings'}
+                  {club?.name || 'BowlsTime'}
                 </span>
               </div>
             </Link>
