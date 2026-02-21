@@ -38,28 +38,6 @@ export default function Profile() {
     loadUser();
   }, []);
 
-    const clubNavigation = [
-    ...(club?.module_rink_booking !== false ? [
-      { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
-      { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
-    ] : []),
-    ...(club?.module_selection !== false ? [
-      { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
-    ] : []),
-    ...(club?.module_competitions !== false ? [
-      { name: 'Competitions', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
-    ] : []),
-    ...(club?.module_leagues !== false ? [
-      { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
-      { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
-    ] : []),
-  ];
-
-  const isActive = (href) => {
-    const [path] = href.split('?');
-    return location.pathname === path;
-  };
-
   const { data: unavailabilities = [], isLoading: loadingUnavailabilities } = useQuery({
     queryKey: ['myUnavailabilities', user?.email],
     queryFn: () => base44.entities.UserUnavailability.filter({ user_email: user.email }, 'start_date'),
@@ -88,6 +66,28 @@ export default function Profile() {
   });
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+
+  const clubNavigation = [
+    ...(club?.module_rink_booking !== false ? [
+      { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
+      { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
+    ] : []),
+    ...(club?.module_selection !== false ? [
+      { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
+    ] : []),
+    ...(club?.module_competitions !== false ? [
+      { name: 'Competitions', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+    ] : []),
+    ...(club?.module_leagues !== false ? [
+      { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
+      { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
+    ] : []),
+  ];
+
+  const isActive = (href) => {
+    const [path] = href.split('?');
+    return location.pathname === path;
+  };
 
   useEffect(() => {
     if (membership) {
