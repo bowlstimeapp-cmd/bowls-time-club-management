@@ -49,7 +49,8 @@ export default function TimeSlotGrid({
   currentUserEmail, 
   club,
   selectedSlots = [],
-  onMultiSlotSelect
+  onMultiSlotSelect,
+  onBookingClick
 }) {
   const TIME_SLOTS = generateTimeSlots(
     club?.opening_time,
@@ -93,6 +94,14 @@ export default function TimeSlotGrid({
   };
 
   const handleSlotClick = (rink, slot, slotIndex) => {
+    const booking = getBookingForSlot(rink, slot.start);
+    
+    // If clicking on an existing booking, show details
+    if (booking && onBookingClick) {
+      onBookingClick(booking);
+      return;
+    }
+    
     if (!isSlotAvailable(rink, slot.start)) return;
     
     if (onMultiSlotSelect) {

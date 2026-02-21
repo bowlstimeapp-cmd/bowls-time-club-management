@@ -254,9 +254,12 @@ useEffect(() => {
           animate={{ opacity: 1}}
           className="mb-8"
         >
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Book a Rink
-          </h1>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Book a Rink
+            </h1>
+            <InfoTooltip content="Select available time slots on the grid below. Click on a slot to book it, or click on an existing booking to view its details." />
+          </div>
           <p className="text-gray-600">
             {club?.name} • Select consecutive time slots on the same rink
           </p>

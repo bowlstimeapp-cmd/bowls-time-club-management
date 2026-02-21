@@ -29,6 +29,7 @@ import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
+import InfoTooltip from '@/components/InfoTooltip';
 
 const APP_BASE_URL = window.location.origin;
 
@@ -516,9 +517,10 @@ ${club?.name || 'Your Bowls Club'}
                       <Label className="flex items-center gap-2 mb-2">
                         <Home className="w-4 h-4" />
                         Select Rinks ({selectedRinks.length}/{homeRinks})
+                        <InfoTooltip content="Choose which rinks will be used for home matches. The number of rinks shown is based on your club's rink count." />
                       </Label>
                       <div className="grid grid-cols-2 gap-2">
-                        {[1, 2, 3, 4].map(rink => (
+                        {Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1).slice(0, Math.min(6, club?.rink_count || 6)).map(rink => (
                           <div 
                             key={rink}
                             className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
