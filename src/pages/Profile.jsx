@@ -6,14 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, User, Save, Calendar, Trash2, Plus, Bell } from 'lucide-react';
+import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function Profile() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const clubId = searchParams.get('clubId');
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
@@ -64,6 +66,15 @@ export default function Profile() {
     enabled: !!user?.email,
   });
 
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
   const { data: membership } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
     queryFn: async () => {
@@ -75,6 +86,8 @@ export default function Profile() {
     },
     enabled: !!clubId && !!user?.email,
   });
+
+  const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
   useEffect(() => {
     if (membership) {
@@ -170,6 +183,36 @@ export default function Profile() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
           <p className="text-gray-600">Manage your personal information</p>
         </motion.div>
+
+        {clubId && club && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-6 max-w-2xl mx-auto"
+          >
+            <nav className="flex gap-2 overflow-x-auto pb-2">
+              {clubNavigation.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                      active
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </motion.div>
+        )}
         
         <div className="max-w-2xl mx-auto">
 
