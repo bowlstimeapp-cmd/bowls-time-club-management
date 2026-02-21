@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import LiveMatchBanner from '@/components/LiveMatchBanner';
+import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
 import { MessageSquare } from 'lucide-react';
 
 export default function Layout({ children, currentPageName }) {
@@ -122,20 +123,20 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Desktop Navigation */}
             {needsClub && clubId && (
-              <nav className="hidden md:flex items-center gap-1">
+              <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1 max-w-2xl">
                 {clubNavigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
                       isActive(item.href)
                         ? "bg-emerald-50 text-emerald-700"
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     )}
                   >
                     <item.icon className="w-4 h-4" />
-                    {item.name}
+                    <span className="hidden lg:inline">{item.name}</span>
                   </Link>
                 ))}
                 {isClubAdmin && (
@@ -143,26 +144,26 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
                         isActive(createPageUrl('AdminBookings'))
                           ? "bg-emerald-50 text-emerald-700"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                       )}
                     >
                       <ShieldCheck className="w-4 h-4" />
-                      Bookings Admin
+                      <span className="hidden lg:inline">Bookings Admin</span>
                     </Link>
                     <Link
                       to={createPageUrl('ClubAdmin') + `?clubId=${clubId}`}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
                         isActive(createPageUrl('ClubAdmin'))
                           ? "bg-emerald-50 text-emerald-700"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                       )}
                     >
                       <Users className="w-4 h-4" />
-                      Members
+                      <span className="hidden lg:inline">Members</span>
                     </Link>
                   </>
                 )}
@@ -328,6 +329,9 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content */}
       <main className="min-h-0 pb-safe">{children}</main>
+      
+      {/* Floating Feedback Button */}
+      <FloatingFeedbackButton />
     </div>
   );
 }

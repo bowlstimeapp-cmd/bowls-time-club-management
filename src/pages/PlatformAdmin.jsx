@@ -17,6 +17,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Building2, 
   Plus, 
@@ -132,6 +139,14 @@ export default function PlatformAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allClubs'] });
       toast.success('Club deleted');
+    },
+  });
+
+  const updateFeedbackMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Feedback.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allFeedback'] });
+      toast.success('Feedback updated');
     },
   });
 
@@ -401,6 +416,7 @@ export default function PlatformAdmin() {
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Title</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">User</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Description</th>
+                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Status</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Date</th>
                           </tr>
                         </thead>
@@ -423,6 +439,25 @@ export default function PlatformAdmin() {
                               </td>
                               <td className="py-3 px-2 text-sm max-w-md">
                                 <p className="line-clamp-2">{feedback.description}</p>
+                              </td>
+                              <td className="py-3 px-2">
+                                <Select
+                                  value={feedback.status || 'new_feedback'}
+                                  onValueChange={(value) => updateFeedbackMutation.mutate({
+                                    id: feedback.id,
+                                    data: { status: value }
+                                  })}
+                                >
+                                  <SelectTrigger className="w-36">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="new_feedback">New Feedback</SelectItem>
+                                    <SelectItem value="reviewed">Reviewed</SelectItem>
+                                    <SelectItem value="implemented">Implemented</SelectItem>
+                                    <SelectItem value="abandoned">Abandoned</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </td>
                               <td className="py-3 px-2 text-sm text-gray-500">
                                 {new Date(feedback.created_date).toLocaleDateString()}
