@@ -21,14 +21,22 @@ export default function PlayerAvailabilityDialog({ open, onClose, team, getMembe
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [unavailableDate, setUnavailableDate] = useState('');
 
-  const updateTeamMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leagueTeams'] });
-      toast.success('Availability updated');
-      setUnavailableDate('');
-    },
-  });
+const updateTeamMutation = useMutation({
+  mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
+
+  onSuccess: (updatedTeam) => {
+    queryClient.setQueryData(['leagueTeams'], (old) => {
+      if (!old) return old;
+
+      return old.map(team =>
+        team.id === updatedTeam.id ? updatedTeam : team
+      );
+    });
+
+    toast.success('Availability updated');
+    setUnavailableDate('');
+  },
+});
 
   const handleAddUnavailability = () => {
     if (!selectedPlayer || !unavailableDate) {
