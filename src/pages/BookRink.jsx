@@ -14,6 +14,13 @@ import DateSelector from '@/components/booking/DateSelector';
 import BookingModal from '@/components/booking/BookingModal';
 import BulkBookingModal from '@/components/booking/BulkBookingModal';
 import { CalendarRange } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -24,6 +31,7 @@ export default function BookRink() {
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [pastDateErrorOpen, setPastDateErrorOpen] = useState(false);
   const [user, setUser] = useState(null);
 
   const queryClient = useQueryClient();
@@ -144,7 +152,7 @@ export default function BookRink() {
     bookingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
     if (bookingDateTime <= now) {
-      toast.error('This date and time is in the past and cannot be booked');
+      setPastDateErrorOpen(true);
       return;
     }
     
@@ -347,6 +355,23 @@ export default function BookRink() {
           onConfirm={handleBulkBooking}
           isLoading={createBookingMutation.isPending}
         />
+
+        {/* Past Date Error Modal */}
+        <Dialog open={pastDateErrorOpen} onOpenChange={setPastDateErrorOpen}>
+          <DialogContent className="sm:max-w-md mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle>Error</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-gray-700">The selected time is in the past and cannot be booked.</p>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setPastDateErrorOpen(false)} className="bg-emerald-600 hover:bg-emerald-700">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

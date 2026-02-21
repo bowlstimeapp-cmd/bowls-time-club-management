@@ -26,6 +26,7 @@ export default function PlayerAvailabilityDialog({ open, onClose, team, getMembe
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagueTeams'] });
       toast.success('Availability updated');
+      setUnavailableDate('');
     },
   });
 
@@ -52,8 +53,6 @@ export default function PlayerAvailabilityDialog({ open, onClose, team, getMembe
       id: team.id,
       data: { player_unavailability: updated }
     });
-
-    setUnavailableDate('');
   };
 
   const handleRemoveUnavailability = (playerEmail, date) => {

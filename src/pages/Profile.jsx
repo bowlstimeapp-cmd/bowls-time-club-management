@@ -139,7 +139,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 pb-safe">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -148,6 +148,8 @@ export default function Profile() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
           <p className="text-gray-600">Manage your personal information</p>
         </motion.div>
+        
+        <div className="max-w-2xl mx-auto">
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -326,6 +328,7 @@ export default function Profile() {
             </CardContent>
           </Card>
         </motion.div>
+        </div>
       </div>
     </div>
   );
