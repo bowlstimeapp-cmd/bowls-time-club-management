@@ -44,6 +44,11 @@ export default function BookRink() {
     loadUser();
   }, []);
 
+// ADD THIS:
+useEffect(() => {
+  window.scrollTo(0, 0);
+}, []);
+
   // Redirect to club selector if no club selected
   useEffect(() => {
     if (!clubId) {
