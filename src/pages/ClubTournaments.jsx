@@ -82,16 +82,24 @@ export default function ClubTournaments() {
               Club Competitions
             </h1>
             <p className="text-gray-600">
-              {club?.name} • Knockout tournaments
+              {club?.name} • Tournaments and competitions
             </p>
           </div>
           {isClubAdmin && (
-            <Link to={createPageUrl('TournamentEditor') + `?clubId=${clubId}`}>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 mr-2" />
-                New Tournament
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link to={createPageUrl('TournamentEditor') + `?clubId=${clubId}`}>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Knockout
+                </Button>
+              </Link>
+              <Link to={createPageUrl('LeagueAdmin') + `?clubId=${clubId}`}>
+                <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Round Robin
+                </Button>
+              </Link>
+            </div>
           )}
         </motion.div>
 
