@@ -29,8 +29,7 @@ React.useEffect(() => {
 const updateTeamMutation = useMutation({
   mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['leagueTeams'] });
-    toast.success('Availability updated');
+queryClient.invalidateQueries({ queryKey: ['leagueTeams'], exact: false });    toast.success('Availability updated');
   },
 });
 
