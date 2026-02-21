@@ -24,7 +24,8 @@ import {
   Settings,
   Trophy,
   Table2,
-  ClipboardList
+  ClipboardList,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -123,49 +124,115 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Desktop Navigation */}
             {needsClub && clubId && (
-              <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1 max-w-2xl">
-                {clubNavigation.map((item) => (
+              <nav className="hidden md:flex items-center gap-2">
+                {/* Rink Booking Dropdown */}
+                {club?.module_rink_booking !== false && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                        <Calendar className="w-4 h-4" />
+                        Rink Booking
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Book a Rink
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('MyBookings') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <CalendarCheck className="w-4 h-4 mr-2" />
+                          My Bookings
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Selection */}
+                {club?.module_selection !== false && (
                   <Link
-                    key={item.name}
-                    to={item.href}
+                    to={createPageUrl('Selection') + `?clubId=${clubId}`}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
-                      isActive(item.href)
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('Selection'))
                         ? "bg-emerald-50 text-emerald-700"
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     )}
                   >
-                    <item.icon className="w-4 h-4" />
-                    <span className="hidden lg:inline">{item.name}</span>
+                    <ClipboardList className="w-4 h-4" />
+                    Selection
                   </Link>
-                ))}
+                )}
+
+                {/* Competitions */}
+                {club?.module_competitions !== false && (
+                  <Link
+                    to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('ClubTournaments'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Competitions
+                  </Link>
+                )}
+
+                {/* My Teams (for all members if leagues enabled) */}
+                {club?.module_leagues !== false && (
+                  <Link
+                    to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('MyLeagueTeam'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
+                  >
+                    <Users className="w-4 h-4" />
+                    My Teams
+                  </Link>
+                )}
+
+                {/* Admin Dropdown (only for admins) */}
                 {isClubAdmin && (
-                  <>
-                    <Link
-                      to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
-                        isActive(createPageUrl('AdminBookings'))
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                        <ShieldCheck className="w-4 h-4" />
+                        Admin
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {club?.module_leagues !== false && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('LeagueAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <Table2 className="w-4 h-4 mr-2" />
+                            Leagues
+                          </Link>
+                        </DropdownMenuItem>
                       )}
-                    >
-                      <ShieldCheck className="w-4 h-4" />
-                      <span className="hidden lg:inline">Bookings Admin</span>
-                    </Link>
-                    <Link
-                      to={createPageUrl('ClubAdmin') + `?clubId=${clubId}`}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
-                        isActive(createPageUrl('ClubAdmin'))
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                      )}
-                    >
-                      <Users className="w-4 h-4" />
-                      <span className="hidden lg:inline">Members</span>
-                    </Link>
-                  </>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('AdminBookings') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <ShieldCheck className="w-4 h-4 mr-2" />
+                          Bookings Admin
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('ClubAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Users className="w-4 h-4 mr-2" />
+                          Members
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </nav>
             )}
