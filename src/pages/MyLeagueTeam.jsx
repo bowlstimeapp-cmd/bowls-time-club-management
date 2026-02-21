@@ -247,8 +247,7 @@ export default function MyLeagueTeam() {
     }
     
     await base44.entities.LeagueTeam.update(team.id, { fixture_rota: rota });
-    queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
-  };
+queryClient.invalidateQueries({ queryKey: ['leagueTeams'] , exact: false });  };
 
   const openAddPlayer = (team) => {
     setSelectedTeam(team);
