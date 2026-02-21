@@ -107,12 +107,14 @@ export default function Layout({ children, currentPageName }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to={createPageUrl('ClubSelector')} className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">LB</span>
-              </div>
+            <Link to={createPageUrl('ClubSelector')} className="flex items-center gap-3 shrink-0">
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699a341923dbca256b30a42f/8e9c2cc24_44cd24dff_logo.png"
+                alt="BowlsTime"
+                className="w-10 h-10 rounded-xl object-cover"
+              />
               <div className="hidden sm:block">
-                <span className="font-semibold text-gray-900">
+                <span className="font-semibold text-gray-900 whitespace-nowrap">
                   {club?.name || 'BowlsTime'}
                 </span>
               </div>
