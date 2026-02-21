@@ -109,7 +109,7 @@ export default function Layout({ children, currentPageName }) {
             {/* Logo */}
             <Link to={createPageUrl('ClubSelector')} className="flex items-center gap-3 shrink-0">
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699a341923dbca256b30a42f/8e9c2cc24_44cd24dff_logo.png"
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6995ed6ffddbd0f64bc9d1e8/61b3b45da_BTZoomed.png"
                 alt="BowlsTime"
                 className="w-10 h-10 rounded-xl object-cover"
               />
