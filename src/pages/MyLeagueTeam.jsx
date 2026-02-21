@@ -255,14 +255,15 @@ export default function MyLeagueTeam() {
     setAddPlayerOpen(true);
   };
 
-  const handleGenerateRota = async (team) => {
-    const league = leagues.find(l => l.id === team.league_id);
-    const teamFixtures = fixtures
-      .filter(f => f.home_team_id === team.id || f.away_team_id === team.id)
-      .sort((a, b) => a.match_date.localeCompare(b.match_date));
-    
-    const players = team.players || [];
-    const unavailability = team.player_unavailability || {};
+const handleGenerateRota = async (team) => {
+  const freshTeam = teams.find(t => t.id === team.id) || team;
+  const league = leagues.find(l => l.id === freshTeam.league_id);
+  const teamFixtures = fixtures
+    .filter(f => f.home_team_id === freshTeam.id || f.away_team_id === freshTeam.id)
+    .sort((a, b) => a.match_date.localeCompare(b.match_date));
+  
+  const players = freshTeam.players || [];
+  const unavailability = freshTeam.player_unavailability || {};
     
     if (players.length === 0) {
       toast.error('Add players to your team first');
@@ -351,7 +352,7 @@ export default function MyLeagueTeam() {
     }
     
     // Save rota to team
-    await base44.entities.LeagueTeam.update(team.id, { fixture_rota: rota });
+    await base44.entities.LeagueTeam.update(freshTeam.id, { fixture_rota: rota });
     queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
     
     setGeneratingRota(false);
