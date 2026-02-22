@@ -482,6 +482,7 @@ export default function PlatformAdmin() {
             setManagingAdminsClub(null);
           }}
           club={managingAdminsClub}
+          isPlatformAdmin={true}
         />
 
         {/* Create/Edit Dialog */}
