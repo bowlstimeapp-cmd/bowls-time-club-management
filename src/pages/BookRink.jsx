@@ -269,7 +269,7 @@ useEffect(() => {
     {club?.name}
   </span>
   <span className="mx-1">•</span>
-  Select consecutive time slots on the same rink
+  Select an available slot to easy book a rink. 
 </p>
         </motion.div>
 
