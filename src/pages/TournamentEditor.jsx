@@ -16,7 +16,8 @@ import {
   Shuffle,
   ShieldAlert,
   Trophy,
-  Users
+  Users,
+  Grid3x3
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -32,8 +33,18 @@ export default function TournamentEditor() {
   
   const [user, setUser] = useState(null);
   const [name, setName] = useState('');
+  const [tournamentType, setTournamentType] = useState('knockout');
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [bracket, setBracket] = useState(null);
+  
+  // Round robin states
+  const [teamCount, setTeamCount] = useState(8);
+  const [teams, setTeams] = useState([]);
+  const [rinksAvailable, setRinksAvailable] = useState(4);
+  const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
+  const [groups, setGroups] = useState(null);
+  const [fixtures, setFixtures] = useState([]);
+  const [knockoutFixtures, setKnockoutFixtures] = useState([]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -73,10 +84,28 @@ export default function TournamentEditor() {
   useEffect(() => {
     if (existingTournament) {
       setName(existingTournament.name);
+      setTournamentType(existingTournament.tournament_type || 'knockout');
       setSelectedPlayers(existingTournament.players || []);
       setBracket(existingTournament.bracket || null);
+      setTeams(existingTournament.teams || []);
+      setRinksAvailable(existingTournament.rinks_available || 4);
+      setQualifiersPerGroup(existingTournament.qualifiers_per_group || 2);
+      setGroups(existingTournament.groups || null);
+      setFixtures(existingTournament.fixtures || []);
+      setKnockoutFixtures(existingTournament.knockout_fixtures || []);
     }
   }, [existingTournament]);
+
+  useEffect(() => {
+    // Initialize teams when team count changes
+    const newTeams = Array.from({ length: teamCount }, (_, i) => ({
+      id: `team_${i + 1}`,
+      name: `Team ${i + 1}`,
+      captain: teams[i]?.captain || '',
+      group: teams[i]?.group || null
+    }));
+    setTeams(newTeams);
+  }, [teamCount]);
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
@@ -209,21 +238,157 @@ export default function TournamentEditor() {
     toast.success('Bracket generated!');
   };
 
+  const randomizeGroups = () => {
+    if (teams.some(t => !t.captain.trim())) {
+      toast.error('Please enter all team captains first');
+      return;
+    }
+
+    const numGroups = Math.ceil(teams.length / 4);
+    const teamsPerGroup = Math.ceil(teams.length / numGroups);
+    
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    const newGroups = {};
+    
+    for (let i = 0; i < numGroups; i++) {
+      const groupLetter = String.fromCharCode(65 + i);
+      newGroups[groupLetter] = [];
+    }
+    
+    shuffled.forEach((team, idx) => {
+      const groupIdx = Math.floor(idx / teamsPerGroup);
+      const groupLetter = String.fromCharCode(65 + groupIdx);
+      newGroups[groupLetter].push(team.id);
+      team.group = groupLetter;
+    });
+    
+    setGroups(newGroups);
+    setTeams([...teams]);
+    toast.success('Groups randomized!');
+  };
+
+  const generateRoundRobin = () => {
+    if (!groups) {
+      toast.error('Please randomize groups first');
+      return;
+    }
+
+    const allFixtures = [];
+    let fixtureId = 0;
+    
+    Object.entries(groups).forEach(([groupLetter, teamIds]) => {
+      const groupTeams = teams.filter(t => teamIds.includes(t.id));
+      
+      for (let i = 0; i < groupTeams.length; i++) {
+        for (let j = i + 1; j < groupTeams.length; j++) {
+          allFixtures.push({
+            id: `fixture_${fixtureId++}`,
+            round: 'group',
+            team1_id: groupTeams[i].id,
+            team2_id: groupTeams[j].id,
+            group: groupLetter,
+            rink: null,
+            team1_score: null,
+            team2_score: null,
+            winner_id: null
+          });
+        }
+      }
+    });
+
+    // Assign rinks trying to minimize repeat usage
+    const teamRinkUsage = {};
+    teams.forEach(t => teamRinkUsage[t.id] = {});
+    
+    allFixtures.forEach(fixture => {
+      let bestRink = 1;
+      let minUsage = Infinity;
+      
+      for (let rink = 1; rink <= rinksAvailable; rink++) {
+        const team1Usage = teamRinkUsage[fixture.team1_id][rink] || 0;
+        const team2Usage = teamRinkUsage[fixture.team2_id][rink] || 0;
+        const totalUsage = team1Usage + team2Usage;
+        
+        if (totalUsage < minUsage) {
+          minUsage = totalUsage;
+          bestRink = rink;
+        }
+      }
+      
+      fixture.rink = bestRink;
+      teamRinkUsage[fixture.team1_id][bestRink] = (teamRinkUsage[fixture.team1_id][bestRink] || 0) + 1;
+      teamRinkUsage[fixture.team2_id][bestRink] = (teamRinkUsage[fixture.team2_id][bestRink] || 0) + 1;
+    });
+
+    setFixtures(allFixtures);
+    
+    // Generate knockout structure
+    const totalQualifiers = Object.keys(groups).length * qualifiersPerGroup;
+    const knockoutStage = [];
+    
+    if (totalQualifiers === 8) {
+      knockoutStage.push({ round: 'Quarter Final', matches: 4 });
+      knockoutStage.push({ round: 'Semi Final', matches: 2 });
+      knockoutStage.push({ round: 'Final', matches: 1 });
+    } else if (totalQualifiers === 4) {
+      knockoutStage.push({ round: 'Semi Final', matches: 2 });
+      knockoutStage.push({ round: 'Final', matches: 1 });
+    } else if (totalQualifiers === 2) {
+      knockoutStage.push({ round: 'Final', matches: 1 });
+    }
+    
+    const knockoutFixturesList = [];
+    let knockoutId = 0;
+    knockoutStage.forEach(stage => {
+      for (let i = 0; i < stage.matches; i++) {
+        knockoutFixturesList.push({
+          id: `knockout_${knockoutId++}`,
+          round: stage.round,
+          team1_id: null,
+          team2_id: null,
+          rink: null,
+          team1_score: null,
+          team2_score: null,
+          winner_id: null
+        });
+      }
+    });
+    
+    setKnockoutFixtures(knockoutFixturesList);
+    toast.success('Round robin fixtures generated!');
+  };
+
   const handleSave = async (publish = false) => {
     if (!name.trim()) {
       toast.error('Please enter a tournament name');
       return;
     }
-    if (!bracket && !publish) {
+    
+    if (tournamentType === 'knockout' && !bracket && !publish) {
       toast.error('Please generate a bracket first');
+      return;
+    }
+    
+    if (tournamentType === 'round_robin' && fixtures.length === 0 && publish) {
+      toast.error('Please generate fixtures first');
       return;
     }
 
     const data = {
       club_id: clubId,
       name: name.trim(),
-      players: selectedPlayers,
-      bracket,
+      tournament_type: tournamentType,
+      ...(tournamentType === 'knockout' ? {
+        players: selectedPlayers,
+        bracket
+      } : {
+        teams,
+        rinks_available: rinksAvailable,
+        qualifiers_per_group: qualifiersPerGroup,
+        groups,
+        fixtures,
+        knockout_fixtures: knockoutFixtures
+      }),
       status: publish ? 'published' : 'draft'
     };
 
@@ -288,36 +453,131 @@ export default function TournamentEditor() {
                 </div>
 
                 <div>
-                  <Label className="flex items-center gap-2 mb-2">
-                    <Users className="w-4 h-4" />
-                    Select Players ({selectedPlayers.length}/32)
-                  </Label>
-                  <div className="max-h-64 overflow-y-auto border rounded-lg p-2 space-y-1">
-                    {members.map(member => (
-                      <div 
-                        key={member.id}
-                        className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                        onClick={() => togglePlayer(member.user_email)}
-                      >
-                        <Checkbox 
-                          checked={selectedPlayers.includes(member.user_email)}
-                          onCheckedChange={() => togglePlayer(member.user_email)}
-                        />
-                        <span className="text-sm">{member.user_name}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <Label>Tournament Type</Label>
+                  <select
+                    value={tournamentType}
+                    onChange={(e) => setTournamentType(e.target.value)}
+                    className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  >
+                    <option value="knockout">Knockout</option>
+                    <option value="round_robin">Round Robin</option>
+                  </select>
                 </div>
 
-                <Button 
-                  onClick={generateBracket}
-                  variant="outline"
-                  className="w-full"
-                  disabled={selectedPlayers.length < 2}
-                >
-                  <Shuffle className="w-4 h-4 mr-2" />
-                  Generate Draw
-                </Button>
+                {tournamentType === 'knockout' ? (
+                  <>
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <Users className="w-4 h-4" />
+                        Select Players ({selectedPlayers.length}/32)
+                      </Label>
+                      <div className="max-h-64 overflow-y-auto border rounded-lg p-2 space-y-1">
+                        {members.map(member => (
+                          <div 
+                            key={member.id}
+                            className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                            onClick={() => togglePlayer(member.user_email)}
+                          >
+                            <Checkbox 
+                              checked={selectedPlayers.includes(member.user_email)}
+                              onCheckedChange={() => togglePlayer(member.user_email)}
+                            />
+                            <span className="text-sm">{member.user_name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={generateBracket}
+                      variant="outline"
+                      className="w-full"
+                      disabled={selectedPlayers.length < 2}
+                    >
+                      <Shuffle className="w-4 h-4 mr-2" />
+                      Generate Draw
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <Label>Number of Teams</Label>
+                      <select
+                        value={teamCount}
+                        onChange={(e) => setTeamCount(Number(e.target.value))}
+                        className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      >
+                        {[4, 6, 8, 12, 16, 20, 24, 32].map(n => (
+                          <option key={n} value={n}>{n} Teams</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label>Team Captains</Label>
+                      <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-2">
+                        {teams.map((team, idx) => (
+                          <Input
+                            key={team.id}
+                            value={team.captain}
+                            onChange={(e) => {
+                              const newTeams = [...teams];
+                              newTeams[idx].captain = e.target.value;
+                              setTeams(newTeams);
+                            }}
+                            placeholder={`Team ${idx + 1} Captain`}
+                            className="text-sm"
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Number of Rinks</Label>
+                      <select
+                        value={rinksAvailable}
+                        onChange={(e) => setRinksAvailable(Number(e.target.value))}
+                        className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      >
+                        {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                          <option key={n} value={n}>{n} Rinks</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label>Qualifiers Per Group</Label>
+                      <select
+                        value={qualifiersPerGroup}
+                        onChange={(e) => setQualifiersPerGroup(Number(e.target.value))}
+                        className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      >
+                        <option value={1}>1 Per Group</option>
+                        <option value={2}>2 Per Group</option>
+                      </select>
+                    </div>
+
+                    <Button 
+                      onClick={randomizeGroups}
+                      variant="outline"
+                      className="w-full"
+                      disabled={teams.some(t => !t.captain.trim())}
+                    >
+                      <Grid3x3 className="w-4 h-4 mr-2" />
+                      Randomize Groups
+                    </Button>
+
+                    <Button 
+                      onClick={generateRoundRobin}
+                      variant="outline"
+                      className="w-full"
+                      disabled={!groups}
+                    >
+                      <Shuffle className="w-4 h-4 mr-2" />
+                      Generate Round Robin
+                    </Button>
+                  </>
+                )}
 
                 <div className="pt-4 space-y-2 border-t">
                   <Button 
@@ -332,7 +592,7 @@ export default function TournamentEditor() {
                   <Button 
                     onClick={() => handleSave(true)}
                     className="w-full bg-emerald-600 hover:bg-emerald-700"
-                    disabled={isSaving || !name.trim() || !bracket}
+                    disabled={isSaving || !name.trim() || (tournamentType === 'knockout' && !bracket) || (tournamentType === 'round_robin' && fixtures.length === 0)}
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                     Publish
@@ -348,20 +608,120 @@ export default function TournamentEditor() {
             transition={{ delay: 0.2 }}
             className="lg:col-span-2"
           >
-            {bracket ? (
-              <TournamentBracket 
-                bracket={bracket} 
-                getMemberName={getMemberName}
-                onUpdateBracket={setBracket}
-                editable={true}
-              />
+            {tournamentType === 'knockout' ? (
+              bracket ? (
+                <TournamentBracket 
+                  bracket={bracket} 
+                  getMemberName={getMemberName}
+                  onUpdateBracket={setBracket}
+                  editable={true}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center text-gray-500">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Select players and generate the draw to see the bracket</p>
+                  </CardContent>
+                </Card>
+              )
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center text-gray-500">
-                  <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>Select players and generate the draw to see the bracket</p>
-                </CardContent>
-              </Card>
+              <div className="space-y-6">
+                {groups && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Groups</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Object.entries(groups).map(([letter, teamIds]) => (
+                          <div key={letter} className="border rounded-lg p-4">
+                            <h3 className="font-semibold text-lg mb-2">Group {letter}</h3>
+                            <div className="space-y-1">
+                              {teamIds.map(teamId => {
+                                const team = teams.find(t => t.id === teamId);
+                                return (
+                                  <div key={teamId} className="text-sm">
+                                    {team?.name}: {team?.captain}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {fixtures.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Group Stage Fixtures</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {Object.keys(groups || {}).map(groupLetter => {
+                          const groupFixtures = fixtures.filter(f => f.group === groupLetter);
+                          return (
+                            <div key={groupLetter}>
+                              <h4 className="font-semibold mb-2">Group {groupLetter}</h4>
+                              <div className="space-y-2">
+                                {groupFixtures.map(fixture => {
+                                  const team1 = teams.find(t => t.id === fixture.team1_id);
+                                  const team2 = teams.find(t => t.id === fixture.team2_id);
+                                  return (
+                                    <div key={fixture.id} className="flex items-center justify-between border rounded p-2 text-sm">
+                                      <span>{team1?.captain} vs {team2?.captain}</span>
+                                      <Badge variant="outline">Rink {fixture.rink}</Badge>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {knockoutFixtures.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Knockout Stage</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {['Quarter Final', 'Semi Final', 'Final'].map(round => {
+                          const roundFixtures = knockoutFixtures.filter(f => f.round === round);
+                          if (roundFixtures.length === 0) return null;
+                          return (
+                            <div key={round}>
+                              <h4 className="font-semibold mb-2">{round}</h4>
+                              <div className="space-y-2">
+                                {roundFixtures.map((fixture, idx) => (
+                                  <div key={fixture.id} className="border rounded p-2 text-sm">
+                                    Match {idx + 1}: TBD vs TBD
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {!groups && fixtures.length === 0 && (
+                  <Card>
+                    <CardContent className="py-12 text-center text-gray-500">
+                      <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p>Set up teams and generate fixtures to see the tournament structure</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
           </motion.div>
         </div>
