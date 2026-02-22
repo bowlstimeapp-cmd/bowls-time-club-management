@@ -20,6 +20,7 @@ export default function MarketingPDFGenerator() {
       const pageHeight = 297;
       const margin = 20;
       const contentWidth = pageWidth - (margin * 2);
+      const brandColor = [16, 185, 129]; // emerald-600
 
       // Helper functions
       const addPage = () => {
@@ -30,9 +31,21 @@ export default function MarketingPDFGenerator() {
       const addHeader = (y, text, size = 24) => {
         doc.setFontSize(size);
         doc.setFont(undefined, 'bold');
-        doc.setTextColor(16, 185, 129); // emerald-600
+        doc.setTextColor(...brandColor);
         doc.text(text, margin, y);
         return y + 10;
+      };
+
+      const addBox = (y, height, fillColor = [249, 250, 251]) => {
+        doc.setDrawColor(229, 231, 235);
+        doc.setFillColor(...fillColor);
+        doc.rect(margin, y, contentWidth, height, 'FD');
+      };
+
+      const addBrandBar = (y, height = 3) => {
+        doc.setFillColor(...brandColor);
+        doc.rect(0, y, pageWidth, height, 'F');
+        return y + height;
       };
 
       const addSubheader = (y, text, size = 16) => {
@@ -52,17 +65,24 @@ export default function MarketingPDFGenerator() {
         return y + (lines.length * 5);
       };
 
-      const addBullet = (y, text, maxWidth = contentWidth - 10) => {
+      const addBullet = (y, text, maxWidth = contentWidth - 10, green = false) => {
         doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(55, 65, 81);
         
         // Add bullet point
-        doc.setFillColor(16, 185, 129);
+        if (green) {
+          doc.setFillColor(...brandColor);
+          doc.setTextColor(...brandColor);
+        } else {
+          doc.setFillColor(107, 114, 128);
+        }
         doc.circle(margin + 2, y - 1.5, 1, 'F');
         
         const lines = doc.splitTextToSize(text, maxWidth);
         doc.text(lines, margin + 6, y);
+        
+        if (green) doc.setTextColor(55, 65, 81);
         return y + (lines.length * 5) + 2;
       };
 
@@ -79,60 +99,90 @@ export default function MarketingPDFGenerator() {
       };
 
       // PAGE 1: COVER PAGE
-      let y = 60;
+      // Brand bar at top
+      let y = 0;
+      y = addBrandBar(y, 4);
       
-      // Title
-      doc.setFontSize(32);
+      y = 70;
+      
+      // Logo area
+      doc.setFillColor(240, 253, 244); // emerald-50
+      doc.roundedRect(pageWidth / 2 - 25, y - 15, 50, 50, 3, 3, 'F');
+      
+      doc.setFontSize(28);
       doc.setFont(undefined, 'bold');
-      doc.setTextColor(16, 185, 129);
-      doc.text('BowlsTime', pageWidth / 2, y, { align: 'center' });
+      doc.setTextColor(...brandColor);
+      doc.text('BowlsTime', pageWidth / 2, y + 10, { align: 'center' });
       
-      y += 15;
-      doc.setFontSize(20);
+      y += 30;
+      doc.setFontSize(22);
       doc.setTextColor(31, 41, 55);
       doc.text('Modern Club Management', pageWidth / 2, y, { align: 'center' });
       
-      y += 8;
-      doc.setFontSize(16);
+      y += 10;
+      doc.setFontSize(18);
       doc.setTextColor(75, 85, 99);
       doc.text('for Bowls Clubs', pageWidth / 2, y, { align: 'center' });
       
-      y += 30;
+      y += 25;
+      doc.setFontSize(13);
+      doc.setTextColor(107, 114, 128);
+      doc.text('Save hours every week • Engage members • Run efficiently', pageWidth / 2, y, { align: 'center' });
+      
+      y += 35;
+      
+      // Feature highlights box
+      addBox(y, 75, [240, 253, 244]);
+      doc.setDrawColor(...brandColor);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(margin, y, contentWidth, 75, 2, 2);
+      
+      y += 10;
       doc.setFontSize(14);
-      doc.setTextColor(55, 65, 81);
-      const tagline = 'Save hours every week. Engage your members. Run your club efficiently.';
-      doc.text(tagline, pageWidth / 2, y, { align: 'center' });
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...brandColor);
+      doc.text('Everything Your Club Needs', pageWidth / 2, y, { align: 'center' });
       
-      y += 50;
-      doc.setDrawColor(16, 185, 129);
-      doc.setLineWidth(0.5);
-      doc.rect(margin, y, contentWidth, 60);
-      
+      y += 10;
       doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
       doc.setTextColor(55, 65, 81);
       const features = [
-        '✓ Online Rink Booking',
-        '✓ Match Team Selection',
-        '✓ League Management',
-        '✓ Live Match Scoring',
-        '✓ Member Portal',
-        '✓ Automated Notifications'
+        'Online Rink Booking',
+        'Match Team Selection', 
+        'League Management',
+        'Live Match Scoring',
+        'Member Portal',
+        'Automated Notifications'
       ];
       
-      let featureY = y + 10;
-      const col1X = margin + 10;
-      const col2X = pageWidth / 2 + 5;
+      const col1X = margin + 15;
+      const col2X = pageWidth / 2 + 10;
       
       features.forEach((feature, i) => {
         const x = i < 3 ? col1X : col2X;
         const offsetY = i < 3 ? i : i - 3;
-        doc.text(feature, x, featureY + (offsetY * 8));
+        
+        doc.setFillColor(...brandColor);
+        doc.circle(x, y + 10 + (offsetY * 10) - 1.5, 1.5, 'F');
+        doc.text(feature, x + 5, y + 10 + (offsetY * 10));
       });
+
+      y += 100;
+      
+      // Footer on cover
+      doc.setFillColor(249, 250, 251);
+      doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.text('Professional • User-Friendly • Time-Saving', pageWidth / 2, pageHeight - 12, { align: 'center' });
 
       // PAGE 2: THE CHALLENGE
       y = addPage();
-      y = addHeader(y, 'The Challenge Facing Bowls Clubs', 20);
-      y += 5;
+      y = addBrandBar(y, 3);
+      y += 20;
+      y = addHeader(y, 'The Challenge Facing Bowls Clubs', 22);
+      y += 3;
       
       y = addText(y, 'Running a bowls club involves countless hours of volunteer admin work. From coordinating rink bookings to chasing members for match availability, club secretaries, treasurers, and selectors are overwhelmed with manual tasks that take time away from what matters most - the sport itself.');
       y += 8;
@@ -163,19 +213,38 @@ export default function MarketingPDFGenerator() {
         }
       ];
       
-      painPoints.forEach(point => {
-        if (y > pageHeight - 40) {
+      painPoints.forEach((point, idx) => {
+        if (y > pageHeight - 50) {
           y = addPage();
+          y = addBrandBar(y, 3);
+          y += 20;
         }
-        y = addSubheader(y, point.title, 12);
-        y = addText(y, point.desc, 10);
-        y += 5;
+        
+        // Box for each pain point
+        addBox(y, 32, idx % 2 === 0 ? [254, 242, 242] : [255, 247, 237]);
+        
+        y += 8;
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(220, 38, 38);
+        doc.text(`${idx + 1}. ${point.title}`, margin + 5, y);
+        
+        y += 6;
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(55, 65, 81);
+        const lines = doc.splitTextToSize(point.desc, contentWidth - 10);
+        doc.text(lines, margin + 5, y);
+        
+        y += 32 - 14 + 6;
       });
 
       // PAGE 3: THE SOLUTION
       y = addPage();
-      y = addHeader(y, 'Introducing BowlsTime', 20);
-      y += 5;
+      y = addBrandBar(y, 3);
+      y += 20;
+      y = addHeader(y, 'Introducing BowlsTime', 22);
+      y += 3;
       
       y = addText(y, 'BowlsTime is a complete club management platform designed specifically for bowls clubs. Everything you need in one place - accessible from any device, requiring no technical knowledge.');
       y += 8;
@@ -211,26 +280,47 @@ export default function MarketingPDFGenerator() {
         }
       ];
       
-      solutions.forEach(solution => {
-        if (y > pageHeight - 50) {
+      solutions.forEach((solution, idx) => {
+        if (y > pageHeight - 55) {
           y = addPage();
+          y = addBrandBar(y, 3);
+          y += 20;
         }
-        y = addSubheader(y, solution.title, 12);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(16, 185, 129);
-        const benefitLines = doc.splitTextToSize(solution.benefit, contentWidth);
-        doc.text(benefitLines, margin, y);
-        y += benefitLines.length * 5 + 3;
         
-        y = addText(y, solution.details, 10);
-        y += 6;
+        // Box for each solution
+        addBox(y, 38, [240, 253, 244]);
+        doc.setDrawColor(...brandColor);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(margin, y, contentWidth, 38, 1, 1);
+        
+        y += 7;
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...brandColor);
+        doc.text(`✓ ${solution.title}`, margin + 5, y);
+        
+        y += 5;
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'italic');
+        doc.setTextColor(22, 101, 52);
+        const benefitLines = doc.splitTextToSize(solution.benefit, contentWidth - 10);
+        doc.text(benefitLines, margin + 5, y);
+        y += benefitLines.length * 4 + 2;
+        
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(55, 65, 81);
+        const detailLines = doc.splitTextToSize(solution.details, contentWidth - 10);
+        doc.text(detailLines, margin + 5, y);
+        
+        y += 38 - (7 + 5 + benefitLines.length * 4 + 2) + 6;
       });
 
       // PAGE 4: WHO BENEFITS
       y = addPage();
-      y = addHeader(y, 'Who Benefits from BowlsTime?', 20);
-      y += 10;
+      y = addBrandBar(y, 3);
+      y += 20;
+      y = addHeader(y, 'Who Benefits from BowlsTime?', 22);
+      y += 8;
       
       const personas = [
         {
@@ -283,244 +373,306 @@ export default function MarketingPDFGenerator() {
         }
       ];
       
-      personas.forEach(persona => {
-        if (y > pageHeight - 40) {
+      personas.forEach((persona, idx) => {
+        if (y > pageHeight - 45) {
           y = addPage();
+          y = addBrandBar(y, 3);
+          y += 20;
         }
         
-        y = addSubheader(y, persona.role, 14);
-        y += 3;
+        // Persona header box
+        addBox(y, 12, [240, 253, 244]);
+        y += 8;
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...brandColor);
+        doc.text(`${idx + 1}. ${persona.role}`, margin + 3, y);
+        y += 8;
         
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont(undefined, 'italic');
         doc.setTextColor(107, 114, 128);
-        const respLines = doc.splitTextToSize(persona.responsibilities, contentWidth);
-        doc.text(respLines, margin, y);
-        y += respLines.length * 4 + 5;
+        const respLines = doc.splitTextToSize(persona.responsibilities, contentWidth - 6);
+        doc.text(respLines, margin + 3, y);
+        y += respLines.length * 4 + 6;
         
-        y = addSubheader(y, 'Current Frustrations:', 11);
-        y += 3;
-        persona.frustrations.forEach(frustration => {
-          y = addBullet(y, frustration);
+        // Frustrations
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(75, 85, 99);
+        doc.text('Pain Points:', margin + 3, y);
+        y += 5;
+        
+        persona.frustrations.slice(0, 3).forEach(frustration => {
+          y = addBullet(y, frustration, contentWidth - 12);
         });
         
         y += 3;
-        y = addSubheader(y, 'How BowlsTime Helps:', 11);
-        y += 3;
-        persona.benefits.forEach(benefit => {
-          doc.setFillColor(16, 185, 129);
-          doc.circle(margin + 2, y - 1.5, 1, 'F');
-          
-          doc.setFontSize(11);
-          doc.setFont(undefined, 'normal');
-          doc.setTextColor(16, 185, 129);
-          const lines = doc.splitTextToSize(benefit, contentWidth - 10);
-          doc.text(lines, margin + 6, y);
-          y += lines.length * 5 + 2;
+        
+        // Benefits
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...brandColor);
+        doc.text('How BowlsTime Helps:', margin + 3, y);
+        y += 5;
+        
+        persona.benefits.slice(0, 3).forEach(benefit => {
+          y = addBullet(y, benefit, contentWidth - 12, true);
         });
         
-        y += 8;
+        y += 10;
       });
 
       // PAGE 5: KEY FEATURES IN DETAIL
       y = addPage();
-      y = addHeader(y, 'Key Features', 20);
+      y = addBrandBar(y, 3);
+      y += 20;
+      y = addHeader(y, 'Key Features in Detail', 22);
       y += 8;
       
-      y = addSubheader(y, 'Rink Booking System', 13);
-      y += 3;
-      y = addBullet(y, 'Visual availability grid showing all rinks and time slots');
-      y = addBullet(y, 'Members book online 24/7 from any device');
-      y = addBullet(y, 'Admin approval workflow or auto-approval options');
-      y = addBullet(y, 'Bulk booking tools for league coordinators');
-      y = addBullet(y, 'Booking history and audit trail');
+      // Feature 1: Rink Booking
+      addBox(y, 8, [...brandColor]);
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('1. Smart Rink Booking System', margin + 3, y + 5.5);
+      y += 11;
+      
+      y = addBullet(y, 'Visual grid shows real-time rink availability');
+      y = addBullet(y, 'Members book 24/7 from any device');
+      y = addBullet(y, 'Admin approval or auto-approve options');
+      y = addBullet(y, 'Bulk booking for league coordinators');
       y += 5;
-      y = addImagePlaceholder(y, '[Screenshot: Rink booking grid with availability]', 45);
+      y = addImagePlaceholder(y, 'Rink Booking Interface - See real-time availability', 40);
       y += 5;
       
-      if (y > pageHeight - 80) y = addPage();
+      // Feature 2: Match Selection
+      if (y > pageHeight - 85) {
+        y = addPage();
+        y = addBrandBar(y, 3);
+        y += 20;
+      }
       
-      y = addSubheader(y, 'Match Selection Module', 13);
-      y += 3;
-      y = addBullet(y, 'Create selections for Bramley, Wessex League, Denny, Top Club');
-      y = addBullet(y, 'Members mark availability with one click');
-      y = addBullet(y, 'Drag-and-drop team builder for quick selection');
-      y = addBullet(y, 'Automatic email notifications to selected players');
-      y = addBullet(y, 'Print-ready team sheets');
-      y += 5;
-      y = addImagePlaceholder(y, '[Screenshot: Team selection interface]', 45);
-      y += 5;
+      addBox(y, 8, [...brandColor]);
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('2. Match Team Selection', margin + 3, y + 5.5);
+      y += 11;
       
-      y = addPage();
-      
-      y = addSubheader(y, 'League Management', 13);
-      y += 3;
-      y = addBullet(y, 'Auto-generate round-robin or knockout fixtures');
-      y = addBullet(y, 'Real-time league tables with automatic calculations');
-      y = addBullet(y, 'Player rota system for fair game distribution');
-      y = addBullet(y, 'Score entry and match tracking');
-      y = addBullet(y, 'Integrated rink booking for league matches');
+      y = addBullet(y, 'Create selections for all competition types');
+      y = addBullet(y, 'Members mark availability instantly');
+      y = addBullet(y, 'Drag-and-drop team building');
+      y = addBullet(y, 'Auto-notifications to selected players');
       y += 5;
-      y = addImagePlaceholder(y, '[Screenshot: League table and fixtures]', 45);
+      y = addImagePlaceholder(y, 'Team Selection & Team Sheets', 40);
       y += 5;
       
-      if (y > pageHeight - 80) y = addPage();
+      // Feature 3: League Management
+      if (y > pageHeight - 40) {
+        y = addPage();
+        y = addBrandBar(y, 3);
+        y += 20;
+      }
       
-      y = addSubheader(y, 'Live Match Scoring', 13);
-      y += 3;
-      y = addBullet(y, 'Update scores in real-time during matches');
-      y = addBullet(y, 'Track individual rink scores and total ends');
-      y = addBullet(y, 'Live banners show ongoing matches to all members');
-      y = addBullet(y, 'Automatic match reports and statistics');
+      addBox(y, 8, [...brandColor]);
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('3. League Management', margin + 3, y + 5.5);
+      y += 11;
+      
+      y = addBullet(y, 'Auto-generate fixtures with smart algorithms');
+      y = addBullet(y, 'Live league tables update automatically');
+      y = addBullet(y, 'Player rotation for fair distribution');
+      y = addBullet(y, 'Integrated rink booking for matches');
       y += 5;
-      y = addImagePlaceholder(y, '[Screenshot: Live scoring interface]', 45);
+      y = addImagePlaceholder(y, 'League Setup & Live Tables', 40);
+      y += 5;
       
       // PAGE 6: MEMBER EXPERIENCE
       y = addPage();
-      y = addHeader(y, 'Easy for Everyone', 20);
+      y = addBrandBar(y, 3);
+      y += 20;
+      y = addHeader(y, 'Easy for Everyone', 22);
       y += 5;
       
       y = addText(y, 'BowlsTime is designed for bowls club members and volunteers - not IT experts. Everything is straightforward and intuitive.');
       y += 8;
       
+      // Members section
+      addBox(y, 35, [240, 253, 244]);
+      y += 7;
       y = addSubheader(y, 'For Members:', 13);
-      y += 3;
-      y = addBullet(y, 'Works on any device - phone, tablet, or computer');
-      y = addBullet(y, 'Simple login and user-friendly interface');
-      y = addBullet(y, 'Automatic notifications for selections and updates');
-      y = addBullet(y, 'Mark availability and view team sheets instantly');
-      y = addBullet(y, 'Access club information anytime, anywhere');
-      y += 8;
+      y += 4;
+      y = addBullet(y, 'Works on any device - mobile, tablet, desktop', contentWidth - 10);
+      y = addBullet(y, 'Simple login with instant notifications', contentWidth - 10);
+      y = addBullet(y, 'Mark availability and view teams in seconds', contentWidth - 10);
+      y = addBullet(y, 'Access club info 24/7 from anywhere', contentWidth - 10);
+      y += 6;
       
+      // Admins section
+      if (y > pageHeight - 50) {
+        y = addPage();
+        y = addBrandBar(y, 3);
+        y += 20;
+      }
+      
+      addBox(y, 40, [254, 249, 195]);
+      y += 7;
       y = addSubheader(y, 'For Administrators:', 13);
-      y += 3;
-      y = addBullet(y, 'No technical knowledge required - just point and click');
-      y = addBullet(y, 'Comprehensive admin dashboard for club oversight');
-      y = addBullet(y, 'Role-based permissions (Admin, Selector, Live Scorer, Member)');
-      y = addBullet(y, 'Audit logs track all changes for accountability');
-      y = addBullet(y, 'Flexible configuration for your club\'s needs');
-      y += 8;
+      y += 4;
+      y = addBullet(y, 'No technical knowledge required', contentWidth - 10);
+      y = addBullet(y, 'Comprehensive dashboard for oversight', contentWidth - 10);
+      y = addBullet(y, 'Role-based permissions (Admin, Selector, Scorer)', contentWidth - 10);
+      y = addBullet(y, 'Complete audit trail for accountability', contentWidth - 10);
+      y = addBullet(y, 'Flexible configuration options', contentWidth - 10);
+      y += 6;
       
+      // Support section
+      addBox(y, 28, [243, 244, 246]);
+      y += 7;
       y = addSubheader(y, 'Setup & Support:', 13);
-      y += 3;
-      y = addBullet(y, 'Quick setup process - we handle the configuration');
-      y = addBullet(y, 'Training provided for your admin team');
-      y = addBullet(y, 'Ongoing support whenever you need it');
-      y = addBullet(y, 'Regular updates and new features at no extra cost');
+      y += 4;
+      y = addBullet(y, 'Quick setup - we configure everything', contentWidth - 10);
+      y = addBullet(y, 'Training for your admin team included', contentWidth - 10);
+      y = addBullet(y, 'Ongoing support and regular updates', contentWidth - 10);
+      y += 6;
 
       // PAGE 7: REAL BENEFITS
       y = addPage();
-      y = addHeader(y, 'The Real Impact', 20);
+      y = addBrandBar(y, 3);
+      y += 20;
+      y = addHeader(y, 'The Real Impact', 22);
       y += 5;
       
-      y = addSubheader(y, 'Time Savings', 14);
-      y += 3;
-      const timeSavings = [
-        'Reduce booking admin from hours per week to minutes',
-        'Cut team selection time by 80%',
-        'Eliminate manual league table calculations',
-        'Stop chasing members for availability',
-        'Automate member communications'
-      ];
-      timeSavings.forEach(saving => {
-        y = addBullet(y, saving);
-      });
+      // Impact boxes
+      addBox(y, 40, [240, 253, 244]);
+      doc.setDrawColor(...brandColor);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(margin, y, contentWidth, 40, 2, 2);
       y += 8;
+      y = addSubheader(y, '⏰ Save Hours Every Week', 13);
+      y += 4;
+      y = addBullet(y, 'Booking admin: hours → minutes', contentWidth - 10);
+      y = addBullet(y, 'Team selection: 80% faster', contentWidth - 10);
+      y = addBullet(y, 'No manual table calculations', contentWidth - 10);
+      y = addBullet(y, 'Auto member communications', contentWidth - 10);
+      y += 7;
       
-      y = addSubheader(y, 'Improved Member Experience', 14);
-      y += 3;
-      const memberExp = [
-        'Members love the convenience of online booking',
-        'Instant visibility of selections and matches',
-        'Never miss important club updates',
-        'Easy access to club information',
-        'Professional appearance enhances club reputation'
-      ];
-      memberExp.forEach(exp => {
-        y = addBullet(y, exp);
-      });
+      addBox(y, 38, [254, 249, 195]);
+      doc.setDrawColor(...brandColor);
+      doc.roundedRect(margin, y, contentWidth, 38, 2, 2);
       y += 8;
+      y = addSubheader(y, '😊 Better Member Experience', 13);
+      y += 4;
+      y = addBullet(y, 'Convenient online booking loved by members', contentWidth - 10);
+      y = addBullet(y, 'Instant visibility of teams and matches', contentWidth - 10);
+      y = addBullet(y, 'Never miss club updates', contentWidth - 10);
+      y = addBullet(y, 'Professional, modern appearance', contentWidth - 10);
+      y += 7;
       
-      y = addSubheader(y, 'Better Club Management', 14);
-      y += 3;
-      const management = [
-        'Single source of truth for all club data',
-        'Complete visibility and transparency',
-        'Easier volunteer recruitment and handovers',
-        'Data-driven insights into club operations',
-        'Reduced conflicts and confusion'
-      ];
-      management.forEach(item => {
-        y = addBullet(y, item);
-      });
+      addBox(y, 35, [243, 232, 255]);
+      doc.setDrawColor(...brandColor);
+      doc.roundedRect(margin, y, contentWidth, 35, 2, 2);
+      y += 8;
+      y = addSubheader(y, '📊 Smarter Club Management', 13);
+      y += 4;
+      y = addBullet(y, 'Single source of truth for all data', contentWidth - 10);
+      y = addBullet(y, 'Complete transparency and audit trail', contentWidth - 10);
+      y = addBullet(y, 'Easier volunteer handovers', contentWidth - 10);
+      y = addBullet(y, 'Data-driven decision making', contentWidth - 10);
+      y += 7;
 
       // PAGE 8: CALL TO ACTION
       y = addPage();
-      y = addHeader(y, 'Ready to Transform Your Club?', 20);
-      y += 10;
+      y = addBrandBar(y, 3);
+      y += 30;
       
-      y = addText(y, 'Join the growing community of bowls clubs using BowlsTime to save time, reduce admin burden, and improve member experience.');
-      y += 10;
-      
-      // Pricing box
-      doc.setDrawColor(16, 185, 129);
-      doc.setLineWidth(1);
-      doc.rect(margin, y, contentWidth, 45);
-      
-      doc.setFontSize(14);
+      // Large header
+      doc.setFontSize(26);
       doc.setFont(undefined, 'bold');
-      doc.setTextColor(16, 185, 129);
-      doc.text('Get Started Today', pageWidth / 2, y + 10, { align: 'center' });
-      
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(55, 65, 81);
-      doc.text('Contact us for a personalized demo and pricing', pageWidth / 2, y + 18, { align: 'center' });
+      doc.setTextColor(...brandColor);
+      doc.text('Ready to Transform', pageWidth / 2, y, { align: 'center' });
+      y += 10;
+      doc.text('Your Club?', pageWidth / 2, y, { align: 'center' });
+      y += 15;
       
       doc.setFontSize(12);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(16, 185, 129);
-      doc.text('Email: contact@bowlstime.com', pageWidth / 2, y + 28, { align: 'center' });
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(75, 85, 99);
+      doc.text('Join clubs already saving hours every week', pageWidth / 2, y, { align: 'center' });
+      y += 15;
       
+      // Contact box
+      addBox(y, 55, [240, 253, 244]);
+      doc.setDrawColor(...brandColor);
+      doc.setLineWidth(1.2);
+      doc.roundedRect(margin, y, contentWidth, 55, 3, 3);
+      
+      y += 12;
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...brandColor);
+      doc.text('Get Started Today', pageWidth / 2, y, { align: 'center' });
+      
+      y += 10;
       doc.setFontSize(11);
       doc.setFont(undefined, 'normal');
       doc.setTextColor(55, 65, 81);
-      doc.text('Visit: www.bowlstime.com', pageWidth / 2, y + 36, { align: 'center' });
+      doc.text('Contact us for a personalized demo and pricing', pageWidth / 2, y, { align: 'center' });
       
-      y += 55;
+      y += 12;
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(31, 41, 55);
+      doc.text('📧 contact@bowlstime.com', pageWidth / 2, y, { align: 'center' });
       
-      y = addSubheader(y, 'What Happens Next?', 13);
-      y += 3;
-      const nextSteps = [
-        '1. Schedule a free consultation and live demo',
-        '2. We configure BowlsTime for your club\'s specific needs',
-        '3. Train your admin team and key volunteers',
-        '4. Launch to your members with our support',
-        '5. Start saving time and improving member experience'
-      ];
-      nextSteps.forEach(step => {
-        y = addBullet(y, step);
-      });
+      y += 8;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text('🌐 www.bowlstime.com', pageWidth / 2, y, { align: 'center' });
       
       y += 15;
       
-      // Footer box
-      doc.setFillColor(249, 250, 251);
-      doc.rect(margin, y, contentWidth, 25, 'F');
+      y = addSubheader(y, 'Your Journey to Success:', 13);
+      y += 5;
       
-      doc.setFontSize(10);
-      doc.setTextColor(107, 114, 128);
-      const footerText = [
-        'BowlsTime - Modern Club Management for Bowls Clubs',
-        'Everything you need in one place. No technical knowledge required.',
-        '© 2026 BowlsTime. All rights reserved.'
+      const steps = [
+        '1️⃣  Free consultation and live demo',
+        '2️⃣  Custom configuration for your club',
+        '3️⃣  Admin team training included',
+        '4️⃣  Launch with full support',
+        '5️⃣  Start saving time immediately'
       ];
       
-      let footerY = y + 7;
-      footerText.forEach(text => {
-        doc.text(text, pageWidth / 2, footerY, { align: 'center' });
-        footerY += 5;
+      steps.forEach((step, idx) => {
+        addBox(y, 8, idx % 2 === 0 ? [243, 244, 246] : [255, 255, 255]);
+        y += 5.5;
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(55, 65, 81);
+        doc.text(step, margin + 5, y);
+        y += 5.5;
       });
+      
+      y += 10;
+      
+      // Footer brand bar
+      doc.setFillColor(...brandColor);
+      doc.rect(0, pageHeight - 30, pageWidth, 30, 'F');
+      
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('BowlsTime', pageWidth / 2, pageHeight - 18, { align: 'center' });
+      
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text('Modern Club Management • Time-Saving • Member-Focused', pageWidth / 2, pageHeight - 11, { align: 'center' });
+      
+      doc.setFontSize(8);
+      doc.text('© 2026 BowlsTime. All rights reserved.', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
       // Save the PDF
       doc.save('BowlsTime-Marketing-Pack.pdf');
