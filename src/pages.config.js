@@ -57,6 +57,7 @@ import Feedback from './pages/Feedback';
 import LeagueAdmin from './pages/LeagueAdmin';
 import LeagueView from './pages/LeagueView';
 import LiveScoring from './pages/LiveScoring';
+import Marketing from './pages/Marketing';
 import MyBookings from './pages/MyBookings';
 import MyLeagueTeam from './pages/MyLeagueTeam';
 import Notifications from './pages/Notifications';
@@ -68,7 +69,6 @@ import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
-import Marketing from './pages/Marketing';
 import __Layout from './Layout.jsx';
 
 
@@ -83,6 +83,7 @@ export const PAGES = {
     "LeagueAdmin": LeagueAdmin,
     "LeagueView": LeagueView,
     "LiveScoring": LiveScoring,
+    "Marketing": Marketing,
     "MyBookings": MyBookings,
     "MyLeagueTeam": MyLeagueTeam,
     "Notifications": Notifications,
@@ -94,7 +95,6 @@ export const PAGES = {
     "SelectionView": SelectionView,
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
-    "Marketing": Marketing,
 }
 
 export const pagesConfig = {

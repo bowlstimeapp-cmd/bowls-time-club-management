@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
+import MarketingPDFGenerator from '@/components/admin/MarketingPDFGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -253,10 +254,13 @@ export default function PlatformAdmin() {
             </h1>
             <p className="text-gray-600">Manage clubs and platform settings</p>
           </div>
-          <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Club
-          </Button>
+          <div className="flex gap-3">
+            <MarketingPDFGenerator />
+            <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Club
+            </Button>
+          </div>
         </motion.div>
 
         {/* Stats */}
