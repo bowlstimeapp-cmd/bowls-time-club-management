@@ -264,9 +264,13 @@ useEffect(() => {
             </h1>
             <InfoTooltip content="Click an available slot to select it. You can select multiple consecutive slots on the same rink for a longer session. Booked slots can be clicked to view booking details. Once happy with your selection, press 'Book Slots' to confirm." />
           </div>
-          <p className="text-gray-600">
-            <h2>{club?.name}</h2> • Select consecutive time slots on the same rink
-          </p>
+         <p className="text-gray-600">
+  <span className="text-lg sm:text-xl font-semibold text-gray-900">
+    {club?.name}
+  </span>
+  <span className="mx-1">•</span>
+  Select consecutive time slots on the same rink
+</p>
         </motion.div>
 
         <motion.div
