@@ -12,10 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, ShieldCheck } from 'lucide-react';
+import { Loader2, Plus, Trash2, ShieldCheck, User } from 'lucide-react';
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-export default function ManageClubAdminsDialog({ open, onClose, club }) {
+export default function ManageClubAdminsDialog({ open, onClose, club, isPlatformAdmin = false }) {
   const queryClient = useQueryClient();
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminFirstName, setNewAdminFirstName] = useState('');
@@ -29,6 +36,26 @@ export default function ManageClubAdminsDialog({ open, onClose, club }) {
       status: 'approved'
     }),
     enabled: !!club?.id && open,
+  });
+
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ['allClubMembers', club?.id],
+    queryFn: () => base44.entities.ClubMembership.filter({ 
+      club_id: club.id,
+      status: 'approved'
+    }),
+    enabled: !!club?.id && open && isPlatformAdmin,
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ membershipId, newRole }) => 
+      base44.entities.ClubMembership.update(membershipId, { role: newRole }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubAdmins'] });
+      queryClient.invalidateQueries({ queryKey: ['allClubMembers'] });
+      queryClient.invalidateQueries({ queryKey: ['clubMembers'] });
+      toast.success('Role updated successfully');
+    },
   });
 
   const addAdminMutation = useMutation({
@@ -175,6 +202,54 @@ export default function ManageClubAdminsDialog({ open, onClose, club }) {
               </div>
             )}
           </div>
+
+          {/* Platform Admin: Change Member Roles */}
+          {isPlatformAdmin && (
+            <div className="border-t pt-4">
+              <Label className="font-medium mb-3 block flex items-center gap-2">
+                <User className="w-4 h-4" />
+                All Members - Change Roles ({allMembers.length})
+              </Label>
+              {allMembers.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No members found</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {allMembers.map(member => (
+                    <div key={member.id} className="border rounded-lg p-3 flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            {member.first_name && member.surname 
+                              ? `${member.first_name} ${member.surname}`
+                              : member.user_name || member.user_email}
+                          </span>
+                          <Badge variant="outline" className="text-xs">{member.role}</Badge>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{member.user_email}</div>
+                      </div>
+                      <Select
+                        value={member.role}
+                        onValueChange={(newRole) => 
+                          updateRoleMutation.mutate({ membershipId: member.id, newRole })
+                        }
+                        disabled={member.user_email === club.primary_admin_email}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="selector">Selector</SelectItem>
+                          <SelectItem value="live_scorer">Live Scorer</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
