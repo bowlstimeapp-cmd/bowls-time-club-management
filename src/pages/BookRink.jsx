@@ -269,7 +269,7 @@ useEffect(() => {
     {club?.name}
   </span>
   <span className="mx-1">•</span>
-  Select an available slot to easy book a rink. 
+  Select an available slot to easily book a rink. 
 </p>
         </motion.div>
 
