@@ -387,13 +387,13 @@ export default function ClubAdmin() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-3">
-                      {filteredApprovedMembers.map(member => (
-                    <Card 
-                      key={member.id} 
-                      className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => setSelectedMember(member)}
-                    >
+                   <div className="space-y-3">
+                     {filteredApprovedMembers.map(member => (
+                       <Card 
+                         key={member.id} 
+                         className="cursor-pointer hover:shadow-md transition-shadow"
+                         onClick={() => setSelectedMember(member)}
+                       >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
