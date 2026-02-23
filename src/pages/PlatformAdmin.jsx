@@ -65,8 +65,9 @@ export default function PlatformAdmin() {
     module_rink_booking: true,
     module_selection: true,
     module_competitions: true,
-    module_leagues: true
-  });
+    module_leagues: true,
+    module_sms_notifications: false
+    });
 
   const queryClient = useQueryClient();
 
