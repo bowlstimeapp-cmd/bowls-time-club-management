@@ -93,12 +93,6 @@ export default function ClubTournaments() {
                   Create Knockout
                 </Button>
               </Link>
-//              <Link to={createPageUrl('LeagueAdmin') + `?clubId=${clubId}`}>
-//                <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-//                  <Plus className="w-4 h-4 mr-2" />
-//                  Create Round Robin
-//                </Button>
-//              </Link>
             </div>
           )}
         </motion.div>
