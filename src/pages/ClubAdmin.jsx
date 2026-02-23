@@ -438,15 +438,17 @@ export default function ClubAdmin() {
                               Remove
                             </Button>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+                          </div>
+                          </CardContent>
+                          </Card>
+                          ))}
+                          </div>
+                          )}
+                          </>
+                          )}
+                          </TabsContent>
 
-            <TabsContent value="audit">
+                          <TabsContent value="audit">
               {auditLogs.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
