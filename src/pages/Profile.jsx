@@ -25,6 +25,7 @@ export default function Profile() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -92,6 +93,7 @@ export default function Profile() {
   useEffect(() => {
     if (membership) {
       setEmailNotifications(membership.email_notifications !== false);
+      setSmsNotifications(membership.sms_notifications || false);
     }
   }, [membership]);
 
@@ -109,6 +111,16 @@ export default function Profile() {
       updateMembershipMutation.mutate({ 
         id: membership.id, 
         data: { email_notifications: checked } 
+      });
+    }
+  };
+
+  const handleSmsNotificationsChange = (checked) => {
+    setSmsNotifications(checked);
+    if (membership) {
+      updateMembershipMutation.mutate({ 
+        id: membership.id, 
+        data: { sms_notifications: checked } 
       });
     }
   };
@@ -300,7 +312,7 @@ export default function Profile() {
                   Manage how you receive notifications from the club
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-base">Email Notifications</Label>
@@ -313,6 +325,21 @@ export default function Profile() {
                     onCheckedChange={handleEmailNotificationsChange}
                   />
                 </div>
+                {club?.module_sms_notifications && (
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div>
+                      <Label className="text-base">SMS Notifications</Label>
+                      <p className="text-sm text-gray-500">
+                        {phone ? 'Receive SMS when you are selected for matches' : 'Add a phone number above to enable SMS notifications'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={smsNotifications}
+                      onCheckedChange={handleSmsNotificationsChange}
+                      disabled={!phone}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

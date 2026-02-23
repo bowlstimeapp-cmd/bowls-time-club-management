@@ -34,6 +34,7 @@ export default function ClubSettings() {
   const [sessionDuration, setSessionDuration] = useState(2);
   const [autoApprove, setAutoApprove] = useState(false);
   const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
+  const [smsMemberNotifications, setSmsMemberNotifications] = useState(false);
   const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -81,6 +82,7 @@ export default function ClubSettings() {
       setSessionDuration(club.session_duration || 2);
       setAutoApprove(club.auto_approve_bookings || false);
       setEmailMemberNotifications(club.email_member_notifications !== false);
+      setSmsMemberNotifications(club.sms_member_notifications || false);
       setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
       setLogoUrl(club.logo_url || '');
     }
@@ -149,6 +151,7 @@ export default function ClubSettings() {
       session_duration: parseInt(sessionDuration),
       auto_approve_bookings: autoApprove,
       email_member_notifications: emailMemberNotifications,
+      sms_member_notifications: smsMemberNotifications,
       membership_types: membershipTypes,
       logo_url: logoUrl
     });
@@ -316,10 +319,10 @@ export default function ClubSettings() {
               <CardHeader>
                 <CardTitle>Notification Settings</CardTitle>
                 <CardDescription>
-                  Configure email notifications for members
+                  Configure how members receive notifications
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-base">Email Member Notifications</Label>
@@ -332,6 +335,20 @@ export default function ClubSettings() {
                     onCheckedChange={setEmailMemberNotifications}
                   />
                 </div>
+                {club?.module_sms_notifications && (
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div>
+                      <Label className="text-base">SMS Member Notifications</Label>
+                      <p className="text-sm text-gray-500">
+                        Send SMS notifications to members when they are selected for matches
+                      </p>
+                    </div>
+                    <Switch
+                      checked={smsMemberNotifications}
+                      onCheckedChange={setSmsMemberNotifications}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
