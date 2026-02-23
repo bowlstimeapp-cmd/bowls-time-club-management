@@ -32,7 +32,6 @@ import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import LiveMatchBanner from '@/components/LiveMatchBanner';
 import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
-import { MessageSquare } from 'lucide-react';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
