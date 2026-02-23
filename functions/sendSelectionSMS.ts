@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const smsMembers = members.filter(m =>
       selectedEmails.includes(m.user_email) &&
-      m.smsnotifications === true &&
+      m.sms_notifications === true &&
       m.phone
     );
 
