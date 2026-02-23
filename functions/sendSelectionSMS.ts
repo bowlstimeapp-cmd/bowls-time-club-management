@@ -34,14 +34,25 @@ Deno.serve(async (req) => {
       return Response.json({ message: 'No players selected' });
     }
 
-    const smsMembers = members.filter(m =>
-      selectedEmails.includes(m.user_email) &&
-      m.sms_notifications === true &&
-      m.phone
-    );
+    const selectedMembers = members.filter(m => selectedEmails.includes(m.user_email));
+    const membersWithSMS = selectedMembers.filter(m => m.sms_notifications === true);
+    const smsMembers = membersWithSMS.filter(m => m.phone);
 
     if (smsMembers.length === 0) {
-      return Response.json({ message: 'No members with SMS notifications enabled' });
+      const reasons = [];
+      if (selectedMembers.length === 0) reasons.push('no members found in selections');
+      if (membersWithSMS.length === 0) reasons.push('no members have SMS enabled');
+      if (membersWithSMS.length > 0 && smsMembers.length === 0) reasons.push(`${membersWithSMS.length} member(s) have SMS enabled but no phone number set`);
+      
+      return Response.json({ 
+        message: 'No SMS sent', 
+        reason: reasons.join(', '),
+        debug: {
+          selectedCount: selectedMembers.length,
+          smsEnabledCount: membersWithSMS.length,
+          withPhoneCount: smsMembers.length
+        }
+      });
     }
 
     // ✅ Twilio credentials (TRIMMED to prevent hidden whitespace bugs)
