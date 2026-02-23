@@ -275,6 +275,8 @@ export default function TournamentEditor() {
   };
 
   const generateRoundRobin = () => {
+    console.log('Generate Round Robin clicked', { groups, teams, numGroups, teamsPerGroup });
+    
     if (!groups) {
       toast.error('Please randomize groups first');
       return;
