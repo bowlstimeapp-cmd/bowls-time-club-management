@@ -156,6 +156,15 @@ export default function Profile() {
       surname: surname.trim(),
       phone: phone.trim()
     });
+    
+    // Update phone in ClubMembership if user is a member of a club
+    if (clubId && membership) {
+      await base44.entities.ClubMembership.update(membership.id, { 
+        phone: phone.trim() || null 
+      });
+      queryClient.invalidateQueries({ queryKey: ['myMembership'] });
+    }
+    
     toast.success('Profile updated successfully!');
     setIsLoading(false);
   };
