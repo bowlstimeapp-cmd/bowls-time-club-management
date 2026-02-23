@@ -17,7 +17,8 @@ import {
   Shield,
   User,
   History,
-  Upload
+  Upload,
+  Search
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -41,6 +42,7 @@ export default function ClubAdmin() {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -193,6 +195,17 @@ export default function ClubAdmin() {
 
   const pendingMembers = memberships.filter(m => m.status === 'pending');
   const approvedMembers = memberships.filter(m => m.status === 'approved');
+
+  const filteredApprovedMembers = approvedMembers.filter(member => {
+    const query = searchQuery.toLowerCase();
+    return (
+      member.user_name?.toLowerCase().includes(query) ||
+      member.user_email?.toLowerCase().includes(query) ||
+      member.first_name?.toLowerCase().includes(query) ||
+      member.surname?.toLowerCase().includes(query) ||
+      member.locker_number?.toLowerCase().includes(query)
+    );
+  });
 
   const membershipTypes = club?.membership_types || ['Winter Indoor Member', 'Summer Indoor Member', 'Outdoor Member', 'Social Member'];
 
@@ -350,16 +363,32 @@ export default function ClubAdmin() {
                     <Skeleton key={i} className="h-20 w-full" />
                   ))}
                 </div>
-              ) : approvedMembers.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500">No members yet</p>
-                  </CardContent>
-                </Card>
               ) : (
-                <div className="space-y-3">
-                  {approvedMembers.map(member => (
+                <>
+                  <div className="mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Input
+                        placeholder="Search members..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  {filteredApprovedMembers.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p className="text-gray-500">
+                          {searchQuery ? 'No members found' : 'No members yet'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredApprovedMembers.map(member => (
                     <Card 
                       key={member.id} 
                       className="cursor-pointer hover:shadow-md transition-shadow"
@@ -391,6 +420,9 @@ export default function ClubAdmin() {
                                 ))}
                               </div>
                               <p className="text-sm text-gray-500">{member.user_email}</p>
+                              {member.locker_number && (
+                                <p className="text-xs text-gray-400 mt-0.5">Locker: {member.locker_number}</p>
+                              )}
                             </div>
                           </div>
                           {member.user_email !== user?.email && (

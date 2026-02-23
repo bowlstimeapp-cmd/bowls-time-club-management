@@ -41,6 +41,8 @@ export default function TournamentEditor() {
   const [teamCount, setTeamCount] = useState(8);
   const [teams, setTeams] = useState([]);
   const [rinksAvailable, setRinksAvailable] = useState(4);
+  const [numGroups, setNumGroups] = useState(2);
+  const [teamsPerGroup, setTeamsPerGroup] = useState(4);
   const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
   const [groups, setGroups] = useState(null);
   const [fixtures, setFixtures] = useState([]);
@@ -89,6 +91,8 @@ export default function TournamentEditor() {
       setBracket(existingTournament.bracket || null);
       setTeams(existingTournament.teams || []);
       setRinksAvailable(existingTournament.rinks_available || 4);
+      setNumGroups(existingTournament.num_groups || 2);
+      setTeamsPerGroup(existingTournament.teams_per_group || 4);
       setQualifiersPerGroup(existingTournament.qualifiers_per_group || 2);
       setGroups(existingTournament.groups || null);
       setFixtures(existingTournament.fixtures || []);
@@ -244,8 +248,11 @@ export default function TournamentEditor() {
       return;
     }
 
-    const numGroups = Math.ceil(teams.length / 4);
-    const teamsPerGroup = Math.ceil(teams.length / numGroups);
+    // Validate structure
+    if (teamCount !== numGroups * teamsPerGroup) {
+      toast.error(`Teams (${teamCount}) must equal Groups (${numGroups}) × Teams per Group (${teamsPerGroup})`);
+      return;
+    }
     
     const shuffled = [...teams].sort(() => Math.random() - 0.5);
     const newGroups = {};
@@ -273,57 +280,128 @@ export default function TournamentEditor() {
       return;
     }
 
+    // Validation: Check total matches fit available rinks per round
+    const matchesPerGroup = (teamsPerGroup * (teamsPerGroup - 1)) / 2;
+    const totalMatches = numGroups * matchesPerGroup;
+    const matchesPerRound = (teamsPerGroup / 2) * numGroups;
+    
+    if (matchesPerRound > rinksAvailable) {
+      toast.error(`Not enough rinks! Need ${matchesPerRound} rinks per round, but only ${rinksAvailable} available`);
+      return;
+    }
+
+    // Generate round robin pairings per group using circle method
     const allFixtures = [];
-    let fixtureId = 0;
+    const roundsData = {};
     
     Object.entries(groups).forEach(([groupLetter, teamIds]) => {
       const groupTeams = teams.filter(t => teamIds.includes(t.id));
+      const n = groupTeams.length;
       
-      for (let i = 0; i < groupTeams.length; i++) {
-        for (let j = i + 1; j < groupTeams.length; j++) {
-          allFixtures.push({
-            id: `fixture_${fixtureId++}`,
-            round: 'group',
-            team1_id: groupTeams[i].id,
-            team2_id: groupTeams[j].id,
-            group: groupLetter,
-            rink: null,
-            team1_score: null,
-            team2_score: null,
-            winner_id: null
-          });
-        }
+      // Circle method for round robin
+      const rounds = [];
+      const teamList = [...groupTeams];
+      
+      // If odd number of teams, add a bye
+      if (n % 2 === 1) {
+        teamList.push({ id: 'bye', captain: 'BYE' });
       }
+      
+      const totalRounds = teamList.length - 1;
+      
+      for (let round = 0; round < totalRounds; round++) {
+        const roundMatches = [];
+        for (let i = 0; i < teamList.length / 2; i++) {
+          const team1 = teamList[i];
+          const team2 = teamList[teamList.length - 1 - i];
+          
+          if (team1.id !== 'bye' && team2.id !== 'bye') {
+            roundMatches.push({
+              team1_id: team1.id,
+              team2_id: team2.id,
+              group: groupLetter
+            });
+          }
+        }
+        rounds.push(roundMatches);
+        
+        // Rotate teams (keep first team fixed)
+        const temp = teamList[1];
+        for (let i = 1; i < teamList.length - 1; i++) {
+          teamList[i] = teamList[i + 1];
+        }
+        teamList[teamList.length - 1] = temp;
+      }
+      
+      roundsData[groupLetter] = rounds;
     });
 
-    // Assign rinks trying to minimize repeat usage
-    const teamRinkUsage = {};
-    teams.forEach(t => teamRinkUsage[t.id] = {});
+    // Merge rounds across all groups
+    const maxRounds = Math.max(...Object.values(roundsData).map(r => r.length));
+    const mergedRounds = [];
     
-    allFixtures.forEach(fixture => {
-      let bestRink = 1;
-      let minUsage = Infinity;
-      
-      for (let rink = 1; rink <= rinksAvailable; rink++) {
-        const team1Usage = teamRinkUsage[fixture.team1_id][rink] || 0;
-        const team2Usage = teamRinkUsage[fixture.team2_id][rink] || 0;
-        const totalUsage = team1Usage + team2Usage;
-        
-        if (totalUsage < minUsage) {
-          minUsage = totalUsage;
-          bestRink = rink;
+    for (let roundIdx = 0; roundIdx < maxRounds; roundIdx++) {
+      const roundMatches = [];
+      Object.entries(roundsData).forEach(([groupLetter, rounds]) => {
+        if (rounds[roundIdx]) {
+          roundMatches.push(...rounds[roundIdx]);
         }
-      }
-      
-      fixture.rink = bestRink;
-      teamRinkUsage[fixture.team1_id][bestRink] = (teamRinkUsage[fixture.team1_id][bestRink] || 0) + 1;
-      teamRinkUsage[fixture.team2_id][bestRink] = (teamRinkUsage[fixture.team2_id][bestRink] || 0) + 1;
+      });
+      mergedRounds.push(roundMatches);
+    }
+
+    // Assign rinks with no team playing on same rink twice
+    const teamRinkUsage = {};
+    teams.forEach(t => teamRinkUsage[t.id] = new Set());
+    
+    let fixtureId = 0;
+    mergedRounds.forEach((roundMatches, roundIdx) => {
+      roundMatches.forEach(match => {
+        let assignedRink = null;
+        
+        // Find a rink that neither team has used
+        for (let rink = 1; rink <= rinksAvailable; rink++) {
+          if (!teamRinkUsage[match.team1_id].has(rink) && 
+              !teamRinkUsage[match.team2_id].has(rink)) {
+            assignedRink = rink;
+            break;
+          }
+        }
+        
+        // If no unused rink, find least-used rink
+        if (!assignedRink) {
+          let minUsage = Infinity;
+          for (let rink = 1; rink <= rinksAvailable; rink++) {
+            const usage = (teamRinkUsage[match.team1_id].has(rink) ? 1 : 0) + 
+                         (teamRinkUsage[match.team2_id].has(rink) ? 1 : 0);
+            if (usage < minUsage) {
+              minUsage = usage;
+              assignedRink = rink;
+            }
+          }
+        }
+        
+        teamRinkUsage[match.team1_id].add(assignedRink);
+        teamRinkUsage[match.team2_id].add(assignedRink);
+        
+        allFixtures.push({
+          id: `fixture_${fixtureId++}`,
+          round: `Round ${roundIdx + 1}`,
+          team1_id: match.team1_id,
+          team2_id: match.team2_id,
+          group: match.group,
+          rink: assignedRink,
+          team1_score: null,
+          team2_score: null,
+          winner_id: null
+        });
+      });
     });
 
     setFixtures(allFixtures);
     
     // Generate knockout structure
-    const totalQualifiers = Object.keys(groups).length * qualifiersPerGroup;
+    const totalQualifiers = numGroups * qualifiersPerGroup;
     const knockoutStage = [];
     
     if (totalQualifiers === 8) {
@@ -355,7 +433,14 @@ export default function TournamentEditor() {
     });
     
     setKnockoutFixtures(knockoutFixturesList);
-    toast.success('Round robin fixtures generated!');
+    
+    // Log rink usage for verification
+    console.log('Rink Usage Summary:');
+    teams.forEach(team => {
+      console.log(`${team.captain}: Rinks ${Array.from(teamRinkUsage[team.id]).join(', ')}`);
+    });
+    
+    toast.success('Round robin fixtures generated with optimized rink allocation!');
   };
 
   const handleSave = async (publish = false) => {
@@ -384,6 +469,8 @@ export default function TournamentEditor() {
       } : {
         teams,
         rinks_available: rinksAvailable,
+        num_groups: numGroups,
+        teams_per_group: teamsPerGroup,
         qualifiers_per_group: qualifiersPerGroup,
         groups,
         fixtures,
@@ -504,10 +591,50 @@ export default function TournamentEditor() {
                       <Label>Number of Teams</Label>
                       <select
                         value={teamCount}
-                        onChange={(e) => setTeamCount(Number(e.target.value))}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setTeamCount(val);
+                          // Auto-adjust groups and teams per group
+                          if (val === 8) {
+                            setNumGroups(2);
+                            setTeamsPerGroup(4);
+                          } else if (val === 12) {
+                            setNumGroups(3);
+                            setTeamsPerGroup(4);
+                          } else if (val === 16) {
+                            setNumGroups(4);
+                            setTeamsPerGroup(4);
+                          }
+                        }}
                         className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                       >
                         {[4, 6, 8, 12, 16, 20, 24, 32].map(n => (
+                          <option key={n} value={n}>{n} Teams</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label>Number of Groups</Label>
+                      <select
+                        value={numGroups}
+                        onChange={(e) => setNumGroups(Number(e.target.value))}
+                        className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      >
+                        {[2, 3, 4, 5, 6, 8].map(n => (
+                          <option key={n} value={n}>{n} Groups</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label>Teams Per Group</Label>
+                      <select
+                        value={teamsPerGroup}
+                        onChange={(e) => setTeamsPerGroup(Number(e.target.value))}
+                        className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      >
+                        {[3, 4, 5, 6, 8].map(n => (
                           <option key={n} value={n}>{n} Teams</option>
                         ))}
                       </select>

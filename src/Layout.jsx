@@ -25,7 +25,8 @@ import {
   Trophy,
   Table2,
   ClipboardList,
-  ChevronDown
+  ChevronDown,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -231,6 +232,12 @@ export default function Layout({ children, currentPageName }) {
                           Members
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('OpenCompetitions') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Trophy className="w-4 h-4 mr-2" />
+                          Open Competitions
+                        </Link>
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -378,6 +385,19 @@ export default function Layout({ children, currentPageName }) {
                   >
                     <Users className="w-5 h-5" />
                     Members
+                  </Link>
+                  <Link
+                    to={createPageUrl('OpenCompetitions') + `?clubId=${clubId}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
+                      isActive(createPageUrl('OpenCompetitions'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100"
+                    )}
+                  >
+                    <Trophy className="w-5 h-5" />
+                    Open Competitions
                   </Link>
                 </>
               )}
