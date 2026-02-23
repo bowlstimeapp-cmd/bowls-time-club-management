@@ -192,7 +192,8 @@ export default function PlatformAdmin() {
       module_rink_booking: true,
       module_selection: true,
       module_competitions: true,
-      module_leagues: true
+      module_leagues: true,
+      module_sms_notifications: false
     });
     setDialogOpen(true);
   };
@@ -214,7 +215,8 @@ export default function PlatformAdmin() {
       module_rink_booking: club.module_rink_booking !== false,
       module_selection: club.module_selection !== false,
       module_competitions: club.module_competitions !== false,
-      module_leagues: club.module_leagues !== false
+      module_leagues: club.module_leagues !== false,
+      module_sms_notifications: club.module_sms_notifications || false
     });
     setDialogOpen(true);
   };
@@ -633,6 +635,13 @@ export default function PlatformAdmin() {
                       <Switch
                         checked={formData.module_leagues}
                         onCheckedChange={(checked) => setFormData({ ...formData, module_leagues: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="font-normal">SMS Notifications</Label>
+                      <Switch
+                        checked={formData.module_sms_notifications}
+                        onCheckedChange={(checked) => setFormData({ ...formData, module_sms_notifications: checked })}
                       />
                     </div>
                   </div>
