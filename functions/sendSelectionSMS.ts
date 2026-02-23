@@ -85,12 +85,14 @@ Deno.serve(async (req) => {
           body: body.toString()
         });
         
-        if (response.ok) {
-          sentCount++;
-        } else {
-          failedCount++;
-          console.error(`Failed to send SMS to ${member.phone}`);
-        }
+const result = await response.json();
+
+if (response.ok) {
+  sentCount++;
+} else {
+  failedCount++;
+  console.error(`Twilio error for ${member.phone}:`, result);
+}
       } catch (error) {
         failedCount++;
         console.error(`Error sending SMS to ${member.phone}:`, error);
