@@ -37,7 +37,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const statusOptions = [
-  { value: '', label: 'Not Contacted', color: 'bg-gray-100 text-gray-800' },
+  { value: 'not_contacted', label: 'Not Contacted', color: 'bg-gray-100 text-gray-800' },
   { value: 'contacted', label: 'Contacted', color: 'bg-blue-100 text-blue-800' },
   { value: 'not_entering', label: 'Not Entering', color: 'bg-red-100 text-red-800' },
   { value: 'entered_team', label: 'Entered Team', color: 'bg-emerald-100 text-emerald-800' }
@@ -348,7 +348,7 @@ export default function OpenCompetitions() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <Select
-                        value={contact.status || ''}
+                        value={contact.status || 'not_contacted'}
                         onValueChange={(value) => handleStatusChange(contact.id, value)}
                       >
                         <SelectTrigger className="w-full sm:w-40">
