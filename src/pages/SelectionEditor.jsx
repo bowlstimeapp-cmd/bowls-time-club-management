@@ -45,6 +45,7 @@ export default function SelectionEditor() {
   const [matchDate, setMatchDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [matchName, setMatchName] = useState('');
   const [selections, setSelections] = useState({});
+  const [originalSelections, setOriginalSelections] = useState({});
   const [homeRinks, setHomeRinks] = useState(2);
   const [selectedRinks, setSelectedRinks] = useState([1, 2]);
   const [matchStartTime, setMatchStartTime] = useState('10:00');
@@ -91,6 +92,7 @@ export default function SelectionEditor() {
       setMatchDate(existingSelection.match_date);
       setMatchName(existingSelection.match_name || '');
       setSelections(existingSelection.selections || {});
+      setOriginalSelections(existingSelection.selections || {});
       setHomeRinks(existingSelection.home_rinks || 2);
       setSelectedRinks(existingSelection.selected_rinks || [1, 2]);
       setMatchStartTime(existingSelection.match_start_time || '10:00');
@@ -329,6 +331,103 @@ ${club?.name || 'Your Bowls Club'}
         await sendSelectionEmails(selectionId);
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       } else if (isRepublish) {
+        // Only notify newly added players
+        const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+        const originalPlayerEmails = [...new Set(Object.values(originalSelections).filter(Boolean))];
+        const newlyAddedEmails = currentPlayerEmails.filter(email => !originalPlayerEmails.includes(email));
+        
+        if (newlyAddedEmails.length > 0) {
+          const notificationsToCreate = newlyAddedEmails.map(email => ({
+            user_email: email,
+            type: 'team_selection',
+            title: 'Selected for Match',
+            message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details on app.bowls-time.com`,
+          }));
+          await base44.entities.Notification.bulkCreate(notificationsToCreate);
+          
+          // Send emails/SMS only to newly added players
+          const selectedPlayerEmails = newlyAddedEmails;
+          const teamList = Object.entries(selections)
+            .filter(([_, email]) => email)
+            .map(([pos, email]) => {
+              const member = members.find(m => m.user_email === email);
+              const name = member?.first_name && member?.surname 
+                ? `${member.first_name} ${member.surname}` 
+                : member?.user_name || email;
+              return `${pos.replace('rink', 'Rink ').replace('_', ' ')}: ${name}`;
+            })
+            .join('\n');
+
+          const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${selectionId}`;
+          
+          // Email notifications
+          if (club?.email_member_notifications) {
+            const emailMembers = members.filter(m => 
+              selectedPlayerEmails.includes(m.user_email) && 
+              m.email_notifications !== false
+            );
+
+            for (const member of emailMembers) {
+              const emailBody = `
+Dear ${member.first_name || 'Member'},
+
+You have been selected to play in an upcoming match!
+
+Match Details:
+- Competition: ${competition}
+- Date: ${format(new Date(matchDate), 'd MMMM yyyy')}
+${matchName ? `- Match: ${matchName}` : ''}
+${matchStartTime ? `- Time: ${matchStartTime} - ${matchEndTime}` : ''}
+
+Team Selection:
+${teamList}
+
+Please confirm your availability by visiting:
+${matchUrl}
+
+Best regards,
+${club?.name || 'Your Bowls Club'}
+              `.trim();
+
+              await base44.integrations.Core.SendEmail({
+                to: member.user_email,
+                subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+                body: emailBody
+              });
+            }
+            
+            if (emailMembers.length > 0) {
+              toast.success(`Emails sent to ${emailMembers.length} newly added player(s)`);
+            }
+          }
+          
+          // SMS notifications
+          if (club?.module_sms_notifications && club?.sms_member_notifications) {
+            const smsMembers = members.filter(m => 
+              selectedPlayerEmails.includes(m.user_email) && 
+              m.sms_notifications === true &&
+              m.phone
+            );
+
+            const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
+
+            for (const member of smsMembers) {
+              try {
+                await base44.functions.invoke('sendSMS', {
+                  to: member.phone,
+                  message: smsMessage
+                });
+              } catch (error) {
+                console.error(`Failed to send SMS to ${member.phone}:`, error);
+              }
+            }
+            
+            if (smsMembers.length > 0) {
+              toast.success(`SMS sent to ${smsMembers.length} newly added player(s)`);
+            }
+          }
+        }
+        
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       }
     } else {
