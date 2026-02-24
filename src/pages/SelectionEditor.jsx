@@ -33,8 +33,6 @@ import InfoTooltip from '@/components/InfoTooltip';
 
 const APP_BASE_URL = window.location.origin;
 
-const COMPETITIONS = ['Bramley', 'Wessex League', 'Denny', 'Top Club'];
-
 export default function SelectionEditor() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
@@ -115,6 +113,12 @@ export default function SelectionEditor() {
       const clubs = await base44.entities.Club.filter({ id: clubId });
       return clubs[0];
     },
+    enabled: !!clubId,
+  });
+
+  const { data: competitions = [] } = useQuery({
+    queryKey: ['competitions', clubId],
+    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
     enabled: !!clubId,
   });
 
@@ -404,6 +408,20 @@ ${club?.name || 'Your Bowls Club'}
     }));
   };
 
+  const handleCompetitionChange = (compName) => {
+    setCompetition(compName);
+    const comp = competitions.find(c => c.name === compName);
+    if (comp) {
+      setHomeRinks(comp.home_rinks);
+      // Auto-select first N rinks as home rinks
+      const newSelectedRinks = [];
+      for (let i = 1; i <= comp.home_rinks; i++) {
+        newSelectedRinks.push(i);
+      }
+      setSelectedRinks(newSelectedRinks);
+    }
+  };
+
   const handleHomeRinksChange = (value) => {
     const numRinks = parseInt(value);
     setHomeRinks(numRinks);
@@ -486,13 +504,13 @@ ${club?.name || 'Your Bowls Club'}
               <CardContent className="space-y-4">
                 <div>
                   <Label>Competition *</Label>
-                  <Select value={competition} onValueChange={setCompetition}>
+                  <Select value={competition} onValueChange={handleCompetitionChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select competition" />
                     </SelectTrigger>
                     <SelectContent>
-                      {COMPETITIONS.map(comp => (
-                        <SelectItem key={comp} value={comp}>{comp}</SelectItem>
+                      {competitions.map(comp => (
+                        <SelectItem key={comp.id} value={comp.name}>{comp.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

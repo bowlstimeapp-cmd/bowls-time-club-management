@@ -19,7 +19,11 @@ import {
   User,
   History,
   Upload,
-  Search
+  Search,
+  Trophy,
+  Plus,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -44,6 +48,14 @@ export default function ClubAdmin() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
+  const [editingCompetition, setEditingCompetition] = useState(null);
+  const [competitionForm, setCompetitionForm] = useState({
+    name: '',
+    players_per_rink: 4,
+    home_rinks: 2,
+    away_rinks: 0
+  });
 
   const queryClient = useQueryClient();
 
@@ -88,6 +100,12 @@ export default function ClubAdmin() {
     enabled: !!clubId,
   });
 
+  const { data: competitions = [] } = useQuery({
+    queryKey: ['competitions', clubId],
+    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
   const updateMembershipMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ClubMembership.update(id, data),
     onSuccess: () => {
@@ -116,6 +134,35 @@ export default function ClubAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member removed');
+    },
+  });
+
+  const createCompetitionMutation = useMutation({
+    mutationFn: (data) => base44.entities.Competition.create({ ...data, club_id: clubId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      toast.success('Competition created');
+      setCompetitionModalOpen(false);
+      resetCompetitionForm();
+    },
+  });
+
+  const updateCompetitionMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Competition.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      toast.success('Competition updated');
+      setCompetitionModalOpen(false);
+      setEditingCompetition(null);
+      resetCompetitionForm();
+    },
+  });
+
+  const deleteCompetitionMutation = useMutation({
+    mutationFn: (id) => base44.entities.Competition.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      toast.success('Competition deleted');
     },
   });
 
@@ -192,6 +239,39 @@ export default function ClubAdmin() {
 
     toast.success('Member updated successfully');
     setSelectedMember(null);
+  };
+
+  const resetCompetitionForm = () => {
+    setCompetitionForm({
+      name: '',
+      players_per_rink: 4,
+      home_rinks: 2,
+      away_rinks: 0
+    });
+  };
+
+  const handleEditCompetition = (competition) => {
+    setEditingCompetition(competition);
+    setCompetitionForm({
+      name: competition.name,
+      players_per_rink: competition.players_per_rink,
+      home_rinks: competition.home_rinks,
+      away_rinks: competition.away_rinks || 0
+    });
+    setCompetitionModalOpen(true);
+  };
+
+  const handleSaveCompetition = () => {
+    if (!competitionForm.name.trim()) {
+      toast.error('Please enter a competition name');
+      return;
+    }
+    
+    if (editingCompetition) {
+      updateCompetitionMutation.mutate({ id: editingCompetition.id, data: competitionForm });
+    } else {
+      createCompetitionMutation.mutate(competitionForm);
+    }
   };
 
   const pendingMembers = memberships.filter(m => m.status === 'pending');
@@ -286,7 +366,7 @@ export default function ClubAdmin() {
           transition={{ delay: 0.2 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
               <TabsTrigger value="pending" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Pending ({pendingMembers.length})
@@ -294,6 +374,10 @@ export default function ClubAdmin() {
               <TabsTrigger value="members" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Members ({approvedMembers.length})
+              </TabsTrigger>
+              <TabsTrigger value="competitions" className="flex items-center gap-2">
+                <Trophy className="w-4 h-4" />
+                Competitions
               </TabsTrigger>
               <TabsTrigger value="audit" className="flex items-center gap-2">
                 <History className="w-4 h-4" />
@@ -449,7 +533,67 @@ export default function ClubAdmin() {
                           )}
                           </TabsContent>
 
-                          <TabsContent value="audit">
+                          <TabsContent value="competitions">
+              <div className="mb-4 flex justify-end">
+                <Button onClick={() => {
+                  resetCompetitionForm();
+                  setEditingCompetition(null);
+                  setCompetitionModalOpen(true);
+                }} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Competition
+                </Button>
+              </div>
+              
+              {competitions.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-gray-500">No competitions defined yet</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {competitions.map(comp => (
+                    <Card key={comp.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-lg">{comp.name}</p>
+                            <div className="flex gap-4 mt-1 text-sm text-gray-600">
+                              <span>{comp.players_per_rink} players per rink</span>
+                              <span>•</span>
+                              <span>{comp.home_rinks} home rink{comp.home_rinks !== 1 ? 's' : ''}</span>
+                              <span>•</span>
+                              <span>{comp.away_rinks || 0} away rink{comp.away_rinks !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditCompetition(comp)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteCompetitionMutation.mutate(comp.id)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="audit">
               {auditLogs.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
@@ -508,6 +652,80 @@ export default function ClubAdmin() {
           clubId={clubId}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] })}
         />
+
+        {/* Competition Modal */}
+        {competitionModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader>
+                <CardTitle>{editingCompetition ? 'Edit Competition' : 'Add Competition'}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Competition Name *</Label>
+                  <Input
+                    value={competitionForm.name}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, name: e.target.value })}
+                    placeholder="e.g., Bramley, Wessex League"
+                  />
+                </div>
+                <div>
+                  <Label>Players per Rink</Label>
+                  <Input
+                    type="number"
+                    min="2"
+                    max="6"
+                    value={competitionForm.players_per_rink}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, players_per_rink: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label>Number of Home Rinks</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="6"
+                    value={competitionForm.home_rinks}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, home_rinks: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label>Number of Away Rinks</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="6"
+                    value={competitionForm.away_rinks}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, away_rinks: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setCompetitionModalOpen(false);
+                      setEditingCompetition(null);
+                      resetCompetitionForm();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleSaveCompetition}
+                    disabled={createCompetitionMutation.isPending || updateCompetitionMutation.isPending}
+                  >
+                    {(createCompetitionMutation.isPending || updateCompetitionMutation.isPending) ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    {editingCompetition ? 'Update' : 'Create'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
