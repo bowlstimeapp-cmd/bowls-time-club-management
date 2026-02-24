@@ -445,6 +445,16 @@ export default function LeagueAdmin() {
     // Update league to mark fixtures as generated
     await base44.entities.League.update(league.id, { fixtures_generated: true });
     
+    // Generate and save scorecards PDF in background
+    try {
+      await base44.functions.invoke('generateAndSaveLeagueScorecards', {
+        leagueId: league.id,
+        clubId: clubId
+      });
+    } catch (error) {
+      console.error('Failed to generate scorecards PDF:', error);
+    }
+    
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     
@@ -835,21 +845,11 @@ export default function LeagueAdmin() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                onClick={async () => {
-                                  try {
-                                    const response = await base44.functions.invoke('generateLeagueScorecards', {
-                                      leagueId: league.id,
-                                      clubId: clubId
-                                    });
-                                    const printWindow = window.open('', '_blank');
-                                    printWindow.document.write(response.data);
-                                    printWindow.document.close();
-                                    setTimeout(() => {
-                                      printWindow.print();
-                                    }, 250);
-                                    toast.success('Scorecards ready to print');
-                                  } catch (error) {
-                                    toast.error('Failed to generate scorecards');
+                                onClick={() => {
+                                  if (league.scorecards_pdf_url) {
+                                    window.open(league.scorecards_pdf_url, '_blank');
+                                  } else {
+                                    toast.error('Scorecards PDF not available. Try regenerating fixtures.');
                                   }
                                 }}
                               >
