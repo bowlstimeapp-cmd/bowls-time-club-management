@@ -130,7 +130,10 @@ export default function SelectionEditor() {
     },
   });
 
-  const competitions = [...platformCompetitions, ...clubCompetitions];
+  const allCompetitions = [...platformCompetitions, ...clubCompetitions];
+  
+  // Filter competitions by club's season (indoor/outdoor)
+  const competitions = allCompetitions.filter(comp => comp.season === club?.season);
 
   const { data: existingBookings = [] } = useQuery({
     queryKey: ['bookings', clubId, matchDate],

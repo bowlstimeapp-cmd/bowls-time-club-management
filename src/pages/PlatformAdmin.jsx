@@ -65,6 +65,7 @@ export default function PlatformAdmin() {
     name: '',
     slug: '',
     description: '',
+    season: 'indoor',
     rink_count: 6,
     opening_time: '10:00',
     closing_time: '21:00',
@@ -230,6 +231,7 @@ export default function PlatformAdmin() {
       name: '',
       slug: '',
       description: '',
+      season: 'indoor',
       rink_count: 6,
       opening_time: '10:00',
       closing_time: '21:00',
@@ -253,6 +255,7 @@ export default function PlatformAdmin() {
       name: club.name,
       slug: club.slug,
       description: club.description || '',
+      season: club.season || 'indoor',
       rink_count: club.rink_count || 6,
       opening_time: club.opening_time || '10:00',
       closing_time: club.closing_time || '21:00',
@@ -296,7 +299,8 @@ export default function PlatformAdmin() {
       name: '',
       players_per_rink: 4,
       home_rinks: 2,
-      away_rinks: 0
+      away_rinks: 0,
+      season: 'indoor'
     });
   };
 
@@ -306,7 +310,8 @@ export default function PlatformAdmin() {
       name: competition.name,
       players_per_rink: competition.players_per_rink,
       home_rinks: competition.home_rinks,
-      away_rinks: competition.away_rinks || 0
+      away_rinks: competition.away_rinks || 0,
+      season: competition.season || 'indoor'
     });
     setCompetitionModalOpen(true);
   };
@@ -710,6 +715,21 @@ export default function PlatformAdmin() {
                     rows={2}
                   />
                 </div>
+                <div className="col-span-2">
+                  <Label>Season *</Label>
+                  <Select
+                    value={formData.season}
+                    onValueChange={(value) => setFormData({ ...formData, season: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="indoor">Indoor</SelectItem>
+                      <SelectItem value="outdoor">Outdoor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label>Number of Rinks</Label>
                   <Input
@@ -858,6 +878,21 @@ export default function PlatformAdmin() {
                   value={competitionForm.away_rinks}
                   onChange={(e) => setCompetitionForm({ ...competitionForm, away_rinks: parseInt(e.target.value) })}
                 />
+              </div>
+              <div>
+                <Label>Season *</Label>
+                <Select
+                  value={competitionForm.season}
+                  onValueChange={(value) => setCompetitionForm({ ...competitionForm, season: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="indoor">Indoor</SelectItem>
+                    <SelectItem value="outdoor">Outdoor</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
