@@ -34,7 +34,8 @@ import {
   Trash2,
   ShieldCheck,
   Trophy,
-  MessageSquare
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -345,6 +346,12 @@ export default function PlatformAdmin() {
           </div>
           <div className="flex gap-3">
             <MarketingPDFGenerator />
+            <Link to={createPageUrl('UserGuides')}>
+              <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                <BookOpen className="w-4 h-4 mr-2" />
+                User Guides
+              </Button>
+            </Link>
             <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="w-4 h-4 mr-2" />
               Add New Club
