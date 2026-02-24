@@ -256,7 +256,7 @@ ${club?.name || 'Your Bowls Club'}
         m.phone
       );
 
-      const smsMessage = `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details: ${matchUrl}`;
+      const smsMessage = `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
 
       for (const member of smsMembers) {
         try {
