@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -38,6 +38,14 @@ export default function ClubSettings() {
   const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
+  const [editingCompetition, setEditingCompetition] = useState(null);
+  const [competitionForm, setCompetitionForm] = useState({
+    name: '',
+    players_per_rink: 4,
+    home_rinks: 2,
+    away_rinks: 0
+  });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -74,6 +82,12 @@ export default function ClubSettings() {
     enabled: !!clubId && !!user?.email,
   });
 
+  const { data: competitions = [] } = useQuery({
+    queryKey: ['competitions', clubId],
+    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
   useEffect(() => {
     if (club) {
       setRinkCount(club.rink_count || 6);
@@ -104,6 +118,35 @@ export default function ClubSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club', clubId] });
       toast.success('Settings saved successfully');
+    },
+  });
+
+  const createCompetitionMutation = useMutation({
+    mutationFn: (data) => base44.entities.Competition.create({ ...data, club_id: clubId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      toast.success('Competition created');
+      setCompetitionModalOpen(false);
+      resetCompetitionForm();
+    },
+  });
+
+  const updateCompetitionMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Competition.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      toast.success('Competition updated');
+      setCompetitionModalOpen(false);
+      setEditingCompetition(null);
+      resetCompetitionForm();
+    },
+  });
+
+  const deleteCompetitionMutation = useMutation({
+    mutationFn: (id) => base44.entities.Competition.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      toast.success('Competition deleted');
     },
   });
 
@@ -139,6 +182,39 @@ export default function ClubSettings() {
       setMembershipTypes(membershipTypes.filter(t => t !== type));
     } else {
       setMembershipTypes([...membershipTypes, type]);
+    }
+  };
+
+  const resetCompetitionForm = () => {
+    setCompetitionForm({
+      name: '',
+      players_per_rink: 4,
+      home_rinks: 2,
+      away_rinks: 0
+    });
+  };
+
+  const handleEditCompetition = (competition) => {
+    setEditingCompetition(competition);
+    setCompetitionForm({
+      name: competition.name,
+      players_per_rink: competition.players_per_rink,
+      home_rinks: competition.home_rinks,
+      away_rinks: competition.away_rinks || 0
+    });
+    setCompetitionModalOpen(true);
+  };
+
+  const handleSaveCompetition = () => {
+    if (!competitionForm.name.trim()) {
+      toast.error('Please enter a competition name');
+      return;
+    }
+    
+    if (editingCompetition) {
+      updateCompetitionMutation.mutate({ id: editingCompetition.id, data: competitionForm });
+    } else {
+      createCompetitionMutation.mutate(competitionForm);
     }
   };
 
@@ -381,6 +457,75 @@ export default function ClubSettings() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5" />
+                      Competitions
+                    </CardTitle>
+                    <CardDescription>
+                      Define competitions for match selection
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      resetCompetitionForm();
+                      setEditingCompetition(null);
+                      setCompetitionModalOpen(true);
+                    }} 
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {competitions.length === 0 ? (
+                  <div className="py-8 text-center text-gray-500">
+                    <Trophy className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">No competitions defined yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {competitions.map(comp => (
+                      <div key={comp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{comp.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {comp.players_per_rink} players • {comp.home_rinks} home • {comp.away_rinks || 0} away
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditCompetition(comp)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteCompetitionMutation.mutate(comp.id)}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Button 
               type="submit" 
               className="w-full bg-emerald-600 hover:bg-emerald-700"
@@ -400,6 +545,82 @@ export default function ClubSettings() {
             </Button>
           </form>
         </motion.div>
+
+        {/* Competition Modal */}
+        {competitionModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader>
+                <CardTitle>{editingCompetition ? 'Edit Competition' : 'Add Competition'}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Competition Name *</Label>
+                  <Input
+                    value={competitionForm.name}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, name: e.target.value })}
+                    placeholder="e.g., Bramley, Wessex League"
+                  />
+                </div>
+                <div>
+                  <Label>Players per Rink</Label>
+                  <Input
+                    type="number"
+                    min="2"
+                    max="6"
+                    value={competitionForm.players_per_rink}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, players_per_rink: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label>Number of Home Rinks</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="6"
+                    value={competitionForm.home_rinks}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, home_rinks: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label>Number of Away Rinks</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="6"
+                    value={competitionForm.away_rinks}
+                    onChange={(e) => setCompetitionForm({ ...competitionForm, away_rinks: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setCompetitionModalOpen(false);
+                      setEditingCompetition(null);
+                      resetCompetitionForm();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleSaveCompetition}
+                    disabled={createCompetitionMutation.isPending || updateCompetitionMutation.isPending}
+                  >
+                    {(createCompetitionMutation.isPending || updateCompetitionMutation.isPending) ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    {editingCompetition ? 'Update' : 'Create'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
