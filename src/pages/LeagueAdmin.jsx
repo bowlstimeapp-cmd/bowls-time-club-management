@@ -832,6 +832,33 @@ export default function LeagueAdmin() {
                                 <BarChart3 className="w-4 h-4 mr-1" />
                                 Table
                               </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    const response = await base44.functions.invoke('generateLeagueScorecards', {
+                                      leagueId: league.id,
+                                      clubId: clubId
+                                    });
+                                    const blob = new Blob([response.data], { type: 'application/pdf' });
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${league.name.replace(/\s+/g, '-')}-Scorecards.pdf`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    a.remove();
+                                    toast.success('Scorecards downloaded');
+                                  } catch (error) {
+                                    toast.error('Failed to generate scorecards');
+                                  }
+                                }}
+                              >
+                                <Printer className="w-4 h-4 mr-1" />
+                                Scorecards
+                              </Button>
                             </>
                           )}
                           <Button 
