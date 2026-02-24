@@ -32,7 +32,9 @@ import {
   ShieldAlert,
   Loader2,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Trophy,
+  MessageSquare
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -50,6 +52,14 @@ export default function PlatformAdmin() {
   const [editingClub, setEditingClub] = useState(null);
   const [manageAdminsDialogOpen, setManageAdminsDialogOpen] = useState(false);
   const [managingAdminsClub, setManagingAdminsClub] = useState(null);
+  const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
+  const [editingCompetition, setEditingCompetition] = useState(null);
+  const [competitionForm, setCompetitionForm] = useState({
+    name: '',
+    players_per_rink: 4,
+    home_rinks: 2,
+    away_rinks: 0
+  });
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -87,6 +97,14 @@ export default function PlatformAdmin() {
   const { data: feedbacks = [], isLoading: feedbacksLoading } = useQuery({
     queryKey: ['allFeedback'],
     queryFn: () => base44.entities.Feedback.list('-created_date'),
+  });
+
+  const { data: platformCompetitions = [] } = useQuery({
+    queryKey: ['platformCompetitions'],
+    queryFn: async () => {
+      const allComps = await base44.entities.Competition.list();
+      return allComps.filter(c => !c.club_id);
+    },
   });
 
   useEffect(() => {
@@ -149,6 +167,35 @@ export default function PlatformAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allFeedback'] });
       toast.success('Feedback updated');
+    },
+  });
+
+  const createCompetitionMutation = useMutation({
+    mutationFn: (data) => base44.entities.Competition.create({ ...data, club_id: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformCompetitions'] });
+      toast.success('Platform competition created');
+      setCompetitionModalOpen(false);
+      resetCompetitionForm();
+    },
+  });
+
+  const updateCompetitionMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Competition.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformCompetitions'] });
+      toast.success('Competition updated');
+      setCompetitionModalOpen(false);
+      setEditingCompetition(null);
+      resetCompetitionForm();
+    },
+  });
+
+  const deleteCompetitionMutation = useMutation({
+    mutationFn: (id) => base44.entities.Competition.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformCompetitions'] });
+      toast.success('Competition deleted');
     },
   });
 
@@ -243,6 +290,39 @@ export default function PlatformAdmin() {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   };
 
+  const resetCompetitionForm = () => {
+    setCompetitionForm({
+      name: '',
+      players_per_rink: 4,
+      home_rinks: 2,
+      away_rinks: 0
+    });
+  };
+
+  const handleEditCompetition = (competition) => {
+    setEditingCompetition(competition);
+    setCompetitionForm({
+      name: competition.name,
+      players_per_rink: competition.players_per_rink,
+      home_rinks: competition.home_rinks,
+      away_rinks: competition.away_rinks || 0
+    });
+    setCompetitionModalOpen(true);
+  };
+
+  const handleSaveCompetition = () => {
+    if (!competitionForm.name.trim()) {
+      toast.error('Please enter a competition name');
+      return;
+    }
+    
+    if (editingCompetition) {
+      updateCompetitionMutation.mutate({ id: editingCompetition.id, data: competitionForm });
+    } else {
+      createCompetitionMutation.mutate(competitionForm);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -315,8 +395,9 @@ export default function PlatformAdmin() {
           transition={{ delay: 0.2 }}
         >
           <Tabs defaultValue="clubs" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="clubs">Clubs</TabsTrigger>
+              <TabsTrigger value="competitions">Competitions</TabsTrigger>
               <TabsTrigger value="feedback">Feedback ({feedbacks.length})</TabsTrigger>
             </TabsList>
 
@@ -395,6 +476,71 @@ export default function PlatformAdmin() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="competitions">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Platform Competitions</CardTitle>
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        resetCompetitionForm();
+                        setEditingCompetition(null);
+                        setCompetitionModalOpen(true);
+                      }} 
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Competition
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {platformCompetitions.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-gray-500">No platform-wide competitions defined yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {platformCompetitions.map(comp => (
+                        <div key={comp.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                          <div>
+                            <p className="font-medium text-lg">{comp.name}</p>
+                            <div className="flex gap-4 mt-1 text-sm text-gray-600">
+                              <span>{comp.players_per_rink} players per rink</span>
+                              <span>•</span>
+                              <span>{comp.home_rinks} home rink{comp.home_rinks !== 1 ? 's' : ''}</span>
+                              <span>•</span>
+                              <span>{comp.away_rinks || 0} away rink{comp.away_rinks !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditCompetition(comp)}
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteCompetitionMutation.mutate(comp.id)}
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="feedback">
@@ -664,6 +810,79 @@ export default function PlatformAdmin() {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Competition Modal */}
+        <Dialog open={competitionModalOpen} onOpenChange={setCompetitionModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{editingCompetition ? 'Edit Competition' : 'Add Platform Competition'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Competition Name *</Label>
+                <Input
+                  value={competitionForm.name}
+                  onChange={(e) => setCompetitionForm({ ...competitionForm, name: e.target.value })}
+                  placeholder="e.g., Bramley, Wessex League"
+                />
+              </div>
+              <div>
+                <Label>Players per Rink</Label>
+                <Input
+                  type="number"
+                  min="2"
+                  max="6"
+                  value={competitionForm.players_per_rink}
+                  onChange={(e) => setCompetitionForm({ ...competitionForm, players_per_rink: parseInt(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Number of Home Rinks</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={competitionForm.home_rinks}
+                  onChange={(e) => setCompetitionForm({ ...competitionForm, home_rinks: parseInt(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Number of Away Rinks</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="6"
+                  value={competitionForm.away_rinks}
+                  onChange={(e) => setCompetitionForm({ ...competitionForm, away_rinks: parseInt(e.target.value) })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCompetitionModalOpen(false);
+                  setEditingCompetition(null);
+                  resetCompetitionForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={handleSaveCompetition}
+                disabled={createCompetitionMutation.isPending || updateCompetitionMutation.isPending}
+              >
+                {(createCompetitionMutation.isPending || updateCompetitionMutation.isPending) ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                {editingCompetition ? 'Update' : 'Create'}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

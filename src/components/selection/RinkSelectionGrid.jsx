@@ -11,15 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { User, Users } from 'lucide-react';
 import { parseISO, isWithinInterval } from 'date-fns';
 
-const POSITIONS = ['Lead', '2', '3', 'Skip'];
-const RINKS = [
-  { number: 1, tag: 'Home' },
-  { number: 2, tag: 'Home' },
-  { number: 3, tag: 'Away' },
-  { number: 4, tag: 'Away' },
-];
-
-export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [] }) {
+export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0 }) {
+  const positions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
+  
+  const rinks = [];
+  for (let i = 1; i <= homeRinks; i++) {
+    rinks.push({ number: i, tag: 'Home' });
+  }
+  for (let i = homeRinks + 1; i <= homeRinks + awayRinks; i++) {
+    rinks.push({ number: i, tag: 'Away' });
+  }
   const getPositionKey = (rink, position) => `rink${rink}_${position}`;
 
   const getMemberName = (member) => {
@@ -51,7 +52,7 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {RINKS.map(rink => (
+      {rinks.map(rink => (
         <Card key={rink.number} className="overflow-hidden">
           <CardHeader className="bg-emerald-50 py-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -63,7 +64,7 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {POSITIONS.map(position => {
+            {positions.map(position => {
               const positionKey = getPositionKey(rink.number, position);
               const selectedMember = selections[positionKey];
               

@@ -116,11 +116,21 @@ export default function SelectionEditor() {
     enabled: !!clubId,
   });
 
-  const { data: competitions = [] } = useQuery({
+  const { data: clubCompetitions = [] } = useQuery({
     queryKey: ['competitions', clubId],
     queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
     enabled: !!clubId,
   });
+
+  const { data: platformCompetitions = [] } = useQuery({
+    queryKey: ['platformCompetitions'],
+    queryFn: async () => {
+      const allComps = await base44.entities.Competition.list();
+      return allComps.filter(c => !c.club_id);
+    },
+  });
+
+  const competitions = [...platformCompetitions, ...clubCompetitions];
 
   const { data: existingBookings = [] } = useQuery({
     queryKey: ['bookings', clubId, matchDate],
@@ -673,6 +683,9 @@ ${club?.name || 'Your Bowls Club'}
                   onSelectionChange={handleSelectionChange}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
+                  playersPerRink={competitions.find(c => c.name === competition)?.players_per_rink || 4}
+                  homeRinks={competitions.find(c => c.name === competition)?.home_rinks || 2}
+                  awayRinks={competitions.find(c => c.name === competition)?.away_rinks || 0}
                 />
               )
             ) : (
