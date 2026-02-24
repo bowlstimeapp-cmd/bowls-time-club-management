@@ -123,6 +123,14 @@ export default function Selection() {
     },
   });
 
+  const deleteSelectionMutation = useMutation({
+    mutationFn: (id) => base44.entities.TeamSelection.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['selections'] });
+      toast.success('Selection deleted');
+    },
+  });
+
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
 
   // Check if user is selected for a match
@@ -165,6 +173,12 @@ export default function Selection() {
 
   const getAvailabilityForSelection = (selectionId) => {
     return allAvailabilities.filter(a => a.selection_id === selectionId);
+  };
+
+  const handleDeleteSelection = (selectionId) => {
+    if (confirm('Are you sure you want to delete this selection?')) {
+      deleteSelectionMutation.mutate(selectionId);
+    }
   };
 
   const EmptyState = ({ title, description }) => (
@@ -304,6 +318,7 @@ export default function Selection() {
                       isSettingAvailability={setAvailabilityMutation.isPending}
                       availabilities={getAvailabilityForSelection(selection.id)}
                       members={members}
+                      onDelete={handleDeleteSelection}
                     />
                   ))}
                 </div>
@@ -331,6 +346,7 @@ export default function Selection() {
                         selection={selection} 
                         isSelector={isSelector}
                         clubId={clubId}
+                        onDelete={handleDeleteSelection}
                       />
                     ))}
                   </div>
