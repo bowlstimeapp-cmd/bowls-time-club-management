@@ -58,7 +58,8 @@ export default function PlatformAdmin() {
     name: '',
     players_per_rink: 4,
     home_rinks: 2,
-    away_rinks: 0
+    away_rinks: 0,
+    season: ''
   });
   const [formData, setFormData] = useState({
     name: '',
