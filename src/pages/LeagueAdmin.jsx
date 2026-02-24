@@ -841,16 +841,13 @@ export default function LeagueAdmin() {
                                       leagueId: league.id,
                                       clubId: clubId
                                     });
-                                    const blob = new Blob([response.data], { type: 'application/pdf' });
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `${league.name.replace(/\s+/g, '-')}-Scorecards.pdf`;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    a.remove();
-                                    toast.success('Scorecards downloaded');
+                                    const printWindow = window.open('', '_blank');
+                                    printWindow.document.write(response.data);
+                                    printWindow.document.close();
+                                    setTimeout(() => {
+                                      printWindow.print();
+                                    }, 250);
+                                    toast.success('Scorecards ready to print');
                                   } catch (error) {
                                     toast.error('Failed to generate scorecards');
                                   }
