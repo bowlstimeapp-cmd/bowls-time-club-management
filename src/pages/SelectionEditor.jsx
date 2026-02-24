@@ -188,7 +188,7 @@ export default function SelectionEditor() {
       user_email: email,
       type: 'team_selection',
       title: 'Selected for Match',
-      message: `You've been selected for ${competition}${matchName ? 'vs' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details at app.bowls-time.com `,
+      message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details at app.bowls-time.com `,
     }));
     
     await base44.entities.Notification.bulkCreate(notificationsToCreate);
@@ -256,7 +256,7 @@ ${club?.name || 'Your Bowls Club'}
         m.phone
       );
 
-      const smsMessage = `You've been selected for ${competition}${matchName ? 'vs' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
+      const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
 
       for (const member of smsMembers) {
         try {
@@ -305,7 +305,7 @@ ${club?.name || 'Your Bowls Club'}
           user_email: email,
           type: 'team_selection',
           title: 'Selected for Match',
-          message: `You've been selected for ${competition}${matchName ? 'vs' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details on app.bowls-time.com`,
+          message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details on app.bowls-time.com`,
 
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
@@ -322,7 +322,7 @@ ${club?.name || 'Your Bowls Club'}
           user_email: email,
           type: 'team_selection',
           title: 'Selected for Match',
-          message: `You've been selected for ${competition}${matchName ?  + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details at app.bowls-time.com`,
+          message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details at app.bowls-time.com`,
 
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
