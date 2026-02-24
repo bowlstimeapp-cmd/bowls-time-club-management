@@ -324,8 +324,10 @@ ${club?.name || 'Your Bowls Club'}
           user_email: email,
           type: 'team_selection',
           title: 'Selected for Match',
-          message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details on app.bowls-time.com`,
-
+          message: `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. Click to view team`,
+          link_page: 'SelectionView',
+          link_params: `clubId=${clubId}&selectionId=${selectionId}`,
+          related_id: selectionId
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
         await sendSelectionEmails(selectionId);
@@ -341,7 +343,10 @@ ${club?.name || 'Your Bowls Club'}
             user_email: email,
             type: 'team_selection',
             title: 'Selected for Match',
-            message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details on app.bowls-time.com`,
+            message: `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. Click to view team`,
+            link_page: 'SelectionView',
+            link_params: `clubId=${clubId}&selectionId=${selectionId}`,
+            related_id: selectionId
           }));
           await base44.entities.Notification.bulkCreate(notificationsToCreate);
           
