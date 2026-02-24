@@ -292,7 +292,7 @@ ${club?.name || 'Your Bowls Club'}
     }
   };
 
-  const handleSave = async (publish = false) => {
+  const handleSave = async (publish = false, isRepublish = false) => {
     if (!competition) {
       toast.error('Please select a competition');
       return;
@@ -315,7 +315,7 @@ ${club?.name || 'Your Bowls Club'}
     if (selectionId) {
       await updateMutation.mutateAsync({ id: selectionId, data });
       toast.success(publish ? 'Selection published!' : 'Selection saved');
-      if (publish) {
+      if (publish && !isRepublish) {
         // Create notifications for selected players
         const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
         const notificationsToCreate = selectedPlayerEmails.map(email => ({
@@ -327,6 +327,8 @@ ${club?.name || 'Your Bowls Club'}
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
         await sendSelectionEmails(selectionId);
+        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+      } else if (isRepublish) {
         navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       }
     } else {
@@ -650,12 +652,12 @@ ${club?.name || 'Your Bowls Club'}
                     Save Draft
                   </Button>
                   <Button 
-                    onClick={() => handleSave(true)}
+                    onClick={() => handleSave(true, existingSelection?.status === 'published')}
                     className="w-full bg-emerald-600 hover:bg-emerald-700"
                     disabled={isSaving || !competition}
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                    Publish Selection
+                    {existingSelection?.status === 'published' ? 'Republish Selection' : 'Publish Selection'}
                   </Button>
                 </div>
               </CardContent>
