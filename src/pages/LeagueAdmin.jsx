@@ -845,9 +845,23 @@ export default function LeagueAdmin() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                onClick={() => {
+                                onClick={async () => {
                                   if (league.scorecards_pdf_url) {
-                                    window.open(league.scorecards_pdf_url, '_blank');
+                                    try {
+                                      const response = await fetch(league.scorecards_pdf_url);
+                                      const blob = await response.blob();
+                                      const url = window.URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = `${league.name.replace(/\s+/g, '-')}-Scorecards.pdf`;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      window.URL.revokeObjectURL(url);
+                                      a.remove();
+                                      toast.success('Scorecards downloaded');
+                                    } catch (error) {
+                                      toast.error('Failed to download scorecards');
+                                    }
                                   } else {
                                     toast.error('Scorecards PDF not available. Try regenerating fixtures.');
                                   }
