@@ -285,6 +285,7 @@ export default function Selection() {
                       isSettingAvailability={setAvailabilityMutation.isPending}
                       availabilities={getAvailabilityForSelection(selection.id)}
                       members={members}
+                      onDelete={handleDeleteSelection}
                     />
                   ))}
                 </div>
