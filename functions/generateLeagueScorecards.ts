@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       
       if (!homeTeam || !awayTeam) return null;
       
-      const matchDate = new Date(fixture.match_date + 'T12:00:00');
+      const matchDate = new Date(fixture.match_date);
       const dayName = matchDate.toLocaleDateString('en-GB', { weekday: 'long' });
       const day = matchDate.getDate();
       const monthName = matchDate.toLocaleDateString('en-GB', { month: 'short' });
@@ -69,6 +69,155 @@ Deno.serve(async (req) => {
         logoUrl: club.logo_url || ''
       };
     }).filter(Boolean);
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    
+    const cardWidth = 72;
+    const cardHeight = 100;
+    const marginX = 8.5;
+    const marginY = 6;
+
+    let cardCount = 0;
+
+    for (const fixture of sortedFixtures) {
+      const homeTeam = teams.find(t => t.id === fixture.home_team_id);
+      const awayTeam = teams.find(t => t.id === fixture.away_team_id);
+
+      if (!homeTeam || !awayTeam) continue;
+
+      // Calculate position (2x2 grid)
+      const col = cardCount % 2;
+      const row = Math.floor((cardCount % 4) / 2);
+      const x = marginX + (col * (cardWidth + marginX));
+      const y = marginY + (row * (cardHeight + marginY));
+
+      // Start new page every 4 cards
+      if (cardCount > 0 && cardCount % 4 === 0) {
+        doc.addPage();
+      }
+
+      // Outer border
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(x, y, cardWidth, cardHeight);
+
+      // Header box with logo and league info
+      const headerBoxHeight = 18;
+      doc.rect(x, y, cardWidth, headerBoxHeight);
+
+      // Logo placeholder (left side)
+      const logoSize = 12;
+      doc.rect(x + 3, y + 3, logoSize, logoSize);
+      
+      // League info box (right side of header)
+      const infoBoxX = x + logoSize + 6;
+      const infoBoxWidth = cardWidth - logoSize - 9;
+      doc.rect(infoBoxX, y + 3, infoBoxWidth, 12);
+      
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      const leagueName = league.name || 'League';
+      const nameLines = doc.splitTextToSize(leagueName, infoBoxWidth - 4);
+      doc.text(nameLines[0], infoBoxX + 2, y + 6);
+      
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'normal');
+      const seasonText = club.season === 'indoor' ? 'Indoor Season' : 'Outdoor Season';
+      doc.text(seasonText, infoBoxX + 2, y + 10);
+      
+      const startYear = new Date(league.start_date).getFullYear();
+      const endYear = new Date(league.end_date).getFullYear();
+      doc.text(`${startYear}-${endYear}`, infoBoxX + 2, y + 14);
+
+      // Match details bar
+      const matchDate = new Date(fixture.match_date);
+      const dayName = matchDate.toLocaleDateString('en-GB', { weekday: 'long' });
+      const day = matchDate.getDate();
+      const monthName = matchDate.toLocaleDateString('en-GB', { month: 'short' });
+      const year = matchDate.getFullYear();
+      const dateStr = `${day} ${monthName} ${year}`;
+      
+      const roundNum = dateToRound[fixture.match_date];
+      const matchInfo = `${dayName} - ${dateStr} - Round ${roundNum} -`;
+      const timeInfo = `${league.start_time} to ${league.end_time} - Rink ${fixture.rink_number || 'TBC'}`;
+      
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      const detailsY = y + headerBoxHeight + 4;
+      doc.text(matchInfo, x + cardWidth / 2, detailsY, { align: 'center' });
+      doc.text(timeInfo, x + cardWidth / 2, detailsY + 3.5, { align: 'center' });
+
+      // Team names row
+      const teamsY = y + headerBoxHeight + 10;
+      doc.setFillColor(230, 230, 230);
+      doc.rect(x, teamsY, cardWidth, 6, 'F');
+      
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text(homeTeam.name || '', x + 3, teamsY + 4);
+      doc.text('Vs', x + cardWidth / 2, teamsY + 4, { align: 'center' });
+      doc.text(awayTeam.name || '', x + cardWidth - 3, teamsY + 4, { align: 'right' });
+
+      // Player positions
+      const posStartY = teamsY + 7;
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'normal');
+      ['1', '2', '3', 'Skip'].forEach((pos, idx) => {
+        doc.text(pos, x + cardWidth / 2, posStartY + (idx * 3), { align: 'center' });
+      });
+
+      // Score table
+      const tableY = posStartY + 13;
+      const colWidths = { score: 13, total: 13, ends: 20 };
+      
+      // Table header
+      doc.setFillColor(220, 220, 220);
+      doc.rect(x, tableY, cardWidth, 4, 'F');
+      
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      doc.text('Score', x + colWidths.score / 2, tableY + 3, { align: 'center' });
+      doc.text('Total', x + colWidths.score + colWidths.total / 2, tableY + 3, { align: 'center' });
+      doc.text('Ends', x + cardWidth / 2, tableY + 3, { align: 'center' });
+      doc.text('Score', x + cardWidth - colWidths.score - colWidths.total / 2, tableY + 3, { align: 'center' });
+      doc.text('Total', x + cardWidth - colWidths.total / 2, tableY + 3, { align: 'center' });
+
+      // Vertical lines
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.2);
+      const tableHeight = 38;
+      doc.line(x + colWidths.score, tableY, x + colWidths.score, tableY + tableHeight);
+      doc.line(x + colWidths.score + colWidths.total, tableY, x + colWidths.score + colWidths.total, tableY + tableHeight);
+      doc.line(x + cardWidth - colWidths.score - colWidths.total, tableY, x + cardWidth - colWidths.score - colWidths.total, tableY + tableHeight);
+      doc.line(x + cardWidth - colWidths.total, tableY, x + cardWidth - colWidths.total, tableY + tableHeight);
+
+      // End numbers (1-24)
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(6);
+      const rowHeight = 1.55;
+      for (let end = 1; end <= 24; end++) {
+        const rowY = tableY + 4 + (end * rowHeight);
+        doc.text(String(end), x + cardWidth / 2, rowY, { align: 'center' });
+      }
+
+      // Total row
+      const totalY = tableY + 4 + (24 * rowHeight) + 1;
+      doc.setFillColor(220, 220, 220);
+      doc.rect(x, totalY, cardWidth, 4, 'F');
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(7);
+      doc.text('Total', x + colWidths.score + colWidths.total / 2, totalY + 3, { align: 'center' });
+      doc.text('Total', x + cardWidth - colWidths.total / 2, totalY + 3, { align: 'center' });
+
+      // Signatures
+      const sigY = totalY + 6;
+      doc.setFontSize(6);
+      doc.setFont(undefined, 'normal');
+      doc.text('Signatures', x + cardWidth / 2, sigY, { align: 'center' });
+      doc.text('of Skips', x + cardWidth / 2, sigY + 3, { align: 'center' });
+
+      cardCount++;
+    }
 
     // Generate HTML
     const html = `
@@ -94,10 +243,11 @@ Deno.serve(async (req) => {
       print-color-adjust: exact;
     }
     
-    .page {
+.page {
       width: 277mm;
       display: flex;
-      gap: 0;
+      flex-wrap: wrap;
+      gap: 4mm;
       page-break-after: always;
       page-break-inside: avoid;
     }
@@ -106,13 +256,14 @@ Deno.serve(async (req) => {
       page-break-after: auto;
     }
     
-    .scorecard {
-      width: 69mm;
+.scorecard {
+      width: 134mm;
       height: 100mm;
       border: 1px solid #000;
       page-break-inside: avoid;
-      display: inline-block;
-      vertical-align: top;
+      display: block;
+      flex: 0 0 134mm;
+      box-sizing: border-box;
     }
     
     .header {
