@@ -445,15 +445,7 @@ export default function LeagueAdmin() {
     // Update league to mark fixtures as generated
     await base44.entities.League.update(league.id, { fixtures_generated: true });
     
-    // Generate and save scorecards PDF in background
-    try {
-      await base44.functions.invoke('generateAndSaveLeagueScorecards', {
-        leagueId: league.id,
-        clubId: clubId
-      });
-    } catch (error) {
-      console.error('Failed to generate scorecards PDF:', error);
-    }
+
     
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
