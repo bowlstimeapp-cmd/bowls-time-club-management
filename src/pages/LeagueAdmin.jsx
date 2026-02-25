@@ -834,28 +834,32 @@ export default function LeagueAdmin() {
                                 <BarChart3 className="w-4 h-4 mr-1" />
                                 Table
                               </Button>
-                              <Button 
+<Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={async () => {
-                                  if (league.scorecards_pdf_url) {
-                                    try {
-                                      const response = await fetch(league.scorecards_pdf_url);
-                                      const blob = await response.blob();
-                                      const url = window.URL.createObjectURL(blob);
-                                      const a = document.createElement('a');
-                                      a.href = url;
-                                      a.download = `${league.name.replace(/\s+/g, '-')}-Scorecards.pdf`;
-                                      document.body.appendChild(a);
-                                      a.click();
-                                      window.URL.revokeObjectURL(url);
-                                      a.remove();
-                                      toast.success('Scorecards downloaded');
-                                    } catch (error) {
-                                      toast.error('Failed to download scorecards');
+                                  try {
+                                    toast.info('Generating scorecards...');
+                                    const result = await base44.functions.invoke('generateLeagueScorecards', {
+                                      leagueId: league.id,
+                                      clubId: clubId
+                                    });
+                                    const html = typeof result === 'string' ? result : result?.html || result?.data;
+                                    if (!html) {
+                                      toast.error('No scorecard data returned');
+                                      return;
                                     }
-                                  } else {
-                                    toast.error('Scorecards PDF not available. Try regenerating fixtures.');
+                                    const printWindow = window.open('', '_blank');
+                                    printWindow.document.write(html);
+                                    printWindow.document.close();
+                                    printWindow.onload = () => {
+                                      printWindow.focus();
+                                      printWindow.print();
+                                    };
+                                    toast.success('Scorecards ready — use Print > Save as PDF');
+                                  } catch (error) {
+                                    toast.error('Failed to generate scorecards');
+                                    console.error(error);
                                   }
                                 }}
                               >
