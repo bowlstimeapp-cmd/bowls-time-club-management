@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
 .page {
       width: 277mm;
       display: flex;
-      flex-wrap: wrap;
-      gap: 4mm;
+      flex-direction: row;
+      gap: 2mm;
       page-break-after: always;
       page-break-inside: avoid;
     }
@@ -107,14 +107,14 @@ Deno.serve(async (req) => {
       page-break-after: auto;
     }
     
-    .scorecard {
-      width: 134mm;
-      height: 100mm;
+.scorecard {
+      width: 67mm;
+      height: 190mm;
       border: 1px solid #000;
       page-break-inside: avoid;
       display: block;
-      flex: 0 0 134mm;
-      box-sizing: border-box;
+      flex: 0 0 67mm;
+      overflow: hidden;
     }
     
     .header {
