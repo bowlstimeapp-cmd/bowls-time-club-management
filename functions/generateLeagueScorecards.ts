@@ -188,10 +188,13 @@ Deno.serve(async (req) => {
       font-size: 7pt;
     }
     
-.players-section div {
+    .players-section div {
       border-bottom: 1px solid #b4b4b4;
       padding: 0.5mm 2mm;
       height: 4.5mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .players-section div {
