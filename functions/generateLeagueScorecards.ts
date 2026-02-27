@@ -187,11 +187,19 @@ Deno.serve(async (req) => {
       font-size: 7pt;
     }
     
-    .players-section {
-      padding: 2mm 0;
-      text-align: center;
+.players-section {
       font-size: 7pt;
-      line-height: 3mm;
+      border-bottom: 1px solid #000;
+    }
+    
+    .players-section div {
+      border-bottom: 1px solid #b4b4b4;
+      padding: 1mm 2mm;
+      height: 6mm;
+    }
+    
+    .players-section div:last-child {
+      border-bottom: none;
     }
     
     .score-table {
@@ -208,9 +216,9 @@ Deno.serve(async (req) => {
       font-size: 7pt;
     }
     
-    .score-table td {
+.score-table td {
       border: 1px solid #b4b4b4;
-      height: 3.2mm;
+      height: 5.5mm;
       text-align: center;
       padding: 0;
     }
@@ -225,11 +233,11 @@ Deno.serve(async (req) => {
       font-size: 7pt;
     }
     
-    .signatures {
+.signatures {
       text-align: center;
-      padding: 2mm 0 1mm 0;
+      padding: 0.5mm 0;
       font-size: 6pt;
-      line-height: 1.3;
+      line-height: 1.1;
     }
     
     @media print {
@@ -299,10 +307,12 @@ ${scorecards.map((card, idx) => {
           <td></td>
           <td></td>
         </tr>`).join('')}
-        <tr class="total-row">
-          <td colspan="2">Total</td>
+<tr class="total-row">
+          <td style="text-align:left; padding-left:1mm;">Total</td>
           <td></td>
-          <td colspan="2">Total</td>
+          <td></td>
+          <td style="text-align:left; padding-left:1mm;">Total</td>
+          <td></td>
         </tr>
       </tbody>
     </table>
