@@ -112,7 +112,8 @@ Deno.serve(async (req) => {
       height: 190mm;
       border: 1px solid #000;
       page-break-inside: avoid;
-      display: block;
+      display: flex;
+      flex-direction: column;
       flex: 0 0 67mm;
       overflow: hidden;
     }
@@ -187,9 +188,10 @@ Deno.serve(async (req) => {
       font-size: 7pt;
     }
     
-.players-section {
-      font-size: 7pt;
-      border-bottom: 1px solid #000;
+.players-section div {
+      border-bottom: 1px solid #b4b4b4;
+      padding: 0.5mm 2mm;
+      height: 4.5mm;
     }
     
     .players-section div {
@@ -218,7 +220,7 @@ Deno.serve(async (req) => {
     
 .score-table td {
       border: 1px solid #b4b4b4;
-      height: 5.5mm;
+      height: 4mm;
       text-align: center;
       padding: 0;
     }
@@ -238,6 +240,10 @@ Deno.serve(async (req) => {
       padding: 0.5mm 0;
       font-size: 6pt;
       line-height: 1.1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2mm;
     }
     
     @media print {
