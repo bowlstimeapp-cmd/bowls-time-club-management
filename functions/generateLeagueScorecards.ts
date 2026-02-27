@@ -175,8 +175,8 @@ Deno.serve(async (req) => {
     .teams-row {
       background: #e6e6e6;
       padding: 1.5mm 3mm;
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
       font-size: 8pt;
       font-weight: bold;
@@ -286,9 +286,9 @@ ${scorecards.map((card, idx) => {
     </div>
     
     <div class="teams-row">
-      <span>${card.teamAName}</span>
-      <span class="vs">Vs</span>
-      <span>${card.teamBName}</span>
+      <span style="text-align: left;">${card.teamAName}</span>
+      <span class="vs" style="text-align: center; padding: 0 2mm;">Vs</span>
+      <span style="text-align: right;">${card.teamBName}</span>
     </div>
     
     <div class="players-section">
