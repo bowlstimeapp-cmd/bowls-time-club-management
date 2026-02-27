@@ -195,6 +195,7 @@ Deno.serve(async (req) => {
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 8pt;
     }
     
     .players-section div {
