@@ -184,6 +184,10 @@ export default function SelectionView() {
                 {format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}
               </p>
             </div>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Print
+            </Button>
           </div>
         </motion.div>
 
