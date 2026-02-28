@@ -43,7 +43,11 @@ Deno.serve(async (req) => {
     const year = matchDate.getFullYear();
     const dateStr = `${day} ${monthName} ${year}`;
 
-    // Determine rinks from selections keys e.g. rink1_Lead, rink2_Skip
+    // Defined at top level so accessible everywhere
+    const posOrder = ['Lead', '2', '3', 'Skip', '4', '5', '6'];
+    const posToNumber = { 'Lead': '1', '2': '2', '3': '3', 'Skip': 'Skip', '4': '4', '5': '5', '6': '6' };
+
+    // Determine rinks from selection keys e.g. rink1_Lead, rink2_Skip
     const rinkNumbers = [...new Set(
       Object.keys(selection.selections || {})
         .map(key => key.match(/^rink(\d+)_/)?.[1])
@@ -51,30 +55,24 @@ Deno.serve(async (req) => {
         .map(Number)
     )].sort((a, b) => a - b);
 
-    // Determine positions used
     const allPositionKeys = Object.keys(selection.selections || {});
+
     const positionsForRink = (rinkNum) => {
       const prefix = `rink${rinkNum}_`;
-      const posOrder = ['Lead', '2', '3', 'Skip', '4', '5', '6'];
-      const posToNumber = { 'Lead': '1', '2': '2', '3': '3', 'Skip': 'Skip', '4': '4', '5': '5', '6': '6' };
-
-      return posOrder.filter(pos =>
-        allPositionKeys.includes(prefix + pos)
-      );
+      return posOrder.filter(pos => allPositionKeys.includes(prefix + pos));
     };
 
     // Build one scorecard per rink
     const scorecards = rinkNumbers.map(rinkNum => {
       const positions = positionsForRink(rinkNum);
-const players = positions.map(pos => {
-          const email = selection.selections[`rink${rinkNum}_${pos}`];
-          return {
-            position: posToNumber[pos] || pos,
-            name: email ? getMemberName(email) : ''
-          };
-        });
+      const players = positions.map(pos => {
+        const email = selection.selections[`rink${rinkNum}_${pos}`];
+        return {
+          position: posToNumber[pos] || pos,
+          name: email ? getMemberName(email) : ''
+        };
+      });
 
-      // Determine home/away tag
       const homeRinks = selection.home_rinks || 2;
       const tag = rinkNum <= homeRinks ? 'Home' : 'Away';
       const selectedRinks = selection.selected_rinks || [];
@@ -182,7 +180,7 @@ const players = positions.map(pos => {
       font-weight: bold;
       border-bottom: 1px solid #000;
     }
-.players-section div {
+    .players-section div {
       border-bottom: 1px solid #b4b4b4;
       padding: 0.5mm 2mm;
       height: 4.5mm;
@@ -238,7 +236,6 @@ ${scorecards.map((card, idx) => {
         ${card.logoUrl ? `<img src="${card.logoUrl}" alt="Club Logo">` : ''}
       </div>
       <div class="info-box">
-
         <div class="season-info">
           <div class="league-name">${card.competition}</div>
           <div>${card.dateStr} - ${card.time}</div>
@@ -246,7 +243,7 @@ ${scorecards.map((card, idx) => {
       </div>
     </div>
     <div class="match-details">
-          <div class="league-name">${card.competition}</div>
+      <div class="league-name">${card.competition}</div>
     </div>
     <div class="teams-row">
       <span style="text-align:left;">${card.clubName}</span>
@@ -254,7 +251,8 @@ ${scorecards.map((card, idx) => {
       <span style="text-align:right;">${card.matchName || 'Opponents'}</span>
     </div>
     <div class="players-section">
-${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:center; min-width:6mm;">${p.position}</span></div>`).join('')}    </div>
+      ${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:center; min-width:6mm;">${p.position}</span></div>`).join('')}
+    </div>
     <table class="score-table">
       <thead>
         <tr>
