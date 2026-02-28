@@ -238,7 +238,7 @@ ${scorecards.map((card, idx) => {
 
         <div class="season-info">
           <div>${card.matchDate}</div>
-          <div>${card.matchName}</div>
+          <div>${card.match_Name}</div>
           <div class="league-name">${card.competition}</div>
         </div>
       </div>
