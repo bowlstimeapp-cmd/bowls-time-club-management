@@ -56,6 +56,8 @@ Deno.serve(async (req) => {
     const positionsForRink = (rinkNum) => {
       const prefix = `rink${rinkNum}_`;
       const posOrder = ['Lead', '2', '3', 'Skip', '4', '5', '6'];
+      const posToNumber = { 'Lead': '1', '2': '2', '3': '3', 'Skip': 'Skip', '4': '4', '5': '5', '6': '6' };
+
       return posOrder.filter(pos =>
         allPositionKeys.includes(prefix + pos)
       );
@@ -64,13 +66,13 @@ Deno.serve(async (req) => {
     // Build one scorecard per rink
     const scorecards = rinkNumbers.map(rinkNum => {
       const positions = positionsForRink(rinkNum);
-      const players = positions.map(pos => {
-        const email = selection.selections[`rink${rinkNum}_${pos}`];
-        return {
-          position: pos,
-          name: email ? getMemberName(email) : ''
-        };
-      });
+const players = positions.map(pos => {
+          const email = selection.selections[`rink${rinkNum}_${pos}`];
+          return {
+            position: posToNumber[pos] || pos,
+            name: email ? getMemberName(email) : ''
+          };
+        });
 
       // Determine home/away tag
       const homeRinks = selection.home_rinks || 2;
@@ -180,11 +182,12 @@ Deno.serve(async (req) => {
       font-weight: bold;
       border-bottom: 1px solid #000;
     }
-    .players-section div {
+.players-section div {
       border-bottom: 1px solid #b4b4b4;
       padding: 0.5mm 2mm;
       height: 4.5mm;
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto;
       align-items: center;
     }
     .players-section div:last-child { border-bottom: none; }
@@ -251,8 +254,7 @@ ${scorecards.map((card, idx) => {
       <span style="text-align:right;">${card.matchName || 'Opponents'}</span>
     </div>
     <div class="players-section">
-      ${card.players.map(p => `<div><strong>${p.position}:</strong>&nbsp;${p.name}</div>`).join('')}
-    </div>
+${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:center; min-width:6mm;">${p.position}</span></div>`).join('')}    </div>
     <table class="score-table">
       <thead>
         <tr>
