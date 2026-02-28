@@ -646,7 +646,7 @@ ${club?.name || 'Your Bowls Club'}
                   />
                 </div>
                 <div>
-                  <Label>Opponent (optional)</Label>
+                  <Label>Opponent</Label>
                   <Input
                     value={matchName}
                     onChange={(e) => setMatchName(e.target.value)}
