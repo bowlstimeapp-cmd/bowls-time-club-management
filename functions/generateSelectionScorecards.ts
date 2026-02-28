@@ -235,7 +235,7 @@ ${scorecards.map((card, idx) => {
         ${card.logoUrl ? `<img src="${card.logoUrl}" alt="Club Logo">` : ''}
       </div>
       <div class="info-box">
-        <div class="league-name">${card.competition}${card.matchName ? ' vs ' + card.matchName : ''}</div>
+        <div class="league-name">${card.competition}${card.matchName}</div>
         <div class="season-info">
           <div>${card.clubName}</div>
           <div>${card.tag} - Rink ${card.rink}</div>
