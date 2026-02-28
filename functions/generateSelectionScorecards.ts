@@ -108,24 +108,29 @@ Deno.serve(async (req) => {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .page {
+.page {
       width: 277mm;
       display: flex;
       flex-direction: row;
-      gap: 2mm;
+      flex-wrap: nowrap;
+      align-items: flex-start;
+      gap: 1mm;
       page-break-after: always;
       page-break-inside: avoid;
     }
     .page:last-child { page-break-after: auto; }
-    .scorecard {
-      width: 67mm;
+.scorecard {
+      width: 65mm;
+      min-width: 65mm;
       height: 190mm;
       border: 1px solid #000;
       page-break-inside: avoid;
       display: flex;
       flex-direction: column;
-      flex: 0 0 67mm;
+      flex: 0 0 65mm;
       overflow: hidden;
+      vertical-align: top;
+      position: relative;
     }
     .header {
       height: 18mm;
