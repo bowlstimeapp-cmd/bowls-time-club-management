@@ -20,7 +20,8 @@ import {
   Loader2,
   ShieldAlert,
   Home,
-  CalendarPlus
+  CalendarPlus,
+  Printer
 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -748,6 +749,40 @@ ${club?.name || 'Your Bowls Club'}
                 )}
 
                 <div className="pt-4 space-y-2">
+<Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={!competition || !selectionId}
+                    onClick={async () => {
+                      try {
+                        toast.info('Generating scorecards...');
+                        const result = await base44.functions.invoke('generateSelectionScorecards', {
+                          selectionId: selectionId,
+                          clubId: clubId
+                        });
+                        const html = typeof result === 'string' ? result : result?.html || result?.data;
+                        if (!html) {
+                          toast.error('No scorecard data returned');
+                          return;
+                        }
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(html);
+                        printWindow.document.close();
+                        printWindow.onload = () => {
+                          printWindow.focus();
+                          printWindow.print();
+                        };
+                        toast.success('Scorecards ready — use Print > Save as PDF');
+                      } catch (error) {
+                        toast.error('Failed to generate scorecards');
+                        console.error(error);
+                      }
+                    }}
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Scorecards
+                  </Button>
                   <Button 
                     onClick={() => handleSave(false)}
                     variant="outline"
