@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       };
     });
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -100,16 +100,18 @@ Deno.serve(async (req) => {
   <style>
     @page {
       size: A4 landscape;
-      margin: 10mm;
+      margin: 8mm;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    html, body {
+      width: 297mm;
       font-family: Arial, sans-serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-.page {
-      width: 277mm;
+    .page {
+      width: 281mm;
+      height: 194mm;
       display: flex;
       flex-direction: row;
       flex-wrap: nowrap;
@@ -117,20 +119,20 @@ Deno.serve(async (req) => {
       gap: 1mm;
       page-break-after: always;
       page-break-inside: avoid;
+      overflow: hidden;
     }
     .page:last-child { page-break-after: auto; }
-.scorecard {
-      width: 65mm;
-      min-width: 65mm;
-      height: 190mm;
+    .scorecard {
+      width: 69mm;
+      min-width: 69mm;
+      max-width: 69mm;
+      height: 194mm;
       border: 1px solid #000;
       page-break-inside: avoid;
       display: flex;
       flex-direction: column;
-      flex: 0 0 65mm;
+      flex: 0 0 69mm;
       overflow: hidden;
-      vertical-align: top;
-      position: relative;
     }
     .header {
       height: 18mm;
