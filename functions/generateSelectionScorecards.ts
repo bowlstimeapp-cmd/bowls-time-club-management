@@ -180,13 +180,13 @@ Deno.serve(async (req) => {
       font-weight: bold;
       border-bottom: 1px solid #000;
     }
-    .players-section div {
+.players-section div {
       border-bottom: 1px solid #b4b4b4;
       padding: 0.5mm 2mm;
       height: 4.5mm;
-      display: grid;
-      grid-template-columns: 1fr auto;
+      display: flex;
       align-items: center;
+      justify-content: space-between;
     }
     .players-section div:last-child { border-bottom: none; }
     .score-table { width: 100%; border-collapse: collapse; font-size: 6pt; }
@@ -251,8 +251,7 @@ ${scorecards.map((card, idx) => {
       <span style="text-align:right;">${card.matchName || 'Opponents'}</span>
     </div>
     <div class="players-section">
-      ${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:center; min-width:6mm;">${p.position}</span></div>`).join('')}
-    </div>
+${card.players.map(p => `<div><span>${p.name}</span><span style="width:6mm; text-align:center; flex-shrink:0;">${p.position}</span></div>`).join('')}    </div>
     <table class="score-table">
       <thead>
         <tr>
