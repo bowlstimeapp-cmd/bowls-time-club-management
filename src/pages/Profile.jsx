@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users } from 'lucide-react';
+import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
-import { useSearchParams, useLocation, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 export default function Profile() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const clubId = searchParams.get('clubId');
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
@@ -26,6 +27,9 @@ export default function Profile() {
   const [endDate, setEndDate] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -108,20 +112,14 @@ export default function Profile() {
   const handleEmailNotificationsChange = (checked) => {
     setEmailNotifications(checked);
     if (membership) {
-      updateMembershipMutation.mutate({ 
-        id: membership.id, 
-        data: { email_notifications: checked } 
-      });
+      updateMembershipMutation.mutate({ id: membership.id, data: { email_notifications: checked } });
     }
   };
 
   const handleSmsNotificationsChange = (checked) => {
     setSmsNotifications(checked);
     if (membership) {
-      updateMembershipMutation.mutate({ 
-        id: membership.id, 
-        data: { sms_notifications: checked } 
-      });
+      updateMembershipMutation.mutate({ id: membership.id, data: { sms_notifications: checked } });
     }
   };
 
@@ -149,22 +147,16 @@ export default function Profile() {
       toast.error('Please enter both first name and surname');
       return;
     }
-
     setIsLoading(true);
     await base44.auth.updateMe({
       first_name: firstName.trim(),
       surname: surname.trim(),
       phone: phone.trim()
     });
-    
-    // Update phone in ClubMembership if user is a member of a club
     if (clubId && membership) {
-      await base44.entities.ClubMembership.update(membership.id, { 
-        phone: phone.trim() || null 
-      });
+      await base44.entities.ClubMembership.update(membership.id, { phone: phone.trim() || null });
       queryClient.invalidateQueries({ queryKey: ['myMembership'] });
     }
-    
     toast.success('Profile updated successfully!');
     setIsLoading(false);
   };
@@ -183,6 +175,29 @@ export default function Profile() {
       start_date: startDate,
       end_date: endDate
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      // Delete all memberships
+      const allMemberships = await base44.entities.ClubMembership.filter({ user_email: user.email });
+      await Promise.all(allMemberships.map(m => base44.entities.ClubMembership.delete(m.id)));
+
+      // Delete all unavailabilities
+      const allUnavailabilities = await base44.entities.UserUnavailability.filter({ user_email: user.email });
+      await Promise.all(allUnavailabilities.map(u => base44.entities.UserUnavailability.delete(u.id)));
+
+      // Delete the user account
+      await base44.auth.deleteMe();
+
+      toast.success('Your account has been deleted.');
+      navigate(createPageUrl('Login'));
+    } catch (err) {
+      console.error(err);
+      toast.error('Something went wrong. Please try again.');
+      setIsDeletingAccount(false);
+    }
   };
 
   if (!user) {
@@ -236,201 +251,217 @@ export default function Profile() {
         )}
         
         <div className="max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="space-y-6"
+          >
+            {/* Personal Info */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <User className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <div>
+                    <CardTitle>{firstName} {surname}</CardTitle>
+                    <CardDescription>{user.email}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="surname">Surname *</Label>
+                      <Input id="surname" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder="Smith" required />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07123 456789" />
+                  </div>
+                  <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
+                    {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save Changes</>}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-6"
-        >
-          <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <User className="w-8 h-8 text-emerald-600" />
-                </div>
-                <div>
-                  <CardTitle>{firstName} {surname}</CardTitle>
-                  <CardDescription>{user.email}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="John"
-                      required
-                    />
+            {/* Notifications */}
+            {clubId && membership && (
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-emerald-600" />
+                    Notification Preferences
+                  </CardTitle>
+                  <CardDescription>Manage how you receive notifications from the club</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base">Email Notifications</Label>
+                      <p className="text-sm text-gray-500">Receive emails when you are selected for matches</p>
+                    </div>
+                    <Switch checked={emailNotifications} onCheckedChange={handleEmailNotificationsChange} />
                   </div>
-                  <div>
-                    <Label htmlFor="surname">Surname *</Label>
-                    <Input
-                      id="surname"
-                      value={surname}
-                      onChange={(e) => setSurname(e.target.value)}
-                      placeholder="Smith"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="07123 456789"
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
-                    </>
+                  {club?.module_sms_notifications && (
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div>
+                        <Label className="text-base">SMS Notifications</Label>
+                        <p className="text-sm text-gray-500">
+                          {phone ? 'Receive SMS when you are selected for matches' : 'Add a phone number above to enable SMS notifications'}
+                        </p>
+                      </div>
+                      <Switch checked={smsNotifications} onCheckedChange={handleSmsNotificationsChange} disabled={!phone} />
+                    </div>
                   )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
 
-          {clubId && membership && (
+            {/* Unavailability */}
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-emerald-600" />
-                  Notification Preferences
+                  <Calendar className="w-5 h-5 text-emerald-600" />
+                  Unavailability
                 </CardTitle>
-                <CardDescription>
-                  Manage how you receive notifications from the club
-                </CardDescription>
+                <CardDescription>Add dates when you're not available for selection (e.g., holidays)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base">Email Notifications</Label>
-                    <p className="text-sm text-gray-500">
-                      Receive emails when you are selected for matches
-                    </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <Label>Start Date</Label>
+                    <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                   </div>
-                  <Switch
-                    checked={emailNotifications}
-                    onCheckedChange={handleEmailNotificationsChange}
-                  />
+                  <div className="flex-1">
+                    <Label>End Date</Label>
+                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={handleAddUnavailability} disabled={addUnavailabilityMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700">
+                      <Plus className="w-4 h-4 mr-1" />Add
+                    </Button>
+                  </div>
                 </div>
-                {club?.module_sms_notifications && (
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div>
-                      <Label className="text-base">SMS Notifications</Label>
-                      <p className="text-sm text-gray-500">
-                        {phone ? 'Receive SMS when you are selected for matches' : 'Add a phone number above to enable SMS notifications'}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={smsNotifications}
-                      onCheckedChange={handleSmsNotificationsChange}
-                      disabled={!phone}
-                    />
+                {loadingUnavailabilities ? (
+                  <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" /></div>
+                ) : unavailabilities.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No unavailability dates set</p>
+                ) : (
+                  <div className="space-y-2">
+                    {unavailabilities.map(item => (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm">
+                          {format(parseISO(item.start_date), 'd MMM yyyy')}
+                          {item.start_date !== item.end_date && <> — {format(parseISO(item.end_date), 'd MMM yyyy')}</>}
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => deleteUnavailabilityMutation.mutate(item.id)} className="text-red-600 hover:bg-red-50">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-          )}
 
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-emerald-600" />
-                Unavailability
-              </CardTitle>
-              <CardDescription>
-                Add dates when you're not available for selection (e.g., holidays)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="flex-1">
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button 
-                    onClick={handleAddUnavailability}
-                    disabled={addUnavailabilityMutation.isPending}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              {loadingUnavailabilities ? (
-                <div className="text-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-                </div>
-              ) : unavailabilities.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">
-                  No unavailability dates set
+            {/* Delete Account */}
+            <Card className="shadow-lg border-red-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <TriangleAlert className="w-5 h-5" />
+                  Delete Account
+                </CardTitle>
+                <CardDescription>
+                  Permanently delete your account and all associated data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Once deleted, your account cannot be recovered. All your bookings, memberships, and personal data will be permanently removed.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {unavailabilities.map(item => (
-                    <div 
-                      key={item.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <span className="text-sm">
-                        {format(parseISO(item.start_date), 'd MMM yyyy')}
-                        {item.start_date !== item.end_date && (
-                          <> — {format(parseISO(item.end_date), 'd MMM yyyy')}</>
-                        )}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteUnavailabilityMutation.mutate(item.id)}
-                        className="text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+                <Button
+                  variant="outline"
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete My Account
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
+
+      {/* Delete confirmation overlay */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
+                <TriangleAlert className="w-7 h-7 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-2">Delete your account?</h2>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                This action <span className="font-semibold text-gray-700">cannot be undone</span>. All your data including memberships, bookings, and preferences will be permanently deleted.
+              </p>
+
+              <div className="mb-5">
+                <Label className="text-sm text-gray-700 mb-1.5 block">
+                  Type <span className="font-semibold text-red-600">DELETE</span> to confirm
+                </Label>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="border-red-200 focus-visible:ring-red-400"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                  disabled={isDeletingAccount}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'DELETE' || isDeletingAccount}
+                >
+                  {isDeletingAccount
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Deleting...</>
+                    : <><Trash2 className="w-4 h-4 mr-2" />Delete Account</>
+                  }
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
