@@ -238,10 +238,6 @@ export default function ClubSelector() {
                               <Clock className="w-4 h-4 mr-2" />
                               Awaiting Approval
                             </Button>
-                          ) : isRejected ? (
-                            <Button disabled className="w-full" variant="outline">
-                              Request Rejected
-                            </Button>
                           ) : (
                             <Button 
                               onClick={() => handleJoinRequest(club.id)}
