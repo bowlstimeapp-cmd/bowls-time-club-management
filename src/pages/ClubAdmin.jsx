@@ -58,9 +58,6 @@ function MemberCard({ member, onSelect, onRemove, isSelf }) {
   const initials = (member.user_name || member.user_email || '?')
     .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
-  // Deterministic avatar hue from email
-  const hue = (member.user_email || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -71,14 +68,14 @@ function MemberCard({ member, onSelect, onRemove, isSelf }) {
       onClick={() => onSelect(member)}
     >
       {/* Coloured top stripe */}
-      <div className="h-1.5 w-full" style={{ background: `hsl(${hue}, 60%, 70%)` }} />
+      <div className="h-1.5 w-full" style={{ background: '#049468' }} />
 
       <div className="p-5">
         {/* Avatar + role */}
         <div className="flex items-start justify-between mb-3">
           <div
             className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm select-none"
-            style={{ background: `hsl(${hue}, 55%, 62%)` }}
+            style={{ background: '#049468' }}
           >
             {initials}
           </div>
