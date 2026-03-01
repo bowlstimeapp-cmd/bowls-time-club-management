@@ -180,22 +180,22 @@ export default function Profile() {
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
     try {
-      // Delete all memberships
-      const allMemberships = await base44.entities.ClubMembership.filter({ user_email: user.email });
-      await Promise.all(allMemberships.map(m => base44.entities.ClubMembership.delete(m.id)));
+      // Log deletion request for platform admin to action
+      await base44.entities.DeletionRequest.create({
+        user_email: user.email,
+        user_name: `${user.first_name || ''} ${user.surname || ''}`.trim() || user.email,
+        requested_date: new Date().toISOString(),
+        status: 'pending',
+      });
 
-      // Delete all unavailabilities
-      const allUnavailabilities = await base44.entities.UserUnavailability.filter({ user_email: user.email });
-      await Promise.all(allUnavailabilities.map(u => base44.entities.UserUnavailability.delete(u.id)));
-
-      // Delete the user account
-      await base44.auth.deleteMe();
-
-      toast.success('Your account has been deleted.');
+      toast.success('Your deletion request has been submitted. Your account will be deleted within 7 days.');
+      setShowDeleteConfirm(false);
+      setDeleteConfirmText('');
       navigate(createPageUrl('Login'));
     } catch (err) {
       console.error(err);
       toast.error('Something went wrong. Please try again.');
+    } finally {
       setIsDeletingAccount(false);
     }
   };
@@ -423,7 +423,7 @@ export default function Profile() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 text-center mb-2">Delete your account?</h2>
               <p className="text-sm text-gray-500 text-center mb-6">
-                This action <span className="font-semibold text-gray-700">cannot be undone</span>. All your data including memberships, bookings, and preferences will be permanently deleted.
+                This action <span className="font-semibold text-gray-700">cannot be undone</span>. All your data including memberships, bookings, and preferences will be permanently deleted. Your account will be deleted within <span className="font-semibold text-gray-700">7 days</span>.
               </p>
 
               <div className="mb-5">
