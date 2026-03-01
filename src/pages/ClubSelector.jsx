@@ -17,7 +17,7 @@ import {
   Search
 } from 'lucide-react';
 import { toast } from "sonner";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 export default function ClubSelector() {
@@ -25,6 +25,10 @@ export default function ClubSelector() {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // If the user arrived via the "Switch Clubs" button, skip the auto-redirect
+  const isSwitchingClubs = searchParams.get('switchClubs') === 'true';
 
   useEffect(() => {
     const loadUser = async () => {
@@ -76,21 +80,22 @@ export default function ClubSelector() {
     navigate(createPageUrl('BookRink') + `?clubId=${clubId}`);
   };
 
-  // Check for approved memberships and redirect if only one
+  // Check for approved memberships and redirect if only one —
+  // but skip this behaviour if the user is deliberately switching clubs
   const approvedMemberships = memberships.filter(m => m.status === 'approved');
   
   useEffect(() => {
-    if (!membershipsLoading && approvedMemberships.length === 1) {
+    if (!isSwitchingClubs && !membershipsLoading && approvedMemberships.length === 1) {
       navigate(createPageUrl('BookRink') + `?clubId=${approvedMemberships[0].club_id}`);
     }
-  }, [approvedMemberships, membershipsLoading, navigate]);
+  }, [approvedMemberships, membershipsLoading, navigate, isSwitchingClubs]);
 
   const isLoading = clubsLoading || membershipsLoading;
   
-  // Filter clubs by search query
-  const filteredClubs = clubs.filter(club =>
-    club.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter clubs by search query, then sort alphabetically
+  const filteredClubs = clubs
+    .filter(club => club.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
