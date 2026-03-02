@@ -830,7 +830,7 @@ ${club?.name || 'Your Bowls Club'}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
                   playersPerRink={competitions.find(c => c.name === competition)?.players_per_rink || 4}
-                  homeRinks={competitions.find(c => c.name === competition)?.home_rinks || 2}
+                  homeRinks={homeRinks}
                   awayRinks={competitions.find(c => c.name === competition)?.away_rinks || 0}
                 />
               )
