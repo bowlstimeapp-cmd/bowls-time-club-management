@@ -547,7 +547,6 @@ ${club?.name || 'Your Bowls Club'}
   const handleHomeRinksChange = (value) => {
     const numRinks = parseInt(value);
     setHomeRinks(numRinks);
-    // Auto-select first N rinks as home rinks
     const newSelectedRinks = [];
     for (let i = 1; i <= numRinks; i++) {
       newSelectedRinks.push(i);
