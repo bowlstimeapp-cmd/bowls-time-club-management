@@ -388,19 +388,19 @@ export default function ClubAdmin() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
-          className="grid grid-cols-3 gap-4 mb-8"
+          className="grid grid-cols-3 gap-2 sm:gap-4 mb-8"
         >
           {[
             { icon: Clock, color: 'text-amber-500 bg-amber-50', label: 'Pending', value: pendingMembers.length },
-            { icon: Users, color: 'text-emerald-600 bg-emerald-50', label: 'Active Members', value: approvedMembers.length },
+            { icon: Users, color: 'text-emerald-600 bg-emerald-50', label: 'Members', value: approvedMembers.length },
             { icon: Shield, color: 'text-violet-500 bg-violet-50', label: 'Admins', value: approvedMembers.filter(m => m.role === 'admin').length },
           ].map(({ icon: Icon, color, label, value }) => (
-            <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
-              <div className={`p-2.5 rounded-xl ${color}`}>
+            <div key={label} className="bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 text-center sm:text-left">
+              <div className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${color} hidden sm:block`}>
                 <Icon className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 leading-none mb-0.5">{value}</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-900 leading-none mb-0.5">{value}</p>
                 <p className="text-xs text-slate-500">{label}</p>
               </div>
             </div>
