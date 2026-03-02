@@ -662,6 +662,7 @@ ${club?.name || 'Your Bowls Club'}
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="0">0 Rinks</SelectItem>
                           <SelectItem value="1">1 Rink</SelectItem>
                           <SelectItem value="2">2 Rinks</SelectItem>
                           <SelectItem value="3">3 Rinks</SelectItem>
