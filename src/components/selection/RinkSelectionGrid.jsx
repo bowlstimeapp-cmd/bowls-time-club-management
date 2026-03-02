@@ -1,14 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { User, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
+import SearchableMemberSelect from '@/components/selection/SearchableMemberSelect';
+import { parseISO, isWithinInterval } from 'date-fns';
 import { parseISO, isWithinInterval } from 'date-fns';
 
 export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0 }) {

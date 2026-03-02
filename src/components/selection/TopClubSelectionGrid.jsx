@@ -1,13 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { User, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
+import SearchableMemberSelect from '@/components/selection/SearchableMemberSelect';
 import { parseISO, isWithinInterval } from 'date-fns';
 
 const TOP_CLUB_EVENTS = [
