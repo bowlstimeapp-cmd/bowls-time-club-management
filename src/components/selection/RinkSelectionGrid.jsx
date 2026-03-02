@@ -2,9 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users } from 'lucide-react';
+import { parseISO, isWithinInterval } from 'date-fns';
 import SearchableMemberSelect from '@/components/selection/SearchableMemberSelect';
-import { parseISO, isWithinInterval } from 'date-fns';
-import { parseISO, isWithinInterval } from 'date-fns';
 
 export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0 }) {
   const positions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
@@ -16,11 +15,10 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
   for (let i = homeRinks + 1; i <= homeRinks + awayRinks; i++) {
     rinks.push({ number: i, tag: 'Away' });
   }
+
   const getPositionKey = (rink, position) => `rink${rink}_${position}`;
 
-  const getMemberName = (member) => {
-    return member?.user_name || member?.user_email || 'Unknown';
-  };
+  const getMemberName = (member) => member?.user_name || member?.user_email || 'Unknown';
 
   const getMemberNameByEmail = (email) => {
     const member = members.find(m => m.user_email === email);
@@ -38,12 +36,19 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
     const date = typeof matchDate === 'string' ? parseISO(matchDate) : matchDate;
     return unavailabilities.some(u => 
       u.user_email === memberEmail &&
-      isWithinInterval(date, {
-        start: parseISO(u.start_date),
-        end: parseISO(u.end_date)
-      })
+      isWithinInterval(date, { start: parseISO(u.start_date), end: parseISO(u.end_date) })
     );
   };
+
+  if (rinks.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-gray-500">
+          No rinks configured for this match. Adjust Home/Away rinks in Match Details.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -65,44 +70,20 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
               
               return (
                 <div key={position} className="flex items-center gap-3">
-                  <div className="w-16 text-sm font-medium text-gray-600">
+                  <div className="w-16 text-sm font-medium text-gray-600 flex-shrink-0">
                     {position}
                   </div>
-                  <Select
-                    value={selectedMember || ''}
-                    onValueChange={(value) => onSelectionChange(positionKey, value || null)}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select member">
-                        {selectedMember ? getMemberNameByEmail(selectedMember) : 'Select member'}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={null}>-- Clear --</SelectItem>
-                      {members.map(member => {
-                        const available = isAvailable(member.user_email, positionKey);
-                        const unavailableDate = isUnavailableOnDate(member.user_email);
-                        return (
-                          <SelectItem 
-                            key={member.id} 
-                            value={member.user_email}
-                            disabled={!available}
-                            className={!available ? 'opacity-50' : ''}
-                          >
-                            <div className="flex items-center gap-2">
-                              {unavailableDate ? (
-                                <span className="text-red-600 font-bold text-xs">NA</span>
-                              ) : (
-                                <User className="w-4 h-4" />
-                              )}
-                              {getMemberName(member)}
-                              {!available && ' (selected)'}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                  <SearchableMemberSelect
+                    members={members}
+                    value={selectedMember || null}
+                    onValueChange={(email) => onSelectionChange(positionKey, email)}
+                    positionKey={positionKey}
+                    isAvailableFn={isAvailable}
+                    isUnavailableOnDateFn={isUnavailableOnDate}
+                    getMemberName={getMemberName}
+                    getMemberNameByEmail={getMemberNameByEmail}
+                    placeholder="Select member"
+                  />
                 </div>
               );
             })}
