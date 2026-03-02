@@ -617,7 +617,7 @@ export default function ClubAdmin() {
                 </div>
                 {[
                   { key: 'players_per_rink', label: 'Players per Rink', min: 2, max: 6 },
-                  { key: 'home_rinks', label: 'Home Rinks', min: 1, max: 6 },
+                  { key: 'home_rinks', label: 'Home Rinks', min: 0, max: 6 },
                   { key: 'away_rinks', label: 'Away Rinks', min: 0, max: 6 },
                 ].map(({ key, label, min, max }) => (
                   <div key={key}>
