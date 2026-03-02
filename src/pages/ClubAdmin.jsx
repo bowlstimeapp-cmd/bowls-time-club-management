@@ -410,20 +410,34 @@ export default function ClubAdmin() {
         {/* Tabs */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-white border border-slate-100 shadow-sm rounded-xl p-1 mb-6 h-auto gap-1">
-              <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-4 py-2">
+            {/* Mobile: compact select dropdown */}
+            <div className="sm:hidden mb-4">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="pending">Pending ({pendingMembers.length})</option>
+                <option value="members">Members ({approvedMembers.length})</option>
+                <option value="competitions">Competitions</option>
+                <option value="audit">Audit Log</option>
+              </select>
+            </div>
+            {/* Desktop: tab bar */}
+            <TabsList className="hidden sm:flex bg-white border border-slate-100 shadow-sm rounded-xl p-1 mb-6 h-auto gap-1 w-full">
+              <TabsTrigger value="pending" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
                 <Clock className="w-3.5 h-3.5 mr-1.5" />
                 Pending {pendingMembers.length > 0 && <span className="ml-1.5 bg-amber-400 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">{pendingMembers.length}</span>}
               </TabsTrigger>
-              <TabsTrigger value="members" className="rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-4 py-2">
+              <TabsTrigger value="members" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
                 <Users className="w-3.5 h-3.5 mr-1.5" />
                 Members ({approvedMembers.length})
               </TabsTrigger>
-              <TabsTrigger value="competitions" className="rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-4 py-2">
+              <TabsTrigger value="competitions" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
                 <Trophy className="w-3.5 h-3.5 mr-1.5" />
                 Competitions
               </TabsTrigger>
-              <TabsTrigger value="audit" className="rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-4 py-2">
+              <TabsTrigger value="audit" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
                 <History className="w-3.5 h-3.5 mr-1.5" />
                 Audit Log
               </TabsTrigger>
