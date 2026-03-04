@@ -99,6 +99,7 @@ export default function ClubSettings() {
       setAutoApprove(club.auto_approve_bookings || false);
       setEmailMemberNotifications(club.email_member_notifications !== false);
       setSmsMemberNotifications(club.sms_member_notifications || false);
+      setDefaultLandingPage(club.default_landing_page || 'rink_booking');
       setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
       setLogoUrl(club.logo_url || '');
     }
