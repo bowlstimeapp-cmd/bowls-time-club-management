@@ -77,7 +77,9 @@ export default function ClubSelector() {
   };
 
   const handleEnterClub = (clubId) => {
-    navigate(createPageUrl('BookRink') + `?clubId=${clubId}`);
+    const club = clubs.find(c => c.id === clubId);
+    const useHomepage = club?.module_homepage && club?.default_landing_page === 'homepage';
+    navigate(createPageUrl(useHomepage ? 'ClubHome' : 'BookRink') + `?clubId=${clubId}`);
   };
 
   // Check for approved memberships and redirect if only one —
