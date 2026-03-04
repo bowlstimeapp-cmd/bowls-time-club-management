@@ -286,6 +286,9 @@ export default function ProspectCRM() {
               <Button variant="outline" size="sm" onClick={exportCsv}>
                 <Download className="w-4 h-4 mr-2" />Export CSV
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}>
+                <FileText className="w-4 h-4 mr-2" />Email Template
+              </Button>
               <Button onClick={openCreate} className="bg-emerald-600 hover:bg-emerald-700">
                 <Plus className="w-4 h-4 mr-2" />Add Club
               </Button>
