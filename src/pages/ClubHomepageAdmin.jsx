@@ -82,7 +82,23 @@ export default function ClubHomepageAdmin() {
       setExternalHtml(homepage.external_html || '');
       setExternalHtmlTitle(homepage.external_html_title || '');
       if (homepage.sections_config?.length) {
-        setSections(homepage.sections_config);
+        // Merge saved config with DEFAULT_SECTIONS so new sections always appear
+        const saved = homepage.sections_config;
+        const merged = DEFAULT_SECTIONS.map(def => {
+          const existing = saved.find(s => s.id === def.id);
+          return existing || def;
+        });
+        // Re-apply order from saved for sections that exist in saved
+        const savedOrder = saved.map(s => s.id);
+        merged.sort((a, b) => {
+          const ai = savedOrder.indexOf(a.id);
+          const bi = savedOrder.indexOf(b.id);
+          if (ai === -1 && bi === -1) return a.order - b.order;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
+        setSections(merged.map((s, i) => ({ ...s, order: i + 1 })));
       }
     }
   }, [homepage]);
