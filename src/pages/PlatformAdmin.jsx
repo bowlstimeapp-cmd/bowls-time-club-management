@@ -332,6 +332,12 @@ export default function PlatformAdmin() {
           </div>
           <div className="flex gap-3">
             <MarketingPDFGenerator />
+            <Link to={createPageUrl('PlatformUsers')}>
+              <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                <UsersRound className="w-4 h-4 mr-2" />
+                All Users
+              </Button>
+            </Link>
             <Link to={createPageUrl('UserGuides')}>
               <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
                 <BookOpen className="w-4 h-4 mr-2" />
