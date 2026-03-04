@@ -17,15 +17,19 @@ import GallerySection from '@/components/homepage/GallerySection';
 import SocialEventsSection from '@/components/homepage/SocialEventsSection';
 import MembersSection from '@/components/homepage/MembersSection';
 import ExternalEmbedSection from '@/components/homepage/ExternalEmbedSection';
+import LeagueFixturesSection from '@/components/homepage/LeagueFixturesSection';
+import TodaysRinksSection from '@/components/homepage/TodaysRinksSection';
 
 const DEFAULT_SECTIONS = [
   { id: 'news', label: 'News', visible: true, order: 1 },
   { id: 'match_results', label: 'Recent Match Results', visible: true, order: 2 },
   { id: 'upcoming_matches', label: 'Upcoming Matches & Selection', visible: true, order: 3 },
-  { id: 'gallery', label: 'Gallery', visible: true, order: 4 },
-  { id: 'social_events', label: 'Social Events', visible: true, order: 5 },
-  { id: 'members', label: 'Club Members', visible: true, order: 6 },
-  { id: 'external_embed', label: 'External Content', visible: false, order: 7 },
+  { id: 'league_fixtures', label: 'My League Fixtures This Week', visible: true, order: 4 },
+  { id: 'todays_rinks', label: "Today's Rink Availability", visible: true, order: 5 },
+  { id: 'gallery', label: 'Gallery', visible: true, order: 6 },
+  { id: 'social_events', label: 'Social Events', visible: true, order: 7 },
+  { id: 'members', label: 'Club Members', visible: true, order: 8 },
+  { id: 'external_embed', label: 'External Content', visible: false, order: 9 },
 ];
 
 export default function ClubHome() {

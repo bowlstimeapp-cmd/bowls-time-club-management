@@ -50,6 +50,8 @@
 import AdminBookings from './pages/AdminBookings';
 import BookRink from './pages/BookRink';
 import ClubAdmin from './pages/ClubAdmin';
+import ClubHome from './pages/ClubHome';
+import ClubHomepageAdmin from './pages/ClubHomepageAdmin';
 import ClubSelector from './pages/ClubSelector';
 import ClubSettings from './pages/ClubSettings';
 import ClubTournaments from './pages/ClubTournaments';
@@ -73,8 +75,6 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
-import ClubHome from './pages/ClubHome';
-import ClubHomepageAdmin from './pages/ClubHomepageAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -82,6 +82,8 @@ export const PAGES = {
     "AdminBookings": AdminBookings,
     "BookRink": BookRink,
     "ClubAdmin": ClubAdmin,
+    "ClubHome": ClubHome,
+    "ClubHomepageAdmin": ClubHomepageAdmin,
     "ClubSelector": ClubSelector,
     "ClubSettings": ClubSettings,
     "ClubTournaments": ClubTournaments,
@@ -105,8 +107,6 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
-    "ClubHome": ClubHome,
-    "ClubHomepageAdmin": ClubHomepageAdmin,
 }
 
 export const pagesConfig = {
