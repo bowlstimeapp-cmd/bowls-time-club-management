@@ -741,6 +741,7 @@ export default function PlatformAdmin() {
                       { key: 'module_competitions', label: 'Competitions' },
                       { key: 'module_leagues', label: 'Leagues' },
                       { key: 'module_sms_notifications', label: 'SMS Notifications' },
+                      { key: 'module_homepage', label: 'Club Homepage' },
                     ].map(({ key, label }) => (
                       <div key={key} className="flex items-center justify-between">
                         <Label className="font-normal">{label}</Label>
