@@ -70,6 +70,12 @@ export default function ProspectCRM() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [importing, setImporting] = useState(false);
   const [scraping, setScraping] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailTarget, setEmailTarget] = useState(null);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [emailTemplate, setEmailTemplate] = useState(DEFAULT_TEMPLATE);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailPreview, setEmailPreview] = useState({ subject: '', body: '' });
   const queryClient = useQueryClient();
 
   useEffect(() => {
