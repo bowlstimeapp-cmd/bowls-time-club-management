@@ -63,6 +63,7 @@ import MyLeagueTeam from './pages/MyLeagueTeam';
 import Notifications from './pages/Notifications';
 import OpenCompetitions from './pages/OpenCompetitions';
 import PlatformAdmin from './pages/PlatformAdmin';
+import PlatformUsers from './pages/PlatformUsers';
 import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
 import Selection from './pages/Selection';
@@ -71,7 +72,7 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
-import PlatformUsers from './pages/PlatformUsers';
+import ProspectCRM from './pages/ProspectCRM';
 import __Layout from './Layout.jsx';
 
 
@@ -92,6 +93,7 @@ export const PAGES = {
     "Notifications": Notifications,
     "OpenCompetitions": OpenCompetitions,
     "PlatformAdmin": PlatformAdmin,
+    "PlatformUsers": PlatformUsers,
     "Profile": Profile,
     "ProfileSetup": ProfileSetup,
     "Selection": Selection,
@@ -100,7 +102,7 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
-    "PlatformUsers": PlatformUsers,
+    "ProspectCRM": ProspectCRM,
 }
 
 export const pagesConfig = {
