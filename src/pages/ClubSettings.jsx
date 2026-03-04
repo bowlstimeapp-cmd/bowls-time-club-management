@@ -36,6 +36,7 @@ export default function ClubSettings() {
   const [autoApprove, setAutoApprove] = useState(false);
   const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
   const [smsMemberNotifications, setSmsMemberNotifications] = useState(false);
+  const [defaultLandingPage, setDefaultLandingPage] = useState('rink_booking');
   const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
