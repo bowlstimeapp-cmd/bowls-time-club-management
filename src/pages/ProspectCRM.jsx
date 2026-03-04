@@ -146,6 +146,43 @@ export default function ProspectCRM() {
   const openCreate = () => { setEditingProspect(null); setFormData(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (p) => { setEditingProspect(p); setFormData({ ...EMPTY_FORM, ...p }); setDialogOpen(true); };
 
+  const fillTemplate = (template, prospect) => {
+    const replace = (str) => str
+      .replace(/{{club_name}}/g, prospect.club_name || '')
+      .replace(/{{contact_name}}/g, prospect.contact_name || 'Club Secretary')
+      .replace(/{{county}}/g, prospect.county || '');
+    return { subject: replace(template.subject), body: replace(template.body) };
+  };
+
+  const openEmail = (p) => {
+    setEmailTarget(p);
+    setEmailPreview(fillTemplate(emailTemplate, p));
+    setEmailDialogOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailTarget?.email) { toast.error('This club has no email address'); return; }
+    setSendingEmail(true);
+    try {
+      await base44.integrations.Core.SendEmail({
+        to: emailTarget.email,
+        subject: emailPreview.subject,
+        body: emailPreview.body.replace(/\n/g, '<br/>'),
+      });
+      // Mark as contacted and update date
+      await base44.entities.ProspectClub.update(emailTarget.id, {
+        contact_status: emailTarget.contact_status === 'not_contacted' ? 'contacted' : emailTarget.contact_status,
+        last_contacted_date: new Date().toISOString().split('T')[0],
+      });
+      queryClient.invalidateQueries({ queryKey: ['prospects'] });
+      toast.success(`Email sent to ${emailTarget.email}`);
+      setEmailDialogOpen(false);
+    } catch (e) {
+      toast.error('Failed to send email: ' + e.message);
+    }
+    setSendingEmail(false);
+  };
+
   const handleSave = () => {
     if (!formData.club_name.trim()) { toast.error('Club name is required'); return; }
     if (editingProspect) {
