@@ -18,7 +18,8 @@ import {
 import {
   ShieldAlert, Search, Plus, Pencil, Trash2, ArrowLeft, Users,
   Phone, Mail, Globe, MapPin, CheckCircle, XCircle, Clock,
-  Star, PhoneCall, RefreshCw, Loader2, Download, Upload, Filter
+  Star, PhoneCall, RefreshCw, Loader2, Download, Upload, Filter,
+  Send, FileText
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link } from 'react-router-dom';

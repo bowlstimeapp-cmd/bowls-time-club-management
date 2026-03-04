@@ -66,13 +66,13 @@ import PlatformAdmin from './pages/PlatformAdmin';
 import PlatformUsers from './pages/PlatformUsers';
 import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
+import ProspectCRM from './pages/ProspectCRM';
 import Selection from './pages/Selection';
 import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
-import ProspectCRM from './pages/ProspectCRM';
 import __Layout from './Layout.jsx';
 
 
@@ -96,13 +96,13 @@ export const PAGES = {
     "PlatformUsers": PlatformUsers,
     "Profile": Profile,
     "ProfileSetup": ProfileSetup,
+    "ProspectCRM": ProspectCRM,
     "Selection": Selection,
     "SelectionEditor": SelectionEditor,
     "SelectionView": SelectionView,
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
-    "ProspectCRM": ProspectCRM,
 }
 
 export const pagesConfig = {
