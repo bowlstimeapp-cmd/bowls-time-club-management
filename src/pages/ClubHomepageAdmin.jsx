@@ -97,24 +97,29 @@ export default function ClubHomepageAdmin() {
     toast.success('Image uploaded');
   };
 
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    if (e) e.preventDefault();
+    if (saving) return;
     setSaving(true);
-    const data = {
-      club_id: clubId,
-      hero_image_url: heroImage,
-      welcome_text: welcomeText,
-      external_html: externalHtml,
-      external_html_title: externalHtmlTitle,
-      sections_config: sections,
-    };
-    if (homepage?.id) {
-      await base44.entities.ClubHomepage.update(homepage.id, data);
-    } else {
-      await base44.entities.ClubHomepage.create(data);
+    try {
+      const data = {
+        club_id: clubId,
+        hero_image_url: heroImage,
+        welcome_text: welcomeText,
+        external_html: externalHtml,
+        external_html_title: externalHtmlTitle,
+        sections_config: sections,
+      };
+      if (homepage?.id) {
+        await base44.entities.ClubHomepage.update(homepage.id, data);
+      } else {
+        await base44.entities.ClubHomepage.create(data);
+      }
+      queryClient.invalidateQueries({ queryKey: ['clubHomepage', clubId] });
+      toast.success('Homepage saved');
+    } finally {
+      setSaving(false);
     }
-    queryClient.invalidateQueries({ queryKey: ['clubHomepage', clubId] });
-    toast.success('Homepage saved');
-    setSaving(false);
   };
 
   const moveSection = (index, direction) => {
