@@ -448,7 +448,11 @@ export default function ProspectCRM() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailTemplate(DEFAULT_TEMPLATE)}>Reset to Default</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { toast.success('Template saved'); setTemplateDialogOpen(false); }}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => {
+              localStorage.setItem('prospectEmailTemplate', JSON.stringify(emailTemplate));
+              toast.success('Template saved');
+              setTemplateDialogOpen(false);
+            }}>
               Save Template
             </Button>
           </DialogFooter>
