@@ -73,7 +73,12 @@ export default function ProspectCRM() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailTarget, setEmailTarget] = useState(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [emailTemplate, setEmailTemplate] = useState(DEFAULT_TEMPLATE);
+  const [emailTemplate, setEmailTemplate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('prospectEmailTemplate');
+      return saved ? JSON.parse(saved) : DEFAULT_TEMPLATE;
+    } catch { return DEFAULT_TEMPLATE; }
+  });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailPreview, setEmailPreview] = useState({ subject: '', body: '' });
   const queryClient = useQueryClient();
