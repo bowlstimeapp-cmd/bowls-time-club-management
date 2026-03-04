@@ -532,6 +532,30 @@ export default function ClubSettings() {
               </CardContent>
             </Card>
 
+            {club?.module_homepage && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Homepage Settings</CardTitle>
+                  <CardDescription>Configure the club homepage landing behaviour</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Default Landing Page</Label>
+                    <p className="text-sm text-gray-500 mb-2">Choose what members see first when entering your club.</p>
+                    <Select value={defaultLandingPage} onValueChange={setDefaultLandingPage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rink_booking">Rink Booking</SelectItem>
+                        <SelectItem value="homepage">Club Homepage</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Button 
               type="submit" 
               className="w-full bg-emerald-600 hover:bg-emerald-700"
