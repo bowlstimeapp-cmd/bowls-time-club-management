@@ -73,6 +73,8 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
+import ClubHome from './pages/ClubHome';
+import ClubHomepageAdmin from './pages/ClubHomepageAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -103,6 +105,8 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
+    "ClubHome": ClubHome,
+    "ClubHomepageAdmin": ClubHomepageAdmin,
 }
 
 export const pagesConfig = {
