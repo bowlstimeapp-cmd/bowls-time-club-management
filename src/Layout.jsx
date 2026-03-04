@@ -78,6 +78,9 @@ export default function Layout({ children, currentPageName }) {
   const needsClub = !noClubPages.includes(currentPageName);
 
   const clubNavigation = [
+    ...(club?.module_homepage ? [
+      { name: 'Club Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 },
+    ] : []),
     ...(club?.module_rink_booking !== false ? [
       { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
       { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
