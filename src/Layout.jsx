@@ -128,6 +128,21 @@ export default function Layout({ children, currentPageName }) {
             {/* Desktop Navigation */}
             {needsClub && clubId && (
               <nav className="hidden md:flex items-center gap-2">
+                {/* Club Home */}
+                {club?.module_homepage && (
+                  <Link
+                    to={createPageUrl('ClubHome') + `?clubId=${clubId}`}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('ClubHome'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    Home
+                  </Link>
+                )}
                 {/* Rink Booking Dropdown */}
                 {club?.module_rink_booking !== false && (
                   <DropdownMenu>
