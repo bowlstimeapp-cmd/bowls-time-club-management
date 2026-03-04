@@ -93,6 +93,33 @@ export default function ClubHome() {
     enabled: !!clubId,
   });
 
+  const { data: leagueTeams = [] } = useQuery({
+    queryKey: ['leagueTeams', clubId],
+    queryFn: () => base44.entities.LeagueTeam.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const { data: leagues = [] } = useQuery({
+    queryKey: ['leagues', clubId],
+    queryFn: () => base44.entities.League.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const { data: leagueFixtures = [] } = useQuery({
+    queryKey: ['leagueFixtures', clubId],
+    queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const { data: todaysBookings = [] } = useQuery({
+    queryKey: ['todaysBookings', clubId],
+    queryFn: () => {
+      const today = new Date().toISOString().split('T')[0];
+      return base44.entities.Booking.filter({ club_id: clubId, date: today });
+    },
+    enabled: !!clubId,
+  });
+
   const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
   const sectionsConfig = homepage?.sections_config?.length
