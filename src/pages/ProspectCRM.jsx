@@ -422,6 +422,68 @@ export default function ProspectCRM() {
         </motion.div>
       </div>
 
+      {/* Email Template Dialog */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email Template</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 -mt-2">
+            Use <code className="bg-gray-100 px-1 rounded">{'{{club_name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{contact_name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{county}}'}</code> as placeholders — they'll be replaced when sending.
+          </p>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Subject</Label>
+              <Input value={emailTemplate.subject} onChange={e => setEmailTemplate({ ...emailTemplate, subject: e.target.value })} />
+            </div>
+            <div>
+              <Label>Body</Label>
+              <Textarea value={emailTemplate.body} onChange={e => setEmailTemplate({ ...emailTemplate, body: e.target.value })} rows={14} className="font-mono text-sm" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailTemplate(DEFAULT_TEMPLATE)}>Reset to Default</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { toast.success('Template saved'); setTemplateDialogOpen(false); }}>
+              Save Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-4 h-4" />
+              Send Email to {emailTarget?.club_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
+              <Mail className="w-4 h-4 shrink-0" />
+              <span>To: <strong>{emailTarget?.email}</strong></span>
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <Input value={emailPreview.subject} onChange={e => setEmailPreview({ ...emailPreview, subject: e.target.value })} />
+            </div>
+            <div>
+              <Label>Body</Label>
+              <Textarea value={emailPreview.body} onChange={e => setEmailPreview({ ...emailPreview, body: e.target.value })} rows={14} className="text-sm" />
+            </div>
+            <p className="text-xs text-gray-400">Sending this email will automatically mark the club's status as "Contacted" and update the last contacted date.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>Cancel</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSendEmail} disabled={sendingEmail}>
+              {sendingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
