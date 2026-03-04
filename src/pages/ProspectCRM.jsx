@@ -173,6 +173,7 @@ export default function ProspectCRM() {
         to: emailTarget.email,
         subject: emailPreview.subject,
         body: emailPreview.body.replace(/\n/g, '<br/>'),
+        from_name: 'BowlsTime',
       });
       // Mark as contacted and update date
       await base44.entities.ProspectClub.update(emailTarget.id, {
