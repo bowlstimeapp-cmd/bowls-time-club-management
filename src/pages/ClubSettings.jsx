@@ -234,7 +234,8 @@ export default function ClubSettings() {
       email_member_notifications: emailMemberNotifications,
       sms_member_notifications: smsMemberNotifications,
       membership_types: membershipTypes,
-      logo_url: logoUrl
+      logo_url: logoUrl,
+      default_landing_page: defaultLandingPage,
     });
   };
 
