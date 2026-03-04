@@ -145,6 +145,24 @@ export default function ClubHome() {
         return <MatchResultsSection key="match_results" posts={matchResults} clubId={clubId} isAdmin={isAdmin} />;
       case 'upcoming_matches':
         return <UpcomingMatchesSection key="upcoming_matches" selections={upcomingMatches} clubId={clubId} />;
+      case 'league_fixtures':
+        return user ? (
+          <LeagueFixturesSection
+            key="league_fixtures"
+            fixtures={leagueFixtures}
+            teams={leagueTeams}
+            leagues={leagues}
+            userEmail={user.email}
+          />
+        ) : null;
+      case 'todays_rinks':
+        return (
+          <TodaysRinksSection
+            key="todays_rinks"
+            club={club}
+            bookings={todaysBookings}
+          />
+        );
       case 'gallery':
         return <GallerySection key="gallery" images={gallery} clubId={clubId} isAdmin={isAdmin} />;
       case 'social_events':
