@@ -396,14 +396,19 @@ export default function ProspectCRM() {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}>
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                  onClick={() => { if (confirm('Delete this prospect?')) deleteMutation.mutate(p.id); }}>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                   title={p.email ? `Send email to ${p.email}` : 'No email address'}
+                                   onClick={() => openEmail(p)} disabled={!p.email}>
+                                   <Send className="w-3.5 h-3.5" />
+                                 </Button>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}>
+                                   <Pencil className="w-3.5 h-3.5" />
+                                 </Button>
+                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                   onClick={() => { if (confirm('Delete this prospect?')) deleteMutation.mutate(p.id); }}>
+                                   <Trash2 className="w-3.5 h-3.5" />
+                                 </Button>
+                               </div>
                             </td>
                           </tr>
                         );
