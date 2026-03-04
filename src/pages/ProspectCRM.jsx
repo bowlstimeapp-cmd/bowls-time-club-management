@@ -40,6 +40,27 @@ const EMPTY_FORM = {
   contact_status: 'not_contacted', notes: '', last_contacted_date: ''
 };
 
+const DEFAULT_TEMPLATE = {
+  subject: 'Introducing BowlsTime – Club Management Made Easy',
+  body: `Dear {{contact_name}},
+
+I hope this email finds you well. My name is [Your Name] and I'm reaching out to introduce BowlsTime, a platform designed specifically for lawn bowls clubs like {{club_name}}.
+
+BowlsTime helps clubs manage:
+- Rink bookings and availability
+- Team selections and match notifications
+- League and competition management
+- Member communications
+
+I'd love to arrange a quick call or demo to show you how BowlsTime could benefit {{club_name}}. 
+
+Would you be available for a 20-minute chat? Feel free to reply to this email or call me on [Your Phone Number].
+
+Kind regards,
+[Your Name]
+BowlsTime`
+};
+
 export default function ProspectCRM() {
   const [user, setUser] = useState(null);
   const [search, setSearch] = useState('');
