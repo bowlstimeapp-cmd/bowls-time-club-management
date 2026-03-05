@@ -45,12 +45,7 @@ export default function PayMembershipFeeCard({ club, clubId, userEmail }) {
         setLoading(false);
         return;
       }
-      // If in iframe, open in new tab instead
-      if (window.self !== window.top) {
-        window.open(url, '_blank');
-      } else {
-        window.location.href = url;
-      }
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
       console.error('Payment error:', err);
       toast.error('Payment failed to start. Please try again.');
