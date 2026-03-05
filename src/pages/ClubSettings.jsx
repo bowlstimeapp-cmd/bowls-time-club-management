@@ -38,6 +38,11 @@ export default function ClubSettings() {
   const [smsMemberNotifications, setSmsMemberNotifications] = useState(false);
   const [defaultLandingPage, setDefaultLandingPage] = useState('rink_booking');
   const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
+  const [membershipFeeEnabled, setMembershipFeeEnabled] = useState(false);
+  const [membershipFeeAmount, setMembershipFeeAmount] = useState('');
+  const [membershipFeeDescription, setMembershipFeeDescription] = useState('');
+  const [stripePublishableKey, setStripePublishableKey] = useState('');
+  const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
@@ -102,6 +107,11 @@ export default function ClubSettings() {
       setDefaultLandingPage(club.default_landing_page || 'rink_booking');
       setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
       setLogoUrl(club.logo_url || '');
+      setMembershipFeeEnabled(club.membership_fee_enabled || false);
+      setMembershipFeeAmount(club.membership_fee_amount_pence ? (club.membership_fee_amount_pence / 100).toString() : '');
+      setMembershipFeeDescription(club.membership_fee_description || '');
+      setStripePublishableKey(club.stripe_publishable_key || '');
+      setStripeSecretKey(club.stripe_secret_key || '');
     }
   }, [club]);
 
@@ -236,6 +246,11 @@ export default function ClubSettings() {
       membership_types: membershipTypes,
       logo_url: logoUrl,
       default_landing_page: defaultLandingPage,
+      membership_fee_enabled: membershipFeeEnabled,
+      membership_fee_amount_pence: membershipFeeAmount ? Math.round(parseFloat(membershipFeeAmount) * 100) : null,
+      membership_fee_description: membershipFeeDescription,
+      stripe_publishable_key: stripePublishableKey || null,
+      stripe_secret_key: stripeSecretKey || null,
     });
   };
 
