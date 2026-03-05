@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -570,6 +570,52 @@ export default function ClubSettings() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Membership Payments */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Membership Payments (Stripe)
+                </CardTitle>
+                <CardDescription>
+                  Enable online membership fee collection via Stripe. Optionally provide your own Stripe keys so payments go directly to your club account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Enable Membership Fee Collection</Label>
+                    <p className="text-sm text-gray-500">Show a payment option on member profiles</p>
+                  </div>
+                  <Switch checked={membershipFeeEnabled} onCheckedChange={setMembershipFeeEnabled} />
+                </div>
+                {membershipFeeEnabled && (
+                  <>
+                    <div>
+                      <Label>Fee Amount (£)</Label>
+                      <Input type="number" min="0" step="0.01" value={membershipFeeAmount} onChange={e => setMembershipFeeAmount(e.target.value)} placeholder="e.g. 50.00" />
+                    </div>
+                    <div>
+                      <Label>Payment Description</Label>
+                      <Input value={membershipFeeDescription} onChange={e => setMembershipFeeDescription(e.target.value)} placeholder="e.g. Annual Membership 2024/25" />
+                    </div>
+                    <div className="border-t pt-4 space-y-3">
+                      <p className="text-sm font-medium text-gray-700">Your Stripe Keys (optional)</p>
+                      <p className="text-xs text-gray-500">Leave blank to use the platform Stripe account. Provide your own keys to receive payments directly into your Stripe account.</p>
+                      <div>
+                        <Label>Stripe Publishable Key</Label>
+                        <Input value={stripePublishableKey} onChange={e => setStripePublishableKey(e.target.value)} placeholder="pk_live_..." />
+                      </div>
+                      <div>
+                        <Label>Stripe Secret Key</Label>
+                        <Input type="password" value={stripeSecretKey} onChange={e => setStripeSecretKey(e.target.value)} placeholder="sk_live_..." />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
             <Button 
               type="submit" 
