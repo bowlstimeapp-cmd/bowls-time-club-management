@@ -53,7 +53,7 @@ const membershipDotColor = {
   'Social Member':        'bg-purple-400',
 };
 
-function MemberCard({ member, onSelect, onRemove, isSelf }) {
+function MemberCard({ member, onSelect, onRemove, isSelf, payment }) {
   const role = member.role || 'member';
   const roleBadge = roleMeta[role] || roleMeta.member;
   const initials = (member.user_name || member.user_email || '?')
@@ -117,6 +117,20 @@ function MemberCard({ member, onSelect, onRemove, isSelf }) {
             <Hash className="w-3 h-3" />
             Locker {member.locker_number}
           </p>
+        )}
+
+        {/* Payment status */}
+        {payment && (
+          <div className="mt-2 flex items-center gap-1">
+            <CreditCard className="w-3 h-3 text-slate-400" />
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              payment.status === 'paid'
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {payment.status === 'paid' ? 'Paid' : 'Not Paid'}
+            </span>
+          </div>
         )}
       </div>
 
