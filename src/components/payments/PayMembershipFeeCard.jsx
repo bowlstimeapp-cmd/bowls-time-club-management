@@ -31,20 +31,31 @@ export default function PayMembershipFeeCard({ club, clubId, userEmail }) {
   const latestPayment = payments[0];
 
   const handlePay = async () => {
-    // Check if running in iframe (preview mode)
-    if (window.self !== window.top) {
-      toast.error('Payments only work from the published app, not in preview mode.');
-      return;
-    }
     setLoading(true);
-    const res = await base44.functions.invoke('createMembershipCheckout', {
-      clubId,
-      membershipType: latestPayment?.membership_type || '',
-      amountPence: club.membership_fee_amount_pence,
-      description: club.membership_fee_description || 'Membership Fee',
-    });
-    const { url } = res.data;
-    window.location.href = url;
+    try {
+      const res = await base44.functions.invoke('createMembershipCheckout', {
+        clubId,
+        membershipType: latestPayment?.membership_type || '',
+        amountPence: club.membership_fee_amount_pence,
+        description: club.membership_fee_description || 'Membership Fee',
+      });
+      const { url } = res.data;
+      if (!url) {
+        toast.error('Could not start payment. Please try again.');
+        setLoading(false);
+        return;
+      }
+      // If in iframe, open in new tab instead
+      if (window.self !== window.top) {
+        window.open(url, '_blank');
+      } else {
+        window.location.href = url;
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      toast.error('Payment failed to start. Please try again.');
+      setLoading(false);
+    }
   };
 
   if (!club?.membership_fee_enabled) return null;
