@@ -28,7 +28,8 @@ import {
   Loader2,
   Mail,
   Key,
-  Hash
+  Hash,
+  CreditCard
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -371,7 +372,13 @@ export default function ClubAdmin() {
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-1">Club Administration</p>
             <h1 className="text-3xl font-bold text-slate-900">{club?.name || 'Club'}</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link to={createPageUrl('MembershipPayments') + `?clubId=${clubId}`}>
+              <Button variant="outline" className="border-slate-200 text-slate-600">
+                <CreditCard className="w-4 h-4 mr-2" />
+                Payments
+              </Button>
+            </Link>
             <Button variant="outline" onClick={() => setBulkUploadOpen(true)} className="border-slate-200 text-slate-600">
               <Upload className="w-4 h-4 mr-2" />
               Bulk Upload
