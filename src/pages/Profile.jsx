@@ -374,6 +374,11 @@ export default function Profile() {
               </CardContent>
             </Card>
 
+            {/* Membership Fee */}
+            {clubId && membership && club && (
+              <PayMembershipFeeCard club={club} clubId={clubId} userEmail={user.email} />
+            )}
+
             {/* Delete Account */}
             <Card className="shadow-lg border-red-100">
               <CardHeader>
