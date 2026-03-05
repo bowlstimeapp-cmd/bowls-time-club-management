@@ -215,12 +215,6 @@ export default function ClubAdmin() {
     enabled: !!clubId,
   });
 
-  const { data: latestPayments = [] } = useQuery({
-    queryKey: ['latestPayments', clubId],
-    queryFn: () => base44.entities.MembershipPayment.filter({ club_id: clubId }, '-created_date', 500),
-    enabled: !!clubId && !!isClubAdmin,
-  });
-
   const updateMembershipMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ClubMembership.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] }),
