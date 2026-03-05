@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert } from 'lucide-react';
+import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
