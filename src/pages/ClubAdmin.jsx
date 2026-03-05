@@ -273,6 +273,12 @@ export default function ClubAdmin() {
 
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
 
+  const { data: latestPayments = [] } = useQuery({
+    queryKey: ['latestPayments', clubId],
+    queryFn: () => base44.entities.MembershipPayment.filter({ club_id: clubId }, '-created_date', 500),
+    enabled: !!clubId && isClubAdmin,
+  });
+
   // Build a map of email -> latest paid payment for member cards
   const paymentByEmail = {};
   latestPayments.forEach(p => {
