@@ -75,6 +75,9 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
+import MembershipPaymentSuccess from './pages/MembershipPaymentSuccess';
+import MembershipPayments from './pages/MembershipPayments';
+import PaymentDetail from './pages/PaymentDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -107,6 +110,9 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
+    "MembershipPaymentSuccess": MembershipPaymentSuccess,
+    "MembershipPayments": MembershipPayments,
+    "PaymentDetail": PaymentDetail,
 }
 
 export const pagesConfig = {
