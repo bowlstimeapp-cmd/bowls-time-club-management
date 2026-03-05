@@ -552,6 +552,7 @@ export default function ClubAdmin() {
                             onSelect={setSelectedMember}
                             onRemove={(id) => deleteMembershipMutation.mutate(id)}
                             isSelf={member.user_email === user?.email}
+                            payment={paymentByEmail[member.user_email]}
                           />
                         </motion.div>
                       ))}
