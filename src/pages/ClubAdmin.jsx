@@ -265,6 +265,15 @@ export default function ClubAdmin() {
 
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
 
+  // Build a map of email -> latest paid payment for member cards
+  const paymentByEmail = {};
+  latestPayments.forEach(p => {
+    const email = p.user_email;
+    if (!paymentByEmail[email] || (p.status === 'paid' && paymentByEmail[email].status !== 'paid')) {
+      paymentByEmail[email] = p;
+    }
+  });
+
   if (!clubId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
