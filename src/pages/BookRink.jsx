@@ -124,6 +124,24 @@ useEffect(() => {
       : (user.full_name || user.email);
     const updatedMembers = [...(booking.rollup_members || []), { email: user.email, name }];
     await base44.entities.Booking.update(booking.id, { rollup_members: updatedMembers });
+
+    // Notify the original booker
+    if (booking.booker_email && booking.booker_email !== user.email) {
+      const joiningNames = updatedMembers
+        .filter(m => m.email !== booking.booker_email)
+        .map(m => m.name)
+        .join(', ');
+      await base44.entities.Notification.create({
+        user_email: booking.booker_email,
+        type: 'booking_accepted',
+        title: 'Someone joined your Roll-up!',
+        message: `${joiningNames} ${updatedMembers.filter(m => m.email !== booking.booker_email).length === 1 ? 'has' : 'have'} joined your roll-up on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date}.`,
+        related_id: booking.id,
+        link_page: 'BookRink',
+        link_params: `clubId=${clubId}`,
+      });
+    }
+
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success("You've joined the roll-up!");
     setSelectedBooking(prev => prev ? { ...prev, rollup_members: updatedMembers } : prev);
