@@ -244,6 +244,12 @@ export default function Layout({ children, currentPageName }) {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('RinkDisplayTV') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          TV Display
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to={createPageUrl('ClubAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Users className="w-4 h-4 mr-2" />
                           Members

@@ -42,6 +42,7 @@ export default function ClubSettings() {
   const [membershipFeeEnabled, setMembershipFeeEnabled] = useState(false);
   const [membershipFeeAmount, setMembershipFeeAmount] = useState('');
   const [membershipFeeDescription, setMembershipFeeDescription] = useState('');
+  const [tvCycleSeconds, setTvCycleSeconds] = useState(30);
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
