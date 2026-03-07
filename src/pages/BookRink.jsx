@@ -448,6 +448,7 @@ useEffect(() => {
           currentUserEmail={user?.email}
           onJoinRollup={handleJoinRollup}
           joinLoading={joiningRollup}
+          club={club}
         />
       </div>
     </div>
