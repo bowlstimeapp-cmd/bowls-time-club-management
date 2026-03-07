@@ -430,6 +430,21 @@ export default function Layout({ children, currentPageName }) {
                     <Trophy className="w-5 h-5" />
                     Open Competitions
                   </Link>
+                  {club?.module_function_rooms && (
+                    <Link
+                      to={createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
+                        isActive(createPageUrl('FunctionRoomAdmin'))
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "text-gray-600 hover:bg-gray-100"
+                      )}
+                    >
+                      <Building2 className="w-5 h-5" />
+                      Function Rooms
+                    </Link>
+                  )}
                 </>
               )}
               <Link
