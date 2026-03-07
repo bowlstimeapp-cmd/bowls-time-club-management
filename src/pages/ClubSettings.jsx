@@ -34,6 +34,7 @@ export default function ClubSettings() {
   const [closingTime, setClosingTime] = useState('21:00');
   const [sessionDuration, setSessionDuration] = useState(2);
   const [autoApprove, setAutoApprove] = useState(false);
+  const [openRollups, setOpenRollups] = useState(false);
   const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
   const [smsMemberNotifications, setSmsMemberNotifications] = useState(false);
   const [defaultLandingPage, setDefaultLandingPage] = useState('rink_booking');

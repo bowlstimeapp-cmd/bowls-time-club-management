@@ -60,10 +60,13 @@ import LeagueAdmin from './pages/LeagueAdmin';
 import LeagueView from './pages/LeagueView';
 import LiveScoring from './pages/LiveScoring';
 import Marketing from './pages/Marketing';
+import MembershipPaymentSuccess from './pages/MembershipPaymentSuccess';
+import MembershipPayments from './pages/MembershipPayments';
 import MyBookings from './pages/MyBookings';
 import MyLeagueTeam from './pages/MyLeagueTeam';
 import Notifications from './pages/Notifications';
 import OpenCompetitions from './pages/OpenCompetitions';
+import PaymentDetail from './pages/PaymentDetail';
 import PlatformAdmin from './pages/PlatformAdmin';
 import PlatformUsers from './pages/PlatformUsers';
 import Profile from './pages/Profile';
@@ -75,9 +78,6 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
-import MembershipPaymentSuccess from './pages/MembershipPaymentSuccess';
-import MembershipPayments from './pages/MembershipPayments';
-import PaymentDetail from './pages/PaymentDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -95,10 +95,13 @@ export const PAGES = {
     "LeagueView": LeagueView,
     "LiveScoring": LiveScoring,
     "Marketing": Marketing,
+    "MembershipPaymentSuccess": MembershipPaymentSuccess,
+    "MembershipPayments": MembershipPayments,
     "MyBookings": MyBookings,
     "MyLeagueTeam": MyLeagueTeam,
     "Notifications": Notifications,
     "OpenCompetitions": OpenCompetitions,
+    "PaymentDetail": PaymentDetail,
     "PlatformAdmin": PlatformAdmin,
     "PlatformUsers": PlatformUsers,
     "Profile": Profile,
@@ -110,9 +113,6 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
-    "MembershipPaymentSuccess": MembershipPaymentSuccess,
-    "MembershipPayments": MembershipPayments,
-    "PaymentDetail": PaymentDetail,
 }
 
 export const pagesConfig = {

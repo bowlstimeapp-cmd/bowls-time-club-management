@@ -18,11 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Loader2 } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, MapPin, Loader2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-const COMPETITION_TYPES = ['Club', 'County', 'National', 'Other'];
+const COMPETITION_TYPES = ['Club', 'County', 'National', 'Roll-up', 'Other'];
 
 export default function BookingModal({ 
   open, 
@@ -30,11 +31,16 @@ export default function BookingModal({
   selectedSlots = [],
   selectedDate, 
   onConfirm, 
-  isLoading 
+  isLoading,
+  club,
+  members = [],
+  currentUserEmail
 }) {
   const [notes, setNotes] = useState('');
   const [competitionType, setCompetitionType] = useState('Club');
   const [competitionOther, setCompetitionOther] = useState('');
+  const [rollupMembers, setRollupMembers] = useState([]);
+  const [memberSearch, setMemberSearch] = useState('');
 
   const handleConfirm = () => {
     // Validate booking is not in the past
