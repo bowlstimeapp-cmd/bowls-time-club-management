@@ -616,8 +616,8 @@ export default function ClubSettings() {
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t">
                   <div>
-                    <Label className="text-base">Leagues — Table View</Label>
-                    <p className="text-sm text-gray-500">Show leagues as a collapsible table instead of cards</p>
+                    <Label className="text-base">League Admin — Table View</Label>
+                    <p className="text-sm text-gray-500">Show the League Admin page as a compact table/accordion instead of cards</p>
                   </div>
                   <Switch checked={altViewLeagues} onCheckedChange={setAltViewLeagues} />
                 </div>

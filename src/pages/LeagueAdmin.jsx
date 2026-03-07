@@ -51,6 +51,7 @@ import {
   CalendarX
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
+import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -79,6 +80,8 @@ export default function LeagueAdmin() {
   const [leagueStartTime, setLeagueStartTime] = useState('18:00');
   const [leagueEndTime, setLeagueEndTime] = useState('21:00');
   const [leagueFormat, setLeagueFormat] = useState('fours');
+  const [leagueIsSets, setLeagueIsSets] = useState(false);
+  const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
