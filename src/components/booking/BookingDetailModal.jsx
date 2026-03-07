@@ -6,7 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Trophy, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, User, Trophy, FileText, CheckCircle, XCircle, Loader2, Users, UserPlus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const statusIcons = {
@@ -23,10 +24,19 @@ const statusColors = {
   cancelled: 'bg-gray-100 text-gray-500 border-gray-300',
 };
 
-export default function BookingDetailModal({ booking, open, onClose }) {
+export default function BookingDetailModal({ booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading }) {
   if (!booking) return null;
 
   const StatusIcon = statusIcons[booking.status];
+  const isRollup = booking.competition_type === 'Roll-up';
+  const rollupMembers = booking.rollup_members || [];
+  const totalPeople = rollupMembers.length + 1; // +1 for booker
+  const isFull = totalPeople >= 8;
+  const alreadyJoined = currentUserEmail && (
+    booking.booker_email === currentUserEmail ||
+    rollupMembers.some(m => m.email === currentUserEmail)
+  );
+  const canJoin = isRollup && !isFull && !alreadyJoined && currentUserEmail;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
