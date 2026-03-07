@@ -45,7 +45,7 @@ export default function PayMembershipFeeCard({ club, clubId, userEmail }) {
         setLoading(false);
         return;
       }
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.location.href = url;
     } catch (err) {
       console.error('Payment error:', err);
       toast.error('Payment failed to start. Please try again.');
