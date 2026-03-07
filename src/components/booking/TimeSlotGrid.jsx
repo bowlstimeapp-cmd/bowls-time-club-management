@@ -130,12 +130,14 @@ export default function TimeSlotGrid({
     }
   };
 
+  const openRollupsEnabled = club?.open_rollups;
+
   return (
     <TooltipProvider>
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="min-w-[600px]">
           {/* Header */}
-          <div className={`grid gap-2 mb-3`} style={{ gridTemplateColumns: `1fr repeat(${RINKS.length}, 1fr)` }}>
+          <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, 1fr)` }}>
             <div className="p-3 text-sm font-medium text-gray-500 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               Time
@@ -153,7 +155,7 @@ export default function TimeSlotGrid({
               <div
                 key={slot.start}
                 className="grid gap-2"
-                style={{ gridTemplateColumns: `1fr repeat(${RINKS.length}, 1fr)` }}
+                style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, 1fr)` }}
               >
                 <div className="p-3 text-sm text-gray-600 font-medium flex items-center">
                   {slot.label}
@@ -166,50 +168,85 @@ export default function TimeSlotGrid({
                   const selected = isSlotSelected(rink, slotIndex);
                   const canSelect = available && (selectedSlots.length === 0 || canSelectSlot(rink, slotIndex) || selectedSlots[0].rink !== rink);
 
+                  // Roll-up join eligibility
+                  const isRollup = booking?.competition_type === 'Roll-up';
+                  const rollupCount = (booking?.rollup_members?.length || 0) + 1;
+                  const rollupFull = rollupCount >= 8;
+                  const alreadyInRollup = currentUserEmail && (
+                    booking?.booker_email === currentUserEmail ||
+                    booking?.rollup_members?.some(m => m.email === currentUserEmail)
+                  );
+                  const canJoinRollup = isRollup && openRollupsEnabled && !rollupFull && !alreadyInRollup && currentUserEmail;
+
                   return (
                     <Tooltip key={rink}>
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleSlotClick(rink, slot, slotIndex)}
-                          disabled={!available}
+                          disabled={available && !canSelect && selectedSlots.length > 0 && selectedSlots[0].rink === rink}
                           className={cn(
-                            "p-3 rounded-xl border-2 transition-all duration-200 min-h-[60px] relative",
+                            "p-2 rounded-xl border-2 transition-all duration-200 min-h-[64px] lg:min-h-[80px] relative w-full text-left",
                             available && !selected
-                              ? "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.02]"
+                              ? "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]"
                               : available && selected
                               ? "bg-emerald-100 border-emerald-500 cursor-pointer"
-                              : cn(statusStyles[booking?.status], "cursor-default"),
+                              : cn(statusStyles[booking?.status], "cursor-pointer"),
                             available && canSelect && "hover:shadow-md",
                             available && !canSelect && selectedSlots.length > 0 && "opacity-50"
                           )}
                         >
                           {available ? (
                             selected ? (
-                              <div className="flex items-center justify-center">
+                              <div className="flex items-center justify-center h-full">
                                 <Check className="w-5 h-5 text-emerald-700" />
                               </div>
                             ) : (
-                              <span className="text-xs font-medium text-emerald-600">Available</span>
+                              <div className="flex items-center justify-center h-full">
+                                <span className="text-xs font-medium text-emerald-600">Available</span>
+                              </div>
                             )
                           ) : (
-                            <div className="flex flex-col items-center gap-1">
-                              {StatusIcon && (
-                                <StatusIcon className={cn(
-                                  "w-4 h-4",
-                                  booking?.status === 'pending' && "animate-spin"
-                                )} />
-                              )}
-                              <span className="text-xs font-medium truncate max-w-full">
-                                {booking?.competition_type === 'Roll-up' ? 'Roll-up' : booking?.booker_name?.split(' ')[0]}
-                              </span>
-                              {booking?.competition_type === 'Roll-up' && (
-                                <span className="text-[10px] font-semibold flex items-center gap-0.5">
-                                  <Users className="w-2.5 h-2.5" />
-                                  {(booking.rollup_members?.length || 0) + 1}/8
+                            <div className="flex flex-col gap-0.5 h-full">
+                              <div className="flex items-center gap-1">
+                                {StatusIcon && (
+                                  <StatusIcon className={cn(
+                                    "w-3 h-3 shrink-0",
+                                    booking?.status === 'pending' && "animate-spin"
+                                  )} />
+                                )}
+                                <span className="text-xs font-semibold truncate leading-tight">
+                                  {isOwnBooking ? 'You' : booking?.booker_name}
+                                </span>
+                              </div>
+                              {booking?.competition_type && (
+                                <span className="text-[10px] lg:text-xs opacity-80 truncate leading-tight">
+                                  {booking.competition_type === 'Other' && booking.competition_other
+                                    ? booking.competition_other
+                                    : booking.competition_type}
                                 </span>
                               )}
-                              {isOwnBooking && booking?.competition_type !== 'Roll-up' && (
-                                <span className="text-[10px] opacity-75">(You)</span>
+                              {isRollup && (
+                                <span className="text-[10px] font-semibold flex items-center gap-0.5 mt-auto">
+                                  <Users className="w-2.5 h-2.5" />
+                                  {rollupCount}/8
+                                  {rollupFull && <span className="ml-1 text-amber-700">Full</span>}
+                                </span>
+                              )}
+                              {canJoinRollup && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onJoinRollup && onJoinRollup(booking);
+                                  }}
+                                  disabled={joinLoading}
+                                  className="mt-1 text-[10px] font-semibold bg-emerald-600 text-white rounded px-1.5 py-0.5 hover:bg-emerald-700 flex items-center gap-0.5 w-fit"
+                                >
+                                  {joinLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <UserPlus className="w-2.5 h-2.5" />}
+                                  Join
+                                </button>
+                              )}
+                              {alreadyInRollup && isRollup && (
+                                <span className="text-[10px] text-emerald-700 font-medium mt-auto">✓ Joined</span>
                               )}
                             </div>
                           )}
@@ -227,7 +264,8 @@ export default function TimeSlotGrid({
                         ) : (
                           <div className="text-center">
                             <p className="font-medium">{booking?.booker_name}</p>
-                            <p className="text-xs capitalize">{booking?.status}</p>
+                            <p className="text-xs capitalize">{booking?.competition_type || booking?.status}</p>
+                            {isRollup && <p className="text-xs">{rollupCount}/8 members</p>}
                           </div>
                         )}
                       </TooltipContent>
