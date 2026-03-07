@@ -198,9 +198,15 @@ export default function TimeSlotGrid({
                                 )} />
                               )}
                               <span className="text-xs font-medium truncate max-w-full">
-                                {booking?.booker_name?.split(' ')[0]}
+                                {booking?.competition_type === 'Roll-up' ? 'Roll-up' : booking?.booker_name?.split(' ')[0]}
                               </span>
-                              {isOwnBooking && (
+                              {booking?.competition_type === 'Roll-up' && (
+                                <span className="text-[10px] font-semibold flex items-center gap-0.5">
+                                  <Users className="w-2.5 h-2.5" />
+                                  {(booking.rollup_members?.length || 0) + 1}/8
+                                </span>
+                              )}
+                              {isOwnBooking && booking?.competition_type !== 'Roll-up' && (
                                 <span className="text-[10px] opacity-75">(You)</span>
                               )}
                             </div>
