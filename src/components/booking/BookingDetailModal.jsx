@@ -113,11 +113,42 @@ export default function BookingDetailModal({ booking, open, onClose, currentUser
                 </div>
               </div>
             )}
+
+            {isRollup && (
+              <div className="flex items-start gap-3">
+                <Users className="w-4 h-4 text-gray-500 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500">Roll-up Members ({totalPeople}/8)</p>
+                  <div className="mt-1 space-y-1">
+                    <p className="text-sm font-medium">{booking.booker_name} <span className="text-xs text-gray-400">(organiser)</span></p>
+                    {rollupMembers.map(m => (
+                      <p key={m.email} className="text-sm">{m.name}</p>
+                    ))}
+                    {isFull && <p className="text-xs text-amber-600 font-medium mt-1">Session full</p>}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="pt-2 border-t">
-            <p className="text-xs text-gray-500">Rink Number</p>
-            <p className="text-2xl font-bold text-emerald-600">Rink {booking.rink_number}</p>
+          <div className="pt-2 border-t flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500">Rink Number</p>
+              <p className="text-2xl font-bold text-emerald-600">Rink {booking.rink_number}</p>
+            </div>
+            {canJoin && (
+              <Button
+                onClick={() => onJoinRollup && onJoinRollup(booking)}
+                disabled={joinLoading}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {joinLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Join Roll-up
+              </Button>
+            )}
+            {alreadyJoined && isRollup && (
+              <Badge className="bg-emerald-100 text-emerald-800">You're in this roll-up</Badge>
+            )}
           </div>
         </div>
       </DialogContent>
