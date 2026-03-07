@@ -43,6 +43,8 @@ export default function ClubSettings() {
   const [membershipFeeAmount, setMembershipFeeAmount] = useState('');
   const [membershipFeeDescription, setMembershipFeeDescription] = useState('');
   const [tvCycleSeconds, setTvCycleSeconds] = useState(30);
+  const [altViewSelection, setAltViewSelection] = useState(false);
+  const [altViewLeagues, setAltViewLeagues] = useState(false);
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -116,6 +118,8 @@ export default function ClubSettings() {
       setStripePublishableKey(club.stripe_publishable_key || '');
       setStripeSecretKey(club.stripe_secret_key || '');
       setTvCycleSeconds(club.tv_display_cycle_seconds || 30);
+      setAltViewSelection(club.alt_view_selection || false);
+      setAltViewLeagues(club.alt_view_leagues || false);
     }
   }, [club]);
 
@@ -257,6 +261,8 @@ export default function ClubSettings() {
       stripe_publishable_key: stripePublishableKey || null,
       stripe_secret_key: stripeSecretKey || null,
       tv_display_cycle_seconds: parseInt(tvCycleSeconds) || 30,
+      alt_view_selection: altViewSelection,
+      alt_view_leagues: altViewLeagues,
     });
   };
 
@@ -588,6 +594,35 @@ export default function ClubSettings() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Alternative Views */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Alternative Page Views
+                </CardTitle>
+                <CardDescription>
+                  Switch specific pages to a cleaner, table-based layout
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Selection — Table View</Label>
+                    <p className="text-sm text-gray-500">Show team selections as a compact table instead of cards</p>
+                  </div>
+                  <Switch checked={altViewSelection} onCheckedChange={setAltViewSelection} />
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div>
+                    <Label className="text-base">Leagues — Table View</Label>
+                    <p className="text-sm text-gray-500">Show leagues as a collapsible table instead of cards</p>
+                  </div>
+                  <Switch checked={altViewLeagues} onCheckedChange={setAltViewLeagues} />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* TV Display */}
             <Card>
