@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
   try {
@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing leagueId or clubId' }, { status: 400 });
     }
 
-    // Fetch league, fixtures, teams, and club data
     const [leagues, fixtures, teams, clubs] = await Promise.all([
       base44.entities.League.filter({ id: leagueId }),
       base44.entities.LeagueFixture.filter({ league_id: leagueId }),
@@ -30,10 +29,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'League or club not found' }, { status: 404 });
     }
 
-    // Sort fixtures by date
     const sortedFixtures = fixtures.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
 
-    // Calculate round numbers based on unique dates
     const dateToRound = {};
     let currentRound = 1;
     sortedFixtures.forEach(fixture => {
@@ -42,19 +39,20 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Build scorecard data
+    const isSets = !!league.is_sets;
+    const setsEnds = isSets ? (parseInt(league.sets_ends) || 8) : 0;
+
     const scorecards = sortedFixtures.map(fixture => {
       const homeTeam = teams.find(t => t.id === fixture.home_team_id);
       const awayTeam = teams.find(t => t.id === fixture.away_team_id);
-      
       if (!homeTeam || !awayTeam) return null;
-      
+
       const matchDate = new Date(fixture.match_date + 'T12:00:00');
       const dayName = matchDate.toLocaleDateString('en-GB', { weekday: 'long' });
       const day = matchDate.getDate();
       const monthName = matchDate.toLocaleDateString('en-GB', { month: 'short' });
       const year = matchDate.getFullYear();
-      
+
       return {
         leagueName: league.name,
         season: club.season === 'indoor' ? 'Indoor Season' : 'Outdoor Season',
@@ -70,7 +68,68 @@ Deno.serve(async (req) => {
       };
     }).filter(Boolean);
 
-    // Generate HTML
+    // Build score table rows for a scorecard
+    // Standard: 24 ends + TOTAL row
+    // Sets: group into blocks of `setsEnds`, each followed by TOTAL row, with 2 blank gap rows between sets
+    const buildScoreRows = () => {
+      if (!isSets) {
+        const rows = Array.from({ length: 24 }, (_, i) => `
+        <tr>
+          <td></td>
+          <td></td>
+          <td class="end-num">${i + 1}</td>
+          <td></td>
+          <td></td>
+        </tr>`).join('');
+        const total = `<tr class="total-row">
+          <td style="text-align:left;padding-left:1mm;">Total</td>
+          <td></td>
+          <td></td>
+          <td style="text-align:left;padding-left:1mm;">Total</td>
+          <td></td>
+        </tr>`;
+        return rows + total;
+      }
+
+      // Sets scorecard: each set = setsEnds ends + TOTAL + 2 blank spacer rows (except after last set)
+      // We always show 2 sets worth of rows
+      let rows = '';
+      for (let set = 0; set < 2; set++) {
+        for (let e = 1; e <= setsEnds; e++) {
+          rows += `
+        <tr>
+          <td></td>
+          <td></td>
+          <td class="end-num">${e}</td>
+          <td></td>
+          <td></td>
+        </tr>`;
+        }
+        // TOTAL row after each set
+        rows += `<tr class="total-row">
+          <td style="text-align:left;padding-left:1mm;">TOTAL</td>
+          <td></td>
+          <td></td>
+          <td style="text-align:left;padding-left:1mm;">TOTAL</td>
+          <td></td>
+        </tr>`;
+        // 2 blank spacer rows between sets (not after last set)
+        if (set < 1) {
+          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
+          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
+        }
+      }
+      // Sets result row at bottom
+      rows += `<tr class="sets-row">
+        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
+        <td></td>
+        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
+      </tr>`;
+      return rows;
+    };
+
+    const scoreRows = buildScoreRows();
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -81,20 +140,9 @@ Deno.serve(async (req) => {
       size: A4 landscape;
       margin: 10mm;
     }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: Arial, sans-serif;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    
-.page {
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page {
       width: 277mm;
       display: flex;
       flex-direction: row;
@@ -102,12 +150,8 @@ Deno.serve(async (req) => {
       page-break-after: always;
       page-break-inside: avoid;
     }
-    
-    .page:last-child {
-      page-break-after: auto;
-    }
-    
-.scorecard {
+    .page:last-child { page-break-after: auto; }
+    .scorecard {
       width: 67mm;
       height: 190mm;
       border: 1px solid #000;
@@ -117,7 +161,6 @@ Deno.serve(async (req) => {
       flex: 0 0 67mm;
       overflow: hidden;
     }
-    
     .header {
       height: 18mm;
       border-bottom: 1px solid #000;
@@ -125,7 +168,6 @@ Deno.serve(async (req) => {
       padding: 3mm;
       gap: 3mm;
     }
-    
     .logo-box {
       width: 15mm;
       height: 12mm;
@@ -136,13 +178,7 @@ Deno.serve(async (req) => {
       justify-content: center;
       overflow: hidden;
     }
-    
-    .logo-box img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-    
+    .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .info-box {
       border: 1px solid #000;
       flex: 1;
@@ -151,18 +187,8 @@ Deno.serve(async (req) => {
       flex-direction: column;
       justify-content: space-between;
     }
-    
-    .league-name {
-      font-size: 9pt;
-      font-weight: bold;
-      line-height: 1.1;
-    }
-    
-    .season-info {
-      font-size: 7pt;
-      line-height: 1.2;
-    }
-    
+    .league-name { font-size: 9pt; font-weight: bold; line-height: 1.1; }
+    .season-info { font-size: 7pt; line-height: 1.2; }
     .match-details {
       background: #f5f5f5;
       padding: 2mm;
@@ -171,7 +197,6 @@ Deno.serve(async (req) => {
       font-weight: bold;
       line-height: 1.3;
     }
-    
     .teams-row {
       background: #e6e6e6;
       padding: 1.5mm 3mm;
@@ -183,37 +208,14 @@ Deno.serve(async (req) => {
       border-top: 1px solid #000;
       border-bottom: 1px solid #000;
     }
-    
-    .vs {
-      font-size: 7pt;
-    }
-    
-    .players-section div {
-      border-bottom: 1px solid #b4b4b4;
-      padding: 0.5mm 2mm;
-      height: 4.5mm;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8pt;
-    }
-    
+    .vs { font-size: 7pt; }
     .players-section div {
       border-bottom: 1px solid #b4b4b4;
       padding: 1mm 2mm;
       height: 6mm;
     }
-    
-    .players-section div:last-child {
-      border-bottom: none;
-    }
-    
-    .score-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 6pt;
-    }
-    
+    .players-section div:last-child { border-bottom: none; }
+    .score-table { width: 100%; border-collapse: collapse; font-size: 6pt; }
     .score-table th {
       background: #dcdcdc;
       padding: 1mm;
@@ -221,25 +223,17 @@ Deno.serve(async (req) => {
       font-weight: bold;
       font-size: 7pt;
     }
-    
-.score-table td {
+    .score-table td {
       border: 1px solid #b4b4b4;
       height: 4mm;
       text-align: center;
       padding: 0;
     }
-    
-    .score-table .end-num {
-      font-size: 6pt;
-    }
-    
-    .score-table .total-row {
-      background: #dcdcdc;
-      font-weight: bold;
-      font-size: 7pt;
-    }
-    
-.signatures {
+    .score-table .end-num { font-size: 6pt; }
+    .score-table .total-row { background: #dcdcdc; font-weight: bold; font-size: 7pt; }
+    .score-table .spacer-row td { background: #f9f9f9; border-color: #e0e0e0; }
+    .score-table .sets-row { background: #e8e8ff; font-weight: bold; }
+    .signatures {
       text-align: center;
       padding: 0.5mm 0;
       font-size: 6pt;
@@ -249,14 +243,9 @@ Deno.serve(async (req) => {
       justify-content: center;
       gap: 2mm;
     }
-    
     @media print {
-      .page {
-        page-break-after: always;
-      }
-      .page:last-child {
-        page-break-after: auto;
-      }
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: auto; }
     }
   </style>
 </head>
@@ -264,7 +253,7 @@ Deno.serve(async (req) => {
 ${scorecards.map((card, idx) => {
   const isNewPage = idx % 4 === 0;
   const isEndPage = idx % 4 === 3 || idx === scorecards.length - 1;
-  
+
   return `${isNewPage ? '<div class="page">' : ''}
   <div class="scorecard">
     <div class="header">
@@ -279,54 +268,35 @@ ${scorecards.map((card, idx) => {
         </div>
       </div>
     </div>
-    
     <div class="match-details">
       <div>${card.dayName} - ${card.dateStr} - Round ${card.round} -</div>
       <div>${card.time} - Rink ${card.rink}</div>
     </div>
-    
     <div class="teams-row">
-      <span style="text-align: left;">${card.teamAName}</span>
-      <span class="vs" style="text-align: center; padding: 0 2mm;">Vs</span>
-      <span style="text-align: right;">${card.teamBName}</span>
+      <span style="text-align:left;">${card.teamAName}</span>
+      <span class="vs" style="text-align:center;padding:0 2mm;">Vs</span>
+      <span style="text-align:right;">${card.teamBName}</span>
     </div>
-    
     <div class="players-section">
       <div>1</div>
       <div>2</div>
       <div>3</div>
       <div>Skip</div>
     </div>
-    
     <table class="score-table">
       <thead>
         <tr>
-          <th style="width: 13mm;">Score</th>
-          <th style="width: 13mm;">Total</th>
-          <th style="width: 17mm;">Ends</th>
-          <th style="width: 13mm;">Score</th>
-          <th style="width: 13mm;">Total</th>
+          <th style="width:13mm;">Score</th>
+          <th style="width:13mm;">Total</th>
+          <th style="width:17mm;">Ends</th>
+          <th style="width:13mm;">Score</th>
+          <th style="width:13mm;">Total</th>
         </tr>
       </thead>
       <tbody>
-        ${Array.from({ length: 24 }, (_, i) => `
-        <tr>
-          <td></td>
-          <td></td>
-          <td class="end-num">${i + 1}</td>
-          <td></td>
-          <td></td>
-        </tr>`).join('')}
-<tr class="total-row">
-          <td style="text-align:left; padding-left:1mm;">Total</td>
-          <td></td>
-          <td></td>
-          <td style="text-align:left; padding-left:1mm;">Total</td>
-          <td></td>
-        </tr>
+        ${scoreRows}
       </tbody>
     </table>
-    
     <div class="signatures">
       <div>Signatures</div>
       <div>of Skips</div>
@@ -339,9 +309,7 @@ ${isEndPage ? '</div>' : ''}`;
 
     return new Response(html, {
       status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      }
+      headers: { 'Content-Type': 'text/html' }
     });
   } catch (error) {
     console.error('Scorecard generation error:', error);
