@@ -399,7 +399,7 @@ export default function ClubSettings() {
                   Configure how bookings are handled
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-base">Auto-approve Bookings</Label>
@@ -410,6 +410,18 @@ export default function ClubSettings() {
                   <Switch
                     checked={autoApprove}
                     onCheckedChange={setAutoApprove}
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div>
+                    <Label className="text-base">Open Roll-ups</Label>
+                    <p className="text-sm text-gray-500">
+                      Allow members to join roll-up sessions booked by others (max 8 per session)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={openRollups}
+                    onCheckedChange={setOpenRollups}
                   />
                 </div>
               </CardContent>
