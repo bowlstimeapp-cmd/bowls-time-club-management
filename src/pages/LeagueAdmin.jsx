@@ -231,6 +231,8 @@ export default function LeagueAdmin() {
     setLeagueStartTime('18:00');
     setLeagueEndTime('21:00');
     setLeagueFormat('fours');
+    setLeagueIsSets(false);
+    setLeagueSetsEnds(8);
   };
 
   const resetTeamForm = () => {
@@ -250,6 +252,8 @@ export default function LeagueAdmin() {
     setLeagueStartTime(league.start_time || '18:00');
     setLeagueEndTime(league.end_time || '21:00');
     setLeagueFormat(league.format || 'fours');
+    setLeagueIsSets(league.is_sets || false);
+    setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueDialogOpen(true);
   };
 
@@ -277,6 +281,8 @@ export default function LeagueAdmin() {
       start_time: leagueStartTime || null,
       end_time: leagueEndTime || null,
       format: leagueFormat,
+      is_sets: leagueIsSets,
+      sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
     };
 
     if (editingLeague) {
