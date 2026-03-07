@@ -387,6 +387,9 @@ useEffect(() => {
           selectedDate={selectedDate}
           onConfirm={handleConfirmBooking}
           isLoading={createBookingMutation.isPending}
+          club={club}
+          members={members}
+          currentUserEmail={user?.email}
         />
 
         <BulkBookingModal
@@ -422,6 +425,9 @@ useEffect(() => {
             setBookingDetailOpen(false);
             setSelectedBooking(null);
           }}
+          currentUserEmail={user?.email}
+          onJoinRollup={handleJoinRollup}
+          joinLoading={joiningRollup}
         />
       </div>
     </div>
