@@ -745,6 +745,41 @@ export default function LeagueAdmin() {
               </Button>
             </CardContent>
           </Card>
+        ) : club?.alt_view_leagues ? (
+          <LeagueAdminTableView
+            leagues={leagues}
+            teams={teams}
+            fixtures={fixtures}
+            club={club}
+            members={members}
+            onEditLeague={handleEditLeague}
+            onDeleteLeague={(id) => setDeleteLeagueId(id)}
+            onAddTeam={openAddTeam}
+            onEditTeam={handleEditTeam}
+            onDeleteTeam={(id) => setDeleteTeamId(id)}
+            onGenerateFixtures={handleGenerateFixtures}
+            onBookRinks={handleBookRinks}
+            onViewFixtures={viewFixtures}
+            onViewTable={viewLeagueTable}
+            onBlacklist={(league) => { setBlacklistLeague(league); setBlacklistDialogOpen(true); }}
+            generatingFixtures={generatingFixtures}
+            bookingRinks={bookingRinks}
+            onGenerateScorecards={async (league) => {
+              try {
+                toast.info('Generating scorecards...');
+                const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId });
+                const html = typeof result === 'string' ? result : result?.html || result?.data;
+                if (!html) { toast.error('No scorecard data returned'); return; }
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+                toast.success('Scorecards ready — use Print > Save as PDF');
+              } catch (error) {
+                toast.error('Failed to generate scorecards');
+              }
+            }}
+          />
         ) : (
           <div className="space-y-6">
             {leagues.map((league) => {
