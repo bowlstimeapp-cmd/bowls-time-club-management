@@ -366,6 +366,8 @@ useEffect(() => {
                     setSelectedBooking(booking);
                     setBookingDetailOpen(true);
                   }}
+                  onJoinRollup={handleJoinRollup}
+                  joinLoading={joiningRollup}
                 />
               )}
             </CardContent>
