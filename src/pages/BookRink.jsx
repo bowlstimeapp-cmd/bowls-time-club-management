@@ -116,7 +116,21 @@ useEffect(() => {
     },
   });
 
-  const handleConfirmBooking = async (notes, competitionType, competitionOther) => {
+  const handleJoinRollup = async (booking) => {
+    if (!user || joiningRollup) return;
+    setJoiningRollup(true);
+    const name = user.first_name && user.surname 
+      ? `${user.first_name} ${user.surname}` 
+      : (user.full_name || user.email);
+    const updatedMembers = [...(booking.rollup_members || []), { email: user.email, name }];
+    await base44.entities.Booking.update(booking.id, { rollup_members: updatedMembers });
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    toast.success("You've joined the roll-up!");
+    setSelectedBooking(prev => prev ? { ...prev, rollup_members: updatedMembers } : prev);
+    setJoiningRollup(false);
+  };
+
+  const handleConfirmBooking = async (notes, competitionType, competitionOther, rollupMembers = []) => {
     if (!user || selectedSlots.length === 0 || !clubId) return;
 
     const status = club?.auto_approve_bookings ? 'approved' : 'pending';
@@ -141,6 +155,7 @@ useEffect(() => {
         booker_name: bookerName,
         booker_email: user.email,
         notes: notes || '',
+        rollup_members: competitionType === 'Roll-up' ? rollupMembers : [],
       })
     );
 
