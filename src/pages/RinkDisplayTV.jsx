@@ -25,9 +25,9 @@ const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duratio
 
 const STATUS_STYLES = {
   approved: 'bg-emerald-500 text-white border-emerald-600',
-  pending:  'bg-amber-100 text-amber-900 border-amber-300',
-  rejected: 'bg-gray-100 text-gray-400 border-gray-200',
-  cancelled:'bg-gray-100 text-gray-400 border-gray-200',
+  pending:  'bg-amber-100 text-amber-800 border-amber-300',
+  rejected: 'bg-gray-100 text-gray-500 border-gray-300',
+  cancelled:'bg-gray-100 text-gray-500 border-gray-300',
 };
 
 export default function RinkDisplayTV() {
@@ -106,19 +106,19 @@ export default function RinkDisplayTV() {
   }, [club]);
 
   if (!clubId) {
-    return <div className="flex items-center justify-center h-screen bg-gray-900 text-white">No club selected.</div>;
+    return <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-900">No club selected.</div>;
   }
 
   if (!authChecked) {
-    return <div className="flex items-center justify-center h-screen bg-gray-900 text-white"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+    return <div className="flex items-center justify-center h-screen bg-gray-50"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>;
   }
 
   if (authChecked && (!user || !isClubAdmin)) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-900 text-white text-center p-8">
+      <div className="flex items-center justify-center h-screen bg-gray-50 text-center p-8">
         <div>
-          <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-          <p className="text-gray-400">This display is only available to club admins.</p>
+          <h1 className="text-3xl font-bold mb-4 text-gray-900">Access Denied</h1>
+          <p className="text-gray-500">This display is only available to club admins.</p>
         </div>
       </div>
     );
@@ -131,16 +131,16 @@ export default function RinkDisplayTV() {
     bookings.find(b => b.rink_number === rink && b.start_time === startTime && b.status !== 'cancelled' && b.status !== 'rejected');
 
   return (
-    <div className="fixed inset-0 bg-gray-950 text-white flex flex-col overflow-hidden select-none">
+    <div className="min-h-screen bg-gray-50 flex flex-col select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 bg-gray-900 border-b border-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
           {club?.logo_url && (
-            <img src={club.logo_url} alt={club.name} className="h-12 w-12 object-contain rounded-lg bg-white p-1" />
+            <img src={club.logo_url} alt={club.name} className="h-12 w-12 object-contain rounded-lg border p-1" />
           )}
           <div>
-            <h1 className="text-2xl font-bold text-white">{club?.name}</h1>
-            <p className="text-emerald-400 font-semibold text-lg">{displayDateLabel}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{club?.name}</h1>
+            <p className="text-emerald-600 font-semibold text-lg">{displayDateLabel}</p>
           </div>
         </div>
 
@@ -149,7 +149,7 @@ export default function RinkDisplayTV() {
       </div>
 
       {/* Progress bar */}
-      <div className="h-1 bg-gray-800 shrink-0">
+      <div className="h-1 bg-gray-200 shrink-0">
         <div
           className="h-full bg-emerald-500 transition-none"
           style={{ width: `${progress}%` }}
@@ -161,29 +161,29 @@ export default function RinkDisplayTV() {
         <div className="min-w-0">
           {/* Rink header row */}
           <div
-            className="grid gap-3 mb-3"
+            className="grid gap-2 mb-3"
             style={{ gridTemplateColumns: `140px repeat(${RINKS.length}, 1fr)` }}
           >
-            <div className="flex items-center gap-2 text-gray-400 text-sm font-medium px-2">
+            <div className="flex items-center gap-2 text-gray-500 text-sm font-medium px-2">
               <Clock className="w-4 h-4" />
               Time
             </div>
             {RINKS.map(rink => (
-              <div key={rink} className="text-center py-2 bg-gray-800 rounded-lg">
-                <span className="text-base font-bold text-gray-100">Rink {rink}</span>
+              <div key={rink} className="text-center py-2">
+                <span className="text-sm font-semibold text-gray-700">Rink {rink}</span>
               </div>
             ))}
           </div>
 
           {/* Slot rows */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {TIME_SLOTS.map(slot => (
               <div
                 key={slot.start}
-                className="grid gap-3"
+                className="grid gap-2"
                 style={{ gridTemplateColumns: `140px repeat(${RINKS.length}, 1fr)` }}
               >
-                <div className="flex items-center px-2 text-sm font-semibold text-gray-300">
+                <div className="flex items-center px-2 text-sm font-medium text-gray-600">
                   {slot.label}
                 </div>
                 {RINKS.map(rink => {
@@ -198,7 +198,7 @@ export default function RinkDisplayTV() {
                         'rounded-xl border-2 px-3 py-3 min-h-[72px] flex flex-col justify-center',
                         booking
                           ? STATUS_STYLES[booking.status] || 'bg-emerald-500 text-white border-emerald-600'
-                          : 'bg-gray-800 border-gray-700 text-gray-500'
+                          : 'bg-white border-emerald-200 text-emerald-600'
                       )}
                     >
                       {booking ? (
@@ -233,13 +233,13 @@ export default function RinkDisplayTV() {
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-3 bg-gray-900 border-t border-gray-800 flex items-center justify-between shrink-0">
+      <div className="px-8 py-3 bg-white border-t border-gray-200 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4 text-xs text-gray-500">
           <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-emerald-500" /> Approved</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-amber-200" /> Pending</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-gray-700" /> Available</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-amber-200 border border-amber-300" /> Pending</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-white border border-emerald-200" /> Available</span>
         </div>
-        <span className="text-xs text-gray-600">
+        <span className="text-xs text-gray-400">
           Cycling every {club?.tv_display_cycle_seconds || 30}s
         </span>
       </div>
@@ -255,10 +255,10 @@ function LiveClock() {
   }, []);
   return (
     <div className="text-right">
-      <p className="text-3xl font-mono font-bold text-white">
+      <p className="text-3xl font-mono font-bold text-gray-900">
         {format(now, 'HH:mm:ss')}
       </p>
-      <p className="text-sm text-gray-400">{format(now, 'EEEE d MMMM yyyy')}</p>
+      <p className="text-sm text-gray-500">{format(now, 'EEEE d MMMM yyyy')}</p>
     </div>
   );
 }
