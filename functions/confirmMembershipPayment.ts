@@ -27,9 +27,15 @@ Deno.serve(async (req) => {
   const stripeKey = club?.stripe_secret_key || Deno.env.get('STRIPE_SECRET_KEY');
   const stripe = new Stripe(stripeKey);
 
+  if (payment.status === 'paid') {
+    return Response.json({ status: 'paid' });
+  }
+
   if (payment.stripe_session_id) {
     const session = await stripe.checkout.sessions.retrieve(payment.stripe_session_id);
-    if (session.payment_status === 'paid' && payment.status !== 'paid') {
+    // 'paid' = card payment completed; 'unpaid' with status 'complete' = also succeeded (e.g. BACS/delayed)
+    const isComplete = session.payment_status === 'paid' || session.status === 'complete';
+    if (isComplete) {
       await base44.asServiceRole.entities.MembershipPayment.update(paymentId, {
         status: 'paid',
         stripe_payment_intent_id: session.payment_intent,
