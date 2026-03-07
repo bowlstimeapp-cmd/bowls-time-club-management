@@ -125,6 +125,8 @@ export default function LeagueView() {
               <p className="text-gray-500">No leagues have been created for this club</p>
             </CardContent>
           </Card>
+        ) : club?.alt_view_leagues ? (
+          <LeagueTableView leagues={leagues} teams={teams} fixtures={fixtures} />
         ) : (
           <div className="space-y-6">
             {leagues.map((league) => {
@@ -174,8 +176,8 @@ export default function LeagueView() {
                           </div>
                         </div>
                         {league.fixtures_generated && (
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => viewFixtures(league)}
                           >
@@ -190,18 +192,12 @@ export default function LeagueView() {
                         <Users className="w-4 h-4" />
                         Teams ({leagueTeams.length})
                       </h4>
-
                       {leagueTeams.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">
-                          No teams in this league yet
-                        </p>
+                        <p className="text-sm text-gray-500 text-center py-4">No teams in this league yet</p>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           {leagueTeams.map((team) => (
-                            <div 
-                              key={team.id}
-                              className="border rounded-lg p-3 bg-gray-50"
-                            >
+                            <div key={team.id} className="border rounded-lg p-3 bg-gray-50">
                               <h5 className="font-medium text-gray-900">{team.name}</h5>
                               {team.captain_email ? (
                                 <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
