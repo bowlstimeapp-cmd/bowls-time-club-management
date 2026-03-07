@@ -270,7 +270,8 @@ export default function PlatformAdmin() {
       module_selection: club.module_selection !== false,
       module_competitions: club.module_competitions !== false,
       module_leagues: club.module_leagues !== false,
-      module_sms_notifications: club.module_sms_notifications || false
+      module_sms_notifications: club.module_sms_notifications || false,
+      module_function_rooms: club.module_function_rooms || false
     });
     setDialogOpen(true);
   };
@@ -742,6 +743,7 @@ export default function PlatformAdmin() {
                       { key: 'module_leagues', label: 'Leagues' },
                       { key: 'module_sms_notifications', label: 'SMS Notifications' },
                       { key: 'module_homepage', label: 'Club Homepage' },
+                      { key: 'module_function_rooms', label: 'Function Room Bookings' },
                     ].map(({ key, label }) => (
                       <div key={key} className="flex items-center justify-between">
                         <Label className="font-normal">{label}</Label>
