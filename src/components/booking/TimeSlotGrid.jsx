@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle, XCircle, Loader2, Check, Users } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2, Check, Users, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
