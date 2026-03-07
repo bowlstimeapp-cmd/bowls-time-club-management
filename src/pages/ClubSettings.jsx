@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -588,6 +588,33 @@ export default function ClubSettings() {
                 </CardContent>
               </Card>
             )}
+
+            {/* TV Display */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tv className="w-5 h-5" />
+                  TV / Display Board
+                </CardTitle>
+                <CardDescription>
+                  Configure the fullscreen rink display for TVs and monitors in the clubhouse
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <Label>Day cycle duration (seconds)</Label>
+                  <p className="text-sm text-gray-500 mb-2">How long to show each day before switching between Today and Tomorrow.</p>
+                  <Input
+                    type="number"
+                    min="5"
+                    max="300"
+                    value={tvCycleSeconds}
+                    onChange={(e) => setTvCycleSeconds(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Membership Payments */}
             <Card>
