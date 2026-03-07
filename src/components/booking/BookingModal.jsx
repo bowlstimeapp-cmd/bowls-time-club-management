@@ -42,6 +42,31 @@ export default function BookingModal({
   const [rollupMembers, setRollupMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
 
+  const isRollup = competitionType === 'Roll-up';
+
+  const filteredMembers = members.filter(m => 
+    m.user_email !== currentUserEmail &&
+    !rollupMembers.find(r => r.email === m.user_email) &&
+    (memberSearch === '' || 
+      `${m.first_name || ''} ${m.surname || ''} ${m.user_name || ''} ${m.user_email}`.toLowerCase().includes(memberSearch.toLowerCase()))
+  );
+
+  const addRollupMember = (member) => {
+    if (rollupMembers.length >= 7) {
+      toast.error('Maximum 8 people per roll-up (including you)');
+      return;
+    }
+    const name = member.first_name && member.surname 
+      ? `${member.first_name} ${member.surname}` 
+      : (member.user_name || member.user_email);
+    setRollupMembers(prev => [...prev, { email: member.user_email, name }]);
+    setMemberSearch('');
+  };
+
+  const removeRollupMember = (email) => {
+    setRollupMembers(prev => prev.filter(m => m.email !== email));
+  };
+
   const handleConfirm = () => {
     // Validate booking is not in the past
     if (!selectedSlots || selectedSlots.length === 0) return;
@@ -60,16 +85,20 @@ export default function BookingModal({
       return;
     }
     
-    onConfirm(notes, competitionType, competitionOther);
+    onConfirm(notes, competitionType, competitionOther, rollupMembers);
     setNotes('');
     setCompetitionType('Club');
     setCompetitionOther('');
+    setRollupMembers([]);
+    setMemberSearch('');
   };
 
   const handleClose = () => {
     setNotes('');
     setCompetitionType('Club');
     setCompetitionOther('');
+    setRollupMembers([]);
+    setMemberSearch('');
     onClose();
   };
 

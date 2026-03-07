@@ -103,6 +103,7 @@ export default function ClubSettings() {
       setClosingTime(club.closing_time || '21:00');
       setSessionDuration(club.session_duration || 2);
       setAutoApprove(club.auto_approve_bookings || false);
+      setOpenRollups(club.open_rollups || false);
       setEmailMemberNotifications(club.email_member_notifications !== false);
       setSmsMemberNotifications(club.sms_member_notifications || false);
       setDefaultLandingPage(club.default_landing_page || 'rink_booking');
