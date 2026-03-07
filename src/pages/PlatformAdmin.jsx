@@ -253,7 +253,8 @@ export default function PlatformAdmin() {
       opening_time: '10:00', closing_time: '21:00', session_duration: 2,
       primary_admin_email: '', admin_first_name: '', admin_surname: '',
       is_active: true, module_rink_booking: true, module_selection: true,
-      module_competitions: true, module_leagues: true, module_sms_notifications: false
+      module_competitions: true, module_leagues: true, module_sms_notifications: false,
+      module_function_rooms: false
     });
     setDialogOpen(true);
   };

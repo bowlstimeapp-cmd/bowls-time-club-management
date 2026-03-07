@@ -697,6 +697,56 @@ export default function ClubSettings() {
               </CardContent>
             </Card>
 
+            {/* Function Room API Key */}
+            {club?.module_function_rooms && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DoorOpen className="w-5 h-5" />
+                    Function Room Bookings — API Key
+                  </CardTitle>
+                  <CardDescription>
+                    This key authenticates requests from your external website to the function room availability and booking API.
+                    Keep it secret — only share with your authorised external app.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={club?.function_room_api_key || '(no key generated yet)'}
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        const newKey = 'frk_' + crypto.randomUUID().replace(/-/g, '');
+                        await base44.entities.Club.update(clubId, { function_room_api_key: newKey });
+                        queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+                        toast.success('New API key generated');
+                      }}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      {club?.function_room_api_key ? 'Regenerate' : 'Generate'}
+                    </Button>
+                  </div>
+                  {club?.function_room_api_key && (
+                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-2">
+                      <p className="font-semibold text-gray-800">API Usage</p>
+                      <p>POST to your function endpoint with JSON body. Two routes:</p>
+                      <p className="font-mono bg-white rounded p-2 border">
+                        {'{'}"route": "check_availability", "club_id": "{clubId}", "api_key": "YOUR_KEY", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2{'}'}
+                      </p>
+                      <p className="font-mono bg-white rounded p-2 border">
+                        {'{'}"route": "submit_booking", "club_id": "{clubId}", "api_key": "YOUR_KEY", "room_id": "ROOM_ID", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2, "contact_name": "John Smith", "contact_email": "john@example.com"{'}'}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Button 
               type="submit" 
               className="w-full bg-emerald-600 hover:bg-emerald-700"

@@ -261,6 +261,14 @@ export default function Layout({ children, currentPageName }) {
                           Open Competitions
                         </Link>
                       </DropdownMenuItem>
+                      {club?.module_function_rooms && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Function Rooms
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
