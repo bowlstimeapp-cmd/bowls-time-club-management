@@ -243,6 +243,7 @@ export default function ClubSettings() {
       closing_time: closingTime,
       session_duration: parseInt(sessionDuration),
       auto_approve_bookings: autoApprove,
+      open_rollups: openRollups,
       email_member_notifications: emailMemberNotifications,
       sms_member_notifications: smsMemberNotifications,
       membership_types: membershipTypes,
