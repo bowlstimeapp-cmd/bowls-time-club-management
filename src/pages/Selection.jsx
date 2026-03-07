@@ -266,97 +266,114 @@ export default function Selection() {
 
             <TabsContent value="published">
               {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-32 w-full" />
-                  ))}
-                </div>
+                <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
               ) : publishedSelections.length > 0 ? (
-                <div className="space-y-4">
-                  {publishedSelections.map(selection => (
-                    <SelectionCard 
-                      key={selection.id} 
-                      selection={selection} 
-                      isSelector={isSelector}
-                      clubId={clubId}
-                      myAvailability={getMyAvailability(selection.id)}
-                      onSetAvailability={(isAvailable) => 
-                        setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
-                      }
-                      isSettingAvailability={setAvailabilityMutation.isPending}
-                      availabilities={getAvailabilityForSelection(selection.id)}
-                      members={members}
-                      onDelete={handleDeleteSelection}
-                    />
-                  ))}
-                </div>
+                club?.alt_view_selection ? (
+                  <SelectionTableView
+                    selections={publishedSelections}
+                    isSelector={isSelector}
+                    clubId={clubId}
+                    getMyAvailability={getMyAvailability}
+                    onSetAvailability={(selectionId, isAvailable) =>
+                      setAvailabilityMutation.mutate({ selectionId, isAvailable })
+                    }
+                    isSettingAvailability={setAvailabilityMutation.isPending}
+                    onDelete={handleDeleteSelection}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    {publishedSelections.map(selection => (
+                      <SelectionCard
+                        key={selection.id}
+                        selection={selection}
+                        isSelector={isSelector}
+                        clubId={clubId}
+                        myAvailability={getMyAvailability(selection.id)}
+                        onSetAvailability={(isAvailable) =>
+                          setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
+                        }
+                        isSettingAvailability={setAvailabilityMutation.isPending}
+                        availabilities={getAvailabilityForSelection(selection.id)}
+                        members={members}
+                        onDelete={handleDeleteSelection}
+                      />
+                    ))}
+                  </div>
+                )
               ) : (
-                <EmptyState 
-                  title="No published selections" 
-                  description="Team selections will appear here once published"
-                />
+                <EmptyState title="No published selections" description="Team selections will appear here once published" />
               )}
             </TabsContent>
 
             <TabsContent value="myselections">
               {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-32 w-full" />
-                  ))}
-                </div>
+                <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
               ) : mySelections.length > 0 ? (
-                <div className="space-y-4">
-                  {mySelections.map(selection => (
-                    <SelectionCard 
-                      key={selection.id} 
-                      selection={selection} 
-                      isSelector={isSelector}
-                      clubId={clubId}
-                      myAvailability={getMyAvailability(selection.id)}
-                      onSetAvailability={(isAvailable) => 
-                        setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
-                      }
-                      isSettingAvailability={setAvailabilityMutation.isPending}
-                      availabilities={getAvailabilityForSelection(selection.id)}
-                      members={members}
-                      onDelete={handleDeleteSelection}
-                    />
-                  ))}
-                </div>
+                club?.alt_view_selection ? (
+                  <SelectionTableView
+                    selections={mySelections}
+                    isSelector={isSelector}
+                    clubId={clubId}
+                    getMyAvailability={getMyAvailability}
+                    onSetAvailability={(selectionId, isAvailable) =>
+                      setAvailabilityMutation.mutate({ selectionId, isAvailable })
+                    }
+                    isSettingAvailability={setAvailabilityMutation.isPending}
+                    onDelete={handleDeleteSelection}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    {mySelections.map(selection => (
+                      <SelectionCard
+                        key={selection.id}
+                        selection={selection}
+                        isSelector={isSelector}
+                        clubId={clubId}
+                        myAvailability={getMyAvailability(selection.id)}
+                        onSetAvailability={(isAvailable) =>
+                          setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
+                        }
+                        isSettingAvailability={setAvailabilityMutation.isPending}
+                        availabilities={getAvailabilityForSelection(selection.id)}
+                        members={members}
+                        onDelete={handleDeleteSelection}
+                      />
+                    ))}
+                  </div>
+                )
               ) : (
-                <EmptyState 
-                  title="No matches found" 
-                  description="You haven't been selected for any matches yet"
-                />
+                <EmptyState title="No matches found" description="You haven't been selected for any matches yet" />
               )}
             </TabsContent>
 
             {isSelector && (
               <TabsContent value="drafts">
                 {isLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-32 w-full" />
-                    ))}
-                  </div>
+                  <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
                 ) : draftSelections.length > 0 ? (
-                  <div className="space-y-4">
-                    {draftSelections.map(selection => (
-                      <SelectionCard 
-                        key={selection.id} 
-                        selection={selection} 
-                        isSelector={isSelector}
-                        clubId={clubId}
-                        onDelete={handleDeleteSelection}
-                      />
-                    ))}
-                  </div>
+                  club?.alt_view_selection ? (
+                    <SelectionTableView
+                      selections={draftSelections}
+                      isSelector={isSelector}
+                      clubId={clubId}
+                      getMyAvailability={() => undefined}
+                      onDelete={handleDeleteSelection}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      {draftSelections.map(selection => (
+                        <SelectionCard
+                          key={selection.id}
+                          selection={selection}
+                          isSelector={isSelector}
+                          clubId={clubId}
+                          onDelete={handleDeleteSelection}
+                        />
+                      ))}
+                    </div>
+                  )
                 ) : (
-                  <EmptyState 
-                    title="No draft selections" 
-                    description="Create a new selection to get started"
-                  />
+                  <EmptyState title="No draft selections" description="Create a new selection to get started" />
                 )}
               </TabsContent>
             )}
