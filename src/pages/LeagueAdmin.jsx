@@ -97,7 +97,7 @@ export default function LeagueAdmin() {
   const [awayScore, setAwayScore] = useState('');
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
-  const tableRef = React.useRef();
+  const tableRef = useRef();
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [blacklistLeague, setBlacklistLeague] = useState(null);
 
