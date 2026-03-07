@@ -92,6 +92,12 @@ useEffect(() => {
     enabled: !!clubId,
   });
 
+  const { data: members = [] } = useQuery({
+    queryKey: ['members', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId, status: 'approved' }),
+    enabled: !!clubId && !!club?.open_rollups,
+  });
+
   const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   const { data: bookings = [], isLoading } = useQuery({
