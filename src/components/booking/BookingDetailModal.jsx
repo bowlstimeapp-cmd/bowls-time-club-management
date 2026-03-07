@@ -24,7 +24,7 @@ const statusColors = {
   cancelled: 'bg-gray-100 text-gray-500 border-gray-300',
 };
 
-export default function BookingDetailModal({ booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading }) {
+export default function BookingDetailModal({ booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club }) {
   if (!booking) return null;
 
   const StatusIcon = statusIcons[booking.status];
@@ -36,7 +36,7 @@ export default function BookingDetailModal({ booking, open, onClose, currentUser
     booking.booker_email === currentUserEmail ||
     rollupMembers.some(m => m.email === currentUserEmail)
   );
-  const canJoin = isRollup && !isFull && !alreadyJoined && currentUserEmail;
+  const canJoin = isRollup && club?.open_rollups && !isFull && !alreadyJoined && currentUserEmail;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
