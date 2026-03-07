@@ -28,6 +28,7 @@ import { format, parseISO } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import SelectionCard from '@/components/selection/SelectionCard';
+import SelectionTableView from '@/components/selection/SelectionTableView';
 
 export default function Selection() {
   const [searchParams] = useSearchParams();

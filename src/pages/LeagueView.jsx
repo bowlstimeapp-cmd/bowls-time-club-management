@@ -24,6 +24,7 @@ import {
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO } from 'date-fns';
+import LeagueTableView from '@/components/leagues/LeagueTableView';
 
 export default function LeagueView() {
   const [searchParams] = useSearchParams();
