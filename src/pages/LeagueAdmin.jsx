@@ -1064,6 +1064,33 @@ export default function LeagueAdmin() {
                   </Select>
                 </div>
               </div>
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="is-sets"
+                    checked={leagueIsSets}
+                    onCheckedChange={setLeagueIsSets}
+                  />
+                  <Label htmlFor="is-sets" className="cursor-pointer">Is Sets?</Label>
+                </div>
+                {leagueIsSets && (
+                  <div>
+                    <Label>Number of Ends per Set</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="21"
+                      value={leagueSetsEnds}
+                      onChange={(e) => setLeagueSetsEnds(e.target.value)}
+                      placeholder="e.g. 8"
+                      className="w-32"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      The scorecard will split into sets of this many ends, with a TOTAL row between each set.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={resetLeagueForm}>Cancel</Button>
