@@ -50,7 +50,9 @@ export default function TimeSlotGrid({
   club,
   selectedSlots = [],
   onMultiSlotSelect,
-  onBookingClick
+  onBookingClick,
+  onJoinRollup,
+  joinLoading
 }) {
   const TIME_SLOTS = generateTimeSlots(
     club?.opening_time,
