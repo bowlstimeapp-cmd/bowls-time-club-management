@@ -115,6 +115,7 @@ export default function ClubSettings() {
       setMembershipFeeDescription(club.membership_fee_description || '');
       setStripePublishableKey(club.stripe_publishable_key || '');
       setStripeSecretKey(club.stripe_secret_key || '');
+      setTvCycleSeconds(club.tv_display_cycle_seconds || 30);
     }
   }, [club]);
 
@@ -255,6 +256,7 @@ export default function ClubSettings() {
       membership_fee_description: membershipFeeDescription,
       stripe_publishable_key: stripePublishableKey || null,
       stripe_secret_key: stripeSecretKey || null,
+      tv_display_cycle_seconds: parseInt(tvCycleSeconds) || 30,
     });
   };
 
