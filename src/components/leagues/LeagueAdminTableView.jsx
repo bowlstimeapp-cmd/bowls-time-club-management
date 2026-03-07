@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Trophy, Users, Pencil, Trash2, Plus, Zap, CalendarCheck, List,
-  BarChart3, Printer, CalendarX, ChevronDown, ChevronRight, UserCircle, Loader2
+  BarChart3, Printer, CalendarX, ChevronDown, ChevronRight, Loader2
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
