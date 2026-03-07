@@ -79,6 +79,7 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
+import FunctionRoomAdmin from './pages/FunctionRoomAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -115,6 +116,7 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
+    "FunctionRoomAdmin": FunctionRoomAdmin,
 }
 
 export const pagesConfig = {
