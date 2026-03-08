@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -36,7 +36,7 @@ export default function FunctionRoomAdmin() {
   const [roomForm, setRoomForm] = useState(EMPTY_ROOM);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
 
-  React.useEffect(() => { base44.auth.me().then(setUser); }, []);
+  useEffect(() => { base44.auth.me().then(setUser); }, []);
 
   const { data: membership } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
