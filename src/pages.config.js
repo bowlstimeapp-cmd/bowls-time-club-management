@@ -56,6 +56,7 @@ import ClubSelector from './pages/ClubSelector';
 import ClubSettings from './pages/ClubSettings';
 import ClubTournaments from './pages/ClubTournaments';
 import Feedback from './pages/Feedback';
+import FunctionRoomAdmin from './pages/FunctionRoomAdmin';
 import LeagueAdmin from './pages/LeagueAdmin';
 import LeagueView from './pages/LeagueView';
 import LiveScoring from './pages/LiveScoring';
@@ -79,7 +80,6 @@ import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
-import FunctionRoomAdmin from './pages/FunctionRoomAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -93,6 +93,7 @@ export const PAGES = {
     "ClubSettings": ClubSettings,
     "ClubTournaments": ClubTournaments,
     "Feedback": Feedback,
+    "FunctionRoomAdmin": FunctionRoomAdmin,
     "LeagueAdmin": LeagueAdmin,
     "LeagueView": LeagueView,
     "LiveScoring": LiveScoring,
@@ -116,7 +117,6 @@ export const PAGES = {
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
-    "FunctionRoomAdmin": FunctionRoomAdmin,
 }
 
 export const pagesConfig = {

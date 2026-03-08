@@ -148,7 +148,7 @@ useEffect(() => {
     setJoiningRollup(false);
   };
 
-  const handleConfirmBooking = async (notes, competitionType, competitionOther, rollupMembers = []) => {
+  const handleConfirmBooking = async (notes, competitionType, competitionOther, rollupMembers = [], bookingFormat = '') => {
     if (!user || selectedSlots.length === 0 || !clubId) return;
 
     const status = club?.auto_approve_bookings ? 'approved' : 'pending';
@@ -170,6 +170,7 @@ useEffect(() => {
         status,
         competition_type: competitionType,
         competition_other: competitionType === 'Other' ? competitionOther : '',
+        booking_format: bookingFormat || null,
         booker_name: bookerName,
         booker_email: user.email,
         notes: notes || '',
