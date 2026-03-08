@@ -1,35 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle, SkipForward, ArrowRight, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function RinkClashModal({
-  open,
-  clashes = [],
-  nonClashingBookings = [],
-  allBookings = [],
-  club,
-  onProceed,
-  onClose,
-  isLoading,
+  open, clashes = [], nonClashingBookings = [], allBookings = [],
+  club, onProceed, onClose, isLoading,
 }) {
   const [resolutions, setResolutions] = useState({});
   const [expandedMove, setExpandedMove] = useState(null);
@@ -48,7 +34,7 @@ export default function RinkClashModal({
 
   const rinks = Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1);
 
-  const generateTimeSlots = () => {
+  const allTimeSlots = useMemo(() => {
     const slots = [];
     const [openHour] = (club?.opening_time || '10:00').split(':').map(Number);
     const [closeHour] = (club?.closing_time || '21:00').split(':').map(Number);
@@ -57,7 +43,7 @@ export default function RinkClashModal({
       slots.push(`${String(hour).padStart(2, '0')}:00`);
     }
     return slots;
-  };
+  }, [club]);
 
   const formatTimeRange = (startTime) => {
     const [hours] = startTime.split(':');
@@ -68,11 +54,64 @@ export default function RinkClashModal({
     return `${fmt(hour)} – ${fmt(endHour)}`;
   };
 
+  /**
+   * Compute which rink:date:time slots are effectively occupied,
+   * accounting for resolutions already made (use_suggestion or moved).
+   * This ensures that accepting a suggestion for clash A removes that
+   * rink from clash B's options.
+   */
+  const effectiveOccupied = useMemo(() => {
+    const occupied = new Set();
+
+    // All existing bookings
+    allBookings.forEach(b => {
+      if (b.status !== 'cancelled' && b.status !== 'rejected') {
+        occupied.add(`${b.date}:${b.rink_number}:${b.start_time}`);
+      }
+    });
+
+    // Non-clashing proposed bookings (will be created)
+    nonClashingBookings.forEach(b => {
+      occupied.add(`${b.date}:${b.rink_number}:${b.start_time}`);
+    });
+
+    // Resolution effects
+    Object.entries(resolutions).forEach(([idxStr, res]) => {
+      const clash = clashes[parseInt(idxStr)];
+      if (!clash) return;
+      if (res.type === 'use_suggestion' && res.rink) {
+        // Proposed booking uses the suggested rink — that slot is now taken
+        occupied.add(`${clash.proposedBooking.date}:${res.rink}:${clash.proposedBooking.start_time}`);
+      }
+      if (res.type === 'moved' && res.newRink && res.newTime) {
+        // Existing booking was physically moved to a new slot — that slot is now taken
+        occupied.add(`${clash.existingBooking.date}:${res.newRink}:${res.newTime}`);
+        // Original clash slot stays occupied (proposed booking will fill it)
+      }
+    });
+
+    return occupied;
+  }, [allBookings, nonClashingBookings, clashes, resolutions]);
+
+  /** Dynamically compute the best free rink for a clash given current resolutions */
+  const getDynamicSuggestedRink = (clash) => {
+    const { date, start_time } = clash.proposedBooking;
+    return rinks.find(r => !effectiveOccupied.has(`${date}:${r}:${start_time}`)) || null;
+  };
+
+  /** Available times on a specific rink+date, excluding occupied slots */
+  const getAvailableTimesForRink = (date, rink) =>
+    allTimeSlots.filter(t => !effectiveOccupied.has(`${date}:${rink}:${t}`));
+
+  /** Available rinks at a specific time+date */
+  const getAvailableRinksForTime = (date, time) =>
+    rinks.filter(r => !effectiveOccupied.has(`${date}:${r}:${time}`));
+
   const resolvedCount = clashes.filter((_, i) => resolutions[i]?.type).length;
   const allResolved = clashes.length > 0 && resolvedCount === clashes.length;
 
-  const handleResolve = (index, type) => {
-    setResolutions(prev => ({ ...prev, [index]: { type } }));
+  const handleResolve = (index, type, extraData = {}) => {
+    setResolutions(prev => ({ ...prev, [index]: { type, ...extraData } }));
     if (expandedMove === index) setExpandedMove(null);
   };
 
@@ -85,10 +124,13 @@ export default function RinkClashModal({
   };
 
   const openMoveForm = (index) => {
-    const clash = clashes[index];
-    setExpandedMove(expandedMove === index ? null : index);
-    setMoveRink(String(clash.proposedBooking.rink_number));
-    setMoveTime(clash.existingBooking.start_time);
+    if (expandedMove === index) {
+      setExpandedMove(null);
+    } else {
+      setExpandedMove(index);
+      setMoveRink('');
+      setMoveTime('');
+    }
   };
 
   const handleMoveBooking = async (index) => {
@@ -98,18 +140,9 @@ export default function RinkClashModal({
       return;
     }
 
-    // Check if target slot is already taken
-    const conflict = allBookings.find(b =>
-      b.id !== clash.existingBooking.id &&
-      b.rink_number === parseInt(moveRink) &&
-      b.date === clash.existingBooking.date &&
-      b.start_time === moveTime &&
-      b.status !== 'cancelled' &&
-      b.status !== 'rejected'
-    );
-
-    if (conflict) {
-      toast.error(`Rink ${moveRink} at ${moveTime} is already booked by ${conflict.booker_name}`);
+    const date = clash.existingBooking.date;
+    if (effectiveOccupied.has(`${date}:${parseInt(moveRink)}:${moveTime}`)) {
+      toast.error(`Rink ${moveRink} at ${formatTimeRange(moveTime)} is not available`);
       return;
     }
 
@@ -125,7 +158,7 @@ export default function RinkClashModal({
         end_time: endTime,
       });
 
-      handleResolve(index, 'moved');
+      handleResolve(index, 'moved', { newRink: parseInt(moveRink), newTime: moveTime });
       toast.success('Existing booking moved successfully');
     } finally {
       setMovingIndex(null);
@@ -134,24 +167,20 @@ export default function RinkClashModal({
 
   const handleProceed = () => {
     const bookingsToCreate = [...nonClashingBookings];
-
     clashes.forEach((clash, index) => {
       const resolution = resolutions[index];
       if (!resolution) return;
-
       if (resolution.type === 'use_suggestion') {
-        bookingsToCreate.push({ ...clash.proposedBooking, rink_number: clash.suggestedRink });
+        bookingsToCreate.push({ ...clash.proposedBooking, rink_number: resolution.rink });
       } else if (resolution.type === 'moved') {
-        // Existing booking was moved out of the way — use original proposed slot
         bookingsToCreate.push(clash.proposedBooking);
       }
-      // 'skip' → don't add
+      // 'skip' → omit
     });
-
     onProceed(bookingsToCreate);
   };
 
-  const proceeedCount = nonClashingBookings.length +
+  const proceedCount = nonClashingBookings.length +
     clashes.filter((_, i) => resolutions[i]?.type === 'use_suggestion' || resolutions[i]?.type === 'moved').length;
 
   return (
@@ -173,13 +202,17 @@ export default function RinkClashModal({
             const resolution = resolutions[index];
             const isResolved = !!resolution?.type;
             const isExpanded = expandedMove === index;
+            const dynamicSuggestedRink = getDynamicSuggestedRink(clash);
+
+            const date = clash.existingBooking.date;
+            const availTimesForRink = moveRink ? getAvailableTimesForRink(date, parseInt(moveRink)) : allTimeSlots;
+            const availRinksForTime = moveTime ? getAvailableRinksForTime(date, moveTime) : rinks;
 
             return (
               <div
                 key={index}
                 className={`border rounded-lg p-4 transition-colors ${isResolved ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}
               >
-                {/* Clash header */}
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <div className="flex items-center gap-2">
@@ -197,28 +230,27 @@ export default function RinkClashModal({
                   </div>
                   {isResolved && (
                     <Badge className="bg-emerald-100 text-emerald-700 text-xs shrink-0 ml-2">
-                      {resolution.type === 'use_suggestion' && `→ Rink ${clash.suggestedRink}`}
-                      {resolution.type === 'moved' && 'Existing moved'}
+                      {resolution.type === 'use_suggestion' && `→ Rink ${resolution.rink}`}
+                      {resolution.type === 'moved' && `Existing → Rink ${resolution.newRink}`}
                       {resolution.type === 'skip' && 'Skipped'}
                     </Badge>
                   )}
                 </div>
 
-                {/* Unresolved actions */}
                 {!isResolved && (
                   <div className="ml-6 space-y-2">
-                    {clash.suggestedRink ? (
+                    {dynamicSuggestedRink ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-gray-600">
-                          Suggested: Rink {clash.suggestedRink} is free at this time
+                          Suggested: Rink {dynamicSuggestedRink} is free at this time
                         </span>
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                          onClick={() => handleResolve(index, 'use_suggestion')}
+                          onClick={() => handleResolve(index, 'use_suggestion', { rink: dynamicSuggestedRink })}
                         >
-                          Use Rink {clash.suggestedRink}
+                          Use Rink {dynamicSuggestedRink}
                         </Button>
                       </div>
                     ) : (
@@ -226,17 +258,11 @@ export default function RinkClashModal({
                     )}
 
                     <div className="flex gap-2 flex-wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => openMoveForm(index)}
-                      >
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openMoveForm(index)}>
                         {isExpanded ? 'Hide' : 'Move Existing Booking'}
                       </Button>
                       <Button
-                        size="sm"
-                        variant="ghost"
+                        size="sm" variant="ghost"
                         className="h-7 text-xs text-gray-500 hover:text-gray-700"
                         onClick={() => handleResolve(index, 'skip')}
                       >
@@ -245,23 +271,34 @@ export default function RinkClashModal({
                       </Button>
                     </div>
 
-                    {/* Inline move form */}
                     {isExpanded && (
                       <div className="mt-2 p-3 bg-white rounded-lg border space-y-3">
                         <p className="text-xs font-medium text-gray-700">
-                          Move the existing booking ({clash.existingBooking.booker_name}) to:
+                          Move <span className="font-semibold">{clash.existingBooking.booker_name}</span>'s booking to an available slot:
                         </p>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label className="text-xs">New Rink</Label>
-                            <Select value={moveRink} onValueChange={setMoveRink}>
+                            <Select
+                              value={moveRink}
+                              onValueChange={(v) => {
+                                setMoveRink(v);
+                                // Auto-clear time if it's no longer available on the new rink
+                                if (moveTime && effectiveOccupied.has(`${date}:${parseInt(v)}:${moveTime}`)) {
+                                  setMoveTime('');
+                                }
+                              }}
+                            >
                               <SelectTrigger className="h-8 text-xs mt-1">
-                                <SelectValue />
+                                <SelectValue placeholder="Select rink…" />
                               </SelectTrigger>
                               <SelectContent>
-                                {rinks.map(r => (
+                                {(moveTime ? availRinksForTime : rinks).map(r => (
                                   <SelectItem key={r} value={String(r)}>Rink {r}</SelectItem>
                                 ))}
+                                {moveTime && availRinksForTime.length === 0 && (
+                                  <div className="px-2 py-2 text-xs text-red-500 text-center">No rinks free at this time</div>
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -269,27 +306,31 @@ export default function RinkClashModal({
                             <Label className="text-xs">New Time</Label>
                             <Select value={moveTime} onValueChange={setMoveTime}>
                               <SelectTrigger className="h-8 text-xs mt-1">
-                                <SelectValue />
+                                <SelectValue placeholder="Select time…" />
                               </SelectTrigger>
                               <SelectContent>
-                                {generateTimeSlots().map(t => (
-                                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                                {availTimesForRink.map(t => (
+                                  <SelectItem key={t} value={t}>{formatTimeRange(t)}</SelectItem>
                                 ))}
+                                {availTimesForRink.length === 0 && (
+                                  <div className="px-2 py-2 text-xs text-red-500 text-center">No times free on this rink</div>
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
+                        {!moveRink && !moveTime && (
+                          <p className="text-xs text-gray-500">Select a rink to see available times, or select a time to see available rinks.</p>
+                        )}
                         <Button
                           size="sm"
                           className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
                           onClick={() => handleMoveBooking(index)}
-                          disabled={movingIndex === index}
+                          disabled={movingIndex === index || !moveRink || !moveTime}
                         >
-                          {movingIndex === index ? (
-                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          ) : (
-                            <ArrowRight className="w-3 h-3 mr-1" />
-                          )}
+                          {movingIndex === index
+                            ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            : <ArrowRight className="w-3 h-3 mr-1" />}
                           Confirm Move
                         </Button>
                       </div>
@@ -297,7 +338,6 @@ export default function RinkClashModal({
                   </div>
                 )}
 
-                {/* Resolved — undo */}
                 {isResolved && (
                   <button
                     className="ml-6 text-xs text-gray-400 hover:text-gray-600 underline"
@@ -321,7 +361,7 @@ export default function RinkClashModal({
             className="bg-emerald-600 hover:bg-emerald-700"
           >
             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Proceed ({proceeedCount} booking{proceeedCount !== 1 ? 's' : ''})
+            Proceed ({proceedCount} booking{proceedCount !== 1 ? 's' : ''})
           </Button>
         </DialogFooter>
       </DialogContent>
