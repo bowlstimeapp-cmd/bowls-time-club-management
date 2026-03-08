@@ -116,6 +116,7 @@ export default function BookingCard({
                       <span className="flex items-center gap-1.5">
                         <Trophy className="w-4 h-4 text-emerald-600" />
                         {booking.competition_type === 'Other' ? booking.competition_other : booking.competition_type}
+                        {booking.booking_format && ` – ${booking.booking_format}`}
                       </span>
                     )}
                   </div>
