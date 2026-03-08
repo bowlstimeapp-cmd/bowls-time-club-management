@@ -52,6 +52,7 @@ import {
   CalendarX
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
+import RinkClashModal from '@/components/booking/RinkClashModal';
 import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -100,6 +101,8 @@ export default function LeagueAdmin() {
   const tableRef = useRef();
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [blacklistLeague, setBlacklistLeague] = useState(null);
+  const [clashModalOpen, setClashModalOpen] = useState(false);
+  const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [], league: null, leagueFixturesForBooking: [] });
 
   useEffect(() => {
     const loadUser = async () => {
