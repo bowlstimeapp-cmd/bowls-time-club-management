@@ -38,6 +38,7 @@ export default function BookRink() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [user, setUser] = useState(null);
   const [joiningRollup, setJoiningRollup] = useState(false);
+  const [deletingBooking, setDeletingBooking] = useState(false);
 
   const queryClient = useQueryClient();
 
