@@ -53,6 +53,7 @@ export default function TimeSlotGrid({
 }) {
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
+  const justDropped = useRef(false);
 
   const TIME_SLOTS = generateTimeSlots(club?.opening_time, club?.closing_time, club?.session_duration);
   const RINKS = Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1);
