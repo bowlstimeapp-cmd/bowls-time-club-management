@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
   try {
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     const getMemberName = (email) => {
       const member = memberships.find(m => m.user_email === email);
-      if (!member) return email;
+      if (!member) return email || '';
       return member.first_name && member.surname
         ? `${member.first_name} ${member.surname}`
         : member.user_name || email;
@@ -43,11 +43,9 @@ Deno.serve(async (req) => {
     const year = matchDate.getFullYear();
     const dateStr = `${day} ${monthName} ${year}`;
 
-    // Defined at top level so accessible everywhere
     const posOrder = ['Lead', '2', '3', 'Skip', '4', '5', '6'];
     const posToNumber = { 'Lead': '1', '2': '2', '3': '3', 'Skip': 'Skip', '4': '4', '5': '5', '6': '6' };
 
-    // Determine rinks from selection keys e.g. rink1_Lead, rink2_Skip
     const rinkNumbers = [...new Set(
       Object.keys(selection.selections || {})
         .map(key => key.match(/^rink(\d+)_/)?.[1])
@@ -62,7 +60,9 @@ Deno.serve(async (req) => {
       return posOrder.filter(pos => allPositionKeys.includes(prefix + pos));
     };
 
-    // Build one scorecard per rink
+    const homeRinks = selection.home_rinks || 2;
+    const selectedRinks = selection.selected_rinks || [];
+
     const scorecards = rinkNumbers.map(rinkNum => {
       const positions = positionsForRink(rinkNum);
       const players = positions.map(pos => {
@@ -73,9 +73,7 @@ Deno.serve(async (req) => {
         };
       });
 
-      const homeRinks = selection.home_rinks || 2;
       const tag = rinkNum <= homeRinks ? 'Home' : 'Away';
-      const selectedRinks = selection.selected_rinks || [];
       const rinkLabel = selectedRinks[rinkNum - 1] || rinkNum;
 
       return {
@@ -92,46 +90,31 @@ Deno.serve(async (req) => {
       };
     });
 
-  const html = `
-<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    @page {
-      size: A4 landscape;
-      margin: 8mm;
-    }
+    @page { size: A4 landscape; margin: 10mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 297mm;
-      font-family: Arial, sans-serif;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+    body { font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page {
-      width: 281mm;
-      height: 194mm;
+      width: 277mm;
       display: flex;
       flex-direction: row;
-      flex-wrap: nowrap;
-      align-items: flex-start;
-      gap: 1mm;
+      gap: 2mm;
       page-break-after: always;
       page-break-inside: avoid;
-      overflow: hidden;
     }
     .page:last-child { page-break-after: auto; }
     .scorecard {
-      width: 69mm;
-      min-width: 69mm;
-      max-width: 69mm;
-      height: 194mm;
+      width: 67mm;
+      height: 190mm;
       border: 1px solid #000;
       page-break-inside: avoid;
       display: flex;
       flex-direction: column;
-      flex: 0 0 69mm;
+      flex: 0 0 67mm;
       overflow: hidden;
     }
     .header {
@@ -169,6 +152,7 @@ Deno.serve(async (req) => {
       font-size: 7pt;
       font-weight: bold;
       line-height: 1.3;
+      border-bottom: 1px solid #000;
     }
     .teams-row {
       background: #e6e6e6;
@@ -178,22 +162,19 @@ Deno.serve(async (req) => {
       align-items: center;
       font-size: 8pt;
       font-weight: bold;
-      border-top: 1px solid #000;
       border-bottom: 1px solid #000;
     }
     .vs { font-size: 7pt; text-align: center; padding: 0 2mm; }
-    .players-section {
-      font-size: 8pt;
-      font-weight: bold;
-      border-bottom: 1px solid #000;
-    }
-.players-section div {
+    .players-section { border-bottom: 1px solid #000; }
+    .players-section div {
       border-bottom: 1px solid #b4b4b4;
-      padding: 0.5mm 2mm;
-      height: 4.5mm;
+      padding: 1mm 2mm;
+      height: 6mm;
       display: grid;
       grid-template-columns: 1fr 6mm 1fr;
       align-items: center;
+      font-size: 8pt;
+      font-weight: bold;
     }
     .players-section div:last-child { border-bottom: none; }
     .score-table { width: 100%; border-collapse: collapse; font-size: 6pt; }
@@ -211,11 +192,7 @@ Deno.serve(async (req) => {
       padding: 0;
     }
     .score-table .end-num { font-size: 6pt; }
-    .score-table .total-row {
-      background: #dcdcdc;
-      font-weight: bold;
-      font-size: 7pt;
-    }
+    .score-table .total-row { background: #dcdcdc; font-weight: bold; font-size: 7pt; }
     .signatures {
       text-align: center;
       padding: 0.5mm 0;
@@ -225,6 +202,7 @@ Deno.serve(async (req) => {
       align-items: center;
       justify-content: center;
       gap: 2mm;
+      margin-top: auto;
     }
     @media print {
       .page { page-break-after: always; }
@@ -243,14 +221,16 @@ ${scorecards.map((card, idx) => {
         ${card.logoUrl ? `<img src="${card.logoUrl}" alt="Club Logo">` : ''}
       </div>
       <div class="info-box">
+        <div class="league-name">${card.competition}</div>
         <div class="season-info">
-          <div class="league-name">${card.competition}</div>
-          <div>${card.dateStr} - ${card.time}</div>
+          <div>${card.clubName} vs ${card.matchName || 'Opponents'}</div>
+          <div>${card.dateStr} · ${card.time}</div>
         </div>
       </div>
     </div>
     <div class="match-details">
-      <div class="league-name">${card.competition}</div>
+      <div>${card.dayName} - ${card.dateStr}</div>
+      <div>${card.competition} · Rink ${card.rink} (${card.tag})</div>
     </div>
     <div class="teams-row">
       <span style="text-align:left;">${card.clubName}</span>
@@ -258,7 +238,9 @@ ${scorecards.map((card, idx) => {
       <span style="text-align:right;">${card.matchName || 'Opponents'}</span>
     </div>
     <div class="players-section">
-${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:center;">${p.position}</span><span></span></div>`).join('')}    <table class="score-table">
+${card.players.map(p => `      <div><span>${p.name}</span><span style="text-align:center;">${p.position}</span><span></span></div>`).join('\n')}
+    </div>
+    <table class="score-table">
       <thead>
         <tr>
           <th style="width:13mm;">Score</th>
@@ -269,7 +251,7 @@ ${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:cent
         </tr>
       </thead>
       <tbody>
-        ${Array.from({ length: 24 }, (_, i) => `
+        ${Array.from({ length: 21 }, (_, i) => `
         <tr>
           <td></td>
           <td></td>
@@ -278,10 +260,10 @@ ${card.players.map(p => `<div><span>${p.name}</span><span style="text-align:cent
           <td></td>
         </tr>`).join('')}
         <tr class="total-row">
-          <td style="text-align:left; padding-left:1mm;">Total</td>
+          <td style="text-align:left;padding-left:1mm;">Total</td>
           <td></td>
           <td></td>
-          <td style="text-align:left; padding-left:1mm;">Total</td>
+          <td style="text-align:left;padding-left:1mm;">Total</td>
           <td></td>
         </tr>
       </tbody>
