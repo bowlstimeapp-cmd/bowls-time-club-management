@@ -495,6 +495,8 @@ useEffect(() => {
           onJoinRollup={handleJoinRollup}
           joinLoading={joiningRollup}
           club={club}
+          onDelete={handleDeleteBooking}
+          deleteLoading={deletingBooking}
         />
       </div>
     </div>
