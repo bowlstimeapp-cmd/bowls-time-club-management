@@ -35,6 +35,7 @@ export default function ClubSettings() {
   const [sessionDuration, setSessionDuration] = useState(2);
   const [autoApprove, setAutoApprove] = useState(false);
   const [openRollups, setOpenRollups] = useState(false);
+  const [privateRollups, setPrivateRollups] = useState(false);
   const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
   const [smsMemberNotifications, setSmsMemberNotifications] = useState(false);
   const [defaultLandingPage, setDefaultLandingPage] = useState('rink_booking');
@@ -107,6 +108,7 @@ export default function ClubSettings() {
       setSessionDuration(club.session_duration || 2);
       setAutoApprove(club.auto_approve_bookings || false);
       setOpenRollups(club.open_rollups || false);
+      setPrivateRollups(club.private_rollups || false);
       setEmailMemberNotifications(club.email_member_notifications !== false);
       setSmsMemberNotifications(club.sms_member_notifications || false);
       setDefaultLandingPage(club.default_landing_page || 'rink_booking');
@@ -250,6 +252,7 @@ export default function ClubSettings() {
       session_duration: parseInt(sessionDuration),
       auto_approve_bookings: autoApprove,
       open_rollups: openRollups,
+      private_rollups: privateRollups,
       email_member_notifications: emailMemberNotifications,
       sms_member_notifications: smsMemberNotifications,
       membership_types: membershipTypes,
@@ -430,9 +433,26 @@ export default function ClubSettings() {
                   </div>
                   <Switch
                     checked={openRollups}
-                    onCheckedChange={setOpenRollups}
+                    onCheckedChange={(v) => {
+                      setOpenRollups(v);
+                      if (!v) setPrivateRollups(false);
+                    }}
                   />
                 </div>
+                {openRollups && (
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div>
+                      <Label className="text-base">Private Roll-ups</Label>
+                      <p className="text-sm text-gray-500">
+                        Add a "Private Roll-up" competition type (treated the same as Club/County etc, not joinable)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={privateRollups}
+                      onCheckedChange={setPrivateRollups}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
