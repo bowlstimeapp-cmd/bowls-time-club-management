@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
       name: r.name,
       description: r.description || null,
       capacity: r.capacity || null,
+      price_per_hour: r.price_per_hour || null,
       available_from: r.available_from || null,
       available_to: r.available_to || null,
     }));
