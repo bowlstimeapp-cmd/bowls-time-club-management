@@ -412,6 +412,8 @@ useEffect(() => {
                   }}
                   onJoinRollup={handleJoinRollup}
                   joinLoading={joiningRollup}
+                  isAdmin={isAdmin}
+                  onMoveBooking={handleMoveBooking}
                 />
               )}
             </CardContent>
