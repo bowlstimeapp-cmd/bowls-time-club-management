@@ -117,6 +117,48 @@ useEffect(() => {
     },
   });
 
+  const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+
+  const handleDeleteBooking = async (booking) => {
+    setDeletingBooking(true);
+    await base44.entities.Booking.update(booking.id, { status: 'cancelled' });
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    toast.success('Booking cancelled');
+    setBookingDetailOpen(false);
+    setSelectedBooking(null);
+    setDeletingBooking(false);
+  };
+
+  const handleMoveBooking = async (booking, newRink, newStartTime) => {
+    const duration = club?.session_duration || 2;
+    const [startHour] = newStartTime.split(':').map(Number);
+    const newEndTime = `${String(startHour + duration).padStart(2, '0')}:00`;
+    const oldRink = booking.rink_number;
+    const oldTime = booking.start_time;
+
+    await base44.entities.Booking.update(booking.id, {
+      rink_number: newRink,
+      start_time: newStartTime,
+      end_time: newEndTime,
+    });
+
+    // Notify the booker if admin moved someone else's booking
+    if (isAdmin && booking.booker_email !== user?.email) {
+      await base44.entities.Notification.create({
+        user_email: booking.booker_email,
+        type: 'booking_moved',
+        title: 'Your booking has been moved',
+        message: `Your booking on Rink ${oldRink} at ${oldTime} on ${booking.date} has been moved to Rink ${newRink} at ${newStartTime}.`,
+        related_id: booking.id,
+        link_page: 'BookRink',
+        link_params: `clubId=${clubId}`,
+      });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    toast.success(`Booking moved to Rink ${newRink} at ${newStartTime}`);
+  };
+
   const handleJoinRollup = async (booking) => {
     if (!user || joiningRollup) return;
     setJoiningRollup(true);
