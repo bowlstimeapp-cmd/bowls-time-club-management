@@ -121,6 +121,9 @@ export default function TimeSlotGrid({
     if (!booking) return;
     if (!isSlotAvailable(rink, slot.start)) return;
     if (isSlotInPast(slot.start)) return;
+    // Prevent the click that fires after drop from selecting the slot
+    justDropped.current = true;
+    setTimeout(() => { justDropped.current = false; }, 300);
     onMoveBooking && onMoveBooking(booking, rink, slot.start);
     setDraggingBooking(null);
     setDropTarget(null);
