@@ -31,6 +31,7 @@ import { format } from 'date-fns';
 import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
 import InfoTooltip from '@/components/InfoTooltip';
+import RinkClashModal from '@/components/booking/RinkClashModal';
 
 const APP_BASE_URL = window.location.origin;
 
@@ -51,6 +52,8 @@ export default function SelectionEditor() {
   const [selectedRinks, setSelectedRinks] = useState([1, 2]);
   const [matchStartTime, setMatchStartTime] = useState('10:00');
   const [matchEndTime, setMatchEndTime] = useState('14:00');
+  const [clashModalOpen, setClashModalOpen] = useState(false);
+  const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -472,45 +475,82 @@ ${club?.name || 'Your Bowls Club'}
     const [endHour] = matchEndTime.split(':').map(Number);
     
     const bookerName = club?.name || `${competition}${matchName ? ` - ${matchName}` : ''}`;
-    const bookingsToCreate = [];
+    const rinkCount = club?.rink_count || 6;
+    const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
+    const clashes = [];
+    const nonClashingBookings = [];
+
+    // Build proposed slots, accounting for other proposed slots in same batch
+    const proposedSlots = [];
     for (const rinkNum of selectedRinks) {
       for (let hour = startHour; hour < endHour; hour += duration) {
-        const slotStart = `${String(hour).padStart(2, '0')}:00`;
-        const slotEnd = `${String(hour + duration).padStart(2, '0')}:00`;
-        
-        // Check if slot is already booked
-        const existingBooking = existingBookings.find(
-          b => b.rink_number === rinkNum && 
-               b.start_time === slotStart && 
-               b.status !== 'cancelled' && 
-               b.status !== 'rejected'
-        );
-        
-        if (!existingBooking) {
-          bookingsToCreate.push({
-            club_id: clubId,
-            rink_number: rinkNum,
-            date: matchDate,
-            start_time: slotStart,
-            end_time: slotEnd,
-            status: 'approved',
-            competition_type: 'Club',
-            booker_name: bookerName,
-            booker_email: user.email,
-            notes: `${competition}${matchName ? ` - ${matchName}` : ''}`,
-          });
-        }
+        proposedSlots.push({ rink: rinkNum, startTime: `${String(hour).padStart(2, '0')}:00` });
       }
     }
 
-    if (bookingsToCreate.length === 0) {
-      toast.error('All selected slots are already booked');
-      return;
+    for (const { rink: rinkNum, startTime: slotStart } of proposedSlots) {
+      const slotEnd = `${String(parseInt(slotStart) + duration).padStart(2, '0')}:00`;
+      const [startH] = slotStart.split(':').map(Number);
+      const slotEndStr = `${String(startH + duration).padStart(2, '0')}:00`;
+
+      const existingBooking = existingBookings.find(
+        b => b.rink_number === rinkNum &&
+             b.start_time === slotStart &&
+             b.status !== 'cancelled' &&
+             b.status !== 'rejected'
+      );
+
+      const proposed = {
+        club_id: clubId,
+        rink_number: rinkNum,
+        date: matchDate,
+        start_time: slotStart,
+        end_time: slotEndStr,
+        status: 'approved',
+        competition_type: 'Club',
+        booker_name: bookerName,
+        booker_email: user.email,
+        notes: `${competition}${matchName ? ` - ${matchName}` : ''}`,
+      };
+
+      if (existingBooking) {
+        // Find a suggested free rink at the same time
+        const usedRinksAtTime = new Set([
+          ...existingBookings
+            .filter(b => b.start_time === slotStart && b.status !== 'cancelled' && b.status !== 'rejected')
+            .map(b => b.rink_number),
+          ...proposedSlots
+            .filter(s => s.startTime === slotStart && s.rink !== rinkNum)
+            .map(s => s.rink)
+        ]);
+        const suggestedRink = allRinks.find(r => !usedRinksAtTime.has(r)) || null;
+
+        clashes.push({ proposedBooking: proposed, existingBooking, suggestedRink });
+      } else {
+        nonClashingBookings.push(proposed);
+      }
     }
 
+    if (clashes.length === 0) {
+      await Promise.all(nonClashingBookings.map(b => createBookingMutation.mutateAsync(b)));
+      toast.success(`${nonClashingBookings.length} booking(s) created for the match`);
+    } else {
+      setClashData({ clashes, nonClashingBookings });
+      setClashModalOpen(true);
+    }
+  };
+
+  const handleClashProceed = async (bookingsToCreate) => {
+    if (bookingsToCreate.length === 0) {
+      toast.info('No bookings to create');
+      setClashModalOpen(false);
+      return;
+    }
     await Promise.all(bookingsToCreate.map(b => createBookingMutation.mutateAsync(b)));
-    toast.success(`${bookingsToCreate.length} booking(s) created for the match`);
+    queryClient.invalidateQueries({ queryKey: ['bookings', clubId, matchDate] });
+    toast.success(`${bookingsToCreate.length} booking(s) created`);
+    setClashModalOpen(false);
   };
 
   const handleSelectionChange = (position, memberEmail) => {
