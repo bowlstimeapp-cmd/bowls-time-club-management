@@ -1399,6 +1399,18 @@ export default function LeagueAdmin() {
           league={blacklistLeague}
         />
 
+        {/* Rink Clash Modal */}
+        <RinkClashModal
+          open={clashModalOpen}
+          clashes={clashData.clashes}
+          nonClashingBookings={clashData.nonClashingBookings}
+          allBookings={[]}
+          club={club}
+          onProceed={handleLeagueClashProceed}
+          onClose={() => setClashModalOpen(false)}
+          isLoading={bookingRinks}
+        />
+
         {/* League Table Dialog */}
         <Dialog open={tableDialogOpen} onOpenChange={() => setTableDialogOpen(false)}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
