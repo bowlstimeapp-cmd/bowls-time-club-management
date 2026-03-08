@@ -34,8 +34,6 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  const base44 = createClientFromRequest(req);
-
   // ── GET /rooms?club_id=xxx ───────────────────────────────────────────────────
   if (req.method === 'GET') {
     const url = new URL(req.url);
