@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
   if (req.method === 'OPTIONS') {
@@ -40,13 +40,14 @@ Deno.serve(async (req) => {
   if (req.method === 'GET') {
     const url = new URL(req.url);
     const club_id = url.searchParams.get('club_id');
-    const api_key = req.headers.get('X-API-Key');
+    const authHeader = req.headers.get('Authorization') || '';
+    const api_key = authHeader.startsWith('ApiKey ') ? authHeader.slice(7) : null;
 
     if (!club_id) {
       return Response.json({ error: 'Missing required query parameter: club_id' }, { status: 400, headers: corsHeaders });
     }
     if (!api_key) {
-      return Response.json({ error: 'Missing required header: X-API-Key' }, { status: 401, headers: corsHeaders });
+      return Response.json({ error: 'Missing required header: Authorization: ApiKey YOUR_KEY' }, { status: 401, headers: corsHeaders });
     }
 
     const clubs = await base44.asServiceRole.entities.Club.filter({ id: club_id });
@@ -87,10 +88,15 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders });
   }
 
-  const { route, club_id, api_key } = body;
+  const { route, club_id } = body;
+  const authHeader = req.headers.get('Authorization') || '';
+  const api_key = authHeader.startsWith('ApiKey ') ? authHeader.slice(7) : null;
 
-  if (!route || !club_id || !api_key) {
-    return Response.json({ error: 'Missing required fields: route, club_id, api_key' }, { status: 400, headers: corsHeaders });
+  if (!api_key) {
+    return Response.json({ error: 'Missing required header: Authorization: ApiKey YOUR_KEY' }, { status: 401, headers: corsHeaders });
+  }
+  if (!route || !club_id) {
+    return Response.json({ error: 'Missing required fields: route, club_id' }, { status: 400, headers: corsHeaders });
   }
 
   // Validate the API key against the club record
@@ -136,12 +142,10 @@ Deno.serve(async (req) => {
 
       return {
         room_id: room.id,
-        name: room.name,
-        capacity: room.capacity,
-        price_per_hour: room.price_per_hour,
-        description: room.description,
+        room_name: room.name,
+        description: room.description || null,
+        capacity: room.capacity || null,
         available: isAvailable && withinHours,
-        unavailable_reason: !withinHours ? 'Outside available hours' : !isAvailable ? 'Already booked' : null,
       };
     });
 
