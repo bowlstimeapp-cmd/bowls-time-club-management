@@ -884,6 +884,17 @@ ${club?.name || 'Your Bowls Club'}
           </motion.div>
         </div>
       </div>
+
+      <RinkClashModal
+        open={clashModalOpen}
+        clashes={clashData.clashes}
+        nonClashingBookings={clashData.nonClashingBookings}
+        allBookings={existingBookings}
+        club={club}
+        onProceed={handleClashProceed}
+        onClose={() => setClashModalOpen(false)}
+        isLoading={createBookingMutation.isPending}
+      />
     </div>
   );
 }
