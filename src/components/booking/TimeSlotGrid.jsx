@@ -135,9 +135,9 @@ export default function TimeSlotGrid({
   return (
     <TooltipProvider>
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="min-w-[600px]">
+        <div style={{ minWidth: `${120 + RINKS.length * 80}px` }}>
           {/* Header */}
-          <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, 1fr)` }}>
+          <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, minmax(70px, 1fr))` }}>
             <div className="p-3 text-sm font-medium text-gray-500 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               Time
@@ -155,7 +155,7 @@ export default function TimeSlotGrid({
               <div
                 key={slot.start}
                 className="grid gap-2"
-                style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, 1fr)` }}
+                style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, minmax(70px, 1fr))` }}
               >
                 <div className="p-3 text-sm text-gray-600 font-medium flex items-center">
                   {slot.label}
@@ -201,9 +201,10 @@ export default function TimeSlotGrid({
                                 <Check className="w-5 h-5 text-emerald-700" />
                               </div>
                             ) : (
-                              <div className="flex items-center justify-center h-full">
-                                <span className="text-xs font-medium text-emerald-600">Available</span>
-                              </div>
+                              <div className="flex flex-col items-center justify-center h-full gap-0.5">
+                                 <span className="text-xs font-medium text-emerald-600">Available</span>
+                                 <span className="text-[10px] text-emerald-500">{slot.label}</span>
+                               </div>
                             )
                           ) : (
                             <div className="flex flex-col gap-0.5 h-full">
