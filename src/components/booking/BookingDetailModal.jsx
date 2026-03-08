@@ -1,13 +1,10 @@
 import React from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, User, Trophy, FileText, CheckCircle, XCircle, Loader2, Users, UserPlus } from 'lucide-react';
+import { Calendar, Clock, User, Trophy, FileText, CheckCircle, XCircle, Loader2, Users, UserPlus, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const statusIcons = {
@@ -24,19 +21,23 @@ const statusColors = {
   cancelled: 'bg-gray-100 text-gray-500 border-gray-300',
 };
 
-export default function BookingDetailModal({ booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club }) {
+export default function BookingDetailModal({
+  booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club, onDelete, deleteLoading,
+}) {
   if (!booking) return null;
 
   const StatusIcon = statusIcons[booking.status];
   const isRollup = booking.competition_type === 'Roll-up';
   const rollupMembers = booking.rollup_members || [];
-  const totalPeople = rollupMembers.length + 1; // +1 for booker
+  const totalPeople = rollupMembers.length + 1;
   const isFull = totalPeople >= 8;
   const alreadyJoined = currentUserEmail && (
     booking.booker_email === currentUserEmail ||
     rollupMembers.some(m => m.email === currentUserEmail)
   );
   const canJoin = isRollup && club?.open_rollups && !isFull && !alreadyJoined && currentUserEmail;
+  const isOwnBooking = booking.booker_email === currentUserEmail;
+  const canDelete = isOwnBooking && onDelete;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -44,7 +45,7 @@ export default function BookingDetailModal({ booking, open, onClose, currentUser
         <DialogHeader>
           <DialogTitle>Booking Details</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-500">Status</span>
@@ -131,24 +132,38 @@ export default function BookingDetailModal({ booking, open, onClose, currentUser
             )}
           </div>
 
-          <div className="pt-2 border-t flex items-center justify-between">
+          <div className="pt-2 border-t flex items-center justify-between flex-wrap gap-2">
             <div>
               <p className="text-xs text-gray-500">Rink Number</p>
               <p className="text-2xl font-bold text-emerald-600">Rink {booking.rink_number}</p>
             </div>
-            {canJoin && (
-              <Button
-                onClick={() => onJoinRollup && onJoinRollup(booking)}
-                disabled={joinLoading}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                {joinLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                Join Roll-up
-              </Button>
-            )}
-            {alreadyJoined && isRollup && (
-              <Badge className="bg-emerald-100 text-emerald-800">You're in this roll-up</Badge>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {canDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDelete(booking)}
+                  disabled={deleteLoading}
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                  Cancel Booking
+                </Button>
+              )}
+              {canJoin && (
+                <Button
+                  onClick={() => onJoinRollup && onJoinRollup(booking)}
+                  disabled={joinLoading}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {joinLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                  Join Roll-up
+                </Button>
+              )}
+              {alreadyJoined && isRollup && (
+                <Badge className="bg-emerald-100 text-emerald-800">You're in this roll-up</Badge>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
