@@ -91,8 +91,7 @@ export default function TimeSlotGrid({
   };
 
   const handleSlotClick = (rink, slot, slotIndex) => {
-    // Ignore click events triggered right after a drag
-    if (draggingBooking) return;
+    if (justDropped.current) return;
 
     const booking = getBookingForSlot(rink, slot.start);
     if (booking && onBookingClick) {
