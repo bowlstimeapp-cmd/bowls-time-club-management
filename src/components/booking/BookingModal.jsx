@@ -23,7 +23,8 @@ import { Calendar, Clock, MapPin, Loader2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-const COMPETITION_TYPES = ['Club', 'County', 'National', 'Roll-up', 'Other'];
+const BASE_COMPETITION_TYPES = ['Club', 'County', 'National', 'Roll-up', 'Other'];
+const FORMAT_OPTIONS = ['Singles', 'Pairs', 'Triples', 'Fours'];
 
 export default function BookingModal({ 
   open, 
@@ -39,8 +40,13 @@ export default function BookingModal({
   const [notes, setNotes] = useState('');
   const [competitionType, setCompetitionType] = useState('Club');
   const [competitionOther, setCompetitionOther] = useState('');
+  const [bookingFormat, setBookingFormat] = useState('');
   const [rollupMembers, setRollupMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
+
+  const competitionTypes = club?.open_rollups && club?.private_rollups
+    ? [...BASE_COMPETITION_TYPES.slice(0, 4), 'Private Roll-up', ...BASE_COMPETITION_TYPES.slice(4)]
+    : BASE_COMPETITION_TYPES;
 
   const isRollup = competitionType === 'Roll-up';
 
@@ -85,10 +91,11 @@ export default function BookingModal({
       return;
     }
     
-    onConfirm(notes, competitionType, competitionOther, rollupMembers);
+    onConfirm(notes, competitionType, competitionOther, rollupMembers, bookingFormat);
     setNotes('');
     setCompetitionType('Club');
     setCompetitionOther('');
+    setBookingFormat('');
     setRollupMembers([]);
     setMemberSearch('');
   };
@@ -97,6 +104,7 @@ export default function BookingModal({
     setNotes('');
     setCompetitionType('Club');
     setCompetitionOther('');
+    setBookingFormat('');
     setRollupMembers([]);
     setMemberSearch('');
     onClose();
@@ -157,8 +165,22 @@ export default function BookingModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {COMPETITION_TYPES.map(type => (
+                {competitionTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Format</Label>
+            <Select value={bookingFormat} onValueChange={setBookingFormat}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select format (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {FORMAT_OPTIONS.map(f => (
+                  <SelectItem key={f} value={f}>{f}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -175,7 +197,7 @@ export default function BookingModal({
             </div>
           )}
 
-          {isRollup && club?.open_rollups && (
+          {(isRollup || competitionType === 'Private Roll-up') && club?.open_rollups && competitionType !== 'Private Roll-up' && (
             <div className="space-y-2">
               <Label>Select Members Joining ({rollupMembers.length + 1}/8)</Label>
               <p className="text-xs text-gray-500">You are automatically included. Select up to 7 more members.</p>
@@ -243,6 +265,7 @@ export default function BookingModal({
             onClick={handleConfirm} 
             disabled={isLoading || (competitionType === 'Other' && !competitionOther.trim())}
             className="bg-emerald-600 hover:bg-emerald-700 min-h-0"
+            disabled={isLoading || (competitionType === 'Other' && !competitionOther.trim())}
           >
             {isLoading ? (
               <>
