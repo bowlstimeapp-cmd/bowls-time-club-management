@@ -92,9 +92,6 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Missing required fields: route, club_id, api_key' }, { status: 400, headers: corsHeaders });
   }
 
-  // Use service role to access club/room data without exposing user info
-  const base44 = createClientFromRequest(req);
-
   // Validate the API key against the club record
   const clubs = await base44.asServiceRole.entities.Club.filter({ id: club_id });
   const club = clubs[0];
