@@ -102,7 +102,7 @@ export default function LeagueAdmin() {
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [blacklistLeague, setBlacklistLeague] = useState(null);
   const [clashModalOpen, setClashModalOpen] = useState(false);
-  const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [], league: null, leagueFixturesForBooking: [] });
+  const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [], league: null, leagueFixturesForBooking: [], allExistingBookings: [] });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -537,7 +537,7 @@ export default function LeagueAdmin() {
     if (clashes.length === 0) {
       await doCreateLeagueBookings(nonClashingBookings, leagueFixtures, league);
     } else {
-      setClashData({ clashes, nonClashingBookings, league, leagueFixturesForBooking: leagueFixtures });
+      setClashData({ clashes, nonClashingBookings, league, leagueFixturesForBooking: leagueFixtures, allExistingBookings });
       setClashModalOpen(true);
     }
   };
@@ -1404,7 +1404,7 @@ export default function LeagueAdmin() {
           open={clashModalOpen}
           clashes={clashData.clashes}
           nonClashingBookings={clashData.nonClashingBookings}
-          allBookings={[]}
+          allBookings={clashData.allExistingBookings}
           club={club}
           onProceed={handleLeagueClashProceed}
           onClose={() => setClashModalOpen(false)}
