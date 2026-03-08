@@ -955,29 +955,32 @@ export default function LeagueAdmin() {
                                 variant="outline" 
                                 size="sm"
                                 onClick={async () => {
-                                  try {
-                                    toast.info('Generating scorecards...');
-                                    const result = await base44.functions.invoke('generateLeagueScorecards', {
-                                      leagueId: league.id,
-                                      clubId: clubId
-                                    });
-                                    const html = typeof result === 'string' ? result : result?.html || result?.data;
-                                    if (!html) {
-                                      toast.error('No scorecard data returned');
-                                      return;
-                                    }
-                                    const printWindow = window.open('', '_blank');
-                                    printWindow.document.write(html);
-                                    printWindow.document.close();
-                                    printWindow.onload = () => {
-                                      printWindow.focus();
-                                      printWindow.print();
-                                    };
-                                    toast.success('Scorecards ready — use Print > Save as PDF');
-                                  } catch (error) {
-                                    toast.error('Failed to generate scorecards');
-                                    console.error(error);
-                                  }
+                                 try {
+                                   if (club?.scorecard_format === 'xlsx') {
+                                     toast.info('Generating Excel scorecards...');
+                                     const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId });
+                                     const fileUrl = result?.data?.file_url || result?.file_url;
+                                     if (!fileUrl) { toast.error('No file URL returned'); return; }
+                                     const a = document.createElement('a');
+                                     a.href = fileUrl;
+                                     a.download = `${league.name}-scorecards.xlsx`;
+                                     a.click();
+                                     toast.success('Excel scorecards downloaded');
+                                   } else {
+                                     toast.info('Generating scorecards...');
+                                     const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId });
+                                     const html = typeof result === 'string' ? result : result?.html || result?.data;
+                                     if (!html) { toast.error('No scorecard data returned'); return; }
+                                     const printWindow = window.open('', '_blank');
+                                     printWindow.document.write(html);
+                                     printWindow.document.close();
+                                     printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+                                     toast.success('Scorecards ready — use Print > Save as PDF');
+                                   }
+                                 } catch (error) {
+                                   toast.error('Failed to generate scorecards');
+                                   console.error(error);
+                                 }
                                 }}
                               >
                                 <Printer className="w-4 h-4 mr-1" />
