@@ -26,16 +26,57 @@ Deno.serve(async (req) => {
   // CORS headers for public access
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
   };
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  const base44 = createClientFromRequest(req);
+
+  // ── GET /rooms?club_id=xxx ───────────────────────────────────────────────────
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const club_id = url.searchParams.get('club_id');
+    const api_key = req.headers.get('X-API-Key');
+
+    if (!club_id) {
+      return Response.json({ error: 'Missing required query parameter: club_id' }, { status: 400, headers: corsHeaders });
+    }
+    if (!api_key) {
+      return Response.json({ error: 'Missing required header: X-API-Key' }, { status: 401, headers: corsHeaders });
+    }
+
+    const clubs = await base44.asServiceRole.entities.Club.filter({ id: club_id });
+    const club = clubs[0];
+    if (!club) {
+      return Response.json({ error: 'Club not found' }, { status: 404, headers: corsHeaders });
+    }
+    if (!club.function_room_api_key || club.function_room_api_key !== api_key) {
+      return Response.json({ error: 'Invalid API key' }, { status: 401, headers: corsHeaders });
+    }
+    if (!club.module_function_rooms) {
+      return Response.json({ error: 'Function room module not enabled for this club' }, { status: 403, headers: corsHeaders });
+    }
+
+    const rooms = await base44.asServiceRole.entities.FunctionRoom.filter({ club_id, is_active: true });
+
+    const publicRooms = rooms.map(r => ({
+      id: r.id,
+      name: r.name,
+      description: r.description || null,
+      capacity: r.capacity || null,
+      available_from: r.available_from || null,
+      available_to: r.available_to || null,
+    }));
+
+    return Response.json({ rooms: publicRooms }, { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return Response.json({ error: 'Only POST requests are supported' }, { status: 405, headers: corsHeaders });
+    return Response.json({ error: 'Method not allowed' }, { status: 405, headers: corsHeaders });
   }
 
   let body;
