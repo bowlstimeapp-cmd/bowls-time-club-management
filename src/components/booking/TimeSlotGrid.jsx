@@ -110,15 +110,9 @@ export default function TimeSlotGrid({
       const isSelected = isSlotSelected(rink, slotIndex);
       
       if (isSelected) {
-        // Can only deselect if it's at the edge
-        const sameRinkSelected = selectedSlots.filter(s => s.rink === rink);
-        const selectedIndices = sameRinkSelected.map(s => s.slotIndex);
-        const minIndex = Math.min(...selectedIndices);
-        const maxIndex = Math.max(...selectedIndices);
-        
-        if (slotIndex === minIndex || slotIndex === maxIndex) {
-          onMultiSlotSelect(selectedSlots.filter(s => !(s.rink === rink && s.slotIndex === slotIndex)));
-        }
+        // Allow deselecting any selected slot (not just edges)
+        onMultiSlotSelect(selectedSlots.filter(s => !(s.rink === rink && s.slotIndex === slotIndex)));
+        return;
       } else if (canSelectSlot(rink, slotIndex)) {
         onMultiSlotSelect([...selectedSlots, { rink, slot, slotIndex }]);
       } else if (selectedSlots.length > 0 && selectedSlots[0].rink !== rink) {
