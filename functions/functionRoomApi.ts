@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
       .some(b => timesOverlap(start_time, end_time, b.start_time, b.end_time));
 
     if (hasConflict) {
-      return Response.json({ error: 'The requested time slot is not available' }, { status: 409, headers: corsHeaders });
+      return Response.json({ error: 'This time slot is no longer available, please select another.' }, { status: 409, headers: corsHeaders });
     }
 
     // Validate operating hours
