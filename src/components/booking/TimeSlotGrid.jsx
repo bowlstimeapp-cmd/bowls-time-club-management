@@ -197,7 +197,8 @@ export default function TimeSlotGrid({
                             // Slight delay so the drag image captures before state update
                             setTimeout(() => setDraggingBooking(booking), 0);
                           } : undefined}
-                          onDragEnd={canDrag ? () => {
+                          onDragEnd={canDrag ? (e) => {
+                            e.preventDefault();
                             setDraggingBooking(null);
                             setDropTarget(null);
                           } : undefined}
