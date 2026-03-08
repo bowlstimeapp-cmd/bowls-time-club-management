@@ -477,8 +477,19 @@ export default function LeagueAdmin() {
     }
     
     setBookingRinks(true);
-    
-    const bookingsToCreate = leagueFixtures.map(fixture => ({
+
+    // Fetch all existing bookings for the dates involved
+    const uniqueDates = [...new Set(leagueFixtures.map(f => f.match_date))];
+    let allExistingBookings = [];
+    for (const date of uniqueDates) {
+      const dayBookings = await base44.entities.Booking.filter({ club_id: clubId, date });
+      allExistingBookings = [...allExistingBookings, ...dayBookings];
+    }
+
+    const rinkCount = club?.rink_count || 6;
+    const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
+
+    const proposedBookings = leagueFixtures.map(fixture => ({
       club_id: clubId,
       rink_number: fixture.rink_number,
       date: fixture.match_date,
@@ -489,28 +500,74 @@ export default function LeagueAdmin() {
       booker_name: `League - ${league.name}`,
       booker_email: user.email,
       notes: `${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
+      _fixtureId: fixture.id,
     }));
-    
-    const createdBookings = await base44.entities.Booking.bulkCreate(bookingsToCreate);
-    
-    // Update fixtures with booking IDs
-    for (let i = 0; i < leagueFixtures.length; i++) {
-      if (createdBookings[i]?.id) {
-        await base44.entities.LeagueFixture.update(leagueFixtures[i].id, {
-          booking_id: createdBookings[i].id
-        });
+
+    const clashes = [];
+    const nonClashingBookings = [];
+
+    for (const proposed of proposedBookings) {
+      const existingBooking = allExistingBookings.find(
+        b => b.rink_number === proposed.rink_number &&
+             b.date === proposed.date &&
+             b.start_time === proposed.start_time &&
+             b.status !== 'cancelled' &&
+             b.status !== 'rejected'
+      );
+
+      if (existingBooking) {
+        // Find free rink (not taken by existing bookings or other proposed bookings at same time/date)
+        const usedRinks = new Set([
+          ...allExistingBookings
+            .filter(b => b.date === proposed.date && b.start_time === proposed.start_time && b.status !== 'cancelled' && b.status !== 'rejected')
+            .map(b => b.rink_number),
+          ...proposedBookings
+            .filter(p => p.date === proposed.date && p.start_time === proposed.start_time && p !== proposed)
+            .map(p => p.rink_number),
+        ]);
+        const suggestedRink = allRinks.find(r => !usedRinks.has(r)) || null;
+        clashes.push({ proposedBooking: proposed, existingBooking, suggestedRink });
+      } else {
+        nonClashingBookings.push(proposed);
       }
     }
-    
-    // Mark league as having bookings created
+
+    setBookingRinks(false);
+
+    if (clashes.length === 0) {
+      await doCreateLeagueBookings(nonClashingBookings, leagueFixtures, league);
+    } else {
+      setClashData({ clashes, nonClashingBookings, league, leagueFixturesForBooking: leagueFixtures });
+      setClashModalOpen(true);
+    }
+  };
+
+  const doCreateLeagueBookings = async (bookingsToCreate, leagueFixtures, league) => {
+    if (bookingsToCreate.length === 0) {
+      toast.info('No bookings created');
+      return;
+    }
+    const cleanBookings = bookingsToCreate.map(({ _fixtureId, ...b }) => b);
+    const createdBookings = await base44.entities.Booking.bulkCreate(cleanBookings);
+
+    for (let i = 0; i < bookingsToCreate.length; i++) {
+      const fixtureId = bookingsToCreate[i]._fixtureId;
+      if (fixtureId && createdBookings[i]?.id) {
+        await base44.entities.LeagueFixture.update(fixtureId, { booking_id: createdBookings[i].id });
+      }
+    }
+
     await base44.entities.League.update(league.id, { bookings_created: true });
-    
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    
-    setBookingRinks(false);
     toast.success(`Created ${createdBookings.length} rink bookings`);
+  };
+
+  const handleLeagueClashProceed = async (bookingsToCreate) => {
+    const { league, leagueFixturesForBooking } = clashData;
+    await doCreateLeagueBookings(bookingsToCreate, leagueFixturesForBooking, league);
+    setClashModalOpen(false);
   };
 
   const viewFixtures = (league) => {
