@@ -46,6 +46,7 @@ export default function ClubSettings() {
   const [tvCycleSeconds, setTvCycleSeconds] = useState(30);
   const [altViewSelection, setAltViewSelection] = useState(false);
   const [altViewLeagues, setAltViewLeagues] = useState(false);
+  const [scorecardFormat, setScorecardFormat] = useState('pdf');
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -122,6 +123,7 @@ export default function ClubSettings() {
       setTvCycleSeconds(club.tv_display_cycle_seconds || 30);
       setAltViewSelection(club.alt_view_selection || false);
       setAltViewLeagues(club.alt_view_leagues || false);
+      setScorecardFormat(club.scorecard_format || 'pdf');
     }
   }, [club]);
 
@@ -266,6 +268,7 @@ export default function ClubSettings() {
       tv_display_cycle_seconds: parseInt(tvCycleSeconds) || 30,
       alt_view_selection: altViewSelection,
       alt_view_leagues: altViewLeagues,
+      scorecard_format: scorecardFormat,
     });
   };
 
@@ -614,6 +617,51 @@ export default function ClubSettings() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Scorecard Format */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Scorecard Format
+                </CardTitle>
+                <CardDescription>
+                  Choose whether scorecards are generated as PDF or Excel (XLSX) files
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="scorecardFormat"
+                      value="pdf"
+                      checked={scorecardFormat === 'pdf'}
+                      onChange={() => setScorecardFormat('pdf')}
+                      className="w-4 h-4 text-emerald-600"
+                    />
+                    <div>
+                      <span className="font-medium text-gray-900">PDF</span>
+                      <p className="text-sm text-gray-500">Print-ready scorecard sheets (default)</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="scorecardFormat"
+                      value="xlsx"
+                      checked={scorecardFormat === 'xlsx'}
+                      onChange={() => setScorecardFormat('xlsx')}
+                      className="w-4 h-4 text-emerald-600"
+                    />
+                    <div>
+                      <span className="font-medium text-gray-900">Excel (XLSX)</span>
+                      <p className="text-sm text-gray-500">One sheet per fixture, editable in Excel or Google Sheets</p>
+                    </div>
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Alternative Views */}
             <Card>
