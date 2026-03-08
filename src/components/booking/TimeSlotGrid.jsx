@@ -221,9 +221,10 @@ export default function TimeSlotGrid({
                               </div>
                               {booking?.competition_type && (
                                 <span className="text-[10px] lg:text-xs opacity-80 truncate leading-tight">
-                                  {booking.competition_type === 'Other' && booking.competition_other
+                                  {(booking.competition_type === 'Other' && booking.competition_other
                                     ? booking.competition_other
-                                    : booking.competition_type}
+                                    : booking.competition_type)}
+                                  {booking.booking_format && ` – ${booking.booking_format}`}
                                 </span>
                               )}
                               {isRollup && (
