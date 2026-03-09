@@ -645,7 +645,16 @@ ${club?.name || 'Your Bowls Club'}
   }
 
   const isTopClub = competition === 'Top Club';
+  const isFriendly = competition === 'Friendly';
   const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  // Effective rink/player settings for Friendly
+  const effectiveHomeRinks = isFriendly ? friendlyNumRinks : homeRinks;
+  const effectivePlayersPerRink = isFriendly
+    ? friendlyPlayersPerRink
+    : (competitions.find(c => c.name === competition)?.players_per_rink || 4);
+  const effectiveAwayRinks = isFriendly ? 0 : (competitions.find(c => c.name === competition)?.away_rinks || 0);
+  const canShowFriendlyGrid = isFriendly && friendlyLocation && friendlyNumRinks > 0 && friendlyPlayersPerRink > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
