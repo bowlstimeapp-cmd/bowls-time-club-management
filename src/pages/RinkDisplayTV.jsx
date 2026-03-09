@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, addDays } from 'date-fns';
-import { CheckCircle, XCircle, Loader2, Users, Clock } from 'lucide-react';
+import { Loader2, Users, Clock, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duration = 2) => {
