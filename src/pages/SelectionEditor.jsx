@@ -319,12 +319,17 @@ ${club?.name || 'Your Bowls Club'}
       match_date: matchDate,
       match_name: matchName,
       selections,
-      home_rinks: homeRinks,
+      home_rinks: competition === 'Friendly' ? friendlyNumRinks : homeRinks,
       selected_rinks: selectedRinks.map(r => String(r)),
       match_start_time: matchStartTime,
       match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
-      selector_email: user.email
+      selector_email: user.email,
+      ...(competition === 'Friendly' ? {
+        friendly_location: friendlyLocation,
+        friendly_num_rinks: friendlyNumRinks,
+        friendly_players_per_rink: friendlyPlayersPerRink,
+      } : {}),
     };
 
     if (selectionId) {
