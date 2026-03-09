@@ -827,15 +827,19 @@ export default function LeagueAdmin() {
             onGenerateScorecards={async (league) => {
               try {
                 if (club?.scorecard_format === 'xlsx') {
-                  toast.info('Generating Excel scorecards...');
+                  toast.info('Generating CSV scorecards...');
                   const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId });
-                  const fileUrl = result?.data?.file_url || result?.file_url;
-                  if (!fileUrl) { toast.error('No file URL returned'); return; }
+                  const csv = result?.data?.csv;
+                  const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
+                  if (!csv) { toast.error('No CSV data returned'); return; }
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
-                  a.href = fileUrl;
-                  a.download = `${league.name}-scorecards.csv`;
+                  a.href = url;
+                  a.download = filename;
                   a.click();
-                  toast.success('Excel scorecards downloaded');
+                  URL.revokeObjectURL(url);
+                  toast.success('CSV scorecards downloaded');
                 } else {
                   toast.info('Generating scorecards...');
                   const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId });
