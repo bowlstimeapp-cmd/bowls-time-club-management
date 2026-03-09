@@ -121,10 +121,14 @@ export default function TournamentView() {
           transition={{ delay: 0.1 }}
         >
           {tournament.bracket ? (
-            <TournamentBracket 
-              bracket={tournament.bracket} 
+            <TournamentBracket
+              bracket={tournament.bracket}
               getMemberName={getMemberName}
+              onUpdateBracket={handleUpdateBracket}
               editable={false}
+              scoringMode={true}
+              isAdmin={isAdmin}
+              userEmail={user?.email}
             />
           ) : (
             <div className="text-center py-12 text-gray-500">
