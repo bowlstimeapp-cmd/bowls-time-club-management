@@ -688,9 +688,63 @@ ${club?.name || 'Your Bowls Club'}
                       {competitions.map(comp => (
                         <SelectItem key={comp.id} value={comp.name}>{comp.name}</SelectItem>
                       ))}
+                      <SelectItem value="Friendly">Friendly</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Friendly cascading options */}
+                {competition === 'Friendly' && (
+                  <>
+                    <div>
+                      <Label>Location *</Label>
+                      <Select value={friendlyLocation} onValueChange={(v) => { setFriendlyLocation(v); setSelections({}); }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Home">Home</SelectItem>
+                          <SelectItem value="Away">Away</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {friendlyLocation && (
+                      <div>
+                        <Label>Number of Rinks</Label>
+                        <Select value={String(friendlyNumRinks)} onValueChange={(v) => {
+                          const n = parseInt(v);
+                          setFriendlyNumRinks(n);
+                          setHomeRinks(n);
+                          setSelectedRinks([]);
+                          setSelections({});
+                        }}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[1,2,3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n} Rink{n > 1 ? 's' : ''}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {friendlyLocation && (
+                      <div>
+                        <Label>Players per Rink</Label>
+                        <Select value={String(friendlyPlayersPerRink)} onValueChange={(v) => {
+                          setFriendlyPlayersPerRink(parseInt(v));
+                          setSelections({});
+                        }}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="2">2 (Pairs)</SelectItem>
+                            <SelectItem value="3">3 (Triples)</SelectItem>
+                            <SelectItem value="4">4 (Fours)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div>
                   <Label>Match Date *</Label>
                   <Input
