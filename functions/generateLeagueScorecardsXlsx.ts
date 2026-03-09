@@ -100,6 +100,6 @@ Deno.serve(async (req) => {
     return Response.json({ success: true, file_url });
   } catch (error) {
     console.error('XLSX scorecard error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 });
