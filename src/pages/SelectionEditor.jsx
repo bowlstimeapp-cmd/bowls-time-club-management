@@ -49,7 +49,11 @@ export default function SelectionEditor() {
   const [selections, setSelections] = useState({});
   const [originalSelections, setOriginalSelections] = useState({});
   const [homeRinks, setHomeRinks] = useState(2);
-  const [selectedRinks, setSelectedRinks] = useState([1, 2]);
+  const [selectedRinks, setSelectedRinks] = useState([]);
+  // Friendly-specific state
+  const [friendlyLocation, setFriendlyLocation] = useState('');
+  const [friendlyNumRinks, setFriendlyNumRinks] = useState(2);
+  const [friendlyPlayersPerRink, setFriendlyPlayersPerRink] = useState(4);
   const [matchStartTime, setMatchStartTime] = useState('10:00');
   const [matchEndTime, setMatchEndTime] = useState('14:00');
   const [clashModalOpen, setClashModalOpen] = useState(false);
@@ -98,9 +102,14 @@ export default function SelectionEditor() {
       setSelections(existingSelection.selections || {});
       setOriginalSelections(existingSelection.selections || {});
       setHomeRinks(existingSelection.home_rinks || 2);
-      setSelectedRinks(existingSelection.selected_rinks || [1, 2]);
+      setSelectedRinks(existingSelection.selected_rinks || []);
       setMatchStartTime(existingSelection.match_start_time || '10:00');
       setMatchEndTime(existingSelection.match_end_time || '14:00');
+      if (existingSelection.competition === 'Friendly') {
+        setFriendlyLocation(existingSelection.friendly_location || '');
+        setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
+        setFriendlyPlayersPerRink(existingSelection.friendly_players_per_rink || 4);
+      }
     }
   }, [existingSelection]);
 
@@ -230,126 +239,46 @@ export default function SelectionEditor() {
 
     const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
     
- // Email notifications
-if (club?.email_member_notifications) {
-  const emailMembers = members.filter(m => 
-    selectedPlayerEmails.includes(m.user_email) && 
-    m.email_notifications !== false
-  );
+    // Email notifications
+    if (club?.email_member_notifications) {
+      const emailMembers = members.filter(m => 
+        selectedPlayerEmails.includes(m.user_email) && 
+        m.email_notifications !== false
+      );
 
-  for (const member of emailMembers) {
-    const emailBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding: 30px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          
-          <!-- Header -->
-          <tr>
-            <td style="background-color:#1a5276; padding: 24px 32px; text-align:center;">
-              <h1 style="margin:0; color:#ffffff; font-size:22px; font-weight:600;">
-                ${club?.name || 'Your Bowls Club'}
-              </h1>
-            </td>
-          </tr>
+      for (const member of emailMembers) {
+        const emailBody = `
+Dear ${member.first_name || 'Member'},
 
-          <!-- Body -->
-          <tr>
-            <td style="padding: 32px;">
-              <p style="margin: 0 0 16px; font-size:16px; color:#333;">
-                Dear ${member.first_name || 'Member'},
-              </p>
-              <p style="margin: 0 0 24px; font-size:16px; color:#333;">
-                You have been selected to play in an upcoming match!
-              </p>
+You have been selected to play in an upcoming match!
 
-              <!-- Match Details -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:20px; margin-bottom:24px;">
-                <tr>
-                  <td>
-                    <h2 style="margin: 0 0 16px; font-size:16px; color:#1a5276; text-transform:uppercase; letter-spacing:0.5px;">Match Details</h2>
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Competition</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${competition}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Date</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${format(new Date(matchDate), 'd MMMM yyyy')}</td>
-                      </tr>
-                      ${matchName ? `
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Match</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${matchName}</td>
-                      </tr>` : ''}
-                      ${matchStartTime ? `
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Time</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${matchStartTime} – ${matchEndTime}</td>
-                      </tr>` : ''}
-                    </table>
-                  </td>
-                </tr>
-              </table>
+Match Details:
+- Competition: ${competition}
+- Date: ${format(new Date(matchDate), 'd MMMM yyyy')}
+${matchName ? `- Match: ${matchName}` : ''}
+${matchStartTime ? `- Time: ${matchStartTime} - ${matchEndTime}` : ''}
 
-              <!-- Team Selection -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:20px; margin-bottom:24px;">
-                <tr>
-                  <td>
-                    <h2 style="margin: 0 0 12px; font-size:16px; color:#1a5276; text-transform:uppercase; letter-spacing:0.5px;">Team Selection</h2>
-                    <p style="margin:0; font-size:14px; color:#333; white-space:pre-line; line-height:1.7;">${teamList}</p>
-                  </td>
-                </tr>
-              </table>
+Team Selection:
+${teamList}
 
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${matchUrl}" style="display:inline-block; background-color:#1a5276; color:#ffffff; text-decoration:none; padding:12px 32px; border-radius:6px; font-size:15px; font-weight:600;">
-                      Confirm Availability
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+Please confirm your availability by visiting:
+${matchUrl}
 
-          <!-- Footer -->
-          <tr>
-            <td style="background-color:#f4f4f4; padding:16px 32px; text-align:center; border-top:1px solid #e0e0e0;">
-              <p style="margin:0; font-size:12px; color:#999;">
-                ${club?.name || 'Your Bowls Club'}
-              </p>
-            </td>
-          </tr>
+Best regards,
+${club?.name || 'Your Bowls Club'}
+        `.trim();
 
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `.trim();
-
-    await base44.integrations.Core.SendEmail({
-      to: member.user_email,
-      subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-      body: emailBody
-    });
-  }
-
-  if (emailMembers.length > 0) {
-    toast.success(`Emails sent to ${emailMembers.length} players`);
-  }
-}
+        await base44.integrations.Core.SendEmail({
+          to: member.user_email,
+          subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+          body: emailBody
+        });
+      }
+      
+      if (emailMembers.length > 0) {
+        toast.success(`Emails sent to ${emailMembers.length} players`);
+      }
+    }
     
     // SMS notifications
     if (club?.module_sms_notifications && club?.sms_member_notifications) {
@@ -390,12 +319,17 @@ if (club?.email_member_notifications) {
       match_date: matchDate,
       match_name: matchName,
       selections,
-      home_rinks: homeRinks,
+      home_rinks: competition === 'Friendly' ? friendlyNumRinks : homeRinks,
       selected_rinks: selectedRinks.map(r => String(r)),
       match_start_time: matchStartTime,
       match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
-      selector_email: user.email
+      selector_email: user.email,
+      ...(competition === 'Friendly' ? {
+        friendly_location: friendlyLocation,
+        friendly_num_rinks: friendlyNumRinks,
+        friendly_players_per_rink: friendlyPlayersPerRink,
+      } : {}),
     };
 
     if (selectionId) {
@@ -652,15 +586,16 @@ ${club?.name || 'Your Bowls Club'}
 
   const handleCompetitionChange = (compName) => {
     setCompetition(compName);
-    const comp = competitions.find(c => c.name === compName);
-    if (comp) {
-      setHomeRinks(comp.home_rinks);
-      // Auto-select first N rinks as home rinks
-      const newSelectedRinks = [];
-      for (let i = 1; i <= comp.home_rinks; i++) {
-        newSelectedRinks.push(i);
+    setSelections({});
+    if (compName === 'Friendly') {
+      setSelectedRinks([]);
+      setHomeRinks(friendlyNumRinks);
+    } else {
+      const comp = competitions.find(c => c.name === compName);
+      if (comp) {
+        setHomeRinks(comp.home_rinks);
+        setSelectedRinks([]);
       }
-      setSelectedRinks(newSelectedRinks);
     }
   };
 
@@ -753,9 +688,63 @@ ${club?.name || 'Your Bowls Club'}
                       {competitions.map(comp => (
                         <SelectItem key={comp.id} value={comp.name}>{comp.name}</SelectItem>
                       ))}
+                      <SelectItem value="Friendly">Friendly</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Friendly cascading options */}
+                {competition === 'Friendly' && (
+                  <>
+                    <div>
+                      <Label>Location *</Label>
+                      <Select value={friendlyLocation} onValueChange={(v) => { setFriendlyLocation(v); setSelections({}); }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Home">Home</SelectItem>
+                          <SelectItem value="Away">Away</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {friendlyLocation && (
+                      <div>
+                        <Label>Number of Rinks</Label>
+                        <Select value={String(friendlyNumRinks)} onValueChange={(v) => {
+                          const n = parseInt(v);
+                          setFriendlyNumRinks(n);
+                          setHomeRinks(n);
+                          setSelectedRinks([]);
+                          setSelections({});
+                        }}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[1,2,3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n} Rink{n > 1 ? 's' : ''}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {friendlyLocation && (
+                      <div>
+                        <Label>Players per Rink</Label>
+                        <Select value={String(friendlyPlayersPerRink)} onValueChange={(v) => {
+                          setFriendlyPlayersPerRink(parseInt(v));
+                          setSelections({});
+                        }}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="2">2 (Pairs)</SelectItem>
+                            <SelectItem value="3">3 (Triples)</SelectItem>
+                            <SelectItem value="4">4 (Fours)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div>
                   <Label>Match Date *</Label>
                   <Input
@@ -773,7 +762,7 @@ ${club?.name || 'Your Bowls Club'}
                   />
                 </div>
 
-                {competition && competition !== 'Top Club' && (
+                {competition && competition !== 'Top Club' && competition !== 'Friendly' && (
                   <>
                     <div>
                       <Label>Number of Home Rinks</Label>
