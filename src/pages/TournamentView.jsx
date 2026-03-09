@@ -15,6 +15,12 @@ export default function TournamentView() {
   const clubId = searchParams.get('clubId');
   const tournamentId = searchParams.get('tournamentId');
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser);
+  }, []);
 
   useEffect(() => {
     if (!clubId || !tournamentId) {
@@ -40,9 +46,32 @@ export default function TournamentView() {
     enabled: !!clubId,
   });
 
+  const { data: membership } = useQuery({
+    queryKey: ['myMembership', clubId, user?.email],
+    queryFn: async () => {
+      const ms = await base44.entities.ClubMembership.filter({ club_id: clubId, user_email: user.email });
+      return ms[0];
+    },
+    enabled: !!clubId && !!user?.email,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.ClubTournament.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] });
+    },
+  });
+
+  const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+
   const getMemberName = (email) => {
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
+  };
+
+  const handleUpdateBracket = async (newBracket) => {
+    await updateMutation.mutateAsync({ id: tournamentId, data: { ...tournament, bracket: newBracket } });
+    toast.success('Bracket updated');
   };
 
   if (isLoading) {
