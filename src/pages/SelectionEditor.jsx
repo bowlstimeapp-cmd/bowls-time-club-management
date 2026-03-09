@@ -939,6 +939,27 @@ ${club?.name || 'Your Bowls Club'}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
                 />
+              ) : isFriendly ? (
+                canShowFriendlyGrid ? (
+                  <RinkSelectionGrid
+                    members={members}
+                    selections={selections}
+                    selectedEmails={selectedEmails}
+                    onSelectionChange={handleSelectionChange}
+                    matchDate={matchDate}
+                    unavailabilities={unavailabilities}
+                    playersPerRink={effectivePlayersPerRink}
+                    homeRinks={effectiveHomeRinks}
+                    awayRinks={0}
+                    locationTag={friendlyLocation}
+                  />
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center text-gray-500">
+                      Select Location, Number of Rinks and Players per Rink to build your team
+                    </CardContent>
+                  </Card>
+                )
               ) : (
                 <RinkSelectionGrid
                   members={members}
@@ -947,9 +968,9 @@ ${club?.name || 'Your Bowls Club'}
                   onSelectionChange={handleSelectionChange}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
-                  playersPerRink={competitions.find(c => c.name === competition)?.players_per_rink || 4}
-                  homeRinks={homeRinks}
-                  awayRinks={competitions.find(c => c.name === competition)?.away_rinks || 0}
+                  playersPerRink={effectivePlayersPerRink}
+                  homeRinks={effectiveHomeRinks}
+                  awayRinks={effectiveAwayRinks}
                 />
               )
             ) : (
