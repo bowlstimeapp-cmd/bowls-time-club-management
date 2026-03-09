@@ -49,7 +49,11 @@ export default function SelectionEditor() {
   const [selections, setSelections] = useState({});
   const [originalSelections, setOriginalSelections] = useState({});
   const [homeRinks, setHomeRinks] = useState(2);
-  const [selectedRinks, setSelectedRinks] = useState([1, 2]);
+  const [selectedRinks, setSelectedRinks] = useState([]);
+  // Friendly-specific state
+  const [friendlyLocation, setFriendlyLocation] = useState('');
+  const [friendlyNumRinks, setFriendlyNumRinks] = useState(2);
+  const [friendlyPlayersPerRink, setFriendlyPlayersPerRink] = useState(4);
   const [matchStartTime, setMatchStartTime] = useState('10:00');
   const [matchEndTime, setMatchEndTime] = useState('14:00');
   const [clashModalOpen, setClashModalOpen] = useState(false);
