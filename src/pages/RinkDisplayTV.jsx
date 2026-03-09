@@ -37,8 +37,24 @@ export default function RinkDisplayTV() {
 
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow
+  const [dayOffset, setDayOffset] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef(null);
+
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      containerRef.current?.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  };
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   // Auth check
   useEffect(() => {
