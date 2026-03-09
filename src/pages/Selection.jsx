@@ -158,10 +158,16 @@ export default function Selection() {
     [selections, competitionFilter]
   );
   
-  const mySelections = useMemo(() => 
-    filterByCompetition(selections.filter(s => s.status === 'published' && isUserSelectedForMatch(s))),
-    [selections, competitionFilter, user?.email]
-  );
+  const mySelections = useMemo(() => {
+    let list = filterByCompetition(selections.filter(s => s.status === 'published' && isUserSelectedForMatch(s)));
+    if (upcomingOnly) {
+      const today = startOfDay(new Date());
+      list = list.filter(s => {
+        try { return isAfter(parseISO(s.match_date), today) || s.match_date === format(today, 'yyyy-MM-dd'); } catch { return true; }
+      });
+    }
+    return list;
+  }, [selections, competitionFilter, user?.email, upcomingOnly]);
 
   // Get unique competition types from selections
   const competitionTypes = useMemo(() => {
