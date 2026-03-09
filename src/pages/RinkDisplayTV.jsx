@@ -263,10 +263,19 @@ export default function RinkDisplayTV() {
 
       {/* Footer */}
       <div className="px-8 py-3 bg-white border-t border-gray-200 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-emerald-500" /> Approved</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-amber-200 border border-amber-300" /> Pending</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-white border border-emerald-200" /> Available</span>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium transition-colors"
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          </button>
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-emerald-500" /> Approved</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-amber-200 border border-amber-300" /> Pending</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-white border border-emerald-200" /> Available</span>
+          </div>
         </div>
         <span className="text-xs text-gray-400">
           Cycling every {club?.tv_display_cycle_seconds || 30}s
