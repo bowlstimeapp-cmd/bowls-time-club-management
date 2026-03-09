@@ -236,10 +236,18 @@ export default function TournamentBracket({
                                 Awaiting approval
                               </Badge>
                             ) : isAccepted ? (
-                              <Badge variant="outline" className="w-full justify-center text-emerald-600 border-emerald-200 bg-emerald-50 text-xs py-1">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Confirmed
-                              </Badge>
+                              <>
+                                <Badge variant="outline" className="w-full justify-center text-emerald-600 border-emerald-200 bg-emerald-50 text-xs py-1">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Confirmed
+                                </Badge>
+                                {isAdmin && (
+                                  <Button size="sm" variant="outline" className="w-full h-7 text-xs mt-1" onClick={() => startEditing(roundIndex, matchIndex, match)}>
+                                    <Edit2 className="w-3 h-3 mr-1" />
+                                    Edit Score
+                                  </Button>
+                                )}
+                              </>
                             ) : canEnterScore(match) ? (
                               <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => startEditing(roundIndex, matchIndex, match)}>
                                 <Edit2 className="w-3 h-3 mr-1" />
