@@ -314,6 +314,15 @@ export default function Selection() {
             </TabsContent>
 
             <TabsContent value="myselections">
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => setUpcomingOnly(!upcomingOnly)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${upcomingOnly ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400'}`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Upcoming only
+                </button>
+              </div>
               {isLoading ? (
                 <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
               ) : mySelections.length > 0 ? (
