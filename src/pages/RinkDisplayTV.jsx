@@ -173,77 +173,90 @@ export default function RinkDisplayTV() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="min-w-0">
+      <div className={cn("flex-1 p-6", isFullscreen ? "overflow-hidden flex flex-col" : "overflow-auto")}>
+        <div className={cn("min-w-0", isFullscreen && "flex flex-col flex-1 h-full")}>
           {/* Rink header row */}
           <div
-            className="grid gap-2 mb-3"
+            className="grid gap-2 mb-3 shrink-0"
             style={{ gridTemplateColumns: `140px repeat(${RINKS.length}, 1fr)` }}
           >
-            <div className="flex items-center gap-2 text-gray-500 text-sm font-medium px-2">
+            <div className="flex items-center gap-2 text-gray-500 font-medium px-2" style={{ fontSize: isFullscreen ? '1rem' : '0.875rem' }}>
               <Clock className="w-4 h-4" />
               Time
             </div>
             {RINKS.map(rink => (
               <div key={rink} className="text-center py-2">
-                <span className="text-sm font-semibold text-gray-700">Rink {rink}</span>
+                <span className="font-semibold text-gray-700" style={{ fontSize: isFullscreen ? '1.1rem' : '0.875rem' }}>Rink {rink}</span>
               </div>
             ))}
           </div>
 
           {/* Slot rows */}
-          <div className="space-y-2">
-            {TIME_SLOTS.map(slot => (
-              <div
-                key={slot.start}
-                className="grid gap-2"
-                style={{ gridTemplateColumns: `140px repeat(${RINKS.length}, 1fr)` }}
-              >
-                <div className="flex items-center px-2 text-sm font-medium text-gray-600">
-                  {slot.label}
-                </div>
-                {RINKS.map(rink => {
-                  const booking = getBooking(rink, slot.start);
-                  const isRollup = booking?.competition_type === 'Roll-up';
-                  const rollupCount = (booking?.rollup_members?.length || 0) + 1;
+          <div className={cn("gap-2", isFullscreen ? "flex flex-col flex-1" : "space-y-2")}>
+            {TIME_SLOTS.map(slot => {
+              return (
+                <div
+                  key={slot.start}
+                  className={cn("grid gap-2", isFullscreen && "flex-1")}
+                  style={{ gridTemplateColumns: `140px repeat(${RINKS.length}, 1fr)` }}
+                >
+                  <div className="flex items-center px-2 font-medium text-gray-600" style={{ fontSize: isFullscreen ? '1rem' : '0.875rem' }}>
+                    {slot.label}
+                  </div>
+                  {RINKS.map(rink => {
+                    const booking = getBooking(rink, slot.start);
+                    const isRollup = booking?.competition_type === 'Roll-up';
+                    const rollupCount = (booking?.rollup_members?.length || 0) + 1;
 
-                  return (
-                    <div
-                      key={rink}
-                      className={cn(
-                        'rounded-xl border-2 px-3 py-3 min-h-[72px] flex flex-col justify-center',
-                        booking
-                          ? STATUS_STYLES[booking.status] || 'bg-emerald-500 text-white border-emerald-600'
-                          : 'bg-white border-emerald-200 text-emerald-600'
-                      )}
-                    >
-                      {booking ? (
-                        <>
-                          <span className="font-bold text-sm leading-tight truncate">
-                            {booking.booker_name}
-                          </span>
-                          {booking.competition_type && (
-                            <span className="text-xs opacity-80 truncate mt-0.5">
-                              {booking.competition_type === 'Other' && booking.competition_other
-                                ? booking.competition_other
-                                : booking.competition_type}
+                    return (
+                      <div
+                        key={rink}
+                        className={cn(
+                          'rounded-xl border-2 px-3 flex flex-col justify-center',
+                          isFullscreen ? 'py-0 h-full' : 'py-3 min-h-[72px]',
+                          booking
+                            ? STATUS_STYLES[booking.status] || 'bg-emerald-500 text-white border-emerald-600'
+                            : 'bg-white border-emerald-200 text-emerald-600'
+                        )}
+                      >
+                        {booking ? (
+                          <>
+                            <span className="font-bold leading-tight" style={{ fontSize: isFullscreen ? '1.1rem' : '0.875rem' }}>
+                              {booking.booker_name}
                             </span>
-                          )}
-                          {isRollup && (
-                            <span className="text-xs font-semibold flex items-center gap-1 mt-1 opacity-90">
-                              <Users className="w-3 h-3" />
-                              {rollupCount}/8
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-xs font-medium text-center w-full">Available</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+                            {booking.competition_type && (
+                              <span className="opacity-80 mt-0.5" style={{ fontSize: isFullscreen ? '0.95rem' : '0.75rem' }}>
+                                {booking.competition_type === 'Other' && booking.competition_other
+                                  ? booking.competition_other
+                                  : booking.competition_type}
+                              </span>
+                            )}
+                            {booking.booking_format && isFullscreen && (
+                              <span className="opacity-75 mt-0.5" style={{ fontSize: '0.9rem' }}>
+                                {booking.booking_format}
+                              </span>
+                            )}
+                            {booking.notes && isFullscreen && (
+                              <span className="opacity-70 mt-0.5 line-clamp-2" style={{ fontSize: '0.85rem' }}>
+                                {booking.notes}
+                              </span>
+                            )}
+                            {isRollup && (
+                              <span className="font-semibold flex items-center gap-1 mt-1 opacity-90" style={{ fontSize: isFullscreen ? '0.95rem' : '0.75rem' }}>
+                                <Users className="w-3.5 h-3.5" />
+                                {rollupCount}/8
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="font-medium text-center w-full" style={{ fontSize: isFullscreen ? '1rem' : '0.75rem' }}>Available</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
