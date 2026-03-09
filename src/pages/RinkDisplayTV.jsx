@@ -147,7 +147,7 @@ export default function RinkDisplayTV() {
     bookings.find(b => b.rink_number === rink && b.start_time === startTime && b.status !== 'cancelled' && b.status !== 'rejected');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col select-none">
+    <div ref={containerRef} className="min-h-screen bg-gray-50 flex flex-col select-none">
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
