@@ -833,7 +833,7 @@ export default function LeagueAdmin() {
                   if (!fileUrl) { toast.error('No file URL returned'); return; }
                   const a = document.createElement('a');
                   a.href = fileUrl;
-                  a.download = `${league.name}-scorecards.xlsx`;
+                  a.download = `${league.name}-scorecards.csv`;
                   a.click();
                   toast.success('Excel scorecards downloaded');
                 } else {
@@ -963,7 +963,7 @@ export default function LeagueAdmin() {
                                      if (!fileUrl) { toast.error('No file URL returned'); return; }
                                      const a = document.createElement('a');
                                      a.href = fileUrl;
-                                     a.download = `${league.name}-scorecards.xlsx`;
+                                     a.download = `${league.name}-scorecards.csv`;
                                      a.click();
                                      toast.success('Excel scorecards downloaded');
                                    } else {
