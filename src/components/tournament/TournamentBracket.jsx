@@ -116,9 +116,9 @@ export default function TournamentBracket({
 
   const canEnterScore = (match) => {
     if (!match.player1 || !match.player2) return false;
+    if (isAdmin) return match.score_status !== 'pending'; // admin can enter/override any score except pending (handled separately)
     if (match.score_status === 'accepted') return false;
-    if (match.score_status === 'pending') return false; // wait for admin action
-    if (isAdmin) return true;
+    if (match.score_status === 'pending') return false;
     if (!scoringMode || !userEmail) return false;
     return match.player1 === userEmail || match.player2 === userEmail;
   };
