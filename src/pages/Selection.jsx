@@ -39,6 +39,7 @@ export default function Selection() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('published');
   const [competitionFilter, setCompetitionFilter] = useState('all');
+  const [upcomingOnly, setUpcomingOnly] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
