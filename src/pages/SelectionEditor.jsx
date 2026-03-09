@@ -102,9 +102,14 @@ export default function SelectionEditor() {
       setSelections(existingSelection.selections || {});
       setOriginalSelections(existingSelection.selections || {});
       setHomeRinks(existingSelection.home_rinks || 2);
-      setSelectedRinks(existingSelection.selected_rinks || [1, 2]);
+      setSelectedRinks(existingSelection.selected_rinks || []);
       setMatchStartTime(existingSelection.match_start_time || '10:00');
       setMatchEndTime(existingSelection.match_end_time || '14:00');
+      if (existingSelection.competition === 'Friendly') {
+        setFriendlyLocation(existingSelection.friendly_location || '');
+        setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
+        setFriendlyPlayersPerRink(existingSelection.friendly_players_per_rink || 4);
+      }
     }
   }, [existingSelection]);
 
