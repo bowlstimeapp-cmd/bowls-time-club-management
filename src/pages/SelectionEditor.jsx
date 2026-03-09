@@ -602,11 +602,7 @@ ${club?.name || 'Your Bowls Club'}
   const handleHomeRinksChange = (value) => {
     const numRinks = parseInt(value);
     setHomeRinks(numRinks);
-    const newSelectedRinks = [];
-    for (let i = 1; i <= numRinks; i++) {
-      newSelectedRinks.push(i);
-    }
-    setSelectedRinks(newSelectedRinks);
+    setSelectedRinks([]);
   };
 
   const toggleRinkSelection = (rinkNum) => {
