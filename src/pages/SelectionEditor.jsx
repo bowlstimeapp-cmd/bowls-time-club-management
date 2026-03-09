@@ -581,15 +581,16 @@ ${club?.name || 'Your Bowls Club'}
 
   const handleCompetitionChange = (compName) => {
     setCompetition(compName);
-    const comp = competitions.find(c => c.name === compName);
-    if (comp) {
-      setHomeRinks(comp.home_rinks);
-      // Auto-select first N rinks as home rinks
-      const newSelectedRinks = [];
-      for (let i = 1; i <= comp.home_rinks; i++) {
-        newSelectedRinks.push(i);
+    setSelections({});
+    if (compName === 'Friendly') {
+      setSelectedRinks([]);
+      setHomeRinks(friendlyNumRinks);
+    } else {
+      const comp = competitions.find(c => c.name === compName);
+      if (comp) {
+        setHomeRinks(comp.home_rinks);
+        setSelectedRinks([]);
       }
-      setSelectedRinks(newSelectedRinks);
     }
   };
 
