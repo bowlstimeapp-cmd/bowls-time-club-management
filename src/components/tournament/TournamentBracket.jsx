@@ -207,9 +207,9 @@ export default function TournamentBracket({
                         <div key={match.id} className="bg-gray-50 rounded-lg border p-2 w-56">
                           {/* Player 1 row */}
                           <div
-                            className="relative"
-                            onMouseEnter={() => setHovered({ rIdx: roundIndex, mIdx: matchIndex, side: 'player1' })}
-                            onMouseLeave={() => setHovered(null)}
+                           className="relative"
+                           onMouseEnter={(e) => setHovered({ rIdx: roundIndex, mIdx: matchIndex, side: 'player1', rect: e.currentTarget.getBoundingClientRect() })}
+                           onMouseLeave={() => setHovered(null)}
                           >
                             <div
                               onClick={() => !scoringMode && editable && handleSelectWinner(roundIndex, matchIndex, match.player1)}
