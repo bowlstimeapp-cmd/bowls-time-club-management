@@ -272,6 +272,7 @@ export default function PlatformAdmin() {
       module_competitions: club.module_competitions !== false,
       module_leagues: club.module_leagues !== false,
       module_sms_notifications: club.module_sms_notifications || false,
+      module_homepage: club.module_homepage || false,
       module_function_rooms: club.module_function_rooms || false
     });
     setDialogOpen(true);
