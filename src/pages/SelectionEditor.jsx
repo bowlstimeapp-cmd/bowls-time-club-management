@@ -358,11 +358,16 @@ if (club?.email_member_notifications) {
     `.trim();
 
     const subject = `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`;
-    await base44.integrations.Core.SendEmail({
-      to: member.user_email,
-      subject,
-      body: emailBody
-    });
+    try {
+      await base44.integrations.Core.SendEmail({
+        to: member.user_email,
+        subject,
+        body: emailBody
+      });
+    } catch (emailErr) {
+      console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
+      continue;
+    }
     await base44.entities.EmailLog.create({
       club_id: clubId,
       club_name: club?.name || '',
