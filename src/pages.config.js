@@ -78,6 +78,8 @@ import Selection from './pages/Selection';
 import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
 import UserGuides from './pages/UserGuides';
+import TournamentView from './pages/TournamentView';
+import TournamentEditor from './pages/TournamentEditor';
 import __Layout from './Layout.jsx';
 
 
@@ -113,6 +115,8 @@ export const PAGES = {
     "SelectionEditor": SelectionEditor,
     "SelectionView": SelectionView,
     "UserGuides": UserGuides,
+    "TournamentView": TournamentView,
+    "TournamentEditor": TournamentEditor,
 }
 
 export const pagesConfig = {
