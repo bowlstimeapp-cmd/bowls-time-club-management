@@ -26,7 +26,7 @@ export default function TournamentBracket({
 }) {
   const [editingMatch, setEditingMatch] = useState(null);
   const [scoreInput, setScoreInput] = useState({ p1: '', p2: '' });
-  const [hovered, setHovered] = useState(null); // { rIdx, mIdx, side }
+  const [hovered, setHovered] = useState(null); // { rIdx, mIdx, side, rect }
 
   if (!bracket || !bracket.rounds) return null;
 
