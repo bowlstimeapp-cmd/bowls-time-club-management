@@ -239,46 +239,126 @@ export default function SelectionEditor() {
 
     const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
     
-    // Email notifications
-    if (club?.email_member_notifications) {
-      const emailMembers = members.filter(m => 
-        selectedPlayerEmails.includes(m.user_email) && 
-        m.email_notifications !== false
-      );
+// Email notifications
+if (club?.email_member_notifications) {
+  const emailMembers = members.filter(m => 
+    selectedPlayerEmails.includes(m.user_email) && 
+    m.email_notifications !== false
+  );
 
-      for (const member of emailMembers) {
-        const emailBody = `
-Dear ${member.first_name || 'Member'},
+  for (const member of emailMembers) {
+    const emailBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding: 30px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1a5276; padding: 24px 32px; text-align:center;">
+              <h1 style="margin:0; color:#ffffff; font-size:22px; font-weight:600;">
+                ${club?.name || 'Your Bowls Club'}
+              </h1>
+            </td>
+          </tr>
 
-You have been selected to play in an upcoming match!
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="margin: 0 0 16px; font-size:16px; color:#333;">
+                Dear ${member.first_name || 'Member'},
+              </p>
+              <p style="margin: 0 0 24px; font-size:16px; color:#333;">
+                You have been selected to play in an upcoming match!
+              </p>
 
-Match Details:
-- Competition: ${competition}
-- Date: ${format(new Date(matchDate), 'd MMMM yyyy')}
-${matchName ? `- Match: ${matchName}` : ''}
-${matchStartTime ? `- Time: ${matchStartTime} - ${matchEndTime}` : ''}
+              <!-- Match Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:20px; margin-bottom:24px;">
+                <tr>
+                  <td>
+                    <h2 style="margin: 0 0 16px; font-size:16px; color:#1a5276; text-transform:uppercase; letter-spacing:0.5px;">Match Details</h2>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Competition</td>
+                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${competition}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Date</td>
+                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${format(new Date(matchDate), 'd MMMM yyyy')}</td>
+                      </tr>
+                      ${matchName ? `
+                      <tr>
+                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Match</td>
+                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${matchName}</td>
+                      </tr>` : ''}
+                      ${matchStartTime ? `
+                      <tr>
+                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Time</td>
+                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${matchStartTime} – ${matchEndTime}</td>
+                      </tr>` : ''}
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-Team Selection:
-${teamList}
+              <!-- Team Selection -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:20px; margin-bottom:24px;">
+                <tr>
+                  <td>
+                    <h2 style="margin: 0 0 12px; font-size:16px; color:#1a5276; text-transform:uppercase; letter-spacing:0.5px;">Team Selection</h2>
+                    <p style="margin:0; font-size:14px; color:#333; white-space:pre-line; line-height:1.7;">${teamList}</p>
+                  </td>
+                </tr>
+              </table>
 
-Please confirm your availability by visiting:
-${matchUrl}
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="${matchUrl}" style="display:inline-block; background-color:#1a5276; color:#ffffff; text-decoration:none; padding:12px 32px; border-radius:6px; font-size:15px; font-weight:600;">
+                      Confirm Availability
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-Best regards,
-${club?.name || 'Your Bowls Club'}
-        `.trim();
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f4f4f4; padding:16px 32px; text-align:center; border-top:1px solid #e0e0e0;">
+              <p style="margin:0; font-size:12px; color:#999;">
+                ${club?.name || 'Your Bowls Club'}
+              </p>
+            </td>
+          </tr>
 
-        await base44.integrations.Core.SendEmail({
-          to: member.user_email,
-          subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-          body: emailBody
-        });
-      }
-      
-      if (emailMembers.length > 0) {
-        toast.success(`Emails sent to ${emailMembers.length} players`);
-      }
-    }
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    await base44.integrations.Core.SendEmail({
+      to: member.user_email,
+      subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+      body: emailBody
+    });
+  }
+
+  if (emailMembers.length > 0) {
+    toast.success(`Emails sent to ${emailMembers.length} players`);
+  }
+}
     
     // SMS notifications
     if (club?.module_sms_notifications && club?.sms_member_notifications) {
