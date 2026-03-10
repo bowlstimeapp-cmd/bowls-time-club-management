@@ -509,11 +509,16 @@ Best regards,
 ${club?.name || 'Your Bowls Club'}
               `.trim();
 
-              await base44.integrations.Core.SendEmail({
-                to: member.user_email,
-                subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-                body: emailBody
-              });
+              try {
+                await base44.integrations.Core.SendEmail({
+                  to: member.user_email,
+                  subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+                  body: emailBody
+                });
+              } catch (emailErr) {
+                console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
+                continue;
+              }
             }
             
             if (emailMembers.length > 0) {
