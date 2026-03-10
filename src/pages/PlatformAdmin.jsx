@@ -599,6 +599,80 @@ export default function PlatformAdmin() {
               </Card>
             </TabsContent>
 
+            {/* ── SENT EMAILS ── */}
+            <TabsContent value="emails">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-blue-500" />
+                      Sent Emails Log
+                    </CardTitle>
+                    <Input
+                      placeholder="Filter by email or club..."
+                      value={emailLogFilter}
+                      onChange={e => setEmailLogFilter(e.target.value)}
+                      className="w-64"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {emailLogsLoading ? (
+                    <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+                  ) : emailLogs.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Mail className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-gray-500">No emails logged yet. Emails will appear here when selections are published.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 px-2 font-medium text-gray-500">Date</th>
+                            <th className="text-left py-2 px-2 font-medium text-gray-500">Club</th>
+                            <th className="text-left py-2 px-2 font-medium text-gray-500">Recipient</th>
+                            <th className="text-left py-2 px-2 font-medium text-gray-500">Match</th>
+                            <th className="text-left py-2 px-2 font-medium text-gray-500">Sent By</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {emailLogs
+                            .filter(log => {
+                              if (!emailLogFilter) return true;
+                              const f = emailLogFilter.toLowerCase();
+                              return (
+                                log.to_email?.toLowerCase().includes(f) ||
+                                log.club_name?.toLowerCase().includes(f) ||
+                                log.to_name?.toLowerCase().includes(f) ||
+                                log.related_label?.toLowerCase().includes(f)
+                              );
+                            })
+                            .map(log => (
+                              <tr key={log.id} className="border-b last:border-0 hover:bg-gray-50">
+                                <td className="py-2 px-2 text-gray-500 whitespace-nowrap">
+                                  {new Date(log.created_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  <div className="text-xs text-gray-400">{new Date(log.created_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                                </td>
+                                <td className="py-2 px-2 font-medium">{log.club_name || '—'}</td>
+                                <td className="py-2 px-2">
+                                  <div>{log.to_name}</div>
+                                  <div className="text-xs text-gray-500">{log.to_email}</div>
+                                </td>
+                                <td className="py-2 px-2 text-gray-600 max-w-xs truncate">{log.related_label || log.subject}</td>
+                                <td className="py-2 px-2 text-xs text-gray-500">{log.sent_by || '—'}</td>
+                              </tr>
+                            ))
+                          }
+                        </tbody>
+                      </table>
+                      <p className="text-xs text-gray-400 mt-3">Showing up to 200 most recent emails</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* ── DELETION REQUESTS ── */}
             <TabsContent value="deletions">
               <Card>
