@@ -236,7 +236,7 @@ export default function TournamentBracket({
                             </div>
                             {/* Contact tooltip for player 1 */}
                             {shouldShowContact(roundIndex, matchIndex, 'player1', match) && (
-                              <ContactTooltip contacts={getContactsForEntry(match.player1)} />
+                              <ContactTooltip contacts={getContactsForEntry(match.player1)} rect={hovered?.rect} />
                             )}
                           </div>
 
