@@ -54,6 +54,7 @@ export default function PlatformAdmin() {
   const manageAdminsClubId = searchParams.get('manageAdmins');
   
   const [user, setUser] = useState(null);
+  const [emailLogFilter, setEmailLogFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState(null);
   const [manageAdminsDialogOpen, setManageAdminsDialogOpen] = useState(false);
