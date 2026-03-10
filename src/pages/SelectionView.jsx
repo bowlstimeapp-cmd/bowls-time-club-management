@@ -211,10 +211,42 @@ export default function SelectionView() {
                 {format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}
               </p>
             </div>
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const allEmails = Object.values(selection.selections || {}).filter(Boolean);
+                const isSelected = user && allEmails.includes(user.email);
+                if (!isSelected) return null;
+                const myAvailability = availabilities.find(a => a.user_email === user.email);
+                const isPending = availabilityMutation.isPending;
+                return (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={myAvailability?.is_available === true ? 'default' : 'outline'}
+                      className={myAvailability?.is_available === true ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                      disabled={isPending}
+                      onClick={() => availabilityMutation.mutate(true)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Available
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={myAvailability?.is_available === false ? 'destructive' : 'outline'}
+                      disabled={isPending}
+                      onClick={() => availabilityMutation.mutate(false)}
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Unavailable
+                    </Button>
+                  </div>
+                );
+              })()}
+              <Button variant="outline" onClick={handlePrint}>
+                <Printer className="w-4 h-4 mr-2" />
+                Print
+              </Button>
+            </div>
           </div>
         </motion.div>
 
