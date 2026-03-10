@@ -35,6 +35,34 @@ import RinkClashModal from '@/components/booking/RinkClashModal';
 
 const APP_BASE_URL = window.location.origin;
 
+const buildFormattedTeamList = (selectionsObj, membersArr) => {
+  const positionOrder = ['Lead', '2', '3', 'Skip'];
+  const rinkMap = {};
+  for (const [pos, email] of Object.entries(selectionsObj)) {
+    if (!email) continue;
+    const match = pos.match(/^rink(\d+)_(.+)$/);
+    if (!match) continue;
+    const rinkNum = parseInt(match[1]);
+    const position = match[2];
+    if (!rinkMap[rinkNum]) rinkMap[rinkNum] = {};
+    const member = membersArr.find(m => m.user_email === email);
+    rinkMap[rinkNum][position] = member?.first_name && member?.surname
+      ? `${member.first_name} ${member.surname}`
+      : member?.user_name || email;
+  }
+  return Object.keys(rinkMap)
+    .sort((a, b) => parseInt(a) - parseInt(b))
+    .map(rinkNum => {
+      const positions = rinkMap[rinkNum];
+      const lines = [`Rink ${rinkNum}`];
+      for (const pos of positionOrder) {
+        if (positions[pos] !== undefined) lines.push(`${pos}: ${positions[pos]}`);
+      }
+      return lines.join('\n');
+    })
+    .join('\n\n');
+};
+
 export default function SelectionEditor() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
@@ -215,27 +243,8 @@ export default function SelectionEditor() {
     // Get all selected player emails
     const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
     
-    // Create notifications for all selected players
-    const notificationsToCreate = selectedPlayerEmails.map(email => ({
-      user_email: email,
-      type: 'team_selection',
-      title: 'Selected for Match',
-      message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. View details at app.bowls-time.com `,
-    }));
-    
-    await base44.entities.Notification.bulkCreate(notificationsToCreate);
-    
-    // Build team list for notifications
-    const teamList = Object.entries(selections)
-      .filter(([_, email]) => email)
-      .map(([pos, email]) => {
-        const member = members.find(m => m.user_email === email);
-        const name = member?.first_name && member?.surname 
-          ? `${member.first_name} ${member.surname}` 
-          : member?.user_name || email;
-        return `${pos.replace('rink', 'Rink ').replace('_', ' ')}: ${name}`;
-      })
-      .join('\n');
+    // Build team list for email
+    const teamList = buildFormattedTeamList(selections, members);
 
     const matchUrl = `https://app.bowls-time.com${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
     
@@ -450,16 +459,7 @@ if (club?.email_member_notifications) {
           
           // Send emails/SMS only to newly added players
           const selectedPlayerEmails = newlyAddedEmails;
-          const teamList = Object.entries(selections)
-            .filter(([_, email]) => email)
-            .map(([pos, email]) => {
-              const member = members.find(m => m.user_email === email);
-              const name = member?.first_name && member?.surname 
-                ? `${member.first_name} ${member.surname}` 
-                : member?.user_name || email;
-              return `${pos.replace('rink', 'Rink ').replace('_', ' ')}: ${name}`;
-            })
-            .join('\n');
+          const teamList = buildFormattedTeamList(selections, members);
 
           const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${selectionId}`;
           
