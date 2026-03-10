@@ -77,9 +77,9 @@ import RinkDisplayTV from './pages/RinkDisplayTV';
 import Selection from './pages/Selection';
 import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
-import UserGuides from './pages/UserGuides';
-import TournamentView from './pages/TournamentView';
 import TournamentEditor from './pages/TournamentEditor';
+import TournamentView from './pages/TournamentView';
+import UserGuides from './pages/UserGuides';
 import __Layout from './Layout.jsx';
 
 
@@ -114,9 +114,9 @@ export const PAGES = {
     "Selection": Selection,
     "SelectionEditor": SelectionEditor,
     "SelectionView": SelectionView,
-    "UserGuides": UserGuides,
-    "TournamentView": TournamentView,
     "TournamentEditor": TournamentEditor,
+    "TournamentView": TournamentView,
+    "UserGuides": UserGuides,
 }
 
 export const pagesConfig = {

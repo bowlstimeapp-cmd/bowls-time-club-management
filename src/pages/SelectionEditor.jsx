@@ -357,10 +357,22 @@ if (club?.email_member_notifications) {
 </html>
     `.trim();
 
+    const subject = `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`;
     await base44.integrations.Core.SendEmail({
       to: member.user_email,
-      subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+      subject,
       body: emailBody
+    });
+    await base44.entities.EmailLog.create({
+      club_id: clubId,
+      club_name: club?.name || '',
+      to_email: member.user_email,
+      to_name: member.user_name || member.first_name || '',
+      subject,
+      type: 'selection',
+      related_id: savedSelectionId,
+      related_label: `${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+      sent_by: user?.email || ''
     });
   }
 
