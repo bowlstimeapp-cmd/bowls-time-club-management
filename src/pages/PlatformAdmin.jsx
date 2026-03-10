@@ -427,7 +427,7 @@ export default function PlatformAdmin() {
           transition={{ delay: 0.2 }}
         >
           <Tabs defaultValue="clubs" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="clubs">Clubs</TabsTrigger>
               <TabsTrigger value="competitions">Competitions</TabsTrigger>
               <TabsTrigger value="feedback">Feedback ({feedbacks.length})</TabsTrigger>
@@ -439,6 +439,7 @@ export default function PlatformAdmin() {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="emails">Sent Emails</TabsTrigger>
             </TabsList>
 
             {/* ── CLUBS ── */}
