@@ -237,7 +237,7 @@ export default function SelectionEditor() {
       })
       .join('\n');
 
-    const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
+    const matchUrl = `https://app.bowls-time.com/FunctionRoomAdmin${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
     
 // Email notifications
 if (club?.email_member_notifications) {
