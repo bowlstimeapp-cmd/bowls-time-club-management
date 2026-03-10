@@ -72,10 +72,30 @@ export default function SelectionView() {
     enabled: !!clubId,
   });
 
-  const { data: availabilities = [] } = useQuery({
+  const { data: availabilities = [], refetch: refetchAvailabilities } = useQuery({
     queryKey: ['selectionAvailabilities', selectionId],
     queryFn: () => base44.entities.MemberAvailability.filter({ selection_id: selectionId }),
     enabled: !!selectionId,
+  });
+
+  const availabilityMutation = useMutation({
+    mutationFn: async (isAvailable) => {
+      const existing = availabilities.find(a => a.user_email === user?.email);
+      if (existing) {
+        return base44.entities.MemberAvailability.update(existing.id, { is_available: isAvailable });
+      } else {
+        return base44.entities.MemberAvailability.create({
+          club_id: clubId,
+          selection_id: selectionId,
+          user_email: user.email,
+          is_available: isAvailable,
+        });
+      }
+    },
+    onSuccess: (_, isAvailable) => {
+      queryClient.invalidateQueries({ queryKey: ['selectionAvailabilities', selectionId] });
+      toast.success(isAvailable ? 'Marked as available' : 'Marked as unavailable');
+    },
   });
 
   const { data: club } = useQuery({
