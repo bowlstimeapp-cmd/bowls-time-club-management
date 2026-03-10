@@ -245,7 +245,7 @@ export default function TournamentBracket({
                           {/* Player 2 row */}
                           <div
                             className="relative"
-                            onMouseEnter={() => setHovered({ rIdx: roundIndex, mIdx: matchIndex, side: 'player2' })}
+                            onMouseEnter={(e) => setHovered({ rIdx: roundIndex, mIdx: matchIndex, side: 'player2', rect: e.currentTarget.getBoundingClientRect() })}
                             onMouseLeave={() => setHovered(null)}
                           >
                             <div
