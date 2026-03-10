@@ -41,6 +41,12 @@ export default function SelectionView() {
   const selectionId = searchParams.get('selectionId');
   const navigate = useNavigate();
   const printRef = React.useRef();
+  const [user, setUser] = React.useState(null);
+  const queryClient = useQueryClient();
+
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!clubId || !selectionId) {
