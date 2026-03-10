@@ -121,7 +121,6 @@ export default function PlatformAdmin() {
     queryFn: () => base44.entities.DeletionRequest.list('-requested_date'),
   });
 
-  const [emailLogFilter, setEmailLogFilter] = useState('');
   const { data: emailLogs = [], isLoading: emailLogsLoading } = useQuery({
     queryKey: ['emailLogs'],
     queryFn: () => base44.entities.EmailLog.list('-created_date', 200),
