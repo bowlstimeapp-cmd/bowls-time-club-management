@@ -348,10 +348,16 @@ export default function TournamentBracket({
   );
 }
 
-function ContactTooltip({ contacts }) {
-  if (!contacts || contacts.length === 0) return null;
+function ContactTooltip({ contacts, rect }) {
+  if (!contacts || contacts.length === 0 || !rect) return null;
+  const style = {
+    position: 'fixed',
+    top: rect.top,
+    left: rect.right + 8,
+    zIndex: 9999,
+  };
   return (
-    <div className="absolute z-50 left-full top-0 ml-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2.5 w-48 text-xs pointer-events-none">
+    <div style={style} className="bg-white border border-gray-200 rounded-lg shadow-xl p-2.5 w-48 text-xs pointer-events-none">
       {contacts.map((c, i) => (
         <div key={i} className={i > 0 ? 'mt-2 pt-2 border-t border-gray-100' : ''}>
           <p className="font-semibold text-gray-800">{c.name}</p>
