@@ -261,7 +261,7 @@ export default function PlatformAdmin() {
       primary_admin_email: '', admin_first_name: '', admin_surname: '',
       is_active: true, module_rink_booking: true, module_selection: true,
       module_competitions: true, module_leagues: true, module_sms_notifications: false,
-      module_homepage: false, module_function_rooms: false
+      module_homepage: false, module_function_rooms: false, module_custom_branding: false
     });
     setDialogOpen(true);
   };
@@ -280,7 +280,8 @@ export default function PlatformAdmin() {
       module_leagues: club.module_leagues !== false,
       module_sms_notifications: club.module_sms_notifications || false,
       module_homepage: club.module_homepage || false,
-      module_function_rooms: club.module_function_rooms || false
+      module_function_rooms: club.module_function_rooms || false,
+      module_custom_branding: club.module_custom_branding || false
     });
     setDialogOpen(true);
   };
@@ -828,6 +829,7 @@ export default function PlatformAdmin() {
                       { key: 'module_sms_notifications', label: 'SMS Notifications' },
                       { key: 'module_homepage', label: 'Club Homepage' },
                       { key: 'module_function_rooms', label: 'Function Room Bookings' },
+                      { key: 'module_custom_branding', label: 'Custom Branding (Scorecard Layout)' },
                     ].map(({ key, label }) => (
                       <div key={key} className="flex items-center justify-between">
                         <Label className="font-normal">{label}</Label>
