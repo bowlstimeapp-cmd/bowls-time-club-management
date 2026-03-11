@@ -10,21 +10,29 @@ import ElementPalette from '@/components/scorecard/ElementPalette';
 import CanvasElement from '@/components/scorecard/CanvasElement';
 import PropertiesPanel from '@/components/scorecard/PropertiesPanel';
 
-export const CANVAS_W = 800;
-export const CANVAS_H = 550;
+// Canvas represents a single scorecard: 67mm × 190mm at ~4px/mm
+export const CANVAS_W = 268;
+export const CANVAS_H = 760;
+
+const S = (v) => ({ fontSize: v, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' });
+const SB = (v, bg) => ({ fontSize: v, fontWeight: 'bold', textAlign: 'left', backgroundColor: bg || '', borderColor: '' });
 
 export const DEFAULT_ELEMENTS = [
-  { id: 'e1', type: 'clubName', x: 10, y: 10, width: 240, height: 38, styles: { fontSize: 16, fontWeight: 'bold', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e2', type: 'logo', x: 640, y: 5, width: 150, height: 48, styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'center', backgroundColor: '', borderColor: '' } },
-  { id: 'e3', type: 'competition', x: 10, y: 56, width: 280, height: 28, styles: { fontSize: 13, fontWeight: 'bold', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e4', type: 'matchName', x: 10, y: 88, width: 280, height: 26, styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e5', type: 'date', x: 300, y: 56, width: 180, height: 28, styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e6', type: 'time', x: 300, y: 88, width: 130, height: 26, styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e7', type: 'rink', x: 490, y: 56, width: 140, height: 28, styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e8', type: 'opponentName', x: 490, y: 88, width: 200, height: 26, styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' } },
-  { id: 'e9', type: 'players', x: 10, y: 124, width: 240, height: 290, styles: { fontSize: 11, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '#cccccc' } },
-  { id: 'e10', type: 'scoreTable', x: 260, y: 124, width: 530, height: 290, styles: { fontSize: 10, fontWeight: 'normal', textAlign: 'center', backgroundColor: '', borderColor: '#cccccc' } },
-  { id: 'e11', type: 'signatures', x: 10, y: 424, width: 780, height: 116, styles: { fontSize: 11, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '#cccccc' } },
+  // Header row (18mm = 72px)
+  { id: 'e1', type: 'logo',           x: 0,   y: 0,   width: 60,  height: 72,  styles: { ...S(8) } },
+  { id: 'e2', type: 'competition',    x: 62,  y: 2,   width: 204, height: 22,  styles: { ...SB(9) } },
+  { id: 'e3', type: 'matchName',      x: 62,  y: 26,  width: 204, height: 20,  styles: { ...S(7) } },
+  { id: 'e4', type: 'date',           x: 62,  y: 48,  width: 204, height: 20,  styles: { ...S(7) } },
+  // Match details grey bar (8mm = 32px)
+  { id: 'e5', type: 'matchDetailsBar', x: 0,  y: 74,  width: 268, height: 32,  styles: { ...SB(7, '#f5f5f5'), borderColor: '#000000' } },
+  // Teams row grey bar (7mm = 28px)
+  { id: 'e6', type: 'teamsRow',       x: 0,   y: 108, width: 268, height: 26,  styles: { ...SB(8, '#e6e6e6'), borderColor: '#000000' } },
+  // Players section (4 players × 6mm = 96px)
+  { id: 'e7', type: 'players',        x: 0,   y: 136, width: 268, height: 96,  styles: { ...SB(8), borderColor: '#000000' } },
+  // Score table (21 ends, ~460px)
+  { id: 'e8', type: 'scoreTable',     x: 0,   y: 234, width: 268, height: 462, styles: { ...S(6), borderColor: '#000000' } },
+  // Signatures footer
+  { id: 'e9', type: 'signatures',     x: 0,   y: 698, width: 268, height: 62,  styles: { ...S(6), borderColor: '#b4b4b4' } },
 ];
 
 const genId = () => `elem_${Math.random().toString(36).slice(2, 10)}`;

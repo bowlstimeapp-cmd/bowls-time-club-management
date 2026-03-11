@@ -1,94 +1,127 @@
 import React, { useRef } from 'react';
 
-const ELEMENT_LABELS = {
+export const ELEMENT_LABELS = {
+  logo: 'Logo',
   competition: 'Competition',
-  matchName: 'Match Name',
-  date: 'Date',
-  time: 'Time',
-  rink: 'Rink',
-  clubName: 'Club Name',
-  opponentName: 'Opponent',
+  matchName: 'Club vs Opponent',
+  date: 'Date & Time',
+  matchDetailsBar: 'Match Details Bar',
+  teamsRow: 'Teams Row',
   players: 'Players List',
   scoreTable: 'Score Table',
-  logo: 'Logo',
   signatures: 'Signatures',
 };
 
 function ElementContent({ type, styles }) {
-  const fs = Math.min(styles?.fontSize || 11, 14);
+  const fs = styles?.fontSize || 8;
+
   switch (type) {
-    case 'competition':
-      return <div style={{ fontSize: fs }} className="px-1 font-bold truncate">Competition Name</div>;
-    case 'matchName':
-      return <div style={{ fontSize: fs }} className="px-1 truncate">vs Opponent BC</div>;
-    case 'date':
-      return <div style={{ fontSize: fs }} className="px-1 truncate">12 March 2026</div>;
-    case 'time':
-      return <div style={{ fontSize: fs }} className="px-1 truncate">14:00</div>;
-    case 'rink':
-      return <div style={{ fontSize: fs }} className="px-1 truncate">Rink 1</div>;
-    case 'clubName':
-      return <div style={{ fontSize: fs }} className="px-1 font-bold truncate">Your Bowls Club</div>;
-    case 'opponentName':
-      return <div style={{ fontSize: fs }} className="px-1 truncate">Opponent BC</div>;
-    case 'players':
+    case 'logo':
       return (
-        <div className="px-1 overflow-hidden" style={{ fontSize: Math.min(fs, 10) }}>
-          <div className="font-semibold mb-0.5">Players</div>
-          {['1. Skip', '2. Third', '3. Second', '4. Lead'].map((p, i) => (
-            <div key={i}>{p}</div>
+        <div className="flex items-center justify-center w-full h-full">
+          <div className="border border-dashed border-gray-400 rounded text-gray-400 flex items-center justify-center w-4/5 h-4/5"
+            style={{ fontSize: Math.min(fs, 9) }}>
+            Club Logo
+          </div>
+        </div>
+      );
+
+    case 'competition':
+      return (
+        <div className="flex items-start w-full h-full p-0.5" style={{ fontSize: fs, fontWeight: 'bold', lineHeight: 1.2 }}>
+          League / Competition Name
+        </div>
+      );
+
+    case 'matchName':
+      return (
+        <div className="flex items-center w-full h-full p-0.5" style={{ fontSize: fs, lineHeight: 1.2 }}>
+          Home Club vs Opponents
+        </div>
+      );
+
+    case 'date':
+      return (
+        <div className="flex items-center w-full h-full p-0.5" style={{ fontSize: fs, lineHeight: 1.2 }}>
+          12 Mar 2026 · 14:00 to 16:00
+        </div>
+      );
+
+    case 'matchDetailsBar':
+      return (
+        <div className="flex flex-col items-center justify-center w-full h-full text-center p-0.5"
+          style={{ fontSize: fs, fontWeight: 'bold', lineHeight: 1.3 }}>
+          <div>Wednesday - 12 Mar 2026</div>
+          <div>Competition · Rink 1 (Home)</div>
+        </div>
+      );
+
+    case 'teamsRow':
+      return (
+        <div className="flex items-center justify-between w-full h-full px-1"
+          style={{ fontSize: fs, fontWeight: 'bold' }}>
+          <span>Home Club</span>
+          <span style={{ fontSize: Math.max(fs - 1, 6) }}>Vs</span>
+          <span>Opponents</span>
+        </div>
+      );
+
+    case 'players': {
+      const positions = ['Lead', '2', '3', 'Skip'];
+      return (
+        <div className="w-full h-full overflow-hidden" style={{ fontSize: fs }}>
+          {positions.map((pos, i) => (
+            <div key={i} className="grid border-b border-gray-300 items-center"
+              style={{ gridTemplateColumns: '1fr 20px 1fr', height: '25%', padding: '0 2px', fontWeight: 'bold' }}>
+              <span className="truncate">Player Name</span>
+              <span className="text-center" style={{ fontSize: Math.max(fs - 1, 6) }}>{pos === 'Lead' ? '1' : pos}</span>
+              <span></span>
+            </div>
           ))}
         </div>
       );
+    }
+
     case 'scoreTable':
       return (
-        <div className="px-1 overflow-hidden w-full h-full">
-          <table className="w-full border-collapse" style={{ fontSize: 8 }}>
+        <div className="w-full h-full overflow-hidden">
+          <table className="w-full border-collapse h-full" style={{ fontSize: Math.max(fs - 2, 5) }}>
             <thead>
               <tr>
-                <th className="border border-gray-400 px-0.5 bg-gray-100">End</th>
-                {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].map(n => (
-                  <th key={n} className="border border-gray-400 px-0.5 bg-gray-100 text-center">{n}</th>
+                {['Score', 'Total', 'Ends', 'Score', 'Total'].map((h, i) => (
+                  <th key={i} className="border border-gray-500 text-center bg-gray-200 py-0" style={{ fontSize: Math.max(fs - 1, 6), fontWeight: 'bold' }}>{h}</th>
                 ))}
-                <th className="border border-gray-400 px-0.5 bg-gray-100">Total</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="border border-gray-400 px-0.5 font-semibold">H</td>
-                {[...Array(21)].map((_, i) => <td key={i} className="border border-gray-400 text-center">&nbsp;</td>)}
-                <td className="border border-gray-400">&nbsp;</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-400 px-0.5 font-semibold">A</td>
-                {[...Array(21)].map((_, i) => <td key={i} className="border border-gray-400 text-center">&nbsp;</td>)}
-                <td className="border border-gray-400">&nbsp;</td>
+              {Array.from({ length: 12 }, (_, i) => (
+                <tr key={i}>
+                  <td className="border border-gray-300" style={{ height: '5%' }}></td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300 text-center bg-gray-50" style={{ fontSize: Math.max(fs - 2, 5) }}>{i + 1}</td>
+                  <td className="border border-gray-300"></td>
+                  <td className="border border-gray-300"></td>
+                </tr>
+              ))}
+              <tr className="bg-gray-200">
+                <td className="border border-gray-500 px-0.5" style={{ fontWeight: 'bold', fontSize: Math.max(fs - 1, 6) }}>Total</td>
+                <td className="border border-gray-500"></td>
+                <td className="border border-gray-500"></td>
+                <td className="border border-gray-500 px-0.5" style={{ fontWeight: 'bold', fontSize: Math.max(fs - 1, 6) }}>Total</td>
+                <td className="border border-gray-500"></td>
               </tr>
             </tbody>
           </table>
         </div>
       );
-    case 'logo':
-      return (
-        <div className="flex items-center justify-center w-full h-full">
-          <div className="border-2 border-dashed border-gray-300 rounded text-gray-400 text-xs px-3 py-1">
-            Club Logo
-          </div>
-        </div>
-      );
+
     case 'signatures':
       return (
-        <div className="px-2 py-1 grid grid-cols-2 gap-6" style={{ fontSize: Math.min(fs, 10) }}>
-          <div>
-            <div className="font-semibold mb-3">Home Skip Signature:</div>
-            <div className="border-b border-gray-500">&nbsp;</div>
-          </div>
-          <div>
-            <div className="font-semibold mb-3">Away Skip Signature:</div>
-            <div className="border-b border-gray-500">&nbsp;</div>
-          </div>
+        <div className="flex items-center justify-center w-full h-full" style={{ fontSize: fs }}>
+          <span>Signatures of Skips</span>
         </div>
       );
+
     default:
       return <div className="px-1 text-xs text-gray-400 truncate">{ELEMENT_LABELS[type] || type}</div>;
   }
@@ -140,8 +173,8 @@ export default function CanvasElement({ element, scale, isSelected, onSelect, on
     const dx = (e.clientX - resizeRef.current.startPx) / scale;
     const dy = (e.clientY - resizeRef.current.startPy) / scale;
     onUpdate(element.id, {
-      width: Math.max(40, resizeRef.current.startW + dx),
-      height: Math.max(18, resizeRef.current.startH + dy),
+      width: Math.max(30, resizeRef.current.startW + dx),
+      height: Math.max(16, resizeRef.current.startH + dy),
     });
   };
 
@@ -165,7 +198,7 @@ export default function CanvasElement({ element, scale, isSelected, onSelect, on
             ? `1px solid ${styles.borderColor}`
             : '1px dashed #cbd5e1',
         backgroundColor: styles.backgroundColor || 'transparent',
-        fontSize: styles.fontSize ? `${styles.fontSize}px` : '11px',
+        fontSize: styles.fontSize ? `${styles.fontSize}px` : '8px',
         fontWeight: styles.fontWeight || 'normal',
         textAlign: styles.textAlign || 'left',
         overflow: 'hidden',
@@ -182,24 +215,22 @@ export default function CanvasElement({ element, scale, isSelected, onSelect, on
 
       {isSelected && (
         <>
-          <div
-            style={{
-              position: 'absolute', top: -18, left: 0,
-              fontSize: 9, background: '#2563eb', color: 'white',
-              padding: '1px 5px', whiteSpace: 'nowrap', pointerEvents: 'none',
-              borderRadius: '2px 2px 0 0',
-            }}
-          >
+          <div style={{
+            position: 'absolute', top: -16, left: 0,
+            fontSize: 8, background: '#2563eb', color: 'white',
+            padding: '1px 5px', whiteSpace: 'nowrap', pointerEvents: 'none',
+            borderRadius: '2px 2px 0 0',
+          }}>
             {ELEMENT_LABELS[element.type]}
           </div>
 
           <div
             style={{
-              position: 'absolute', top: -8, right: -8,
-              width: 16, height: 16, background: '#ef4444',
+              position: 'absolute', top: -7, right: -7,
+              width: 14, height: 14, background: '#ef4444',
               borderRadius: '50%', display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'pointer', color: 'white',
-              fontSize: 12, zIndex: 20, lineHeight: 1,
+              fontSize: 11, zIndex: 20, lineHeight: 1,
             }}
             onPointerDown={(e) => { e.stopPropagation(); onDelete(element.id); }}
           >
@@ -208,8 +239,8 @@ export default function CanvasElement({ element, scale, isSelected, onSelect, on
 
           <div
             style={{
-              position: 'absolute', bottom: -5, right: -5,
-              width: 10, height: 10, background: '#2563eb',
+              position: 'absolute', bottom: -4, right: -4,
+              width: 9, height: 9, background: '#2563eb',
               borderRadius: 2, cursor: 'se-resize', zIndex: 20,
               touchAction: 'none',
             }}

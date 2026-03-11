@@ -1,17 +1,15 @@
 import React from 'react';
 
-const PALETTE_ITEMS = [
-  { type: 'competition', label: 'Competition', bg: '#dbeafe' },
-  { type: 'matchName', label: 'Match Name', bg: '#dcfce7' },
-  { type: 'date', label: 'Date', bg: '#fef3c7' },
-  { type: 'time', label: 'Time', bg: '#fef3c7' },
-  { type: 'rink', label: 'Rink', bg: '#fce7f3' },
-  { type: 'clubName', label: 'Club Name', bg: '#dbeafe' },
-  { type: 'opponentName', label: 'Opponent', bg: '#dcfce7' },
-  { type: 'players', label: 'Players List', bg: '#ede9fe' },
-  { type: 'scoreTable', label: 'Score Table', bg: '#ede9fe' },
+export const PALETTE_ITEMS = [
   { type: 'logo', label: 'Logo', bg: '#fef9c3' },
-  { type: 'signatures', label: 'Signatures', bg: '#f0fdf4' },
+  { type: 'competition', label: 'Competition', bg: '#dbeafe' },
+  { type: 'matchName', label: 'Club vs Opponent', bg: '#dcfce7' },
+  { type: 'date', label: 'Date & Time', bg: '#fef3c7' },
+  { type: 'matchDetailsBar', label: 'Match Details Bar', bg: '#e5e7eb' },
+  { type: 'teamsRow', label: 'Teams Row', bg: '#d1d5db' },
+  { type: 'players', label: 'Players List', bg: '#ede9fe' },
+  { type: 'scoreTable', label: 'Score Table', bg: '#f0fdf4' },
+  { type: 'signatures', label: 'Signatures', bg: '#fce7f3' },
 ];
 
 export default function ElementPalette() {
