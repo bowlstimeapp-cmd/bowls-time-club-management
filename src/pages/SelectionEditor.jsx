@@ -973,7 +973,10 @@ ${club?.name || 'Your Bowls Club'}
                     onClick={async () => {
                       try {
                         toast.info('Generating scorecards...');
-                        const result = await base44.functions.invoke('generateSelectionScorecards', {
+                        const functionName = (club?.module_custom_branding && club?.use_custom_scorecard_layout)
+                          ? 'generateCustomScorecards'
+                          : 'generateSelectionScorecards';
+                        const result = await base44.functions.invoke(functionName, {
                           selectionId: selectionId,
                           clubId: clubId
                         });
