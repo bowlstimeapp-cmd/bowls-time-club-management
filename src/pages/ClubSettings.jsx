@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink } from 'lucide-react';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -47,6 +47,7 @@ export default function ClubSettings() {
   const [altViewSelection, setAltViewSelection] = useState(false);
   const [altViewLeagues, setAltViewLeagues] = useState(false);
   const [scorecardFormat, setScorecardFormat] = useState('pdf');
+  const [useCustomScorecardLayout, setUseCustomScorecardLayout] = useState(false);
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -124,6 +125,7 @@ export default function ClubSettings() {
       setAltViewSelection(club.alt_view_selection || false);
       setAltViewLeagues(club.alt_view_leagues || false);
       setScorecardFormat(club.scorecard_format || 'pdf');
+      setUseCustomScorecardLayout(club.use_custom_scorecard_layout || false);
     }
   }, [club]);
 
@@ -269,6 +271,7 @@ export default function ClubSettings() {
       alt_view_selection: altViewSelection,
       alt_view_leagues: altViewLeagues,
       scorecard_format: scorecardFormat,
+      use_custom_scorecard_layout: useCustomScorecardLayout,
     });
   };
 
@@ -764,6 +767,43 @@ export default function ClubSettings() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Custom Scorecard Layout */}
+            {club?.module_custom_branding && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="w-5 h-5" />
+                    Custom Scorecard Layout
+                  </CardTitle>
+                  <CardDescription>
+                    Design a custom scorecard layout for this club. When enabled, the scorecard generator will use your custom layout.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base">Use Custom Scorecard Layout</Label>
+                      <p className="text-sm text-gray-500">Override the default scorecard design with your custom layout</p>
+                    </div>
+                    <Switch
+                      checked={useCustomScorecardLayout}
+                      onCheckedChange={setUseCustomScorecardLayout}
+                    />
+                  </div>
+                  {useCustomScorecardLayout && (
+                    <div className="pt-2">
+                      <Link to={createPageUrl('ScorecardLayoutEditor') + `?clubId=${clubId}`}>
+                        <Button type="button" variant="outline" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Edit Layout
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Function Room API Key */}
             {club?.module_function_rooms && (
