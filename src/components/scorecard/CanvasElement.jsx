@@ -94,7 +94,7 @@ function ElementContent({ type, styles }) {
               </tr>
             </thead>
             <tbody>
-              {Array.from({ length: 12 }, (_, i) => (
+              {Array.from({ length: 21 }, (_, i) => (
                 <tr key={i}>
                   <td className="border border-gray-300" style={{ height: '5%' }}></td>
                   <td className="border border-gray-300"></td>
