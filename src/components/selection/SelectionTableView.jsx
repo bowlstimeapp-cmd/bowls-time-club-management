@@ -113,36 +113,55 @@ export default function SelectionTableView({
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
+                  {/* Desktop: icon buttons */}
+                  <div className="hidden sm:flex items-center justify-end gap-1">
                     <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"><Eye className="w-3.5 h-3.5" /></Button>
                     </Link>
                     {selection.status === 'published' && (
                       <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                          <ClipboardList className="w-3.5 h-3.5" />
-                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"><ClipboardList className="w-3.5 h-3.5" /></Button>
                       </Link>
                     )}
                     {isSelector && (
                       <>
                         <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"><Pencil className="w-3.5 h-3.5" /></Button>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => onDelete?.(selection.id)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => onDelete?.(selection.id)}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </>
                     )}
+                  </div>
+                  {/* Mobile: dropdown */}
+                  <div className="sm:hidden flex justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 px-2"><MoreVertical className="w-4 h-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
+                          <Eye className="w-4 h-4 mr-2" />View
+                        </DropdownMenuItem>
+                        {selection.status === 'published' && (
+                          <DropdownMenuItem onClick={() => navigate(createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
+                            <ClipboardList className="w-4 h-4 mr-2" />Live Scoring
+                          </DropdownMenuItem>
+                        )}
+                        {isSelector && (
+                          <>
+                            <DropdownMenuItem onClick={() => navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
+                              <Pencil className="w-4 h-4 mr-2" />Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onDelete?.(selection.id)} className="text-red-600">
+                              <Trash2 className="w-4 h-4 mr-2" />Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>
