@@ -40,8 +40,17 @@ import {
   CheckCircle,
   Clock,
   UsersRound,
-  Mail
+  Mail,
+  MoreVertical,
+  ChevronDown
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';

@@ -74,13 +74,13 @@ import Profile from './pages/Profile';
 import ProfileSetup from './pages/ProfileSetup';
 import ProspectCRM from './pages/ProspectCRM';
 import RinkDisplayTV from './pages/RinkDisplayTV';
+import ScorecardLayoutEditor from './pages/ScorecardLayoutEditor';
 import Selection from './pages/Selection';
 import SelectionEditor from './pages/SelectionEditor';
 import SelectionView from './pages/SelectionView';
 import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
-import ScorecardLayoutEditor from './pages/ScorecardLayoutEditor';
 import __Layout from './Layout.jsx';
 
 
@@ -112,13 +112,13 @@ export const PAGES = {
     "ProfileSetup": ProfileSetup,
     "ProspectCRM": ProspectCRM,
     "RinkDisplayTV": RinkDisplayTV,
+    "ScorecardLayoutEditor": ScorecardLayoutEditor,
     "Selection": Selection,
     "SelectionEditor": SelectionEditor,
     "SelectionView": SelectionView,
     "TournamentEditor": TournamentEditor,
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
-    "ScorecardLayoutEditor": ScorecardLayoutEditor,
 }
 
 export const pagesConfig = {

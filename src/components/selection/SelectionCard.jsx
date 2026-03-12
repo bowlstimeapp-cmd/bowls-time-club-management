@@ -3,9 +3,16 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, User, ClipboardList, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, ClipboardList, Trash2, MoreVertical } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 
