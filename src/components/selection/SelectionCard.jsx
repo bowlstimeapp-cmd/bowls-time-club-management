@@ -35,6 +35,7 @@ export default function SelectionCard({
   onDelete
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
+  const navigate = useNavigate();
 
   const countSelected = () => {
     return Object.values(selection.selections || {}).filter(Boolean).length;
