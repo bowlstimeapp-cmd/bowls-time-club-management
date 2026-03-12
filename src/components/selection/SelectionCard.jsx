@@ -87,40 +87,68 @@ export default function SelectionCard({
                 </p>
               </div>
 
-              <div className="flex gap-2 flex-wrap shrink-0">
-              <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                <Button variant="outline" size="sm">
-                  <Eye className="w-4 h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">View</span>
-                </Button>
-              </Link>
-              {selection.status === 'published' && (
-                <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+              {/* Desktop buttons */}
+              <div className="hidden sm:flex gap-2 flex-wrap shrink-0">
+                <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
                   <Button variant="outline" size="sm">
-                    <ClipboardList className="w-4 h-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Live Scoring</span>
+                    <Eye className="w-4 h-4 mr-1" />View
                   </Button>
                 </Link>
-              )}
-              {isSelector && (
-                <>
-                  <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                {selection.status === 'published' && (
+                  <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
                     <Button variant="outline" size="sm">
-                      <Pencil className="w-4 h-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Edit</span>
+                      <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
                     </Button>
                   </Link>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => onDelete?.(selection.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Delete</span>
-                  </Button>
-                </>
-              )}
+                )}
+                {isSelector && (
+                  <>
+                    <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                      <Button variant="outline" size="sm">
+                        <Pencil className="w-4 h-4 mr-1" />Edit
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="outline" size="sm"
+                      onClick={() => onDelete?.(selection.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />Delete
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Mobile dropdown */}
+              <div className="sm:hidden shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate(createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
+                      <Eye className="w-4 h-4 mr-2" />View
+                    </DropdownMenuItem>
+                    {selection.status === 'published' && (
+                      <DropdownMenuItem onClick={() => navigate(createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
+                        <ClipboardList className="w-4 h-4 mr-2" />Live Scoring
+                      </DropdownMenuItem>
+                    )}
+                    {isSelector && (
+                      <>
+                        <DropdownMenuItem onClick={() => navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
+                          <Pencil className="w-4 h-4 mr-2" />Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onDelete?.(selection.id)} className="text-red-600">
+                          <Trash2 className="w-4 h-4 mr-2" />Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
