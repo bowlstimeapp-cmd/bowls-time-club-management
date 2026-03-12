@@ -453,20 +453,23 @@ export default function PlatformAdmin() {
           transition={{ delay: 0.2 }}
         >
           <Tabs defaultValue="clubs" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
-              <TabsTrigger value="clubs">Clubs</TabsTrigger>
-              <TabsTrigger value="competitions">Competitions</TabsTrigger>
-              <TabsTrigger value="feedback">Feedback ({feedbacks.length})</TabsTrigger>
-              <TabsTrigger value="deletions" className="relative">
-                Account Deletions
-                {pendingDeletions.length > 0 && (
-                  <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">
-                    {pendingDeletions.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="emails">Sent Emails</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto mb-6">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5">
+                <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
+                <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
+                <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
+                <TabsTrigger value="deletions" className="relative whitespace-nowrap">
+                  <span className="hidden sm:inline">Account Deletions</span>
+                  <span className="sm:hidden">Deletions</span>
+                  {pendingDeletions.length > 0 && (
+                    <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">
+                      {pendingDeletions.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="emails" className="whitespace-nowrap">Sent Emails</TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* ── CLUBS ── */}
             <TabsContent value="clubs">
