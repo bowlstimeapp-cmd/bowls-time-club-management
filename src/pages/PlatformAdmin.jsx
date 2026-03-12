@@ -486,22 +486,23 @@ export default function PlatformAdmin() {
                   ) : (
                     <div className="space-y-3">
                       {clubs.map(club => (
-                        <div key={club.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                              <Building2 className="w-6 h-6 text-emerald-600" />
+                        <div key={club.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="w-5 h-5 text-emerald-600" />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-medium text-gray-900">{club.name}</h3>
-                                <Badge variant={club.is_active !== false ? "default" : "secondary"}>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-medium text-gray-900 truncate">{club.name}</h3>
+                                <Badge variant={club.is_active !== false ? "default" : "secondary"} className="flex-shrink-0">
                                   {club.is_active !== false ? 'Active' : 'Inactive'}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-gray-500">{club.rink_count} rinks • Admin: {club.primary_admin_email}</p>
+                              <p className="text-xs text-gray-500 truncate">{club.rink_count} rinks • {club.primary_admin_email}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          {/* Desktop actions */}
+                          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                             <Button variant="outline" size="sm" onClick={() => { setManagingAdminsClub(club); setManageAdminsDialogOpen(true); }}>
                               <ShieldCheck className="w-4 h-4 mr-1" />Admins
                             </Button>
@@ -511,6 +512,26 @@ export default function PlatformAdmin() {
                             <Button variant="ghost" size="sm" onClick={() => deleteClubMutation.mutate(club.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                               <Trash2 className="w-4 h-4" />
                             </Button>
+                          </div>
+                          {/* Mobile dropdown */}
+                          <div className="sm:hidden flex-shrink-0">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm"><MoreVertical className="w-4 h-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => { setManagingAdminsClub(club); setManageAdminsDialogOpen(true); }}>
+                                  <ShieldCheck className="w-4 h-4 mr-2" />Admins
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenEdit(club)}>
+                                  <Pencil className="w-4 h-4 mr-2" />Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => deleteClubMutation.mutate(club.id)} className="text-red-600">
+                                  <Trash2 className="w-4 h-4 mr-2" />Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       ))}
