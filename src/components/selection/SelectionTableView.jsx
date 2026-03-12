@@ -30,6 +30,7 @@ export default function SelectionTableView({
   isSettingAvailability,
   onDelete,
 }) {
+  const navigate = useNavigate();
   if (selections.length === 0) return null;
 
   return (
