@@ -350,29 +350,45 @@ export default function PlatformAdmin() {
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Platform Administration</h1>
             <p className="text-gray-600">Manage clubs and platform settings</p>
           </div>
-          <div className="flex gap-3">
-            <MarketingPDFGenerator />
-            <Link to={createPageUrl('ProspectCRM')}>
-              <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
-                <Users className="w-4 h-4 mr-2" />
-                Prospect CRM
-              </Button>
-            </Link>
-            <Link to={createPageUrl('PlatformUsers')}>
-              <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                <UsersRound className="w-4 h-4 mr-2" />
-                All Users
-              </Button>
-            </Link>
-            <Link to={createPageUrl('UserGuides')}>
-              <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
-                <BookOpen className="w-4 h-4 mr-2" />
-                User Guides
-              </Button>
-            </Link>
-            <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Club
+          <div className="flex gap-2 flex-wrap">
+            {/* Desktop: show all buttons */}
+            <div className="hidden sm:flex gap-2 flex-wrap">
+              <MarketingPDFGenerator />
+              <Link to={createPageUrl('ProspectCRM')}>
+                <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
+                  <Users className="w-4 h-4 mr-2" />Prospect CRM
+                </Button>
+              </Link>
+              <Link to={createPageUrl('PlatformUsers')}>
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  <UsersRound className="w-4 h-4 mr-2" />All Users
+                </Button>
+              </Link>
+              <Link to={createPageUrl('UserGuides')}>
+                <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                  <BookOpen className="w-4 h-4 mr-2" />User Guides
+                </Button>
+              </Link>
+            </div>
+            {/* Mobile: dropdown for secondary actions */}
+            <div className="sm:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="w-4 h-4 mr-1" />More
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild><Link to={createPageUrl('ProspectCRM')} className="cursor-pointer"><Users className="w-4 h-4 mr-2" />Prospect CRM</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link to={createPageUrl('PlatformUsers')} className="cursor-pointer"><UsersRound className="w-4 h-4 mr-2" />All Users</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link to={createPageUrl('UserGuides')} className="cursor-pointer"><BookOpen className="w-4 h-4 mr-2" />User Guides</Link></DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700" size="sm">
+              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Add New Club</span>
+              <span className="sm:hidden">Add Club</span>
             </Button>
           </div>
         </motion.div>
