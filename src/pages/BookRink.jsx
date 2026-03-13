@@ -177,11 +177,17 @@ useEffect(() => {
   };
 
   const handleMoveBooking = async (booking, newRink, newStartTime) => {
-    const duration = club?.session_duration || 2;
-    const [startHour] = newStartTime.split(':').map(Number);
-    const newEndTime = `${String(startHour + duration).padStart(2, '0')}:00`;
-    const oldRink = booking.rink_number;
-    const oldTime = booking.start_time;
+    // Find end time from custom sessions or compute from duration
+    let newEndTime;
+    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
+      const session = club.custom_sessions.find(s => s.start === newStartTime);
+      newEndTime = session ? session.end : newStartTime;
+    } else {
+      const duration = club?.session_duration || 2;
+      const [startHour, startMin = 0] = newStartTime.split(':').map(Number);
+      const endMins = startHour * 60 + startMin + duration * 60;
+      newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
+    }
 
     await base44.entities.Booking.update(booking.id, {
       rink_number: newRink,
@@ -189,21 +195,40 @@ useEffect(() => {
       end_time: newEndTime,
     });
 
-    // Notify the booker if admin moved someone else's booking
     if (isAdmin && booking.booker_email !== user?.email) {
-      await base44.entities.Notification.create({
-        user_email: booking.booker_email,
-        type: 'booking_moved',
-        title: 'Your booking has been moved',
-        message: `Your booking on Rink ${oldRink} at ${oldTime} on ${booking.date} has been moved to Rink ${newRink} at ${newStartTime}.`,
-        related_id: booking.id,
-        link_page: 'BookRink',
-        link_params: `clubId=${clubId}`,
-      });
+      await sendBookingChangeNotification(
+        booking, 'moved',
+        ` It has been moved to Rink ${newRink} at ${newStartTime}.`
+      );
     }
 
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`Booking moved to Rink ${newRink} at ${newStartTime}`);
+  };
+
+  const handleSwapBookings = async (bookingA, bookingB) => {
+    // Swap rink + time of two bookings
+    await Promise.all([
+      base44.entities.Booking.update(bookingA.id, {
+        rink_number: bookingB.rink_number,
+        start_time: bookingB.start_time,
+        end_time: bookingB.end_time,
+      }),
+      base44.entities.Booking.update(bookingB.id, {
+        rink_number: bookingA.rink_number,
+        start_time: bookingA.start_time,
+        end_time: bookingA.end_time,
+      }),
+    ]);
+
+    // Notify both owners
+    await Promise.all([
+      sendBookingChangeNotification(bookingA, 'swapped', ` It has been swapped to Rink ${bookingB.rink_number} at ${bookingB.start_time}.`),
+      sendBookingChangeNotification(bookingB, 'swapped', ` It has been swapped to Rink ${bookingA.rink_number} at ${bookingA.start_time}.`),
+    ]);
+
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    toast.success('Bookings swapped');
   };
 
   const handleJoinRollup = async (booking) => {
