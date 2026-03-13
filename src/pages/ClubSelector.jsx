@@ -62,6 +62,7 @@ export default function ClubSelector() {
       first_name: user.first_name || '',
       surname: user.surname || '',
       title: user.title || null,
+      phone: user.phone || null,
       gender: user.gender || null,
       emergency_contact_name: user.emergency_contact_name || null,
       emergency_contact_phone: user.emergency_contact_phone || null,

@@ -22,6 +22,7 @@ export default function ProfileSetup() {
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
   const [gender, setGender] = useState('');
+  const [phone, setPhone] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +52,7 @@ export default function ProfileSetup() {
       title: title || null,
       first_name: firstName.trim(),
       surname: surname.trim(),
+      phone: phone.trim() || null,
       gender: gender || null,
       emergency_contact_name: emergencyContactName.trim() || null,
       emergency_contact_phone: emergencyContactPhone.trim() || null,
@@ -118,6 +120,18 @@ export default function ProfileSetup() {
                   onChange={(e) => setSurname(e.target.value)}
                   placeholder="Smith"
                   required
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="07123 456789"
                 />
               </div>
 
