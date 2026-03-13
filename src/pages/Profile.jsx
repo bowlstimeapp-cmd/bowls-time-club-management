@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert } from 'lucide-react';
 import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
+import PasswordChangeCard from '@/components/profile/PasswordChangeCard';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
@@ -441,6 +442,9 @@ export default function Profile() {
             {clubId && membership && club && (
               <PayMembershipFeeCard club={club} clubId={clubId} userEmail={user.email} />
             )}
+
+            {/* Password Change */}
+            <PasswordChangeCard user={user} />
 
             {/* Delete Account */}
             <Card className="shadow-lg border-red-100">
