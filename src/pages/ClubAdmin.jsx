@@ -386,7 +386,7 @@ export default function ClubAdmin() {
 
   const pendingMembers = memberships.filter(m => m.status === 'pending');
   const approvedMembers = memberships.filter(m => m.status === 'approved' && m.member_status !== 'left');
-  const previousMembers = memberships.filter(m => m.status === 'approved' && m.member_status === 'left');
+  const previousMembers = memberships.filter(m => m.member_status === 'left');
 
   const applyFilters = (list) => list
     .filter(member => {
