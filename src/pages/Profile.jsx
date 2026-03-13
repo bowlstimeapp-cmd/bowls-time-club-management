@@ -320,8 +320,8 @@ export default function Profile() {
                           </Select>
                         </div>
                         <div>
-                          <Label htmlFor="membershipStartDate">Membership Start Date</Label>
-                          <Input id="membershipStartDate" type="date" value={membershipStartDate} onChange={(e) => setMembershipStartDate(e.target.value)} />
+                          <Label>Membership Start Date</Label>
+                          <Input value={membershipStartDate ? membershipStartDate : 'Not set'} disabled className="bg-gray-50" />
                         </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -334,7 +334,20 @@ export default function Profile() {
                           <Input value={membership.locker_number_2 || ''} disabled className="bg-gray-50" />
                         </div>
                       </div>
-                      <p className="text-xs text-gray-400">Locker numbers can only be changed by a club admin.</p>
+                      <p className="text-xs text-gray-400">Locker numbers and membership start date can only be changed by a club admin.</p>
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-medium text-gray-700 mb-3">Emergency Contact</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="emergencyContactName">Contact Name</Label>
+                            <Input id="emergencyContactName" value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} placeholder="Jane Smith" />
+                          </div>
+                          <div>
+                            <Label htmlFor="emergencyContactPhone">Contact Phone</Label>
+                            <Input id="emergencyContactPhone" type="tel" value={emergencyContactPhone} onChange={(e) => setEmergencyContactPhone(e.target.value)} placeholder="07123 456789" />
+                          </div>
+                        </div>
+                      </div>
                     </>
                   )}
                   <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>

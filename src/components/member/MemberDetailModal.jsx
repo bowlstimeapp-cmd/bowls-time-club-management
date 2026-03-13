@@ -117,6 +117,8 @@ export default function MemberDetailModal({
     lockerNumber2 !== (member.locker_number_2 || '') ||
     gender !== (member.gender || '') ||
     membershipStartDate !== (member.membership_start_date || '') ||
+    emergencyContactName !== (member.emergency_contact_name || '') ||
+    emergencyContactPhone !== (member.emergency_contact_phone || '') ||
     selectedRole !== member.role ||
     JSON.stringify(selectedGroups.sort()) !== JSON.stringify((member.membership_groups || []).sort());
 
