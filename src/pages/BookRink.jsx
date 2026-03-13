@@ -99,6 +99,8 @@ useEffect(() => {
     enabled: !!clubId && !!club?.open_rollups,
   });
 
+  const dateString = format(selectedDate, 'yyyy-MM-dd');
+
   const { data: leagueFixtures = [] } = useQuery({
     queryKey: ['leagueFixtures', clubId, dateString],
     queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId, match_date: dateString }),
