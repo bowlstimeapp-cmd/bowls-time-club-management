@@ -157,6 +157,7 @@ export default function ClubAdmin() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [membershipTypeFilter, setMembershipTypeFilter] = useState('all');
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [competitionForm, setCompetitionForm] = useState({
@@ -239,6 +240,13 @@ export default function ClubAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member removed');
+    },
+  });
+
+  const setMemberStatusMutation = useMutation({
+    mutationFn: ({ id, member_status }) => base44.entities.ClubMembership.update(id, { member_status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
     },
   });
 
@@ -372,18 +380,24 @@ export default function ClubAdmin() {
   };
 
   const pendingMembers = memberships.filter(m => m.status === 'pending');
-  const approvedMembers = memberships.filter(m => m.status === 'approved');
+  const approvedMembers = memberships.filter(m => m.status === 'approved' && m.member_status !== 'left');
+  const previousMembers = memberships.filter(m => m.status === 'approved' && m.member_status === 'left');
 
-  const filteredApprovedMembers = approvedMembers
+  const applyFilters = (list) => list
     .filter(member => {
       const query = searchQuery.toLowerCase();
-      return (
+      const matchesSearch = (
         member.user_name?.toLowerCase().includes(query) ||
         member.user_email?.toLowerCase().includes(query) ||
         member.locker_number?.toLowerCase().includes(query)
       );
+      const matchesType = membershipTypeFilter === 'all' || (member.membership_groups || []).includes(membershipTypeFilter);
+      return matchesSearch && matchesType;
     })
     .sort((a, b) => (a.user_name || a.user_email).localeCompare(b.user_name || b.user_email));
+
+  const filteredApprovedMembers = applyFilters(approvedMembers);
+  const filteredPreviousMembers = applyFilters(previousMembers);
 
   const membershipTypes = club?.membership_types || ['Winter Indoor Member', 'Summer Indoor Member', 'Outdoor Member', 'Social Member'];
 
