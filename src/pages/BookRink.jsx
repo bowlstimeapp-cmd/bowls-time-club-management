@@ -119,8 +119,6 @@ useEffect(() => {
     enabled: !!clubId,
   });
 
-  const dateString = format(selectedDate, 'yyyy-MM-dd');
-
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['bookings', clubId, dateString],
     queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: dateString }),
