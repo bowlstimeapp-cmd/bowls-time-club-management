@@ -137,9 +137,38 @@ useEffect(() => {
 
   const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
+  const sendBookingChangeNotification = async (booking, type, extraMessage = '') => {
+    if (!booking?.booker_email || booking.booker_email === user?.email) return;
+    const messages = {
+      moved: `Your booking on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been moved by a club admin.${extraMessage}`,
+      deleted: `Your booking on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been cancelled by a club admin.`,
+      swapped: `Your booking on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been swapped with another booking by a club admin.${extraMessage}`,
+    };
+    const titles = { moved: 'Booking moved by admin', deleted: 'Booking cancelled by admin', swapped: 'Booking swapped by admin' };
+    await Promise.all([
+      base44.entities.Notification.create({
+        user_email: booking.booker_email,
+        type: 'booking_moved',
+        title: titles[type],
+        message: messages[type],
+        related_id: booking.id,
+        link_page: 'BookRink',
+        link_params: `clubId=${clubId}`,
+      }),
+      base44.integrations.Core.SendEmail({
+        to: booking.booker_email,
+        subject: titles[type],
+        body: `<p>Hi ${booking.booker_name},</p><p>${messages[type]}</p><p>Please log in to the app to check your bookings.</p>`,
+      }),
+    ]);
+  };
+
   const handleDeleteBooking = async (booking) => {
     setDeletingBooking(true);
     await base44.entities.Booking.update(booking.id, { status: 'cancelled' });
+    if (isAdmin && booking.booker_email !== user?.email) {
+      await sendBookingChangeNotification(booking, 'deleted');
+    }
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success('Booking cancelled');
     setBookingDetailOpen(false);
