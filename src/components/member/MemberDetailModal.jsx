@@ -310,7 +310,7 @@ export default function MemberDetailModal({
                 </div>
                 <div>
                   <Label className="text-gray-500 text-xs">Membership Start Date</Label>
-                  <p className="font-medium">{member.membership_start_date ? format(parseISO(member.membership_start_date), 'd MMM yyyy') : '-'}</p>
+                  <p className="font-medium">{member.membership_start_date ? (() => { try { return format(parseISO(member.membership_start_date), 'd MMM yyyy'); } catch { return member.membership_start_date; } })() : '-'}</p>
                 </div>
               </div>
 
