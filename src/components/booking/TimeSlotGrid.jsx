@@ -7,20 +7,45 @@ import {
 
 const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duration = 2) => {
   const slots = [];
-  const [openHour] = openingTime.split(':').map(Number);
-  const [closeHour] = closingTime.split(':').map(Number);
-  for (let hour = openHour; hour + duration <= closeHour; hour += duration) {
-    const startHour = hour;
-    const endHour = hour + duration;
-    const formatHour = (h) => h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
-    slots.push({
-      start: `${String(startHour).padStart(2, '0')}:00`,
-      end: `${String(endHour).padStart(2, '0')}:00`,
-      label: `${formatHour(startHour)} - ${formatHour(endHour)}`,
-      index: slots.length
-    });
+  const [openHour, openMin = 0] = openingTime.split(':').map(Number);
+  const [closeHour, closeMin = 0] = closingTime.split(':').map(Number);
+  const openMins = openHour * 60 + openMin;
+  const closeMins = closeHour * 60 + closeMin;
+  const durationMins = duration * 60;
+
+  let cur = openMins;
+  while (cur + durationMins <= closeMins) {
+    const startH = Math.floor(cur / 60);
+    const startM = cur % 60;
+    const endMins = cur + durationMins;
+    const endH = Math.floor(endMins / 60);
+    const endM = endMins % 60;
+    const fmt = (h, m) => {
+      const ampm = h < 12 ? 'am' : 'pm';
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+    };
+    const startStr = `${String(startH).padStart(2,'0')}:${String(startM).padStart(2,'0')}`;
+    const endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+    slots.push({ start: startStr, end: endStr, label: `${fmt(startH, startM)} - ${fmt(endH, endM)}`, index: slots.length });
+    cur += durationMins;
   }
   return slots;
+};
+
+const generateCustomSlots = (customSessions = []) => {
+  const fmt = (t) => {
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h < 12 ? 'am' : 'pm';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+  };
+  return customSessions.map((s, i) => ({
+    start: s.start,
+    end: s.end,
+    label: `${fmt(s.start)} - ${fmt(s.end)}`,
+    index: i,
+  }));
 };
 
 const statusStyles = {
@@ -50,12 +75,19 @@ export default function TimeSlotGrid({
   joinLoading,
   isAdmin = false,
   onMoveBooking,
+  onSwapBookings,
+  leagueFixtures = [],
+  leagueTeams = [],
+  leagues = [],
 }) {
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const justDropped = useRef(false);
 
-  const TIME_SLOTS = generateTimeSlots(club?.opening_time, club?.closing_time, club?.session_duration);
+  const TIME_SLOTS = club?.use_custom_sessions && club?.custom_sessions?.length > 0
+    ? generateCustomSlots(club.custom_sessions)
+    : generateTimeSlots(club?.opening_time, club?.closing_time, club?.session_duration);
+
   const RINKS = Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1);
 
   const getBookingForSlot = (rink, startTime) =>
@@ -85,9 +117,20 @@ export default function TimeSlotGrid({
     if (!selectedDate) return false;
     const now = new Date();
     const slotDateTime = new Date(selectedDate);
-    const [hours] = slotStart.split(':').map(Number);
-    slotDateTime.setHours(hours, 0, 0, 0);
+    const [hours, mins] = slotStart.split(':').map(Number);
+    slotDateTime.setHours(hours, mins, 0, 0);
     return slotDateTime <= now;
+  };
+
+  // Get league fixture info for a booking
+  const getLeagueInfo = (booking) => {
+    if (!booking) return null;
+    const fixture = leagueFixtures.find(f => f.booking_id === booking.id);
+    if (!fixture) return null;
+    const league = leagues.find(l => l.id === fixture.league_id);
+    const homeTeam = leagueTeams.find(t => t.id === fixture.home_team_id);
+    const awayTeam = leagueTeams.find(t => t.id === fixture.away_team_id);
+    return { league, homeTeam, awayTeam };
   };
 
   const handleSlotClick = (rink, slot, slotIndex) => {
@@ -119,12 +162,19 @@ export default function TimeSlotGrid({
     const bookingId = e.dataTransfer.getData('text/plain');
     const booking = bookings.find(b => b.id === bookingId) || draggingBooking;
     if (!booking) return;
-    if (!isSlotAvailable(rink, slot.start)) return;
-    if (isSlotInPast(slot.start)) return;
-    // Prevent the click that fires after drop from selecting the slot
+
     justDropped.current = true;
     setTimeout(() => { justDropped.current = false; }, 300);
-    onMoveBooking && onMoveBooking(booking, rink, slot.start);
+
+    const targetBooking = getBookingForSlot(rink, slot.start);
+
+    // Admin swap: dragging onto another booking
+    if (targetBooking && isAdmin && onSwapBookings && targetBooking.id !== booking.id) {
+      onSwapBookings(booking, targetBooking);
+    } else if (!targetBooking && !isSlotInPast(slot.start)) {
+      onMoveBooking && onMoveBooking(booking, rink, slot.start);
+    }
+
     setDraggingBooking(null);
     setDropTarget(null);
   };
@@ -165,7 +215,7 @@ export default function TimeSlotGrid({
                   const available = isSlotAvailable(rink, slot.start);
                   const isPast = isSlotInPast(slot.start);
                   const isOwnBooking = booking?.booker_email === currentUserEmail;
-                  const canDrag = !!booking && (isOwnBooking || isAdmin) && !!onMoveBooking && !isPast;
+                  const canDrag = !!booking && (isOwnBooking || isAdmin) && !isPast;
                   const StatusIcon = booking ? statusIcons[booking.status] : null;
                   const selected = isSlotSelected(rink, slotIndex);
                   const canSelect = available && (selectedSlots.length === 0 || canSelectSlot(rink, slotIndex) || selectedSlots[0].rink !== rink);
@@ -180,8 +230,13 @@ export default function TimeSlotGrid({
                   );
                   const canJoinRollup = isRollup && openRollupsEnabled && !rollupFull && !alreadyInRollup && currentUserEmail;
 
-                  // Drop zone styling
-                  const isDroppable = available && !isPast && isDragging;
+                  // League info
+                  const leagueInfo = getLeagueInfo(booking);
+
+                  // Drop zone: empty slot OR admin swapping onto booked slot
+                  const isSwapTarget = !available && isAdmin && isDragging && draggingBooking?.id !== booking?.id;
+                  const isEmptyDroppable = available && !isPast && isDragging;
+                  const isDroppable = isEmptyDroppable || isSwapTarget;
                   const isHoverTarget = dropTarget === `${rink}:${slot.start}`;
 
                   return (
@@ -194,11 +249,9 @@ export default function TimeSlotGrid({
                           onDragStart={canDrag ? (e) => {
                             e.dataTransfer.setData('text/plain', booking.id);
                             e.dataTransfer.effectAllowed = 'move';
-                            // Slight delay so the drag image captures before state update
                             setTimeout(() => setDraggingBooking(booking), 0);
                           } : undefined}
-                          onDragEnd={canDrag ? (e) => {
-                            e.preventDefault();
+                          onDragEnd={canDrag ? () => {
                             setDraggingBooking(null);
                             setDropTarget(null);
                           } : undefined}
@@ -217,19 +270,15 @@ export default function TimeSlotGrid({
                           onDrop={isDroppable ? (e) => handleDrop(e, rink, slot) : undefined}
                           className={cn(
                             "p-2 rounded-xl border-2 transition-all duration-150 min-h-[64px] lg:min-h-[80px] relative w-full text-left select-none",
-                            // Available slot — normal
-                            available && !selected && !isDroppable && "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]",
-                            // Available slot — selected
+                            available && !selected && !isEmptyDroppable && "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]",
                             available && selected && "bg-emerald-100 border-emerald-500 cursor-pointer",
-                            // Available slot — drop zone (something being dragged)
-                            available && isDroppable && !isHoverTarget && "bg-blue-50 border-blue-300 border-dashed",
-                            // Available slot — hover drop zone
+                            available && isEmptyDroppable && !isHoverTarget && "bg-blue-50 border-blue-300 border-dashed",
                             available && isHoverTarget && "bg-blue-100 border-blue-500 scale-[1.03] shadow-md",
-                            // Booked slot
                             !available && cn(statusStyles[booking?.status]),
+                            !available && isSwapTarget && !isHoverTarget && "ring-2 ring-orange-300 ring-offset-1",
+                            !available && isHoverTarget && "ring-2 ring-orange-500 ring-offset-2 scale-[1.03] shadow-md",
                             !available && canDrag && "cursor-grab active:cursor-grabbing",
                             !available && !canDrag && "cursor-pointer",
-                            // Disabled (non-adjacent)
                             available && !canSelect && !isDragging && selectedSlots.length > 0 && "opacity-50"
                           )}
                         >
@@ -250,47 +299,70 @@ export default function TimeSlotGrid({
                             )
                           ) : (
                             <div className="flex flex-col gap-0.5 h-full">
-                              <div className="flex items-center gap-1">
-                                {StatusIcon && (
-                                  <StatusIcon className={cn(
-                                    "w-3 h-3 shrink-0",
-                                    booking?.status === 'pending' && "animate-spin"
-                                  )} />
-                                )}
-                                <span className="text-xs font-semibold truncate leading-tight">
-                                  {isOwnBooking ? 'You' : booking?.booker_name}
-                                </span>
-                              </div>
-                              {booking?.competition_type && (
-                                <span className="text-[10px] lg:text-xs opacity-80 truncate leading-tight">
-                                  {booking.competition_type === 'Other' && booking.competition_other
-                                    ? booking.competition_other
-                                    : booking.competition_type}
-                                  {booking.booking_format && ` – ${booking.booking_format}`}
-                                </span>
-                              )}
-                              {isRollup && (
-                                <span className="text-[10px] font-semibold flex items-center gap-0.5 mt-auto">
-                                  <Users className="w-2.5 h-2.5" />
-                                  {rollupCount}/8
-                                  {rollupFull && <span className="ml-1 text-amber-700">Full</span>}
-                                </span>
-                              )}
-                              {canJoinRollup && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onJoinRollup && onJoinRollup(booking);
-                                  }}
-                                  disabled={joinLoading}
-                                  className="mt-1 text-[10px] font-semibold bg-emerald-600 text-white rounded px-1.5 py-0.5 hover:bg-emerald-700 flex items-center gap-0.5 w-fit"
-                                >
-                                  {joinLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <UserPlus className="w-2.5 h-2.5" />}
-                                  Join
-                                </button>
-                              )}
-                              {alreadyInRollup && isRollup && (
-                                <span className="text-[10px] text-emerald-700 font-medium mt-auto">✓ Joined</span>
+                              {isHoverTarget && isSwapTarget ? (
+                                <div className="flex items-center justify-center h-full">
+                                  <span className="text-xs font-semibold text-orange-600">Swap</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    {StatusIcon && (
+                                      <StatusIcon className={cn("w-3 h-3 shrink-0", booking?.status === 'pending' && "animate-spin")} />
+                                    )}
+                                    <span className="text-xs font-semibold truncate leading-tight">
+                                      {isOwnBooking ? 'You' : booking?.booker_name}
+                                    </span>
+                                  </div>
+
+                                  {/* League fixture info */}
+                                  {leagueInfo ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      {leagueInfo.league && (
+                                        <span className="text-[10px] font-semibold opacity-90 truncate leading-tight">
+                                          {leagueInfo.league.name}
+                                        </span>
+                                      )}
+                                      {leagueInfo.homeTeam && leagueInfo.awayTeam && (
+                                        <span className="text-[10px] opacity-80 truncate leading-tight">
+                                          {leagueInfo.homeTeam.name} v {leagueInfo.awayTeam.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    booking?.competition_type && (
+                                      <span className="text-[10px] lg:text-xs opacity-80 truncate leading-tight">
+                                        {booking.competition_type === 'Other' && booking.competition_other
+                                          ? booking.competition_other
+                                          : booking.competition_type}
+                                        {booking.booking_format && ` – ${booking.booking_format}`}
+                                      </span>
+                                    )
+                                  )}
+
+                                  {isRollup && (
+                                    <span className="text-[10px] font-semibold flex items-center gap-0.5 mt-auto">
+                                      <Users className="w-2.5 h-2.5" />
+                                      {rollupCount}/8
+                                      {rollupFull && <span className="ml-1 text-amber-700">Full</span>}
+                                    </span>
+                                  )}
+                                  {canJoinRollup && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onJoinRollup && onJoinRollup(booking);
+                                      }}
+                                      disabled={joinLoading}
+                                      className="mt-1 text-[10px] font-semibold bg-emerald-600 text-white rounded px-1.5 py-0.5 hover:bg-emerald-700 flex items-center gap-0.5 w-fit"
+                                    >
+                                      {joinLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <UserPlus className="w-2.5 h-2.5" />}
+                                      Join
+                                    </button>
+                                  )}
+                                  {alreadyInRollup && isRollup && (
+                                    <span className="text-[10px] text-emerald-700 font-medium mt-auto">✓ Joined</span>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
@@ -313,8 +385,12 @@ export default function TimeSlotGrid({
                           <div className="text-center">
                             <p className="font-medium">{booking?.booker_name}</p>
                             <p className="text-xs capitalize">{booking?.competition_type || booking?.status}</p>
+                            {leagueInfo?.homeTeam && leagueInfo?.awayTeam && (
+                              <p className="text-xs">{leagueInfo.homeTeam.name} vs {leagueInfo.awayTeam.name}</p>
+                            )}
                             {isRollup && <p className="text-xs">{rollupCount}/8 members</p>}
-                            {canDrag && <p className="text-xs text-gray-400 mt-1">Drag to move</p>}
+                            {canDrag && isAdmin && !available && <p className="text-xs text-gray-400 mt-1">Drag to swap with another booking</p>}
+                            {canDrag && !isAdmin && <p className="text-xs text-gray-400 mt-1">Drag to move</p>}
                           </div>
                         )}
                       </TooltipContent>
