@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User, Mail, Phone, Shield, Loader2, Save, Pencil } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 const roleColors = {
   admin: 'bg-indigo-100 text-indigo-800 border-indigo-200',
@@ -55,6 +56,9 @@ export default function MemberDetailModal({
   const [surname, setSurname] = useState('');
   const [phone, setPhone] = useState('');
   const [lockerNumber, setLockerNumber] = useState('');
+  const [lockerNumber2, setLockerNumber2] = useState('');
+  const [gender, setGender] = useState('');
+  const [membershipStartDate, setMembershipStartDate] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
   const [selectedGroups, setSelectedGroups] = useState([]);
 
@@ -64,6 +68,9 @@ export default function MemberDetailModal({
       setSurname(member.surname || '');
       setPhone(member.phone || '');
       setLockerNumber(member.locker_number || '');
+      setLockerNumber2(member.locker_number_2 || '');
+      setGender(member.gender || '');
+      setMembershipStartDate(member.membership_start_date || '');
       setSelectedRole(member.role || 'member');
       setSelectedGroups(member.membership_groups || []);
       setIsEditing(false);
@@ -87,6 +94,9 @@ export default function MemberDetailModal({
       user_name: `${firstName.trim()} ${surname.trim()}`,
       phone: phone.trim(),
       locker_number: lockerNumber.trim(),
+      locker_number_2: lockerNumber2.trim(),
+      gender: gender || null,
+      membership_start_date: membershipStartDate || null,
       role: selectedRole,
       membership_groups: selectedGroups
     };
@@ -98,6 +108,9 @@ export default function MemberDetailModal({
     surname !== (member.surname || '') ||
     phone !== (member.phone || '') ||
     lockerNumber !== (member.locker_number || '') ||
+    lockerNumber2 !== (member.locker_number_2 || '') ||
+    gender !== (member.gender || '') ||
+    membershipStartDate !== (member.membership_start_date || '') ||
     selectedRole !== member.role ||
     JSON.stringify(selectedGroups.sort()) !== JSON.stringify((member.membership_groups || []).sort());
 
@@ -158,13 +171,48 @@ export default function MemberDetailModal({
                 />
               </div>
 
-              <div>
-                <Label>Locker Number</Label>
-                <Input
-                  value={lockerNumber}
-                  onChange={(e) => setLockerNumber(e.target.value)}
-                  placeholder="e.g., 42"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Membership Start Date</Label>
+                  <Input
+                    type="date"
+                    value={membershipStartDate}
+                    onChange={(e) => setMembershipStartDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Locker 1</Label>
+                  <Input
+                    value={lockerNumber}
+                    onChange={(e) => setLockerNumber(e.target.value)}
+                    placeholder="e.g., 42"
+                  />
+                </div>
+                <div>
+                  <Label>Locker 2</Label>
+                  <Input
+                    value={lockerNumber2}
+                    onChange={(e) => setLockerNumber2(e.target.value)}
+                    placeholder="e.g., 43"
+                  />
+                </div>
               </div>
 
               <div>
@@ -227,9 +275,26 @@ export default function MemberDetailModal({
                 <p className="font-medium">{member.phone || '-'}</p>
               </div>
 
-              <div>
-                <Label className="text-gray-500 text-xs">Locker Number</Label>
-                <p className="font-medium">{member.locker_number || '-'}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-500 text-xs">Gender</Label>
+                  <p className="font-medium">{member.gender || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-500 text-xs">Membership Start Date</Label>
+                  <p className="font-medium">{member.membership_start_date ? format(parseISO(member.membership_start_date), 'd MMM yyyy') : '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-500 text-xs">Locker 1</Label>
+                  <p className="font-medium">{member.locker_number || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-500 text-xs">Locker 2</Label>
+                  <p className="font-medium">{member.locker_number_2 || '-'}</p>
+                </div>
               </div>
 
               <div>

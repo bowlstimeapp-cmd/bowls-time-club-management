@@ -27,10 +27,16 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
         const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         return {
           member_number: values[0] || '',
-          first_name: values[1] || '',
-          surname: values[2] || '',
-          email: values[3] || '',
-          phone: values[4] || ''
+          title: values[1] || '',
+          first_name: values[2] || '',
+          surname: values[3] || '',
+          email: values[4] || '',
+          phone: values[5] || '',
+          gender: values[6] || '',
+          membership_type: values[7] || '',
+          join_date: values[8] || '',
+          locker1: values[9] || '',
+          locker2: values[10] || ''
         };
       }).filter(row => row.email);
       setPreview(parsed.slice(0, 5));
@@ -52,10 +58,16 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
         const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         return {
           member_number: values[0] || '',
-          first_name: values[1] || '',
-          surname: values[2] || '',
-          email: values[3] || '',
-          phone: values[4] || ''
+          title: values[1] || '',
+          first_name: values[2] || '',
+          surname: values[3] || '',
+          email: values[4] || '',
+          phone: values[5] || '',
+          gender: values[6] || '',
+          membership_type: values[7] || '',
+          join_date: values[8] || '',
+          locker1: values[9] || '',
+          locker2: values[10] || ''
         };
       }).filter(row => row.email);
 
@@ -76,7 +88,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
             continue;
           }
 
-          await base44.entities.ClubMembership.create({
+          const memberData = {
             club_id: clubId,
             user_email: member.email.toLowerCase(),
             user_name: `${member.first_name} ${member.surname}`.trim(),
@@ -85,7 +97,13 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
             phone: member.phone,
             role: 'member',
             status: 'approved'
-          });
+          };
+          if (member.gender) memberData.gender = member.gender;
+          if (member.join_date) memberData.membership_start_date = member.join_date;
+          if (member.locker1) memberData.locker_number = member.locker1;
+          if (member.locker2) memberData.locker_number_2 = member.locker2;
+          if (member.membership_type) memberData.membership_groups = [member.membership_type];
+          await base44.entities.ClubMembership.create(memberData);
           successCount++;
         } catch (err) {
           errors.push(`${member.email}: ${err.message || 'Failed to create'}`);
@@ -104,7 +122,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
   };
 
   const downloadTemplate = () => {
-    const template = 'Member Number,First Name,Last Name,Email,Phone Number\n001,John,Smith,john.smith@email.com,07123456789\n002,Jane,Doe,jane.doe@email.com,07987654321';
+    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member,2024-01-15,42,\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -154,7 +172,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
                 >
                   <Upload className="w-10 h-10 mx-auto mb-3 text-gray-400" />
                   <p className="text-sm text-gray-600 mb-1">Click to upload CSV file</p>
-                  <p className="text-xs text-gray-400">Member Number, First Name, Last Name, Email, Phone Number</p>
+                  <p className="text-xs text-gray-400">ID, Title, Name, Surname, Email, Telephone, Gender, MembershipType, JoinDate, Locker1, Locker2</p>
                 </div>
               ) : (
                 <div className="text-center">

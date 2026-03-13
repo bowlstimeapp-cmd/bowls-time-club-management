@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert } from 'lucide-react';
 import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +24,8 @@ export default function Profile() {
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
   const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
+  const [membershipStartDate, setMembershipStartDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -99,6 +102,8 @@ export default function Profile() {
     if (membership) {
       setEmailNotifications(membership.email_notifications !== false);
       setSmsNotifications(membership.sms_notifications || false);
+      setGender(membership.gender || '');
+      setMembershipStartDate(membership.membership_start_date || '');
     }
   }, [membership]);
 
@@ -155,7 +160,10 @@ export default function Profile() {
       phone: phone.trim()
     });
     if (clubId && membership) {
-      await base44.entities.ClubMembership.update(membership.id, { phone: phone.trim() || null });
+      const memberUpdates = { phone: phone.trim() || null };
+      if (gender) memberUpdates.gender = gender;
+      if (membershipStartDate) memberUpdates.membership_start_date = membershipStartDate;
+      await base44.entities.ClubMembership.update(membership.id, memberUpdates);
       queryClient.invalidateQueries({ queryKey: ['myMembership'] });
     }
     toast.success('Profile updated successfully!');
@@ -287,6 +295,41 @@ export default function Profile() {
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07123 456789" />
                   </div>
+                  {clubId && membership && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="gender">Gender</Label>
+                          <Select value={gender} onValueChange={setGender}>
+                            <SelectTrigger id="gender">
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="membershipStartDate">Membership Start Date</Label>
+                          <Input id="membershipStartDate" type="date" value={membershipStartDate} onChange={(e) => setMembershipStartDate(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Locker 1</Label>
+                          <Input value={membership.locker_number || ''} disabled className="bg-gray-50" />
+                        </div>
+                        <div>
+                          <Label>Locker 2</Label>
+                          <Input value={membership.locker_number_2 || ''} disabled className="bg-gray-50" />
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400">Locker numbers can only be changed by a club admin.</p>
+                    </>
+                  )}
                   <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
                     {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save Changes</>}
                   </Button>
