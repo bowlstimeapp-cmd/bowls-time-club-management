@@ -390,10 +390,9 @@ useEffect(() => {
   };
 
   // Clear selection when date changes
-  const dateString2 = format(selectedDate, 'yyyy-MM-dd');
   useEffect(() => {
     setSelectedSlots([]);
-  }, [dateString2]);
+  }, [dateString]);
 
   if (!clubId || membershipLoading) {
     return (
