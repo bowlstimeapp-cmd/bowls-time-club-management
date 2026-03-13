@@ -59,6 +59,12 @@ export default function ClubSelector() {
       club_id: clubId,
       user_email: user.email,
       user_name: `${user.first_name} ${user.surname}`,
+      first_name: user.first_name || '',
+      surname: user.surname || '',
+      title: user.title || null,
+      gender: user.gender || null,
+      emergency_contact_name: user.emergency_contact_name || null,
+      emergency_contact_phone: user.emergency_contact_phone || null,
       role: 'member',
       status: 'pending'
     }),
