@@ -102,11 +102,14 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
             role: 'member',
             status: 'approved'
           };
+          if (member.title) memberData.title = member.title;
           if (member.gender) memberData.gender = member.gender;
           if (member.join_date) memberData.membership_start_date = member.join_date;
           if (member.locker1) memberData.locker_number = member.locker1;
           if (member.locker2) memberData.locker_number_2 = member.locker2;
           if (member.membership_type) memberData.membership_groups = [member.membership_type];
+          if (member.emergency_contact_name) memberData.emergency_contact_name = member.emergency_contact_name;
+          if (member.emergency_contact_phone) memberData.emergency_contact_phone = member.emergency_contact_phone;
           await base44.entities.ClubMembership.create(memberData);
           successCount++;
         } catch (err) {
@@ -176,7 +179,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
                 >
                   <Upload className="w-10 h-10 mx-auto mb-3 text-gray-400" />
                   <p className="text-sm text-gray-600 mb-1">Click to upload CSV file</p>
-                  <p className="text-xs text-gray-400">ID, Title, Name, Surname, Email, Telephone, Gender, MembershipType, JoinDate, Locker1, Locker2</p>
+                  <p className="text-xs text-gray-400">ID, Title, Name, Surname, Email, Telephone, Gender, MembershipType, JoinDate, Locker1, Locker2, EmergencyContactName, EmergencyContactPhone</p>
                 </div>
               ) : (
                 <div className="text-center">
