@@ -99,6 +99,24 @@ useEffect(() => {
     enabled: !!clubId && !!club?.open_rollups,
   });
 
+  const { data: leagueFixtures = [] } = useQuery({
+    queryKey: ['leagueFixtures', clubId, dateString],
+    queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId, match_date: dateString }),
+    enabled: !!clubId,
+  });
+
+  const { data: leagueTeams = [] } = useQuery({
+    queryKey: ['leagueTeams', clubId],
+    queryFn: () => base44.entities.LeagueTeam.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const { data: leagues = [] } = useQuery({
+    queryKey: ['leagues', clubId],
+    queryFn: () => base44.entities.League.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
   const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   const { data: bookings = [], isLoading } = useQuery({
