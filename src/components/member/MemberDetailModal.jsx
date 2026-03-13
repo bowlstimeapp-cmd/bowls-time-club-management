@@ -73,6 +73,8 @@ export default function MemberDetailModal({
       setLockerNumber2(member.locker_number_2 || '');
       setGender(member.gender || '');
       setMembershipStartDate(member.membership_start_date || '');
+      setEmergencyContactName(member.emergency_contact_name || '');
+      setEmergencyContactPhone(member.emergency_contact_phone || '');
       setSelectedRole(member.role || 'member');
       setSelectedGroups(member.membership_groups || []);
       setIsEditing(false);

@@ -106,6 +106,8 @@ export default function Profile() {
       setSmsNotifications(membership.sms_notifications || false);
       setGender(membership.gender || '');
       setMembershipStartDate(membership.membership_start_date || '');
+      setEmergencyContactName(membership.emergency_contact_name || '');
+      setEmergencyContactPhone(membership.emergency_contact_phone || '');
     }
   }, [membership]);
 
