@@ -245,7 +245,11 @@ export default function ClubAdmin() {
   });
 
   const setMemberStatusMutation = useMutation({
-    mutationFn: ({ id, member_status }) => base44.entities.ClubMembership.update(id, { member_status }),
+    mutationFn: ({ id, member_status }) => base44.entities.ClubMembership.update(id, {
+      member_status,
+      // left = revoke access; active = restore access
+      status: member_status === 'left' ? 'rejected' : 'approved',
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
     },
