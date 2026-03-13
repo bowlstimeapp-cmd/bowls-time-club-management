@@ -27,9 +27,9 @@ import {
   Trash2,
   Loader2,
   Mail,
-  Key,
   Hash,
-  CreditCard
+  CreditCard,
+  UserX
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
