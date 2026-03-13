@@ -486,6 +486,10 @@ useEffect(() => {
                   joinLoading={joiningRollup}
                   isAdmin={isAdmin}
                   onMoveBooking={handleMoveBooking}
+                  onSwapBookings={handleSwapBookings}
+                  leagueFixtures={leagueFixtures}
+                  leagueTeams={leagueTeams}
+                  leagues={leagues}
                 />
               )}
             </CardContent>
