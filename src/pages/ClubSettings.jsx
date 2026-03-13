@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink } from 'lucide-react';
+import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -33,6 +34,8 @@ export default function ClubSettings() {
   const [openingTime, setOpeningTime] = useState('10:00');
   const [closingTime, setClosingTime] = useState('21:00');
   const [sessionDuration, setSessionDuration] = useState(2);
+  const [useCustomSessions, setUseCustomSessions] = useState(false);
+  const [customSessions, setCustomSessions] = useState([]);
   const [autoApprove, setAutoApprove] = useState(false);
   const [openRollups, setOpenRollups] = useState(false);
   const [privateRollups, setPrivateRollups] = useState(false);
@@ -108,6 +111,8 @@ export default function ClubSettings() {
       setOpeningTime(club.opening_time || '10:00');
       setClosingTime(club.closing_time || '21:00');
       setSessionDuration(club.session_duration || 2);
+      setUseCustomSessions(club.use_custom_sessions || false);
+      setCustomSessions(club.custom_sessions || []);
       setAutoApprove(club.auto_approve_bookings || false);
       setOpenRollups(club.open_rollups || false);
       setPrivateRollups(club.private_rollups || false);
@@ -254,6 +259,8 @@ export default function ClubSettings() {
       opening_time: openingTime,
       closing_time: closingTime,
       session_duration: parseInt(sessionDuration),
+      use_custom_sessions: useCustomSessions,
+      custom_sessions: useCustomSessions ? customSessions : [],
       auto_approve_bookings: autoApprove,
       open_rollups: openRollups,
       private_rollups: privateRollups,
@@ -397,16 +404,36 @@ export default function ClubSettings() {
                     />
                   </div>
                 </div>
-                <div>
-                  <Label>Session Duration (hours)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="4"
-                    value={sessionDuration}
-                    onChange={(e) => setSessionDuration(e.target.value)}
-                  />
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div>
+                    <Label className="text-base">Custom Session Times</Label>
+                    <p className="text-sm text-gray-500">Define specific session time ranges instead of a fixed duration</p>
+                  </div>
+                  <Switch checked={useCustomSessions} onCheckedChange={setUseCustomSessions} />
                 </div>
+                {!useCustomSessions ? (
+                  <div>
+                    <Label>Session Duration (hours)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="4"
+                      value={sessionDuration}
+                      onChange={(e) => setSessionDuration(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="mb-2 block">Session Time Ranges</Label>
+                    <p className="text-xs text-gray-500 mb-3">Define sessions within {openingTime}–{closingTime}. Minimum 15-minute intervals.</p>
+                    <CustomSessionEditor
+                      sessions={customSessions}
+                      onChange={setCustomSessions}
+                      openingTime={openingTime}
+                      closingTime={closingTime}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
