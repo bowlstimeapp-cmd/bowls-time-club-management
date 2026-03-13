@@ -469,6 +469,7 @@ export default function ClubAdmin() {
               >
                 <option value="pending">Pending ({pendingMembers.length})</option>
                 <option value="members">Members ({approvedMembers.length})</option>
+                <option value="previous">Previous Members ({previousMembers.length})</option>
                 <option value="competitions">Competitions</option>
                 <option value="audit">Audit Log</option>
               </select>
@@ -482,6 +483,10 @@ export default function ClubAdmin() {
               <TabsTrigger value="members" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
                 <Users className="w-3.5 h-3.5 mr-1.5" />
                 Members ({approvedMembers.length})
+              </TabsTrigger>
+              <TabsTrigger value="previous" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
+                <UserX className="w-3.5 h-3.5 mr-1.5" />
+                Previous ({previousMembers.length})
               </TabsTrigger>
               <TabsTrigger value="competitions" className="flex-1 rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 text-sm px-3 py-2">
                 <Trophy className="w-3.5 h-3.5 mr-1.5" />
@@ -537,8 +542,8 @@ export default function ClubAdmin() {
                 </div>
               ) : (
                 <>
-                  <div className="mb-5 flex items-center gap-3">
-                    <div className="relative flex-1 max-w-sm">
+                  <div className="mb-5 flex flex-wrap items-center gap-3">
+                    <div className="relative flex-1 min-w-[160px] max-w-sm">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <Input
                         placeholder="Search members..."
@@ -547,6 +552,15 @@ export default function ClubAdmin() {
                         className="pl-9 bg-white border-slate-200 rounded-xl h-9 text-sm"
                       />
                     </div>
+                    <Select value={membershipTypeFilter} onValueChange={setMembershipTypeFilter}>
+                      <SelectTrigger className="w-48 h-9 bg-white border-slate-200 rounded-xl text-sm">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {membershipTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                     <p className="text-sm text-slate-400 flex-shrink-0">
                       {filteredApprovedMembers.length} member{filteredApprovedMembers.length !== 1 ? 's' : ''}
                     </p>
@@ -574,6 +588,55 @@ export default function ClubAdmin() {
                   )}
                 </>
               )}
+            </TabsContent>
+
+            {/* ── PREVIOUS MEMBERS ── */}
+            <TabsContent value="previous">
+              <>
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                  <div className="relative flex-1 min-w-[160px] max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      placeholder="Search previous members..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 bg-white border-slate-200 rounded-xl h-9 text-sm"
+                    />
+                  </div>
+                  <Select value={membershipTypeFilter} onValueChange={setMembershipTypeFilter}>
+                    <SelectTrigger className="w-48 h-9 bg-white border-slate-200 rounded-xl text-sm">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {membershipTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-slate-400 flex-shrink-0">
+                    {filteredPreviousMembers.length} member{filteredPreviousMembers.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                {filteredPreviousMembers.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center">
+                    <UserX className="w-10 h-10 mx-auto mb-3 text-slate-200" />
+                    <p className="text-slate-400 font-medium">No previous members</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredPreviousMembers.map((member, i) => (
+                      <motion.div key={member.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                        <MemberCard
+                          member={member}
+                          onSelect={setSelectedMember}
+                          onRemove={(id) => deleteMembershipMutation.mutate(id)}
+                          isSelf={false}
+                          payment={paymentByEmail[member.user_email]}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </>
             </TabsContent>
 
             {/* ── COMPETITIONS ── */}
@@ -660,6 +723,11 @@ export default function ClubAdmin() {
           isUpdating={updateMembershipMutation.isPending}
           isAdmin={true}
           membershipTypes={membershipTypes}
+          onSetMemberStatus={(id, status) => {
+            setMemberStatusMutation.mutate({ id, member_status: status });
+            toast.success(status === 'left' ? 'Member moved to Previous Members' : 'Member reinstated');
+            setSelectedMember(null);
+          }}
         />
         <BulkUploadModal
           open={bulkUploadOpen}
