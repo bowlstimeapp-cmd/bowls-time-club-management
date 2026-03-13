@@ -223,6 +223,26 @@ export default function MemberDetailModal({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Emergency Contact Name</Label>
+                  <Input
+                    value={emergencyContactName}
+                    onChange={(e) => setEmergencyContactName(e.target.value)}
+                    placeholder="Jane Smith"
+                  />
+                </div>
+                <div>
+                  <Label>Emergency Contact Phone</Label>
+                  <Input
+                    type="tel"
+                    value={emergencyContactPhone}
+                    onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                    placeholder="07123 456789"
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label>Role</Label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
@@ -302,6 +322,17 @@ export default function MemberDetailModal({
                 <div>
                   <Label className="text-gray-500 text-xs">Locker 2</Label>
                   <p className="font-medium">{member.locker_number_2 || '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-500 text-xs">Emergency Contact</Label>
+                  <p className="font-medium">{member.emergency_contact_name || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-500 text-xs">Emergency Phone</Label>
+                  <p className="font-medium">{member.emergency_contact_phone || '-'}</p>
                 </div>
               </div>
 
