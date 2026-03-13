@@ -49,7 +49,8 @@ export default function MemberDetailModal({
   onUpdateMember,
   isUpdating,
   isAdmin = false,
-  membershipTypes = DEFAULT_MEMBERSHIP_TYPES
+  membershipTypes = DEFAULT_MEMBERSHIP_TYPES,
+  onSetMemberStatus
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -342,6 +343,33 @@ export default function MemberDetailModal({
                   {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                 </Badge>
               </div>
+
+              {isAdmin && onSetMemberStatus && (
+                <div className="pt-3 border-t">
+                  <Label className="text-gray-500 text-xs block mb-2">Member Status</Label>
+                  <div className="flex gap-2">
+                    {member.member_status !== 'left' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        onClick={() => onSetMemberStatus(member.id, 'left')}
+                      >
+                        Mark as Left
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => onSetMemberStatus(member.id, 'active')}
+                      >
+                        Reinstate Member
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label className="text-gray-500 text-xs mb-2 block">Membership Groups</Label>
