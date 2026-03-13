@@ -122,7 +122,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
   };
 
   const downloadTemplate = () => {
-    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member,2024-01-15,42,\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12';
+    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2,EmergencyContactName,EmergencyContactPhone\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member,2024-01-15,42,,Jane Smith,07111222333\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12,,';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -26,6 +26,8 @@ export default function Profile() {
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('');
   const [membershipStartDate, setMembershipStartDate] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
