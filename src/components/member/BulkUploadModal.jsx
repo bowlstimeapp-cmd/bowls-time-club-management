@@ -69,7 +69,9 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           membership_type: values[7] || '',
           join_date: values[8] || '',
           locker1: values[9] || '',
-          locker2: values[10] || ''
+          locker2: values[10] || '',
+          emergency_contact_name: values[11] || '',
+          emergency_contact_phone: values[12] || ''
         };
       }).filter(row => row.email);
 

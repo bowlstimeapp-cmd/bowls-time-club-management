@@ -164,9 +164,12 @@ export default function Profile() {
       phone: phone.trim()
     });
     if (clubId && membership) {
-      const memberUpdates = { phone: phone.trim() || null };
-      if (gender) memberUpdates.gender = gender;
-      if (membershipStartDate) memberUpdates.membership_start_date = membershipStartDate;
+      const memberUpdates = {
+        phone: phone.trim() || null,
+        gender: gender || null,
+        emergency_contact_name: emergencyContactName.trim() || null,
+        emergency_contact_phone: emergencyContactPhone.trim() || null,
+      };
       await base44.entities.ClubMembership.update(membership.id, memberUpdates);
       queryClient.invalidateQueries({ queryKey: ['myMembership'] });
     }

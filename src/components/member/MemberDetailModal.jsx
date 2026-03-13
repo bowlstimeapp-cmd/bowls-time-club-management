@@ -101,6 +101,8 @@ export default function MemberDetailModal({
       locker_number_2: lockerNumber2.trim(),
       gender: gender || null,
       membership_start_date: membershipStartDate || null,
+      emergency_contact_name: emergencyContactName.trim() || null,
+      emergency_contact_phone: emergencyContactPhone.trim() || null,
       role: selectedRole,
       membership_groups: selectedGroups
     };
