@@ -336,28 +336,36 @@ useEffect(() => {
       : (user.full_name || user.email);
 
     // Generate time slots between start and end time
-    const sessionDuration = club.session_duration || 2;
     const slots = [];
-    
-    const [startHour, startMin] = bulkData.startTime.split(':').map(Number);
-    const [endHour, endMin] = bulkData.endTime.split(':').map(Number);
-    
-    let currentHour = startHour;
-    let currentMin = startMin;
-    
-    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
-      const nextHour = currentHour + sessionDuration;
-      const nextMin = currentMin;
-      
-      if (nextHour > endHour || (nextHour === endHour && nextMin > endMin)) break;
-      
-      const slotStart = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
-      const slotEnd = `${String(nextHour).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`;
-      
-      slots.push({ start_time: slotStart, end_time: slotEnd });
-      
-      currentHour = nextHour;
-      currentMin = nextMin;
+
+    if (club.use_custom_sessions && club.custom_sessions?.length > 0) {
+      // Use custom sessions that fall within the selected range
+      const timeToMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+      const startMins = timeToMins(bulkData.startTime);
+      const endMins = timeToMins(bulkData.endTime);
+      for (const session of club.custom_sessions) {
+        const sStart = timeToMins(session.start);
+        const sEnd = timeToMins(session.end);
+        if (sStart >= startMins && sEnd <= endMins) {
+          slots.push({ start_time: session.start, end_time: session.end });
+        }
+      }
+    } else {
+      const sessionDuration = club.session_duration || 2;
+      const [startHour, startMin] = bulkData.startTime.split(':').map(Number);
+      const [endHour, endMin] = bulkData.endTime.split(':').map(Number);
+      let currentHour = startHour;
+      let currentMin = startMin;
+      while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+        const nextHour = currentHour + sessionDuration;
+        const nextMin = currentMin;
+        if (nextHour > endHour || (nextHour === endHour && nextMin > endMin)) break;
+        const slotStart = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+        const slotEnd = `${String(nextHour).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`;
+        slots.push({ start_time: slotStart, end_time: slotEnd });
+        currentHour = nextHour;
+        currentMin = nextMin;
+      }
     }
 
     // Create bookings for all rinks and all time slots
