@@ -38,7 +38,8 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           locker1: values[9] || '',
           locker2: values[10] || '',
           emergency_contact_name: values[11] || '',
-          emergency_contact_phone: values[12] || ''
+          emergency_contact_phone: values[12] || '',
+          date_of_birth: values[13] || ''
         };
       }).filter(row => row.email);
       setPreview(parsed.slice(0, 5));
@@ -71,7 +72,8 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           locker1: values[9] || '',
           locker2: values[10] || '',
           emergency_contact_name: values[11] || '',
-          emergency_contact_phone: values[12] || ''
+          emergency_contact_phone: values[12] || '',
+          date_of_birth: values[13] || ''
         };
       }).filter(row => row.email);
 
@@ -110,6 +112,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           if (member.membership_type) memberData.membership_groups = [member.membership_type];
           if (member.emergency_contact_name) memberData.emergency_contact_name = member.emergency_contact_name;
           if (member.emergency_contact_phone) memberData.emergency_contact_phone = member.emergency_contact_phone;
+          if (member.date_of_birth) memberData.date_of_birth = member.date_of_birth;
           await base44.entities.ClubMembership.create(memberData);
           successCount++;
         } catch (err) {
@@ -129,7 +132,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
   };
 
   const downloadTemplate = () => {
-    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2,EmergencyContactName,EmergencyContactPhone\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member,2024-01-15,42,,Jane Smith,07111222333\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12,,';
+    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2,EmergencyContactName,EmergencyContactPhone,DateOfBirth\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member,2024-01-15,42,,Jane Smith,07111222333,1960-05-15\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12,,,1975-08-22';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
