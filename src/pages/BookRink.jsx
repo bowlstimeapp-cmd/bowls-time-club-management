@@ -470,16 +470,42 @@ useEffect(() => {
                 />
                 <div className="flex gap-2 flex-wrap">
                   {membership?.role === 'admin' && (
-                    <Button 
-                      onClick={() => setBulkModalOpen(true)}
-                      variant="outline"
-                      className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                    >
-                      <CalendarRange className="w-4 h-4 mr-2" />
-                      Bulk Booking
-                    </Button>
+                    <>
+                      <Button 
+                        onClick={() => setBulkModalOpen(true)}
+                        variant="outline"
+                        className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                        disabled={bulkDeleteMode}
+                      >
+                        <CalendarRange className="w-4 h-4 mr-2" />
+                        Bulk Booking
+                      </Button>
+                      {!bulkDeleteMode ? (
+                        <Button
+                          onClick={() => { setBulkDeleteMode(true); setBulkDeleteSelected([]); setSelectedSlots([]); }}
+                          variant="outline"
+                          className="border-red-500 text-red-600 hover:bg-red-50"
+                        >
+                          <CalendarRange className="w-4 h-4 mr-2" />
+                          Bulk Delete
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={handleBulkDeleteConfirm}
+                            disabled={bulkDeleteSelected.length === 0 || bulkDeleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            {bulkDeleting ? <><CalendarRange className="w-4 h-4 mr-2 animate-spin" />Deleting...</> : `Confirm Delete (${bulkDeleteSelected.length})`}
+                          </Button>
+                          <Button variant="outline" onClick={() => { setBulkDeleteMode(false); setBulkDeleteSelected([]); }}>
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                    </>
                   )}
-                  {selectedSlots.length > 0 && (
+                  {selectedSlots.length > 0 && !bulkDeleteMode && (
                     <Button 
                       onClick={handleBookSelected}
                       className="bg-emerald-600 hover:bg-emerald-700"
