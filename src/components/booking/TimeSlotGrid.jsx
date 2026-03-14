@@ -286,9 +286,11 @@ export default function TimeSlotGrid({
                             !available && cn(statusStyles[booking?.status]),
                             !available && isSwapTarget && !isHoverTarget && "ring-2 ring-orange-300 ring-offset-1",
                             !available && isHoverTarget && "ring-2 ring-orange-500 ring-offset-2 scale-[1.03] shadow-md",
-                            !available && canDrag && "cursor-grab active:cursor-grabbing",
+                            !available && canDrag && !bulkDeleteMode && "cursor-grab active:cursor-grabbing",
                             !available && !canDrag && "cursor-pointer",
-                            available && !canSelect && !isDragging && selectedSlots.length > 0 && "opacity-50"
+                            bulkDeleteMode && !available && booking && bulkDeleteSelected.includes(booking.id) && "ring-2 ring-red-500 ring-offset-1",
+                            bulkDeleteMode && !available && booking && "cursor-pointer",
+                            available && !canSelect && !isDragging && selectedSlots.length > 0 && !bulkDeleteMode && "opacity-50"
                           )}
                         >
                           {bulkDeleteMode && !available && booking ? (
