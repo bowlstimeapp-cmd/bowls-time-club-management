@@ -104,6 +104,25 @@ export default function BulkBookingModal({
   const rinkCount = club?.rink_count || 6;
   const rinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
+  // Generate time options based on club config
+  const timeOptions = React.useMemo(() => {
+    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
+      return club.custom_sessions.map(s => ({ value: s.start, label: `${s.start} – ${s.end}`, end: s.end }));
+    }
+    const opts = [];
+    const [openH] = (club?.opening_time || '10:00').split(':').map(Number);
+    const [closeH] = (club?.closing_time || '21:00').split(':').map(Number);
+    const dur = club?.session_duration || 2;
+    for (let h = openH; h + dur <= closeH; h += dur) {
+      const start = `${String(h).padStart(2, '0')}:00`;
+      const end = `${String(h + dur).padStart(2, '0')}:00`;
+      opts.push({ value: start, label: `${start} – ${end}`, end });
+    }
+    return opts;
+  }, [club]);
+
+  const useDropdowns = club?.use_custom_sessions && club?.custom_sessions?.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
