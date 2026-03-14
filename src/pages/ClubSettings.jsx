@@ -542,16 +542,13 @@ export default function ClubSettings() {
               <CardContent>
                 <div className="space-y-3">
                   {ALL_MEMBERSHIP_TYPES.map(type => (
-                    <div 
-                      key={type}
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => toggleMembershipType(type)}
-                    >
+                    <div key={type} className="flex items-center gap-3">
                       <Checkbox 
+                        id={`mtype-${type}`}
                         checked={membershipTypes.includes(type)}
-                        onCheckedChange={() => {}}
+                        onCheckedChange={() => toggleMembershipType(type)}
                       />
-                      <span>{type}</span>
+                      <label htmlFor={`mtype-${type}`} className="cursor-pointer select-none">{type}</label>
                     </div>
                   ))}
                 </div>

@@ -62,6 +62,7 @@ export default function MemberDetailModal({
   const [membershipStartDate, setMembershipStartDate] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
   const [selectedGroups, setSelectedGroups] = useState([]);
 
