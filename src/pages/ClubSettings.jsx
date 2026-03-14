@@ -548,7 +548,7 @@ export default function ClubSettings() {
                     >
                       <Checkbox 
                         checked={membershipTypes.includes(type)}
-                        onCheckedChange={() => toggleMembershipType(type)}
+                        onCheckedChange={() => {}}
                       />
                       <span>{type}</span>
                     </div>
