@@ -188,10 +188,25 @@ export default function LeagueAdmin() {
   });
 
   const deleteLeagueMutation = useMutation({
-    mutationFn: (id) => base44.entities.League.delete(id),
+    mutationFn: async (id) => {
+      // Delete associated fixtures and their bookings
+      const leagueFixturesList = await base44.entities.LeagueFixture.filter({ league_id: id });
+      // Cancel bookings linked to this league's fixtures
+      const bookingIds = leagueFixturesList.map(f => f.booking_id).filter(Boolean);
+      await Promise.all(bookingIds.map(bid => base44.entities.Booking.update(bid, { status: 'cancelled' })));
+      // Delete fixtures
+      await Promise.all(leagueFixturesList.map(f => base44.entities.LeagueFixture.delete(f.id)));
+      // Delete teams
+      const leagueTeamsList = await base44.entities.LeagueTeam.filter({ league_id: id });
+      await Promise.all(leagueTeamsList.map(t => base44.entities.LeagueTeam.delete(t.id)));
+      // Delete league
+      await base44.entities.League.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
-      toast.success('League deleted');
+      queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success('League deleted and associated bookings removed');
       setDeleteLeagueId(null);
     },
   });
