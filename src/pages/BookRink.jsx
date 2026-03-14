@@ -39,6 +39,9 @@ export default function BookRink() {
   const [user, setUser] = useState(null);
   const [joiningRollup, setJoiningRollup] = useState(false);
   const [deletingBooking, setDeletingBooking] = useState(false);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [bulkDeleteSelected, setBulkDeleteSelected] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -392,7 +395,32 @@ useEffect(() => {
   // Clear selection when date changes
   useEffect(() => {
     setSelectedSlots([]);
+    setBulkDeleteSelected([]);
+    setBulkDeleteMode(false);
   }, [dateString]);
+
+  const handleBulkDeleteConfirm = async () => {
+    if (bulkDeleteSelected.length === 0) return;
+    setBulkDeleting(true);
+    for (const bookingId of bulkDeleteSelected) {
+      const booking = bookings.find(b => b.id === bookingId);
+      await base44.entities.Booking.update(bookingId, { status: 'cancelled' });
+      if (booking && booking.booker_email !== user?.email) {
+        await sendBookingChangeNotification(booking, 'deleted');
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    toast.success(`${bulkDeleteSelected.length} booking(s) cancelled`);
+    setBulkDeleteSelected([]);
+    setBulkDeleteMode(false);
+    setBulkDeleting(false);
+  };
+
+  const toggleBulkDeleteBooking = (bookingId) => {
+    setBulkDeleteSelected(prev =>
+      prev.includes(bookingId) ? prev.filter(id => id !== bookingId) : [...prev, bookingId]
+    );
+  };
 
   if (!clubId || membershipLoading) {
     return (
