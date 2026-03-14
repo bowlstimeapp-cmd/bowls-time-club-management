@@ -576,7 +576,7 @@ export default function LeagueAdmin() {
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    toast.success(`Created ${createdBookings.length} rink bookings`);
+    toast.success(`Fixtures generated and rinks successfully booked. ${createdBookings.length} rink booking${createdBookings.length !== 1 ? 's' : ''} created.`);
   };
 
   const handleLeagueClashProceed = async (bookingsToCreate) => {
