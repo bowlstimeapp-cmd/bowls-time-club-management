@@ -317,6 +317,11 @@ export default function MemberDetailModal({
                 <p className="font-medium">{member.phone || '-'}</p>
               </div>
 
+              <div>
+                <Label className="text-gray-500 text-xs">Date of Birth</Label>
+                <p className="font-medium">{member.date_of_birth ? (() => { try { return format(parseISO(member.date_of_birth), 'd MMM yyyy'); } catch { return member.date_of_birth; } })() : '-'}</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-500 text-xs">Gender</Label>
