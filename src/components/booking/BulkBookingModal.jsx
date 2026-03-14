@@ -162,24 +162,39 @@ export default function BulkBookingModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Start Time *</Label>
-              <Input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
+          {useDropdowns ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Session *</Label>
+                <Select value={startTime} onValueChange={setStartTime}>
+                  <SelectTrigger><SelectValue placeholder="Select start..." /></SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>End Session *</Label>
+                <Select value={endTime} onValueChange={setEndTime}>
+                  <SelectTrigger><SelectValue placeholder="Select end..." /></SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map(opt => <SelectItem key={opt.end} value={opt.end}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label>End Time *</Label>
-              <Input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Time *</Label>
+                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+              </div>
+              <div>
+                <Label>End Time *</Label>
+                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label>Competition Type *</Label>
