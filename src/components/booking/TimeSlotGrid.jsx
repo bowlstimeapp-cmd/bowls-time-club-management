@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Clock, CheckCircle, XCircle, Loader2, Check, Users, UserPlus } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2, Check, Users, UserPlus, Square, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -79,6 +79,9 @@ export default function TimeSlotGrid({
   leagueFixtures = [],
   leagueTeams = [],
   leagues = [],
+  bulkDeleteMode = false,
+  bulkDeleteSelected = [],
+  onToggleBulkDelete,
 }) {
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
