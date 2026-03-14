@@ -23,6 +23,7 @@ export default function ProfileSetup() {
   const [surname, setSurname] = useState('');
   const [gender, setGender] = useState('');
   const [phone, setPhone] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +54,7 @@ export default function ProfileSetup() {
       first_name: firstName.trim(),
       surname: surname.trim(),
       phone: phone.trim() || null,
+      date_of_birth: dateOfBirth || null,
       gender: gender || null,
       emergency_contact_name: emergencyContactName.trim() || null,
       emergency_contact_phone: emergencyContactPhone.trim() || null,
@@ -132,6 +134,17 @@ export default function ProfileSetup() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="07123 456789"
+                />
+              </div>
+
+              {/* Date of Birth */}
+              <div>
+                <Label htmlFor="dob">Date of Birth</Label>
+                <Input
+                  id="dob"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
                 />
               </div>
 
