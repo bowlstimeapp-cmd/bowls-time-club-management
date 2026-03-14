@@ -134,7 +134,8 @@ export default function ClubSettings() {
       setScorecardFormat(club.scorecard_format || 'pdf');
       setUseCustomScorecardLayout(club.use_custom_scorecard_layout || false);
     }
-  }, [club]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [club?.id]);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
