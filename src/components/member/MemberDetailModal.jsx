@@ -77,6 +77,7 @@ export default function MemberDetailModal({
       setMembershipStartDate(member.membership_start_date || '');
       setEmergencyContactName(member.emergency_contact_name || '');
       setEmergencyContactPhone(member.emergency_contact_phone || '');
+      setDateOfBirth(member.date_of_birth || '');
       setSelectedRole(member.role || 'member');
       setSelectedGroups(member.membership_groups || []);
       setIsEditing(false);
