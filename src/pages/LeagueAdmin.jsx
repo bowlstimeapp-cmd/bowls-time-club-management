@@ -504,19 +504,39 @@ export default function LeagueAdmin() {
     const rinkCount = club?.rink_count || 6;
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
-    const proposedBookings = leagueFixtures.map(fixture => ({
-      club_id: clubId,
-      rink_number: fixture.rink_number,
-      date: fixture.match_date,
-      start_time: league.start_time || '18:00',
-      end_time: league.end_time || '21:00',
-      status: 'approved',
-      competition_type: 'Club',
-      booker_name: `League - ${league.name}`,
-      booker_email: user.email,
-      notes: `${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`,
-      _fixtureId: fixture.id,
-    }));
+    // For custom sessions: expand each fixture into multiple bookings (one per session in range)
+    const leagueStartTime = league.start_time || '18:00';
+    const leagueEndTime = league.end_time || '21:00';
+
+    const getSessionSlots = () => {
+      if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
+        const timeToMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+        const startMins = timeToMins(leagueStartTime);
+        const endMins = timeToMins(leagueEndTime);
+        return club.custom_sessions.filter(s => timeToMins(s.start) >= startMins && timeToMins(s.end) <= endMins)
+          .map(s => ({ start_time: s.start, end_time: s.end }));
+      }
+      return [{ start_time: leagueStartTime, end_time: leagueEndTime }];
+    };
+
+    const sessionSlots = getSessionSlots();
+
+    const proposedBookings = leagueFixtures.flatMap(fixture => {
+      const notesText = `${leagueTeams.find(t => t.id === fixture.home_team_id)?.name} vs ${leagueTeams.find(t => t.id === fixture.away_team_id)?.name}`;
+      return sessionSlots.map((slot, slotIdx) => ({
+        club_id: clubId,
+        rink_number: fixture.rink_number,
+        date: fixture.match_date,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        status: 'approved',
+        competition_type: 'Club',
+        booker_name: `League - ${league.name}`,
+        booker_email: user.email,
+        notes: notesText,
+        _fixtureId: slotIdx === 0 ? fixture.id : null, // only link first slot to fixture
+      }));
+    });
 
     const clashes = [];
     const nonClashingBookings = [];
