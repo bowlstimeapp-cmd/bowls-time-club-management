@@ -246,9 +246,15 @@ export default function TimeSlotGrid({
                     <Tooltip key={rink}>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => handleSlotClick(rink, slot, slotIndex)}
-                          disabled={available && !canSelect && !isDragging && selectedSlots.length > 0 && selectedSlots[0].rink === rink}
-                          draggable={canDrag}
+                        onClick={() => {
+                          if (bulkDeleteMode && !available && booking) {
+                            onToggleBulkDelete?.(booking.id);
+                            return;
+                          }
+                          handleSlotClick(rink, slot, slotIndex);
+                        }}
+                        disabled={available && !canSelect && !isDragging && selectedSlots.length > 0 && selectedSlots[0].rink === rink && !bulkDeleteMode}
+                        draggable={canDrag && !bulkDeleteMode}
                           onDragStart={canDrag ? (e) => {
                             e.dataTransfer.setData('text/plain', booking.id);
                             e.dataTransfer.effectAllowed = 'move';
