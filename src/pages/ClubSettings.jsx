@@ -663,36 +663,15 @@ export default function ClubSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="scorecardFormat"
-                      value="pdf"
-                      checked={scorecardFormat === 'pdf'}
-                      onChange={() => setScorecardFormat('pdf')}
-                      className="w-4 h-4 text-emerald-600"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">PDF</span>
-                      <p className="text-sm text-gray-500">Print-ready scorecard sheets (default)</p>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="scorecardFormat"
-                      value="xlsx"
-                      checked={scorecardFormat === 'xlsx'}
-                      onChange={() => setScorecardFormat('xlsx')}
-                      className="w-4 h-4 text-emerald-600"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">Excel (XLSX)</span>
-                      <p className="text-sm text-gray-500">One sheet per fixture, editable in Excel or Google Sheets</p>
-                    </div>
-                  </label>
-                </div>
+                <Select value={scorecardFormat} onValueChange={setScorecardFormat}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF — Print-ready scorecard sheets (default)</SelectItem>
+                    <SelectItem value="xlsx">Excel (XLSX) — One sheet per fixture, editable in Excel or Google Sheets</SelectItem>
+                  </SelectContent>
+                </Select>
               </CardContent>
             </Card>
 
