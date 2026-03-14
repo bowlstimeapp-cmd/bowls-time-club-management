@@ -291,7 +291,21 @@ export default function TimeSlotGrid({
                             available && !canSelect && !isDragging && selectedSlots.length > 0 && "opacity-50"
                           )}
                         >
-                          {available ? (
+                          {bulkDeleteMode && !available && booking ? (
+                            <div className="flex flex-col gap-0.5 h-full relative">
+                              <div className="absolute top-1 right-1">
+                                {bulkDeleteSelected.includes(booking.id)
+                                  ? <CheckSquare className="w-4 h-4 text-red-600" />
+                                  : <Square className="w-4 h-4 text-red-400" />}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-semibold truncate leading-tight">{booking.booker_name}</span>
+                              </div>
+                              {booking.competition_type && (
+                                <span className="text-[10px] opacity-80 truncate">{booking.competition_type}</span>
+                              )}
+                            </div>
+                          ) : available ? (
                             selected ? (
                               <div className="flex items-center justify-center h-full">
                                 <Check className="w-5 h-5 text-emerald-700" />
