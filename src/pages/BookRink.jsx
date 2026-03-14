@@ -505,7 +505,7 @@ useEffect(() => {
                       )}
                     </>
                   )}
-                  {selectedSlots.length > 0 && !bulkDeleteMode && (
+                  {!bulkDeleteMode && selectedSlots.length > 0 && (
                     <Button 
                       onClick={handleBookSelected}
                       className="bg-emerald-600 hover:bg-emerald-700"
