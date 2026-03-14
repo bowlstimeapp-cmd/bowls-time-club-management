@@ -184,6 +184,15 @@ export default function MemberDetailModal({
                 />
               </div>
 
+              <div>
+                <Label>Date of Birth</Label>
+                <Input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Gender</Label>
