@@ -884,6 +884,30 @@ export default function ClubSettings() {
               </Card>
             )}
 
+            {/* Import Bookings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileUp className="w-5 h-5" />
+                  Import Bookings
+                </CardTitle>
+                <CardDescription>
+                  Bulk-import bookings from a CSV file
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setImportBookingsOpen(true)}
+                  className="w-full"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  Import Bookings from CSV
+                </Button>
+              </CardContent>
+            </Card>
+
             <Button 
               type="submit" 
               className="w-full bg-emerald-600 hover:bg-emerald-700"
