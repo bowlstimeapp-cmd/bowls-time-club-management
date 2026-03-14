@@ -154,7 +154,7 @@ export default function BulkBookingModal({
                 >
                   <Checkbox 
                     checked={selectedRinks.includes(rinkNumber)}
-                    onCheckedChange={() => toggleRink(rinkNumber)}
+                    onCheckedChange={() => {}}
                   />
                   <span className="text-sm">Rink {rinkNumber}</span>
                 </div>
