@@ -928,6 +928,16 @@ export default function ClubSettings() {
           </form>
         </motion.div>
 
+        <BulkBookingImportModal
+          open={importBookingsOpen}
+          onClose={() => setImportBookingsOpen(false)}
+          clubId={clubId}
+          onSuccess={() => {
+            toast.success('Bookings imported successfully');
+            setImportBookingsOpen(false);
+          }}
+        />
+
         {/* Competition Modal */}
         {competitionModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
