@@ -543,6 +543,9 @@ useEffect(() => {
                   leagueFixtures={leagueFixtures}
                   leagueTeams={leagueTeams}
                   leagues={leagues}
+                  bulkDeleteMode={bulkDeleteMode}
+                  bulkDeleteSelected={bulkDeleteSelected}
+                  onToggleBulkDelete={toggleBulkDeleteBooking}
                 />
               )}
             </CardContent>
