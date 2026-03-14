@@ -10,8 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp } from 'lucide-react';
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
+import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -51,6 +52,7 @@ export default function ClubSettings() {
   const [altViewLeagues, setAltViewLeagues] = useState(false);
   const [scorecardFormat, setScorecardFormat] = useState('pdf');
   const [useCustomScorecardLayout, setUseCustomScorecardLayout] = useState(false);
+  const [importBookingsOpen, setImportBookingsOpen] = useState(false);
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
