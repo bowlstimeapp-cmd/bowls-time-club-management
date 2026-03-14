@@ -106,6 +106,7 @@ export default function MemberDetailModal({
       membership_start_date: membershipStartDate || null,
       emergency_contact_name: emergencyContactName.trim() || null,
       emergency_contact_phone: emergencyContactPhone.trim() || null,
+      date_of_birth: dateOfBirth || null,
       role: selectedRole,
       membership_groups: selectedGroups
     };
