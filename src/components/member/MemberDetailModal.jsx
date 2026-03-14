@@ -123,6 +123,7 @@ export default function MemberDetailModal({
     membershipStartDate !== (member.membership_start_date || '') ||
     emergencyContactName !== (member.emergency_contact_name || '') ||
     emergencyContactPhone !== (member.emergency_contact_phone || '') ||
+    dateOfBirth !== (member.date_of_birth || '') ||
     selectedRole !== member.role ||
     JSON.stringify(selectedGroups.sort()) !== JSON.stringify((member.membership_groups || []).sort());
 
