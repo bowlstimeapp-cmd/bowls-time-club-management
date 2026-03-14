@@ -305,6 +305,12 @@ export default function Profile() {
                   </div>
                   {clubId && membership && (
                     <>
+                      {membership?.date_of_birth && (
+                        <div>
+                          <Label>Date of Birth</Label>
+                          <Input value={(() => { try { return format(parseISO(membership.date_of_birth), 'd MMM yyyy'); } catch { return membership.date_of_birth; } })()} disabled className="bg-gray-50" />
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="gender">Gender</Label>
