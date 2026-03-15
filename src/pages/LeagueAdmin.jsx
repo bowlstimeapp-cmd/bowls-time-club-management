@@ -93,6 +93,7 @@ export default function LeagueAdmin() {
   const [pendingFixtures, setPendingFixtures] = useState([]);
   const [pendingFixtureLeague, setPendingFixtureLeague] = useState(null);
   const [pendingFixtureTeams, setPendingFixtureTeams] = useState([]);
+  const [regenerateCounter, setRegenerateCounter] = useState(0);
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
