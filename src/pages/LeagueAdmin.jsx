@@ -1251,6 +1251,19 @@ export default function LeagueAdmin() {
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <Checkbox
+                    id="force-even"
+                    checked={leagueForceEven}
+                    onCheckedChange={setLeagueForceEven}
+                  />
+                  <div>
+                    <Label htmlFor="force-even" className="cursor-pointer">Force even number of games between teams</Label>
+                    <p className="text-xs text-gray-500">When enabled, each team plays every other team the same number of times. When disabled, fixtures fill the full league duration.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
                     id="is-sets"
                     checked={leagueIsSets}
                     onCheckedChange={setLeagueIsSets}
