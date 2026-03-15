@@ -364,134 +364,128 @@ export default function LeagueAdmin() {
     return rounds;
   };
 
+  const buildFixtureList = (league, leagueTeams) => {
+    const startDate = parseISO(league.start_date);
+    const endDate = parseISO(league.end_date);
+
+    // Blacklisted individual dates
+    const blacklistedSet = new Set((league.blacklisted_dates || []).map(bl => bl.date));
+    const isDateBlacklisted = (date) => blacklistedSet.has(format(date, 'yyyy-MM-dd'));
+
+    // Generate weekly dates
+    const weeks = [];
+    let currentDate = startDate;
+    while (isBefore(currentDate, endDate) || format(currentDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
+      if (!isDateBlacklisted(currentDate)) weeks.push(currentDate);
+      currentDate = addDays(currentDate, 7);
+    }
+
+    const rounds = generateRoundRobinFixtures(leagueTeams);
+    const rinkCount = club?.rink_count || 6;
+    const allFixtures = [];
+    const rinkUsage = {};
+    const dateRinkUsage = {};
+
+    leagueTeams.forEach(team => {
+      rinkUsage[team.id] = {};
+      for (let r = 1; r <= rinkCount; r++) rinkUsage[team.id][r] = 0;
+    });
+
+    const forceEven = league.force_even_fixtures !== false;
+    const availableWeeks = weeks.length;
+    const totalRounds = rounds.length;
+    const repetitions = forceEven
+      ? Math.floor(availableWeeks / totalRounds)
+      : null; // null = fill all weeks
+
+    let weekIndex = 0;
+
+    const processRound = (round, matchDate) => {
+      const dateKey = format(matchDate, 'yyyy-MM-dd');
+      if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
+
+      for (const match of round) {
+        let bestRink = null;
+        let lowestUsage = Infinity;
+        for (let r = 1; r <= rinkCount; r++) {
+          if (dateRinkUsage[dateKey].has(r)) continue;
+          const usage = (rinkUsage[match.home_team_id][r] || 0) + (rinkUsage[match.away_team_id][r] || 0);
+          if (usage < lowestUsage) { lowestUsage = usage; bestRink = r; }
+        }
+        if (bestRink === null) continue;
+
+        dateRinkUsage[dateKey].add(bestRink);
+        rinkUsage[match.home_team_id][bestRink]++;
+        rinkUsage[match.away_team_id][bestRink]++;
+
+        allFixtures.push({
+          league_id: league.id,
+          club_id: clubId,
+          home_team_id: match.home_team_id,
+          away_team_id: match.away_team_id,
+          match_date: dateKey,
+          rink_number: bestRink,
+          status: 'scheduled',
+        });
+      }
+    };
+
+    if (forceEven) {
+      for (let rep = 0; rep < repetitions && weekIndex < availableWeeks; rep++) {
+        for (let roundIdx = 0; roundIdx < rounds.length && weekIndex < availableWeeks; roundIdx++) {
+          processRound(rounds[roundIdx], weeks[weekIndex]);
+          weekIndex++;
+        }
+      }
+    } else {
+      // Fill all available weeks, cycling through rounds
+      while (weekIndex < availableWeeks) {
+        const roundIdx = weekIndex % rounds.length;
+        processRound(rounds[roundIdx], weeks[weekIndex]);
+        weekIndex++;
+      }
+    }
+
+    return allFixtures;
+  };
+
   const handleGenerateFixtures = async (league) => {
     const leagueTeams = teams.filter(t => t.league_id === league.id);
-    
+
     if (leagueTeams.length < 2) {
       toast.error('Need at least 2 teams to generate fixtures');
       return;
     }
-    
     if (!league.start_date || !league.end_date) {
       toast.error('Please set league start and end dates first');
       return;
     }
-    
-    setGeneratingFixtures(true);
-    
-    // Get available weeks starting from the exact start date
-    const startDate = parseISO(league.start_date);
-    const endDate = parseISO(league.end_date);
-    
-    // Get blacklisted dates
-    const blacklisted = league.blacklisted_dates || [];
-    const isDateBlacklisted = (date) => {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      return blacklisted.some(bl => {
-        return dateStr >= bl.start_date && dateStr <= bl.end_date;
-      });
-    };
-    
-    // Generate weekly dates starting from the actual start date, excluding blacklisted dates
-    const weeks = [];
-    let currentDate = startDate;
-    while (isBefore(currentDate, endDate) || format(currentDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
-      if (!isDateBlacklisted(currentDate)) {
-        weeks.push(currentDate);
-      }
-      currentDate = addDays(currentDate, 7);
-    }
-    
-    // Generate round robin schedule
-    const rounds = generateRoundRobinFixtures(leagueTeams);
-    
-    // Calculate how many times to repeat the schedule
-    const totalRounds = rounds.length;
-    const availableWeeks = weeks.length;
-    const repetitions = Math.floor(availableWeeks / totalRounds);
-    
-    // Flatten all matches with dates and rinks - only 1 match per rink per day
-    const rinkCount = club?.rink_count || 6;
-    const allFixtures = [];
-    const rinkUsage = {}; // Track rink usage per team
-    const dateRinkUsage = {}; // Track which rinks are used on each date
-    
-    leagueTeams.forEach(team => {
-      rinkUsage[team.id] = {};
-      for (let r = 1; r <= rinkCount; r++) {
-        rinkUsage[team.id][r] = 0;
-      }
-    });
-    
-    let weekIndex = 0;
-    for (let rep = 0; rep < repetitions && weekIndex < availableWeeks; rep++) {
-      for (let roundIdx = 0; roundIdx < rounds.length && weekIndex < availableWeeks; roundIdx++) {
-        const round = rounds[roundIdx];
-        const matchDate = weeks[weekIndex];
-        const dateKey = format(matchDate, 'yyyy-MM-dd');
-        
-        if (!dateRinkUsage[dateKey]) {
-          dateRinkUsage[dateKey] = new Set();
-        }
-        
-        // Assign rinks to matches, ensuring no rink is used twice on same day
-        const matchesThisWeek = [];
-        for (const match of round) {
-          // Find the best available rink for this match
-          let bestRink = null;
-          let lowestUsage = Infinity;
-          
-          for (let r = 1; r <= rinkCount; r++) {
-            // Skip if rink already used on this date
-            if (dateRinkUsage[dateKey].has(r)) continue;
-            
-            const totalUsage = (rinkUsage[match.home_team_id][r] || 0) + 
-                              (rinkUsage[match.away_team_id][r] || 0);
-            if (totalUsage < lowestUsage) {
-              lowestUsage = totalUsage;
-              bestRink = r;
-            }
-          }
-          
-          // If no rink available, skip this match (will need more weeks)
-          if (bestRink === null) continue;
-          
-          // Mark rink as used on this date
-          dateRinkUsage[dateKey].add(bestRink);
-          
-          // Update team usage
-          rinkUsage[match.home_team_id][bestRink]++;
-          rinkUsage[match.away_team_id][bestRink]++;
-          
-          matchesThisWeek.push({
-            league_id: league.id,
-            club_id: clubId,
-            home_team_id: match.home_team_id,
-            away_team_id: match.away_team_id,
-            match_date: dateKey,
-            rink_number: bestRink,
-            status: 'scheduled',
-          });
-        }
-        
-        allFixtures.push(...matchesThisWeek);
-        weekIndex++;
-      }
-    }
-    
-    // Bulk create fixtures (no bookings yet - separate action)
-    await base44.entities.LeagueFixture.bulkCreate(allFixtures);
-    
-    // Update league to mark fixtures as generated
-    await base44.entities.League.update(league.id, { fixtures_generated: true });
-    
 
-    
+    setGeneratingFixtures(true);
+    const allFixtures = buildFixtureList(league, leagueTeams);
+    setGeneratingFixtures(false);
+
+    // Show distribution preview modal
+    setPendingFixtures(allFixtures);
+    setPendingFixtureLeague(league);
+    setPendingFixtureTeams(leagueTeams);
+    setDistributionModalOpen(true);
+  };
+
+  const handleConfirmFixtures = async () => {
+    setGeneratingFixtures(true);
+    await base44.entities.LeagueFixture.bulkCreate(pendingFixtures);
+    await base44.entities.League.update(pendingFixtureLeague.id, { fixtures_generated: true });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
-    
     setGeneratingFixtures(false);
-    toast.success(`Generated ${allFixtures.length} fixtures`);
+    setDistributionModalOpen(false);
+    toast.success(`Generated ${pendingFixtures.length} fixtures`);
+  };
+
+  const handleRegenerateFixtures = () => {
+    const allFixtures = buildFixtureList(pendingFixtureLeague, pendingFixtureTeams);
+    setPendingFixtures(allFixtures);
   };
 
   const handleBookRinks = async (league) => {
