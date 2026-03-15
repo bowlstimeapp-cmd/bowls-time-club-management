@@ -135,6 +135,8 @@ export default function SelectionEditor() {
       setSelectedRinks(existingSelection.selected_rinks || []);
       setMatchStartTime(existingSelection.match_start_time || '10:00');
       setMatchEndTime(existingSelection.match_end_time || '14:00');
+      setHomeCaptainEmail(existingSelection.home_captain_email || '');
+      setAwayCaptainEmail(existingSelection.away_captain_email || '');
       if (existingSelection.competition === 'Friendly') {
         setFriendlyLocation(existingSelection.friendly_location || '');
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
