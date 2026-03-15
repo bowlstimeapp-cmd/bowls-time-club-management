@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,114 +11,109 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
 
 export default function BlacklistDatesDialog({ open, onClose, league }) {
   const queryClient = useQueryClient();
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [newDate, setNewDate] = useState('');
   const [reason, setReason] = useState('');
+  // Local copy so list updates immediately without waiting for query refetch
+  const [localDates, setLocalDates] = useState([]);
+
+  useEffect(() => {
+    if (league) {
+      setLocalDates(league.blacklisted_dates || []);
+    }
+  }, [league]);
 
   const updateLeagueMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.League.update(id, data),
-    onSuccess: (updatedLeague) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues'] });
-      toast.success('Blacklisted dates updated');
-      setStartDate('');
-      setEndDate('');
-      setReason('');
     },
   });
 
-  const handleAddBlacklist = async () => {
-    if (!startDate || !endDate) {
-      toast.error('Please select start and end dates');
+  const handleAddDate = async () => {
+    if (!newDate) {
+      toast.error('Please select a date');
+      return;
+    }
+    // Prevent duplicates
+    if (localDates.some(d => d.date === newDate)) {
+      toast.error('This date is already blacklisted');
       return;
     }
 
-    if (endDate < startDate) {
-      toast.error('End date must be after start date');
-      return;
-    }
+    const entry = { date: newDate, reason: reason.trim() || 'Unavailable' };
+    const updated = [...localDates, entry].sort((a, b) => a.date.localeCompare(b.date));
 
-    const blacklisted = league?.blacklisted_dates || [];
-    const newEntry = {
-      start_date: startDate,
-      end_date: endDate,
-      reason: reason.trim() || 'Unavailable'
-    };
-
-    try {
-      await updateLeagueMutation.mutateAsync({
-        id: league.id,
-        data: { blacklisted_dates: [...blacklisted, newEntry] }
-      });
-    } catch (error) {
-      toast.error('Failed to add blacklisted dates');
-    }
-  };
-
-  const handleRemoveBlacklist = async (index) => {
-    const blacklisted = league?.blacklisted_dates || [];
-    const updated = blacklisted.filter((_, i) => i !== index);
+    // Update local state immediately
+    setLocalDates(updated);
+    setNewDate('');
+    setReason('');
 
     try {
       await updateLeagueMutation.mutateAsync({
         id: league.id,
         data: { blacklisted_dates: updated }
       });
-    } catch (error) {
-      toast.error('Failed to remove blacklisted dates');
+      toast.success('Date blacklisted');
+    } catch {
+      // Rollback on error
+      setLocalDates(localDates);
+      toast.error('Failed to save blacklisted date');
+    }
+  };
+
+  const handleRemoveDate = async (index) => {
+    const updated = localDates.filter((_, i) => i !== index);
+    setLocalDates(updated);
+
+    try {
+      await updateLeagueMutation.mutateAsync({
+        id: league.id,
+        data: { blacklisted_dates: updated }
+      });
+      toast.success('Date removed');
+    } catch {
+      setLocalDates(localDates);
+      toast.error('Failed to remove date');
     }
   };
 
   if (!league) return null;
 
-  const blacklistedDates = league.blacklisted_dates || [];
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle>Blacklisted Dates - {league.name}</DialogTitle>
+          <DialogTitle>Blacklisted Dates — {league.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Add Blacklist */}
+          {/* Add single date */}
           <div className="border rounded-lg p-4 space-y-3">
-            <Label className="font-medium">Add Blacklisted Period</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Start Date</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">End Date</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || undefined}
-                />
-              </div>
+            <Label className="font-medium">Add Blacklisted Date</Label>
+            <div>
+              <Label className="text-xs">Date</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
             </div>
             <div>
               <Label className="text-xs">Reason (optional)</Label>
               <Input
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g., Christmas break, Maintenance"
+                placeholder="e.g., Christmas, Maintenance"
               />
             </div>
-            <Button 
-              onClick={handleAddBlacklist}
+            <Button
+              onClick={handleAddDate}
               disabled={updateLeagueMutation.isPending}
               className="w-full"
             >
@@ -127,32 +122,32 @@ export default function BlacklistDatesDialog({ open, onClose, league }) {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Add Blacklisted Period
+              Add Date
             </Button>
           </div>
 
-          {/* Current Blacklisted Dates */}
+          {/* Current blacklisted dates */}
           <div>
-            <Label className="font-medium mb-3 block">Current Blacklisted Periods</Label>
-            {blacklistedDates.length === 0 ? (
+            <Label className="font-medium mb-3 block">Current Blacklisted Dates</Label>
+            {localDates.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-4">
                 No blacklisted dates. Fixtures can be scheduled on any date.
               </p>
             ) : (
               <div className="space-y-2">
-                {blacklistedDates.map((entry, index) => (
-                  <div key={index} className="border rounded-lg p-3 flex items-start justify-between">
+                {localDates.map((entry, index) => (
+                  <div key={index} className="border rounded-lg p-3 flex items-center justify-between">
                     <div>
                       <div className="font-medium text-sm">
-                        {format(parseISO(entry.start_date), 'd MMM yyyy')} - {format(parseISO(entry.end_date), 'd MMM yyyy')}
+                        {format(parseISO(entry.date), 'd MMM yyyy')}
                       </div>
                       {entry.reason && (
-                        <div className="text-xs text-gray-500 mt-1">{entry.reason}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{entry.reason}</div>
                       )}
                     </div>
                     <button
-                      onClick={() => handleRemoveBlacklist(index)}
-                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleRemoveDate(index)}
+                      className="text-red-600 hover:text-red-700 ml-4"
                     >
                       <X className="w-4 h-4" />
                     </button>
