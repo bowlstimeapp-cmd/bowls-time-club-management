@@ -85,6 +85,13 @@ export default function LeagueAdmin() {
   const [leagueFormat, setLeagueFormat] = useState('fours');
   const [leagueIsSets, setLeagueIsSets] = useState(false);
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
+  const [leagueForceEven, setLeagueForceEven] = useState(true);
+
+  // Rink distribution preview state
+  const [distributionModalOpen, setDistributionModalOpen] = useState(false);
+  const [pendingFixtures, setPendingFixtures] = useState([]);
+  const [pendingFixtureLeague, setPendingFixtureLeague] = useState(null);
+  const [pendingFixtureTeams, setPendingFixtureTeams] = useState([]);
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
