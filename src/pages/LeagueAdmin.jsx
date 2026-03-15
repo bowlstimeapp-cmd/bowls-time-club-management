@@ -1267,6 +1267,31 @@ export default function LeagueAdmin() {
                   </Select>
                 </div>
               </div>
+              {/* Rink selection */}
+              {club && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div>
+                    <Label className="font-medium">Rinks for this league</Label>
+                    <p className="text-xs text-gray-500 mt-0.5">Select which rinks will be used when generating fixtures. Leave all unchecked to use all club rinks.</p>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                    {Array.from({ length: club.rink_count || 6 }, (_, i) => i + 1).map(rinkNum => (
+                      <label key={rinkNum} className="flex items-center gap-2 cursor-pointer select-none">
+                        <Checkbox
+                          checked={leagueRinks.includes(rinkNum)}
+                          onCheckedChange={(checked) => {
+                            setLeagueRinks(prev =>
+                              checked ? [...prev, rinkNum].sort((a, b) => a - b) : prev.filter(r => r !== rinkNum)
+                            );
+                          }}
+                        />
+                        <span className="text-sm">Rink {rinkNum}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <Checkbox
