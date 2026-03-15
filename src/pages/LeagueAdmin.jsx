@@ -482,6 +482,7 @@ export default function LeagueAdmin() {
     setPendingFixtures(allFixtures);
     setPendingFixtureLeague(league);
     setPendingFixtureTeams(leagueTeams);
+    setRegenerateCounter(0);
     setDistributionModalOpen(true);
   };
 
