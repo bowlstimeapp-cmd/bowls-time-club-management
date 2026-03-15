@@ -895,6 +895,37 @@ ${club?.name || 'Your Bowls Club'}
                   />
                 </div>
 
+                {/* Captain fields */}
+                {competition && selectedEmails.length > 0 && (
+                  <div className="space-y-3 pt-2 border-t">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Captains (optional)</p>
+                    <div>
+                      <Label>Home Captain</Label>
+                      <Select value={homeCaptainEmail || '__none__'} onValueChange={v => setHomeCaptainEmail(v === '__none__' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Select home captain" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— None —</SelectItem>
+                          {captainHomeOptions.map(email => (
+                            <SelectItem key={email} value={email}>{getMemberLabel(email)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Away Captain</Label>
+                      <Select value={awayCaptainEmail || '__none__'} onValueChange={v => setAwayCaptainEmail(v === '__none__' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Select away captain" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— None —</SelectItem>
+                          {captainAwayOptions.map(email => (
+                            <SelectItem key={email} value={email}>{getMemberLabel(email)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
                 {competition && competition !== 'Top Club' && competition !== 'Friendly' && (
                   <>
                     <div>
