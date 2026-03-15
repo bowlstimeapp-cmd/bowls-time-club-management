@@ -69,6 +69,28 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!clubId && !!user?.email,
   });
 
+  // Pages that non-members can access even with a clubId
+  const publicClubPages = ['ClubSelector', 'PlatformAdmin', 'Profile', 'ProfileSetup', 'Feedback'];
+  const requiresMembership = clubId && needsClub && !publicClubPages.includes(currentPageName);
+
+  // Block access if clubId is present but user is not an approved member
+  if (requiresMembership && user && !membershipLoading && (!membership || membership.status !== 'approved')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <ShieldCheck className="w-8 h-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">You don't have an approved membership for this club.</p>
+          <Link to={createPageUrl('ClubSelector')}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">Go to Club Selector</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
   const isSelector = (membership?.role === 'selector' || membership?.role === 'admin') && membership?.status === 'approved';
   const isPlatformAdmin = user?.role === 'admin';
