@@ -84,6 +84,8 @@ export default function SelectionEditor() {
   const [friendlyPlayersPerRink, setFriendlyPlayersPerRink] = useState(4);
   const [matchStartTime, setMatchStartTime] = useState('10:00');
   const [matchEndTime, setMatchEndTime] = useState('14:00');
+  const [homeCaptainEmail, setHomeCaptainEmail] = useState('');
+  const [awayCaptainEmail, setAwayCaptainEmail] = useState('');
   const [clashModalOpen, setClashModalOpen] = useState(false);
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
 
