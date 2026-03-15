@@ -91,7 +91,17 @@ export default function CustomSessionEditor({ sessions, onChange, openingTime = 
       <div className="space-y-2">
         {sessions.map((session, i) => (
           <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-            <span className="text-xs text-gray-500 w-6 text-center">{i + 1}</span>
+            <div className="flex flex-col gap-0.5">
+              <button type="button" onClick={() => moveSession(i, -1)} disabled={i === 0}
+                className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded">
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button type="button" onClick={() => moveSession(i, 1)} disabled={i === sessions.length - 1}
+                className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <span className="text-xs text-gray-500 w-5 text-center">{i + 1}</span>
             <select
               value={session.start}
               onChange={(e) => updateSession(i, 'start', e.target.value)}
