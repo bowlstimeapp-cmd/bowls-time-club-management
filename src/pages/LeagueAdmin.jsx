@@ -286,6 +286,7 @@ export default function LeagueAdmin() {
     setLeagueIsSets(league.is_sets || false);
     setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueForceEven(league.force_even_fixtures !== false);
+    setLeagueRinks(league.league_rinks || []);
     setLeagueDialogOpen(true);
   };
 
