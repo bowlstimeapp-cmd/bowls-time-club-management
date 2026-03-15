@@ -1509,7 +1509,7 @@ export default function LeagueAdmin() {
         <BlacklistDatesDialog
           open={blacklistDialogOpen}
           onClose={() => setBlacklistDialogOpen(false)}
-          league={blacklistLeague}
+          league={blacklistLeague ? (leagues.find(l => l.id === blacklistLeague.id) || blacklistLeague) : null}
         />
 
         {/* Rink Clash Modal */}
