@@ -52,6 +52,7 @@ import {
   CalendarX
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
+import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import { toast } from "sonner";
