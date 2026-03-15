@@ -921,7 +921,17 @@ export default function PlatformAdmin() {
                   </div>
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                {editingClub && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-red-400 text-red-600 hover:bg-red-50 sm:mr-auto"
+                    onClick={() => { setResetClub(editingClub); setResetConfirmOpen(true); }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />Reset League/Selection Data
+                  </Button>
+                )}
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button>
                 <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={createClubMutation.isPending || updateClubMutation.isPending}>
                   {(createClubMutation.isPending || updateClubMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
