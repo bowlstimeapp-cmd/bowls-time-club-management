@@ -46,6 +46,14 @@ export default function CustomSessionEditor({ sessions, onChange, openingTime = 
     onChange(sessions.filter((_, idx) => idx !== i));
   };
 
+  const moveSession = (i, direction) => {
+    const newSessions = [...sessions];
+    const target = i + direction;
+    if (target < 0 || target >= newSessions.length) return;
+    [newSessions[i], newSessions[target]] = [newSessions[target], newSessions[i]];
+    onChange(newSessions);
+  };
+
   const updateSession = (i, field, value) => {
     const updated = sessions.map((s, idx) => idx === i ? { ...s, [field]: value } : s);
     onChange(updated);
