@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react';
 
 const timeToMinutes = (t) => {
   const [h, m] = t.split(':').map(Number);
