@@ -9,6 +9,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [results, setResults] = useState(null);
   const fileInputRef = useRef(null);
 
