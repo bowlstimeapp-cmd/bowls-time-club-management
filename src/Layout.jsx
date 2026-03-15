@@ -99,10 +99,6 @@ export default function Layout({ children, currentPageName }) {
   const isSelector = (membership?.role === 'selector' || membership?.role === 'admin') && membership?.status === 'approved';
   const isPlatformAdmin = user?.role === 'admin';
 
-  // Pages that don't need club context
-  const noClubPages = ['ClubSelector', 'PlatformAdmin'];
-  const needsClub = !noClubPages.includes(currentPageName);
-
   const clubNavigation = [
     ...(club?.module_homepage ? [
       { name: 'Club Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 },
