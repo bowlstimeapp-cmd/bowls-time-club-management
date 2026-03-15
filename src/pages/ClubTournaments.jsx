@@ -74,6 +74,18 @@ export default function ClubTournaments() {
     enabled: !!clubId,
   });
 
+  const queryClient = useQueryClient();
+  const [deleteId, setDeleteId] = useState(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.ClubTournament.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tournaments', clubId] });
+      toast.success('Tournament deleted');
+      setDeleteId(null);
+    },
+  });
+
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
   const publishedTournaments = tournaments.filter(t => t.status === 'published');
