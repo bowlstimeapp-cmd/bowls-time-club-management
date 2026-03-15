@@ -1494,6 +1494,17 @@ export default function LeagueAdmin() {
           </DialogContent>
         </Dialog>
 
+        {/* Rink Distribution Preview Modal */}
+        <RinkDistributionModal
+          open={distributionModalOpen}
+          fixtures={pendingFixtures}
+          teams={pendingFixtureTeams}
+          rinkCount={club?.rink_count || 6}
+          onRegenerate={handleRegenerateFixtures}
+          onConfirm={handleConfirmFixtures}
+          isLoading={generatingFixtures}
+        />
+
         {/* Blacklist Dates Dialog */}
         <BlacklistDatesDialog
           open={blacklistDialogOpen}
