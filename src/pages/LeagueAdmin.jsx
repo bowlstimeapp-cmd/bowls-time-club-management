@@ -317,6 +317,7 @@ export default function LeagueAdmin() {
       is_sets: leagueIsSets,
       sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
       force_even_fixtures: leagueForceEven,
+      league_rinks: leagueRinks,
     };
 
     if (editingLeague) {
