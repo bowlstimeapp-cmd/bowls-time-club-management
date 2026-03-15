@@ -66,6 +66,9 @@ export default function PlatformAdmin() {
   const [emailLogFilter, setEmailLogFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetClub, setResetClub] = useState(null);
+  const [resetting, setResetting] = useState(false);
   const [manageAdminsDialogOpen, setManageAdminsDialogOpen] = useState(false);
   const [managingAdminsClub, setManagingAdminsClub] = useState(null);
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
