@@ -57,7 +57,7 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!clubId,
   });
 
-  const { data: membership } = useQuery({
+  const { data: membership, isLoading: membershipLoading } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
     queryFn: async () => {
       const memberships = await base44.entities.ClubMembership.filter({ 
