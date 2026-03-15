@@ -69,6 +69,10 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!clubId && !!user?.email,
   });
 
+  // Pages that don't need club context
+  const noClubPages = ['ClubSelector', 'PlatformAdmin'];
+  const needsClub = !noClubPages.includes(currentPageName);
+
   // Pages that non-members can access even with a clubId
   const publicClubPages = ['ClubSelector', 'PlatformAdmin', 'Profile', 'ProfileSetup', 'Feedback'];
   const requiresMembership = clubId && needsClub && !publicClubPages.includes(currentPageName);
