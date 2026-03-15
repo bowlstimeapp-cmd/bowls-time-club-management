@@ -150,6 +150,11 @@ export default function SelectionView() {
     return member?.user_name || email;
   };
 
+  const isCaptain = (email) => {
+    if (!email || !selection) return false;
+    return email === selection.home_captain_email || email === selection.away_captain_email;
+  };
+
   const getAvailability = (email) => {
     if (!email) return null;
     const availability = availabilities.find(a => a.user_email === email);
