@@ -497,7 +497,9 @@ export default function LeagueAdmin() {
   };
 
   const handleRegenerateFixtures = () => {
-    const allFixtures = buildFixtureList(pendingFixtureLeague, pendingFixtureTeams);
+    const nextSeed = regenerateCounter + 1;
+    setRegenerateCounter(nextSeed);
+    const allFixtures = buildFixtureList(pendingFixtureLeague, pendingFixtureTeams, nextSeed);
     setPendingFixtures(allFixtures);
   };
 
