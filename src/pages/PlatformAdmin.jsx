@@ -339,6 +339,36 @@ export default function PlatformAdmin() {
     }
   };
 
+  const handleResetClubData = async () => {
+    if (!resetClub) return;
+    setResetting(true);
+    const clubId = resetClub.id;
+    try {
+      // Fetch all related records in parallel
+      const [competitions, selections, leagues, leagueTeams] = await Promise.all([
+        base44.entities.Competition.filter({ club_id: clubId }),
+        base44.entities.TeamSelection.filter({ club_id: clubId }),
+        base44.entities.League.filter({ club_id: clubId }),
+        base44.entities.LeagueTeam.filter({ club_id: clubId }),
+      ]);
+
+      // Delete everything in parallel
+      await Promise.all([
+        ...competitions.map(c => base44.entities.Competition.delete(c.id)),
+        ...selections.map(s => base44.entities.TeamSelection.delete(s.id)),
+        ...leagueTeams.map(t => base44.entities.LeagueTeam.delete(t.id)),
+        ...leagues.map(l => base44.entities.League.delete(l.id)),
+      ]);
+
+      toast.success(`Reset complete: removed ${competitions.length} competitions, ${selections.length} selections, ${leagues.length} leagues and ${leagueTeams.length} team entries.`);
+    } catch (err) {
+      toast.error('Reset failed: ' + err.message);
+    }
+    setResetting(false);
+    setResetConfirmOpen(false);
+    setResetClub(null);
+  };
+
   const pendingDeletions = deletionRequests.filter(r => r.status === 'pending');
 
   return (
