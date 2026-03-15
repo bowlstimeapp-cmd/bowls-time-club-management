@@ -263,6 +263,7 @@ export default function LeagueAdmin() {
     setLeagueIsSets(false);
     setLeagueSetsEnds(8);
     setLeagueForceEven(true);
+    setLeagueRinks([]);
   };
 
   const resetTeamForm = () => {
