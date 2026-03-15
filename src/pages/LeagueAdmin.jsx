@@ -368,7 +368,7 @@ export default function LeagueAdmin() {
     return rounds;
   };
 
-  const buildFixtureList = (league, leagueTeams) => {
+  const buildFixtureList = (league, leagueTeams, shuffleSeed = 0) => {
     const startDate = parseISO(league.start_date);
     const endDate = parseISO(league.end_date);
 
@@ -384,23 +384,33 @@ export default function LeagueAdmin() {
       currentDate = addDays(currentDate, 7);
     }
 
-    const rounds = generateRoundRobinFixtures(leagueTeams);
+    // Determine which rinks to use
     const rinkCount = club?.rink_count || 6;
+    const allClubRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
+    const availableRinks = (league.league_rinks && league.league_rinks.length > 0)
+      ? league.league_rinks.slice().sort((a, b) => a - b)
+      : allClubRinks;
+
+    let rounds = generateRoundRobinFixtures(leagueTeams);
+
+    // When shuffleSeed > 0, rotate the round order to produce a different draw
+    if (shuffleSeed > 0 && rounds.length > 1) {
+      const offset = shuffleSeed % rounds.length;
+      rounds = [...rounds.slice(offset), ...rounds.slice(0, offset)];
+    }
+
     const allFixtures = [];
     const rinkUsage = {};
     const dateRinkUsage = {};
 
     leagueTeams.forEach(team => {
       rinkUsage[team.id] = {};
-      for (let r = 1; r <= rinkCount; r++) rinkUsage[team.id][r] = 0;
+      availableRinks.forEach(r => { rinkUsage[team.id][r] = 0; });
     });
 
     const forceEven = league.force_even_fixtures !== false;
     const availableWeeks = weeks.length;
-    const totalRounds = rounds.length;
-    const repetitions = forceEven
-      ? Math.floor(availableWeeks / totalRounds)
-      : null; // null = fill all weeks
+    const repetitions = forceEven ? Math.floor(availableWeeks / rounds.length) : null;
 
     let weekIndex = 0;
 
@@ -411,7 +421,7 @@ export default function LeagueAdmin() {
       for (const match of round) {
         let bestRink = null;
         let lowestUsage = Infinity;
-        for (let r = 1; r <= rinkCount; r++) {
+        for (const r of availableRinks) {
           if (dateRinkUsage[dateKey].has(r)) continue;
           const usage = (rinkUsage[match.home_team_id][r] || 0) + (rinkUsage[match.away_team_id][r] || 0);
           if (usage < lowestUsage) { lowestUsage = usage; bestRink = r; }
@@ -442,10 +452,8 @@ export default function LeagueAdmin() {
         }
       }
     } else {
-      // Fill all available weeks, cycling through rounds
       while (weekIndex < availableWeeks) {
-        const roundIdx = weekIndex % rounds.length;
-        processRound(rounds[roundIdx], weeks[weekIndex]);
+        processRound(rounds[weekIndex % rounds.length], weeks[weekIndex]);
         weekIndex++;
       }
     }
