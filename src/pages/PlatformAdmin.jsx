@@ -942,6 +942,27 @@ export default function PlatformAdmin() {
           </DialogContent>
         </Dialog>
 
+        {/* Reset Club Data Confirmation */}
+        <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Reset Club Data</DialogTitle>
+            </DialogHeader>
+            <div className="py-2 space-y-3">
+              <p className="text-gray-700">
+                This will permanently delete all <strong>competitions</strong>, <strong>selections</strong>, <strong>leagues</strong> and <strong>league team entries</strong> for <strong>{resetClub?.name}</strong>.
+              </p>
+              <p className="text-sm text-red-600 font-medium">This action cannot be undone.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setResetConfirmOpen(false); setResetClub(null); }} disabled={resetting}>Cancel</Button>
+              <Button className="bg-red-600 hover:bg-red-700" onClick={handleResetClubData} disabled={resetting}>
+                {resetting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Resetting...</> : <><Trash2 className="w-4 h-4 mr-2" />Yes, Reset Data</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Competition Modal */}
         <Dialog open={competitionModalOpen} onOpenChange={setCompetitionModalOpen}>
           <DialogContent className="max-w-md">
