@@ -725,6 +725,26 @@ ${club?.name || 'Your Bowls Club'}
 
   const selectedEmails = Object.values(selections).filter(Boolean);
 
+  // Derive home/away player lists for captain dropdowns
+  const homePlayerEmails = [...new Set(
+    Object.entries(selections)
+      .filter(([key, val]) => val && key.match(/^rink\d+_/) && !key.includes('away'))
+      .map(([, val]) => val)
+  )];
+  const awayPlayerEmails = [...new Set(
+    Object.entries(selections)
+      .filter(([key, val]) => val && key.includes('away'))
+      .map(([, val]) => val)
+  )];
+  // Fallback: if no explicit away keys, use all selected emails
+  const captainHomeOptions = homePlayerEmails.length > 0 ? homePlayerEmails : selectedEmails;
+  const captainAwayOptions = awayPlayerEmails.length > 0 ? awayPlayerEmails : selectedEmails;
+
+  const getMemberLabel = (email) => {
+    const m = members.find(mb => mb.user_email === email);
+    return m?.first_name && m?.surname ? `${m.first_name} ${m.surname}` : m?.user_name || email;
+  };
+
   if (!isSelector && user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
