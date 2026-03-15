@@ -1178,24 +1178,49 @@ export default function LeagueAdmin() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              {club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
                 <div>
-                  <Label>Match Start Time</Label>
-                  <Input
-                    type="time"
-                    value={leagueStartTime}
-                    onChange={(e) => setLeagueStartTime(e.target.value)}
-                  />
+                  <Label>Match Session</Label>
+                  <Select
+                    value={`${leagueStartTime}|${leagueEndTime}`}
+                    onValueChange={(v) => {
+                      const [s, e] = v.split('|');
+                      setLeagueStartTime(s);
+                      setLeagueEndTime(e);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a session" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {club.custom_sessions.map((session, i) => (
+                        <SelectItem key={i} value={`${session.start}|${session.end}`}>
+                          {session.start} – {session.end}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <Label>Match End Time</Label>
-                  <Input
-                    type="time"
-                    value={leagueEndTime}
-                    onChange={(e) => setLeagueEndTime(e.target.value)}
-                  />
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Match Start Time</Label>
+                    <Input
+                      type="time"
+                      value={leagueStartTime}
+                      onChange={(e) => setLeagueStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Match End Time</Label>
+                    <Input
+                      type="time"
+                      value={leagueEndTime}
+                      onChange={(e) => setLeagueEndTime(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Format</Label>
