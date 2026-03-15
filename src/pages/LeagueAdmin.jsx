@@ -261,6 +261,7 @@ export default function LeagueAdmin() {
     setLeagueFormat('fours');
     setLeagueIsSets(false);
     setLeagueSetsEnds(8);
+    setLeagueForceEven(true);
   };
 
   const resetTeamForm = () => {
