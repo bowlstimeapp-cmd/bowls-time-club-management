@@ -82,7 +82,19 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
       let errorCount = 0;
       const errors = [];
 
-      for (const member of members) {
+      const BATCH_SIZE = 100;
+      const BATCH_DELAY_MS = 61000; // 61 seconds between batches
+
+      for (let i = 0; i < members.length; i++) {
+        // Pause between batches of 100
+        if (i > 0 && i % BATCH_SIZE === 0) {
+          setUploadProgress(`Processed ${i} of ${members.length}. Pausing to avoid rate limit...`);
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+        }
+
+        setUploadProgress(`Processing ${i + 1} of ${members.length}...`);
+        const member = members[i];
+
         try {
           const existing = await base44.entities.ClubMembership.filter({
             club_id: clubId,
@@ -122,6 +134,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
         }
       }
 
+      setUploadProgress('');
       setResults({ successCount, errorCount, errors });
       setIsUploading(false);
       
