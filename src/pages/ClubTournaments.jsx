@@ -145,12 +145,17 @@ export default function ClubTournaments() {
                           </div>
                           <Badge variant="secondary">Draft</Badge>
                         </div>
-                        <Link to={createPageUrl('TournamentEditor') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Pencil className="w-4 h-4 mr-1" />
-                            Edit
+                        <div className="flex gap-2">
+                          <Link to={createPageUrl('TournamentEditor') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          </Link>
+                          <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteId(tournament.id)}>
+                            <Trash2 className="w-4 h-4" />
                           </Button>
-                        </Link>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
