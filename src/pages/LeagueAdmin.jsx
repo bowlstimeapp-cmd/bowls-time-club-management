@@ -1516,9 +1516,11 @@ export default function LeagueAdmin() {
         {/* Rink Distribution Preview Modal */}
         <RinkDistributionModal
           open={distributionModalOpen}
+          onClose={() => setDistributionModalOpen(false)}
           fixtures={pendingFixtures}
           teams={pendingFixtureTeams}
           rinkCount={club?.rink_count || 6}
+          leagueRinks={pendingFixtureLeague?.league_rinks}
           onRegenerate={handleRegenerateFixtures}
           onConfirm={handleConfirmFixtures}
           isLoading={generatingFixtures}
