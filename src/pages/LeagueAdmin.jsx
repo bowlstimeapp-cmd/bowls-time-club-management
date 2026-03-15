@@ -86,6 +86,7 @@ export default function LeagueAdmin() {
   const [leagueIsSets, setLeagueIsSets] = useState(false);
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
   const [leagueForceEven, setLeagueForceEven] = useState(true);
+  const [leagueRinks, setLeagueRinks] = useState([]);
 
   // Rink distribution preview state
   const [distributionModalOpen, setDistributionModalOpen] = useState(false);
