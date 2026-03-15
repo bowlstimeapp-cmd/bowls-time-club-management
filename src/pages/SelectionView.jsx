@@ -335,6 +335,9 @@ export default function SelectionView() {
                                 <User className="w-4 h-4 text-gray-400" />
                               )}
                               {getMemberName(memberEmail)}
+                              {isCaptain(memberEmail) && (
+                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" title="Captain" />
+                              )}
                             </span>
                           </div>
                         );
