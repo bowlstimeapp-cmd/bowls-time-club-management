@@ -270,7 +270,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
+                    {uploadProgress || 'Uploading...'}
                   </>
                 ) : (
                   <>
