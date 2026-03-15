@@ -435,6 +435,8 @@ if (club?.email_member_notifications) {
       match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
       selector_email: user.email,
+      home_captain_email: homeCaptainEmail || null,
+      away_captain_email: awayCaptainEmail || null,
       ...(competition === 'Friendly' ? {
         friendly_location: friendlyLocation,
         friendly_num_rinks: friendlyNumRinks,
