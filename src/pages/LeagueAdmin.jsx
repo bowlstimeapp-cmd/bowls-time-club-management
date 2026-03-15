@@ -494,6 +494,9 @@ export default function LeagueAdmin() {
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     setGeneratingFixtures(false);
     setDistributionModalOpen(false);
+    setPendingFixtures([]);
+    setPendingFixtureLeague(null);
+    setPendingFixtureTeams([]);
     toast.success(`Generated ${pendingFixtures.length} fixtures`);
   };
 
