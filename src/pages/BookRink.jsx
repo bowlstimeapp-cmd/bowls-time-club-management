@@ -15,7 +15,7 @@ import BookingModal from '@/components/booking/BookingModal';
 import BulkBookingModal from '@/components/booking/BulkBookingModal';
 import BookingDetailModal from '@/components/booking/BookingDetailModal';
 import InfoTooltip from '@/components/InfoTooltip';
-import { CalendarRange } from 'lucide-react';
+import { CalendarRange, Copy } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
