@@ -321,7 +321,7 @@ export default function TimeSlotGrid({
                               </div>
                             ) : isHoverTarget ? (
                               <div className="flex flex-col items-center justify-center h-full gap-0.5">
-                                <span className="text-xs font-semibold text-blue-600">Drop here</span>
+                                <span className="text-xs font-semibold text-blue-600">{copyMode ? 'Copy here' : 'Drop here'}</span>
                               </div>
                             ) : (
                               <div className="flex flex-col items-center justify-center h-full gap-0.5">
