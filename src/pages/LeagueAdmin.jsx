@@ -667,6 +667,8 @@ export default function LeagueAdmin() {
     setEditingFixture(fixture);
     setHomeScore(fixture.home_score?.toString() || '');
     setAwayScore(fixture.away_score?.toString() || '');
+    setHomeSets(fixture.home_sets?.toString() || '');
+    setAwaySets(fixture.away_sets?.toString() || '');
     setScoreDialogOpen(true);
   };
 
