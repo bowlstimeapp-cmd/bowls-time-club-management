@@ -244,7 +244,7 @@ export default function TimeSlotGrid({
                   const leagueInfo = getLeagueInfo(booking);
 
                   // Drop zone: empty slot OR admin swapping onto booked slot
-                  const isSwapTarget = !available && isAdmin && isDragging && draggingBooking?.id !== booking?.id;
+                  const isSwapTarget = !copyMode && !available && isAdmin && isDragging && draggingBooking?.id !== booking?.id;
                   const isEmptyDroppable = available && !isPast && isDragging;
                   const isDroppable = isEmptyDroppable || isSwapTarget;
                   const isHoverTarget = dropTarget === `${rink}:${slot.start}`;
