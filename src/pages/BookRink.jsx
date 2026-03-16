@@ -401,11 +401,44 @@ useEffect(() => {
     toast.success(message);
   };
 
+  const handleCopyBooking = async (booking, newRink, newStartTime) => {
+    let newEndTime;
+    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
+      const session = club.custom_sessions.find(s => s.start === newStartTime);
+      newEndTime = session ? session.end : newStartTime;
+    } else {
+      const duration = club?.session_duration || 2;
+      const [startHour, startMin = 0] = newStartTime.split(':').map(Number);
+      const endMins = startHour * 60 + startMin + duration * 60;
+      newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
+    }
+
+    await base44.entities.Booking.create({
+      club_id: booking.club_id,
+      rink_number: newRink,
+      date: dateString,
+      start_time: newStartTime,
+      end_time: newEndTime,
+      status: booking.status,
+      competition_type: booking.competition_type,
+      competition_other: booking.competition_other,
+      booking_format: booking.booking_format,
+      booker_name: booking.booker_name,
+      booker_email: booking.booker_email,
+      notes: booking.notes,
+      rollup_members: booking.rollup_members || [],
+    });
+
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    toast.success(`Booking copied to Rink ${newRink} at ${newStartTime}`);
+  };
+
   // Clear selection when date changes
   useEffect(() => {
     setSelectedSlots([]);
     setBulkDeleteSelected([]);
     setBulkDeleteMode(false);
+    setCopyMode(false);
   }, [dateString]);
 
   const handleBulkDeleteConfirm = async () => {
