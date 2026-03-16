@@ -538,7 +538,7 @@ useEffect(() => {
                           Exit Copy Mode
                         </Button>
                       )}
-                      {!bulkDeleteMode && !copyMode ? (
+                      {!bulkDeleteMode && !copyMode && (
                         <Button
                           onClick={() => { setBulkDeleteMode(true); setBulkDeleteSelected([]); setSelectedSlots([]); }}
                           variant="outline"
@@ -547,7 +547,8 @@ useEffect(() => {
                           <CalendarRange className="w-4 h-4 mr-2" />
                           Bulk Delete
                         </Button>
-                      ) : bulkDeleteMode ? (
+                      )}
+                      {bulkDeleteMode && (
                         <>
                           <Button
                             onClick={handleBulkDeleteConfirm}
@@ -560,7 +561,7 @@ useEffect(() => {
                             Cancel
                           </Button>
                         </>
-                      ) : null}
+                      )}
                     </>
                   )}
                   {!bulkDeleteMode && selectedSlots.length > 0 && (
