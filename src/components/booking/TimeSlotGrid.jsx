@@ -143,6 +143,25 @@ export default function TimeSlotGrid({
     if (justDropped.current) return;
 
     const booking = getBookingForSlot(rink, slot.start);
+
+    // Mobile copy mode flow
+    if (copyMode && isAdmin) {
+      if (booking) {
+        // Select this booking as copy source (or deselect if already selected)
+        if (mobileCopySource?.id === booking.id) {
+          setMobileCopySource(null);
+        } else {
+          setMobileCopySource(booking);
+        }
+        return;
+      } else if (mobileCopySource && !isSlotInPast(slot.start)) {
+        // Paste into this empty slot
+        onCopyBooking && onCopyBooking(mobileCopySource, rink, slot.start);
+        setMobileCopySource(null);
+        return;
+      }
+    }
+
     if (booking && onBookingClick) {
       onBookingClick(booking);
       return;
