@@ -15,7 +15,9 @@ const statusColors = {
 export default function LeagueTableView({ leagues, teams, fixtures }) {
   const [expandedLeague, setExpandedLeague] = useState(null);
   const [fixturesDialogOpen, setFixturesDialogOpen] = useState(false);
+  const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingLeague, setViewingLeague] = useState(null);
+  const [viewingTableLeague, setViewingTableLeague] = useState(null);
 
   const toggleLeague = (id) => setExpandedLeague(prev => prev === id ? null : id);
 
