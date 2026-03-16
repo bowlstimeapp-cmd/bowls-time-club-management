@@ -88,6 +88,13 @@ export default function LeagueAdmin() {
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
   const [leagueForceEven, setLeagueForceEven] = useState(true);
   const [leagueRinks, setLeagueRinks] = useState([]);
+  // Sets scoring config
+  const [scoringPointsPerSet, setScoringPointsPerSet] = useState(false);
+  const [scoringPointsPerSetValue, setScoringPointsPerSetValue] = useState(1);
+  const [scoringGameWin, setScoringGameWin] = useState(false);
+  const [scoringGameWinValue, setScoringGameWinValue] = useState(1);
+  const [scoringStandardWin, setScoringStandardWin] = useState(false);
+  const [scoringHighestShots, setScoringHighestShots] = useState(false);
 
   // Rink distribution preview state
   const [distributionModalOpen, setDistributionModalOpen] = useState(false);
