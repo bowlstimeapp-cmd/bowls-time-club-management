@@ -140,6 +140,69 @@ export default function LeagueTableView({ leagues, teams, fixtures }) {
         );
       })}
 
+      {/* League Table Dialog */}
+      <Dialog open={tableDialogOpen} onOpenChange={setTableDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>{viewingTableLeague?.name} — League Table</DialogTitle>
+          </DialogHeader>
+          {viewingTableLeague && (() => {
+            const leagueTeams = teams.filter(t => t.league_id === viewingTableLeague.id);
+            const leagueFixtures = fixtures.filter(f => f.league_id === viewingTableLeague.id);
+            const table = calculateLeagueTable(viewingTableLeague, leagueTeams, leagueFixtures);
+            const scoringRules = getScoringRules(viewingTableLeague);
+            return (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="border p-2 bg-gray-50">Pos</th>
+                        <th className="border p-2 bg-gray-50 text-left">Team</th>
+                        <th className="border p-2 bg-gray-50">P</th>
+                        <th className="border p-2 bg-gray-50">W</th>
+                        <th className="border p-2 bg-gray-50">D</th>
+                        <th className="border p-2 bg-gray-50">L</th>
+                        <th className="border p-2 bg-gray-50">PF</th>
+                        <th className="border p-2 bg-gray-50">PA</th>
+                        <th className="border p-2 bg-gray-50">+/-</th>
+                        <th className="border p-2 bg-gray-50">Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.map((entry, idx) => (
+                        <tr key={entry.team.id}>
+                          <td className="border p-2 text-center font-medium">{idx + 1}</td>
+                          <td className="border p-2 font-medium">{entry.team.name}</td>
+                          <td className="border p-2 text-center">{entry.played}</td>
+                          <td className="border p-2 text-center">{entry.won}</td>
+                          <td className="border p-2 text-center">{entry.drawn}</td>
+                          <td className="border p-2 text-center">{entry.lost}</td>
+                          <td className="border p-2 text-center">{entry.pointsFor}</td>
+                          <td className="border p-2 text-center">{entry.pointsAgainst}</td>
+                          <td className="border p-2 text-center">{entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}</td>
+                          <td className="border p-2 text-center font-bold">{entry.points}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {scoringRules.length > 0 && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg border text-sm text-gray-600">
+                    <p className="font-semibold text-gray-700 mb-1">League Scoring Rules:</p>
+                    <ul className="space-y-0.5">
+                      {scoringRules.map((rule, i) => (
+                        <li key={i}>• {rule}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* Fixtures Dialog */}
       <Dialog open={fixturesDialogOpen} onOpenChange={setFixturesDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
