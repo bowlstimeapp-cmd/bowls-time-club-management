@@ -42,6 +42,7 @@ export default function BookRink() {
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
   const [bulkDeleteSelected, setBulkDeleteSelected] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [copyMode, setCopyMode] = useState(false);
 
   const queryClient = useQueryClient();
 
