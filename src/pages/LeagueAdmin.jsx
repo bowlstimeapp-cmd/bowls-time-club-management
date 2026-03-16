@@ -1666,7 +1666,7 @@ export default function LeagueAdmin() {
             <div ref={tableRef}>
               {viewingTableLeague && (() => {
                 const table = getLeagueTable(viewingTableLeague);
-                const scoringRules = getScoringRules(viewingTableLeague);
+                const scoringRules = viewingTableLeague.is_sets ? getScoringRules(viewingTableLeague) : [];
                 return (
                   <>
                     <h1>{viewingTableLeague.name}</h1>
