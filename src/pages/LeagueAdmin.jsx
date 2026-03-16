@@ -302,6 +302,12 @@ export default function LeagueAdmin() {
     setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueForceEven(league.force_even_fixtures !== false);
     setLeagueRinks(league.league_rinks || []);
+    setScoringPointsPerSet(league.scoring_points_per_set || false);
+    setScoringPointsPerSetValue(league.scoring_points_per_set_value ?? 1);
+    setScoringGameWin(league.scoring_game_win || false);
+    setScoringGameWinValue(league.scoring_game_win_value ?? 1);
+    setScoringStandardWin(league.scoring_standard_win || false);
+    setScoringHighestShots(league.scoring_highest_shots || false);
     setLeagueDialogOpen(true);
   };
 
