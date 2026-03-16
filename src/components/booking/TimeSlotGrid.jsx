@@ -331,7 +331,7 @@ export default function TimeSlotGrid({
                           onDrop={isDroppable ? (e) => handleDrop(e, rink, slot) : undefined}
                           className={cn(
                             "p-2 rounded-xl border-2 transition-all duration-150 min-h-[64px] lg:min-h-[80px] relative w-full text-left select-none",
-                            available && !selected && !isEmptyDroppable && !isMobileCopyTarget && "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]",
+                            available && !selected && !isEmptyDroppable && "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]",
                             available && selected && "bg-emerald-100 border-emerald-500 cursor-pointer",
                             available && isEmptyDroppable && !isHoverTarget && "bg-blue-50 border-blue-300 border-dashed",
                             available && isHoverTarget && "bg-blue-100 border-blue-500 scale-[1.03] shadow-md",
