@@ -91,7 +91,7 @@ export default function TimeSlotGrid({
   const justDropped = useRef(false);
 
   // Reset mobile copy source when copy mode is turned off
-  React.useEffect(() => {
+  useEffect(() => {
     if (!copyMode) setMobileCopySource(null);
   }, [copyMode]);
 
