@@ -604,6 +604,8 @@ useEffect(() => {
                   bulkDeleteMode={bulkDeleteMode}
                   bulkDeleteSelected={bulkDeleteSelected}
                   onToggleBulkDelete={toggleBulkDeleteBooking}
+                  copyMode={copyMode}
+                  onCopyBooking={handleCopyBooking}
                 />
               )}
             </CardContent>
