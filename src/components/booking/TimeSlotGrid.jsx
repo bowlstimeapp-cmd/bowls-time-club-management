@@ -404,8 +404,8 @@ export default function TimeSlotGrid({
                         {available ? (
                           isDragging ? (
                             isSlotInPast(slot.start)
-                              ? <p>Cannot move to a past slot</p>
-                              : <p>Drop to move here</p>
+                              ? <p>Cannot {copyMode ? 'copy' : 'move'} to a past slot</p>
+                              : <p>Drop to {copyMode ? 'copy' : 'move'} here</p>
                           ) : selected ? (
                             <p>Click to deselect</p>
                           ) : canSelect ? (
