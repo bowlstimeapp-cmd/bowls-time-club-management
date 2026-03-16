@@ -370,11 +370,6 @@ export default function TimeSlotGrid({
                               <div className="flex flex-col items-center justify-center h-full gap-0.5">
                                 <span className="text-xs font-semibold text-blue-600">{copyMode ? 'Copy here' : 'Drop here'}</span>
                               </div>
-                            ) : isMobileCopyTarget ? (
-                              <div className="flex flex-col items-center justify-center h-full gap-0.5">
-                                <span className="text-xs font-semibold text-purple-600">Paste here</span>
-                                <span className="text-[10px] text-purple-400">{slot.label}</span>
-                              </div>
                             ) : (
                               <div className="flex flex-col items-center justify-center h-full gap-0.5">
                                 <span className="text-xs font-medium text-emerald-600">Available</span>
