@@ -225,7 +225,7 @@ export default function TimeSlotGrid({
                   const available = isSlotAvailable(rink, slot.start);
                   const isPast = isSlotInPast(slot.start);
                   const isOwnBooking = booking?.booker_email === currentUserEmail;
-                  const canDrag = !!booking && (isOwnBooking || isAdmin) && !isPast;
+                  const canDrag = !!booking && (isOwnBooking || isAdmin) && !isPast && (copyMode ? isAdmin : true);
                   const StatusIcon = booking ? statusIcons[booking.status] : null;
                   const selected = isSlotSelected(rink, slotIndex);
                   const canSelect = available && (selectedSlots.length === 0 || canSelectSlot(rink, slotIndex) || selectedSlots[0].rink !== rink);
