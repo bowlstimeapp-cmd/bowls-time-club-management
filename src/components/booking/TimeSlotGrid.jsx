@@ -87,6 +87,7 @@ export default function TimeSlotGrid({
 }) {
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
+  const [mobileCopySource, setMobileCopySource] = useState(null); // for touch-based copy
   const justDropped = useRef(false);
 
   const TIME_SLOTS = club?.use_custom_sessions && club?.custom_sessions?.length > 0
