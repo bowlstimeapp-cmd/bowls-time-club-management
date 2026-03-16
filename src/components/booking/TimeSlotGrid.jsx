@@ -421,8 +421,9 @@ export default function TimeSlotGrid({
                               <p className="text-xs">{leagueInfo.homeTeam.name} vs {leagueInfo.awayTeam.name}</p>
                             )}
                             {isRollup && <p className="text-xs">{rollupCount}/8 members</p>}
-                            {canDrag && isAdmin && !available && <p className="text-xs text-gray-400 mt-1">Drag to swap with another booking</p>}
-                            {canDrag && !isAdmin && <p className="text-xs text-gray-400 mt-1">Drag to move</p>}
+                            {canDrag && copyMode && <p className="text-xs text-gray-400 mt-1">Drag to copy to another slot</p>}
+                            {canDrag && !copyMode && isAdmin && !available && <p className="text-xs text-gray-400 mt-1">Drag to swap with another booking</p>}
+                            {canDrag && !copyMode && !isAdmin && <p className="text-xs text-gray-400 mt-1">Drag to move</p>}
                           </div>
                         )}
                       </TooltipContent>
