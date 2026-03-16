@@ -326,18 +326,20 @@ export default function TimeSlotGrid({
                           onDrop={isDroppable ? (e) => handleDrop(e, rink, slot) : undefined}
                           className={cn(
                             "p-2 rounded-xl border-2 transition-all duration-150 min-h-[64px] lg:min-h-[80px] relative w-full text-left select-none",
-                            available && !selected && !isEmptyDroppable && "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]",
+                            available && !selected && !isEmptyDroppable && !isMobileCopyTarget && "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer hover:scale-[1.01]",
                             available && selected && "bg-emerald-100 border-emerald-500 cursor-pointer",
                             available && isEmptyDroppable && !isHoverTarget && "bg-blue-50 border-blue-300 border-dashed",
                             available && isHoverTarget && "bg-blue-100 border-blue-500 scale-[1.03] shadow-md",
+                            available && isMobileCopyTarget && !isEmptyDroppable && "bg-purple-50 border-purple-300 border-dashed cursor-pointer hover:bg-purple-100 hover:border-purple-500",
                             !available && cn(statusStyles[booking?.status]),
                             !available && isSwapTarget && !isHoverTarget && "ring-2 ring-orange-300 ring-offset-1",
                             !available && isHoverTarget && "ring-2 ring-orange-500 ring-offset-2 scale-[1.03] shadow-md",
                             !available && canDrag && !bulkDeleteMode && "cursor-grab active:cursor-grabbing",
                             !available && !canDrag && "cursor-pointer",
+                            isMobileCopySource && "ring-2 ring-purple-500 ring-offset-2 scale-[1.02]",
                             bulkDeleteMode && !available && booking && bulkDeleteSelected.includes(booking.id) && "ring-2 ring-red-500 ring-offset-1",
                             bulkDeleteMode && !available && booking && "cursor-pointer",
-                            available && !canSelect && !isDragging && selectedSlots.length > 0 && !bulkDeleteMode && "opacity-50"
+                            available && !canSelect && !isDragging && selectedSlots.length > 0 && !bulkDeleteMode && !isMobileCopyTarget && "opacity-50"
                           )}
                         >
                           {bulkDeleteMode && !available && booking ? (
