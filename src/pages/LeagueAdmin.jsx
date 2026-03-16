@@ -691,60 +691,10 @@ export default function LeagueAdmin() {
     setTableDialogOpen(true);
   };
 
-  const calculateLeagueTable = (league) => {
+  const getLeagueTable = (league) => {
     const leagueTeams = teams.filter(t => t.league_id === league.id);
-    const leagueFixtures = fixtures.filter(f => f.league_id === league.id && f.status === 'completed');
-    
-    const table = leagueTeams.map(team => ({
-      team,
-      played: 0,
-      won: 0,
-      lost: 0,
-      drawn: 0,
-      pointsFor: 0,
-      pointsAgainst: 0,
-      pointsDiff: 0,
-      points: 0
-    }));
-    
-    leagueFixtures.forEach(fixture => {
-      const homeEntry = table.find(t => t.team.id === fixture.home_team_id);
-      const awayEntry = table.find(t => t.team.id === fixture.away_team_id);
-      
-      if (homeEntry && awayEntry && fixture.home_score !== undefined && fixture.away_score !== undefined) {
-        homeEntry.played++;
-        awayEntry.played++;
-        homeEntry.pointsFor += fixture.home_score;
-        homeEntry.pointsAgainst += fixture.away_score;
-        awayEntry.pointsFor += fixture.away_score;
-        awayEntry.pointsAgainst += fixture.home_score;
-        
-        if (fixture.home_score > fixture.away_score) {
-          homeEntry.won++;
-          homeEntry.points += 2;
-          awayEntry.lost++;
-        } else if (fixture.away_score > fixture.home_score) {
-          awayEntry.won++;
-          awayEntry.points += 2;
-          homeEntry.lost++;
-        } else {
-          homeEntry.drawn++;
-          awayEntry.drawn++;
-          homeEntry.points += 1;
-          awayEntry.points += 1;
-        }
-      }
-    });
-    
-    table.forEach(entry => {
-      entry.pointsDiff = entry.pointsFor - entry.pointsAgainst;
-    });
-    
-    return table.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.pointsDiff !== a.pointsDiff) return b.pointsDiff - a.pointsDiff;
-      return b.pointsFor - a.pointsFor;
-    });
+    const leagueFixtures = fixtures.filter(f => f.league_id === league.id);
+    return calculateLeagueTable(league, leagueTeams, leagueFixtures);
   };
 
   const handlePrintTable = () => {
