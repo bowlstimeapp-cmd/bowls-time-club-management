@@ -214,6 +214,24 @@ export default function TimeSlotGrid({
 
   return (
     <TooltipProvider>
+      {/* Mobile copy mode banner */}
+      {copyMode && isAdmin && (
+        <div className={cn(
+          "mb-3 px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between",
+          mobileCopySource
+            ? "bg-purple-100 border border-purple-300 text-purple-800"
+            : "bg-purple-50 border border-purple-200 text-purple-600"
+        )}>
+          {mobileCopySource ? (
+            <>
+              <span>📋 Copying: <strong>{mobileCopySource.booker_name}</strong> ({mobileCopySource.competition_type || 'booking'}) — tap an empty slot to paste</span>
+              <button onClick={() => setMobileCopySource(null)} className="ml-3 text-purple-500 hover:text-purple-700 font-bold text-lg leading-none">×</button>
+            </>
+          ) : (
+            <span>Tap a booking to select it for copying</span>
+          )}
+        </div>
+      )}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <div style={{ minWidth: `${120 + RINKS.length * 80}px` }}>
           {/* Header */}
