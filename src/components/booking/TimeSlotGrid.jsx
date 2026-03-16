@@ -90,6 +90,11 @@ export default function TimeSlotGrid({
   const [mobileCopySource, setMobileCopySource] = useState(null); // for touch-based copy
   const justDropped = useRef(false);
 
+  // Reset mobile copy source when copy mode is turned off
+  React.useEffect(() => {
+    if (!copyMode) setMobileCopySource(null);
+  }, [copyMode]);
+
   const TIME_SLOTS = club?.use_custom_sessions && club?.custom_sessions?.length > 0
     ? generateCustomSlots(club.custom_sessions)
     : generateTimeSlots(club?.opening_time, club?.closing_time, club?.session_duration);
