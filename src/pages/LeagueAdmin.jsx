@@ -1567,36 +1567,49 @@ export default function LeagueAdmin() {
             <DialogHeader>
               <DialogTitle>Enter Score</DialogTitle>
             </DialogHeader>
-            {editingFixture && (
-              <div className="space-y-4">
-                <div className="text-center text-sm text-gray-500 mb-4">
-                  {format(parseISO(editingFixture.match_date), 'd MMM yyyy')}
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <div className="text-right">
-                    <Label className="block mb-2">{teams.find(t => t.id === editingFixture.home_team_id)?.name}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={homeScore}
-                      onChange={(e) => setHomeScore(e.target.value)}
-                      className="text-center"
-                    />
+            {editingFixture && (() => {
+              const scoringLeague = viewingLeague || leagues.find(l => l.id === editingFixture.league_id);
+              const isSetsLeague = scoringLeague?.is_sets;
+              const homeTeam = teams.find(t => t.id === editingFixture.home_team_id);
+              const awayTeam = teams.find(t => t.id === editingFixture.away_team_id);
+              return (
+                <div className="space-y-4">
+                  <div className="text-center text-sm text-gray-500">
+                    {format(parseISO(editingFixture.match_date), 'd MMM yyyy')}
                   </div>
-                  <div className="text-center text-gray-400 pt-6">vs</div>
-                  <div className="text-left">
-                    <Label className="block mb-2">{teams.find(t => t.id === editingFixture.away_team_id)?.name}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={awayScore}
-                      onChange={(e) => setAwayScore(e.target.value)}
-                      className="text-center"
-                    />
+                  {isSetsLeague && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 text-center mb-2">Sets Won</p>
+                      <div className="grid grid-cols-3 gap-4 items-center">
+                        <div className="text-right">
+                          <Label className="block mb-2 text-xs">{homeTeam?.name}</Label>
+                          <Input type="number" min="0" value={homeSets} onChange={(e) => setHomeSets(e.target.value)} className="text-center" placeholder="0" />
+                        </div>
+                        <div className="text-center text-gray-400 pt-6 text-sm">sets</div>
+                        <div className="text-left">
+                          <Label className="block mb-2 text-xs">{awayTeam?.name}</Label>
+                          <Input type="number" min="0" value={awaySets} onChange={(e) => setAwaySets(e.target.value)} className="text-center" placeholder="0" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 text-center mb-2">Total Shots</p>
+                    <div className="grid grid-cols-3 gap-4 items-center">
+                      <div className="text-right">
+                        {!isSetsLeague && <Label className="block mb-2">{homeTeam?.name}</Label>}
+                        <Input type="number" min="0" value={homeScore} onChange={(e) => setHomeScore(e.target.value)} className="text-center" />
+                      </div>
+                      <div className="text-center text-gray-400 pt-6">vs</div>
+                      <div className="text-left">
+                        {!isSetsLeague && <Label className="block mb-2">{awayTeam?.name}</Label>}
+                        <Input type="number" min="0" value={awayScore} onChange={(e) => setAwayScore(e.target.value)} className="text-center" />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <DialogFooter>
               <Button variant="outline" onClick={() => setScoreDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSaveScore} className="bg-emerald-600 hover:bg-emerald-700">
