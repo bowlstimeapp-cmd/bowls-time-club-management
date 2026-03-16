@@ -339,6 +339,12 @@ export default function LeagueAdmin() {
       sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
       force_even_fixtures: leagueForceEven,
       league_rinks: leagueRinks,
+      scoring_points_per_set: leagueIsSets ? scoringPointsPerSet : false,
+      scoring_points_per_set_value: leagueIsSets && scoringPointsPerSet ? (parseFloat(scoringPointsPerSetValue) || 1) : null,
+      scoring_game_win: leagueIsSets ? scoringGameWin : false,
+      scoring_game_win_value: leagueIsSets && scoringGameWin ? (parseFloat(scoringGameWinValue) || 1) : null,
+      scoring_standard_win: leagueIsSets ? scoringStandardWin : false,
+      scoring_highest_shots: leagueIsSets ? scoringHighestShots : false,
     };
 
     if (editingLeague) {
