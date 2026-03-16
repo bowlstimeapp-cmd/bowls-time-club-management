@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trophy, Calendar, Clock, Users, ChevronDown, ChevronRight, List } from 'lucide-react';
+import { Trophy, Calendar, Clock, Users, ChevronDown, ChevronRight, List, BarChart3 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { calculateLeagueTable, getScoringRules } from '@/lib/leagueScoring';
 
 const statusColors = {
   draft: 'bg-gray-100 text-gray-700',
