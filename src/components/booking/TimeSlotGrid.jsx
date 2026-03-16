@@ -82,6 +82,8 @@ export default function TimeSlotGrid({
   bulkDeleteMode = false,
   bulkDeleteSelected = [],
   onToggleBulkDelete,
+  copyMode = false,
+  onCopyBooking,
 }) {
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
