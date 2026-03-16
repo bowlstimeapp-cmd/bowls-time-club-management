@@ -1291,20 +1291,96 @@ export default function LeagueAdmin() {
                   <Label htmlFor="is-sets" className="cursor-pointer">Is Sets?</Label>
                 </div>
                 {leagueIsSets && (
-                  <div>
-                    <Label>Number of Ends per Set</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="21"
-                      value={leagueSetsEnds}
-                      onChange={(e) => setLeagueSetsEnds(e.target.value)}
-                      placeholder="e.g. 8"
-                      className="w-32"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      The scorecard will split into sets of this many ends, with a TOTAL row between each set.
-                    </p>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Number of Ends per Set</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="21"
+                        value={leagueSetsEnds}
+                        onChange={(e) => setLeagueSetsEnds(e.target.value)}
+                        placeholder="e.g. 8"
+                        className="w-32"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        The scorecard will split into sets of this many ends, with a TOTAL row between each set.
+                      </p>
+                    </div>
+                    {/* Scoring Configuration */}
+                    <div className="border rounded-lg p-4 space-y-4 bg-purple-50 border-purple-200">
+                      <p className="text-sm font-semibold text-purple-800">Scoring Configuration</p>
+
+                      {/* Points per set */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="scoring-per-set"
+                            checked={scoringPointsPerSet}
+                            onCheckedChange={setScoringPointsPerSet}
+                          />
+                          <Label htmlFor="scoring-per-set" className="cursor-pointer">Award points per set win</Label>
+                        </div>
+                        {scoringPointsPerSet && (
+                          <div className="ml-7 flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="0.5"
+                              step="0.5"
+                              value={scoringPointsPerSetValue}
+                              onChange={(e) => setScoringPointsPerSetValue(e.target.value)}
+                              className="w-24"
+                            />
+                            <span className="text-sm text-gray-500">points per set win (draws = half)</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Points for game win */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="scoring-game-win"
+                            checked={scoringGameWin}
+                            onCheckedChange={setScoringGameWin}
+                          />
+                          <Label htmlFor="scoring-game-win" className="cursor-pointer">Award points for game win (winning more sets)</Label>
+                        </div>
+                        {scoringGameWin && (
+                          <div className="ml-7 flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="0.5"
+                              step="0.5"
+                              value={scoringGameWinValue}
+                              onChange={(e) => setScoringGameWinValue(e.target.value)}
+                              className="w-24"
+                            />
+                            <span className="text-sm text-gray-500">points for game win</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Standard win */}
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="scoring-standard-win"
+                          checked={scoringStandardWin}
+                          onCheckedChange={setScoringStandardWin}
+                        />
+                        <Label htmlFor="scoring-standard-win" className="cursor-pointer">Use standard 2 points per win</Label>
+                      </div>
+
+                      {/* Highest overall shots */}
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="scoring-highest-shots"
+                          checked={scoringHighestShots}
+                          onCheckedChange={setScoringHighestShots}
+                        />
+                        <Label htmlFor="scoring-highest-shots" className="cursor-pointer">Award 1 point for highest overall shots</Label>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
