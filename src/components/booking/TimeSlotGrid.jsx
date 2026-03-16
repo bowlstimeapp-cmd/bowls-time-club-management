@@ -173,8 +173,13 @@ export default function TimeSlotGrid({
 
     const targetBooking = getBookingForSlot(rink, slot.start);
 
-    // Admin swap: dragging onto another booking
-    if (targetBooking && isAdmin && onSwapBookings && targetBooking.id !== booking.id) {
+    if (copyMode) {
+      // Copy mode: only drop onto empty slots
+      if (!targetBooking && !isSlotInPast(slot.start)) {
+        onCopyBooking && onCopyBooking(booking, rink, slot.start);
+      }
+    } else if (targetBooking && isAdmin && onSwapBookings && targetBooking.id !== booking.id) {
+      // Admin swap: dragging onto another booking
       onSwapBookings(booking, targetBooking);
     } else if (!targetBooking && !isSlotInPast(slot.start)) {
       onMoveBooking && onMoveBooking(booking, rink, slot.start);
