@@ -78,19 +78,34 @@ export default function LeagueTableView({ leagues, teams, fixtures }) {
                 <div className="px-5 py-3 flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-700">Teams</span>
                   {league.fixtures_generated && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setViewingLeague(league);
-                        setFixturesDialogOpen(true);
-                      }}
-                    >
-                      <List className="w-3.5 h-3.5 mr-1" />
-                      View Fixtures
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewingLeague(league);
+                          setFixturesDialogOpen(true);
+                        }}
+                      >
+                        <List className="w-3.5 h-3.5 mr-1" />
+                        Fixtures
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewingTableLeague(league);
+                          setTableDialogOpen(true);
+                        }}
+                      >
+                        <BarChart3 className="w-3.5 h-3.5 mr-1" />
+                        Table
+                      </Button>
+                    </div>
                   )}
                 </div>
                 {leagueTeams.length === 0 ? (
