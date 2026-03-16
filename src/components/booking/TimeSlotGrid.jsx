@@ -344,7 +344,7 @@ export default function TimeSlotGrid({
                             isMobileCopySource && "ring-2 ring-purple-500 ring-offset-2 scale-[1.02]",
                             bulkDeleteMode && !available && booking && bulkDeleteSelected.includes(booking.id) && "ring-2 ring-red-500 ring-offset-1",
                             bulkDeleteMode && !available && booking && "cursor-pointer",
-                            available && !canSelect && !isDragging && selectedSlots.length > 0 && !bulkDeleteMode && !isMobileCopyTarget && "opacity-50"
+                            available && !canSelect && !isDragging && selectedSlots.length > 0 && !bulkDeleteMode && "opacity-50"
                           )}
                         >
                           {bulkDeleteMode && !available && booking ? (
