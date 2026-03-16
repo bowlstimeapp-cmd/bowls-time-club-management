@@ -677,12 +677,24 @@ export default function LeagueAdmin() {
       toast.error('Please enter both scores');
       return;
     }
+    const scoringLeague = viewingLeague || leagues.find(l => l.id === editingFixture?.league_id);
+    const isSetsLeague = scoringLeague?.is_sets;
+    if (isSetsLeague && (homeSets === '' || awaySets === '')) {
+      toast.error('Please enter both set counts');
+      return;
+    }
     
-    await base44.entities.LeagueFixture.update(editingFixture.id, {
+    const updateData = {
       home_score: parseInt(homeScore),
       away_score: parseInt(awayScore),
-      status: 'completed'
-    });
+      status: 'completed',
+    };
+    if (isSetsLeague) {
+      updateData.home_sets = parseInt(homeSets);
+      updateData.away_sets = parseInt(awaySets);
+    }
+
+    await base44.entities.LeagueFixture.update(editingFixture.id, updateData);
     
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     setScoreDialogOpen(false);
