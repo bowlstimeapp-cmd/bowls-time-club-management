@@ -1599,6 +1599,16 @@ export default function LeagueAdmin() {
                         </tbody>
                       </table>
                     </div>
+                    {scoringRules.length > 0 && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg border text-sm text-gray-600">
+                        <p className="font-semibold text-gray-700 mb-1">League Scoring Rules:</p>
+                        <ul className="space-y-0.5">
+                          {scoringRules.map((rule, i) => (
+                            <li key={i}>• {rule}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </>
                 );
               })()}
