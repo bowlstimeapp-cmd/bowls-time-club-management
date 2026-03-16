@@ -560,7 +560,7 @@ useEffect(() => {
                             Cancel
                           </Button>
                         </>
-                      )}
+                      ) : null}
                     </>
                   )}
                   {!bulkDeleteMode && selectedSlots.length > 0 && (
