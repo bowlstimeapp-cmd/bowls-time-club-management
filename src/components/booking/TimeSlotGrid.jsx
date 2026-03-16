@@ -286,6 +286,8 @@ export default function TimeSlotGrid({
                   const isEmptyDroppable = available && !isPast && isDragging;
                   const isDroppable = isEmptyDroppable || isSwapTarget;
                   const isHoverTarget = dropTarget === `${rink}:${slot.start}`;
+                  const isMobileCopySource = mobileCopySource?.id === booking?.id;
+                  const isMobileCopyTarget = copyMode && isAdmin && mobileCopySource && available && !isPast;
 
                   return (
                     <Tooltip key={rink}>
