@@ -1560,7 +1560,8 @@ export default function LeagueAdmin() {
             </DialogHeader>
             <div ref={tableRef}>
               {viewingTableLeague && (() => {
-                const table = calculateLeagueTable(viewingTableLeague);
+                const table = getLeagueTable(viewingTableLeague);
+                const scoringRules = getScoringRules(viewingTableLeague);
                 return (
                   <>
                     <h1>{viewingTableLeague.name}</h1>
