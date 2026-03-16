@@ -114,6 +114,8 @@ export default function LeagueAdmin() {
   const [editingFixture, setEditingFixture] = useState(null);
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
+  const [homeSets, setHomeSets] = useState('');
+  const [awaySets, setAwaySets] = useState('');
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
   const tableRef = useRef();
