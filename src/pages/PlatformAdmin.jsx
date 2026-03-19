@@ -962,6 +962,62 @@ export default function PlatformAdmin() {
           </DialogContent>
         </Dialog>
 
+        {/* Feedback Detail Modal */}
+        <Dialog open={!!selectedFeedback} onOpenChange={() => setSelectedFeedback(null)}>
+          <DialogContent className="max-w-lg mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-emerald-600" />
+                Feedback Detail
+              </DialogTitle>
+            </DialogHeader>
+            {selectedFeedback && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={selectedFeedback.category === 'bug' ? 'destructive' : selectedFeedback.category === 'feature' ? 'default' : 'secondary'}>
+                    {selectedFeedback.category}
+                  </Badge>
+                  <span className="text-xs text-gray-400">{new Date(selectedFeedback.created_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Title</p>
+                  <p className="font-semibold text-gray-900">{selectedFeedback.title}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Description</p>
+                  <p className="text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 text-sm">{selectedFeedback.description}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Submitted By</p>
+                  <p className="text-gray-900">{selectedFeedback.user_name}</p>
+                  <p className="text-sm text-gray-500">{selectedFeedback.user_email}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                  <Select
+                    value={selectedFeedback.status || 'new_feedback'}
+                    onValueChange={(value) => {
+                      updateFeedbackMutation.mutate({ id: selectedFeedback.id, data: { status: value } });
+                      setSelectedFeedback({ ...selectedFeedback, status: value });
+                    }}
+                  >
+                    <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new_feedback">New Feedback</SelectItem>
+                      <SelectItem value="reviewed">Reviewed</SelectItem>
+                      <SelectItem value="implemented">Implemented</SelectItem>
+                      <SelectItem value="abandoned">Abandoned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSelectedFeedback(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Competition Modal */}
         <Dialog open={competitionModalOpen} onOpenChange={setCompetitionModalOpen}>
           <DialogContent className="max-w-md">
