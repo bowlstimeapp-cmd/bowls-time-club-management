@@ -1091,6 +1091,30 @@ export default function PlatformAdmin() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={competitionForm.gender || 'mixed'} onValueChange={(value) => setCompetitionForm({ ...competitionForm, gender: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                      <SelectItem value="men">Men</SelectItem>
+                      <SelectItem value="women">Women</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Age Group</Label>
+                  <Select value={competitionForm.age_group || 'n/a'} onValueChange={(value) => setCompetitionForm({ ...competitionForm, age_group: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="n/a">N/A</SelectItem>
+                      <SelectItem value="u25">Under 25</SelectItem>
+                      <SelectItem value="o60">Over 60</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setCompetitionModalOpen(false); setEditingCompetition(null); resetCompetitionForm(); }}>Cancel</Button>
