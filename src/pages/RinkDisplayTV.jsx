@@ -9,18 +9,39 @@ import { cn } from '@/lib/utils';
 
 const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duration = 2) => {
   const slots = [];
-  const [openHour] = openingTime.split(':').map(Number);
-  const [closeHour] = closingTime.split(':').map(Number);
-  for (let hour = openHour; hour + duration <= closeHour; hour += duration) {
-    const endHour = hour + duration;
-    const fmt = (h) => h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+  const [openHour, openMin = 0] = openingTime.split(':').map(Number);
+  const [closeHour, closeMin = 0] = closingTime.split(':').map(Number);
+  const openMins = openHour * 60 + openMin;
+  const closeMins = closeHour * 60 + closeMin;
+  const durationMins = duration * 60;
+  let cur = openMins;
+  while (cur + durationMins <= closeMins) {
+    const startH = Math.floor(cur / 60), startM = cur % 60;
+    const endMins = cur + durationMins;
+    const endH = Math.floor(endMins / 60), endM = endMins % 60;
+    const fmt = (h, m) => {
+      const ampm = h < 12 ? 'am' : 'pm';
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+    };
     slots.push({
-      start: `${String(hour).padStart(2, '0')}:00`,
-      end: `${String(endHour).padStart(2, '0')}:00`,
-      label: `${fmt(hour)} - ${fmt(endHour)}`,
+      start: `${String(startH).padStart(2,'0')}:${String(startM).padStart(2,'0')}`,
+      end: `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`,
+      label: `${fmt(startH, startM)} - ${fmt(endH, endM)}`,
     });
+    cur += durationMins;
   }
   return slots;
+};
+
+const generateCustomSlots = (customSessions = []) => {
+  const fmt = (t) => {
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h < 12 ? 'am' : 'pm';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+  };
+  return customSessions.map(s => ({ start: s.start, end: s.end, label: `${fmt(s.start)} - ${fmt(s.end)}` }));
 };
 
 const STATUS_STYLES = {
@@ -140,7 +161,9 @@ export default function RinkDisplayTV() {
     );
   }
 
-  const TIME_SLOTS = generateTimeSlots(club?.opening_time, club?.closing_time, club?.session_duration);
+  const TIME_SLOTS = club?.use_custom_sessions && club?.custom_sessions?.length > 0
+    ? generateCustomSlots(club.custom_sessions)
+    : generateTimeSlots(club?.opening_time, club?.closing_time, club?.session_duration);
   const RINKS = Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1);
 
   const getBooking = (rink, startTime) =>

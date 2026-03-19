@@ -649,7 +649,7 @@ export default function PlatformAdmin() {
                         </thead>
                         <tbody>
                           {feedbacks.map(feedback => (
-                            <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedFeedback(feedback)}>
+                            <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedFeedback(feedback); setFeedbackResponse(feedback.admin_response || ''); }}>
                               <td className="py-3 px-2">
                                 <Badge variant={feedback.category === 'bug' ? 'destructive' : feedback.category === 'feature' ? 'default' : 'secondary'}>
                                   {feedback.category}
