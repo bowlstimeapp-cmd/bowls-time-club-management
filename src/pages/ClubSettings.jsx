@@ -63,7 +63,9 @@ export default function ClubSettings() {
     name: '',
     players_per_rink: 4,
     home_rinks: 2,
-    away_rinks: 0
+    away_rinks: 0,
+    gender: 'mixed',
+    age_group: 'n/a'
   });
 
   useEffect(() => {
