@@ -131,6 +131,9 @@ export default function PasswordChangeCard({ user }) {
               <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
             )}
           </div>
+          {success && (
+            <p className="text-emerald-600 text-sm font-medium text-center">Password changed successfully</p>
+          )}
           <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
             {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Changing Password...</> : <><Lock className="w-4 h-4 mr-2" />Change Password</>}
           </Button>
