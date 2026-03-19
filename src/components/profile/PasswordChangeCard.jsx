@@ -92,6 +92,9 @@ export default function PasswordChangeCard({ user }) {
                 {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {currentPasswordError && (
+              <p className="text-red-500 text-sm mt-1">{currentPasswordError}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="newPassword">New Password</Label>
