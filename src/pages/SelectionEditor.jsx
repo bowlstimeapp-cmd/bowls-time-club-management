@@ -1132,7 +1132,7 @@ ${club?.name || 'Your Bowls Club'}
             {competition ? (
               isTopClub ? (
                 <TopClubSelectionGrid
-                  members={members}
+                  members={filteredMembers}
                   selections={selections}
                   selectedEmails={selectedEmails}
                   onSelectionChange={handleSelectionChange}
@@ -1142,7 +1142,7 @@ ${club?.name || 'Your Bowls Club'}
               ) : isFriendly ? (
                 canShowFriendlyGrid ? (
                   <RinkSelectionGrid
-                    members={members}
+                    members={filteredMembers}
                     selections={selections}
                     selectedEmails={selectedEmails}
                     onSelectionChange={handleSelectionChange}
