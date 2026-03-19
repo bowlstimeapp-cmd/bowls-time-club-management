@@ -1043,7 +1043,7 @@ export default function PlatformAdmin() {
                       message: `An admin has responded to your feedback: "${selectedFeedback.title}"`,
                       is_read: false,
                       link_page: 'Profile',
-                      link_params: 'tab=feedback',
+                      link_params: '?tab=feedback',
                     });
                   }
                   toast.success('Response saved');
