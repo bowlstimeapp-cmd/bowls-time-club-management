@@ -725,22 +725,33 @@ ${club?.name || 'Your Bowls Club'}
 
   const selectedEmails = Object.values(selections).filter(Boolean);
 
-  // Derive home/away player lists for captain dropdowns
-  // Home players: positions that don't have 'away' in the key
-  const homePlayerEmails = [...new Set(
+  // Derive home/away player lists for captain dropdowns using rink numbers
+  // Home rinks: 1..effectiveHomeRinks, Away rinks: effectiveHomeRinks+1..effectiveHomeRinks+effectiveAwayRinks
+  // Note: effectiveHomeRinks/effectiveAwayRinks are defined below, so we compute inline here
+  const _homeRinksCount = isFriendly ? friendlyNumRinks : homeRinks;
+  const _awayRinksCount = isFriendly ? 0 : (competitions.find(c => c.name === competition)?.away_rinks || 0);
+  const homeRinkNumbers = new Set(Array.from({ length: _homeRinksCount }, (_, i) => i + 1));
+  const awayRinkNumbers = new Set(
+    Array.from({ length: _awayRinksCount }, (_, i) => _homeRinksCount + i + 1)
+  );
+  const captainHomeOptions = [...new Set(
     Object.entries(selections)
-      .filter(([key, val]) => val && !key.includes('away'))
+      .filter(([key, val]) => {
+        if (!val) return false;
+        const match = key.match(/^rink(\d+)_/);
+        return match && homeRinkNumbers.has(parseInt(match[1]));
+      })
       .map(([, val]) => val)
   )];
-  // Away players: positions with 'away' in the key
-  const awayPlayerEmails = [...new Set(
+  const captainAwayOptions = [...new Set(
     Object.entries(selections)
-      .filter(([key, val]) => val && key.includes('away'))
+      .filter(([key, val]) => {
+        if (!val) return false;
+        const match = key.match(/^rink(\d+)_/);
+        return match && awayRinkNumbers.has(parseInt(match[1]));
+      })
       .map(([, val]) => val)
   )];
-  // For home captain: only home players. For away captain: only away players (fallback to all if no away keys)
-  const captainHomeOptions = homePlayerEmails.length > 0 ? homePlayerEmails : selectedEmails;
-  const captainAwayOptions = awayPlayerEmails.length > 0 ? awayPlayerEmails : selectedEmails;
 
   const getMemberLabel = (email) => {
     const m = members.find(mb => mb.user_email === email);
