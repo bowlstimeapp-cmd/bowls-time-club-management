@@ -982,6 +982,36 @@ export default function ClubSettings() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Gender</Label>
+                    <Select
+                      value={competitionForm.gender || 'mixed'}
+                      onValueChange={(value) => setCompetitionForm({ ...competitionForm, gender: value })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                        <SelectItem value="men">Men</SelectItem>
+                        <SelectItem value="women">Women</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Age Group</Label>
+                    <Select
+                      value={competitionForm.age_group || 'n/a'}
+                      onValueChange={(value) => setCompetitionForm({ ...competitionForm, age_group: value })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="n/a">N/A</SelectItem>
+                        <SelectItem value="u25">Under 25</SelectItem>
+                        <SelectItem value="o60">Over 60</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div className="flex gap-2 pt-4">
                   <Button
                     type="button"
