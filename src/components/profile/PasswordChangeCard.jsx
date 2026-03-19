@@ -15,9 +15,13 @@ export default function PasswordChangeCard({ user }) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentPasswordError, setCurrentPasswordError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    setCurrentPasswordError('');
+    setSuccess(false);
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('Please fill in all fields');
@@ -34,11 +38,16 @@ export default function PasswordChangeCard({ user }) {
 
     setIsLoading(true);
     try {
-      // Update password via base44 auth
-      await base44.auth.changePassword({
-        currentPassword,
-        newPassword,
-      });
+      // Verify current password first
+      await base44.auth.loginViaEmailPassword(user.email, currentPassword);
+    } catch {
+      setCurrentPasswordError('Incorrect password');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await base44.auth.changePassword({ currentPassword, newPassword });
 
       // Send security notification email
       await base44.functions.invoke('sendPasswordChangeEmail', {
@@ -46,12 +55,12 @@ export default function PasswordChangeCard({ user }) {
         name: user.first_name || user.full_name || 'Member',
       });
 
-      toast.success('Password changed successfully');
+      setSuccess(true);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to change password. Please check your current password.');
+      toast.error(err?.response?.data?.message || 'Failed to change password.');
     } finally {
       setIsLoading(false);
     }
