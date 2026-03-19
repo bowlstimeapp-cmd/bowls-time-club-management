@@ -530,6 +530,53 @@ export default function Profile() {
               </CardContent>
             </Card>
           </motion.div>
+            </TabsContent>
+
+            <TabsContent value="feedback">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                {loadingFeedback ? (
+                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /></div>
+                ) : myFeedback.length === 0 ? (
+                  <Card className="shadow-lg">
+                    <CardContent className="py-12 text-center">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-gray-500">You haven't submitted any feedback yet.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  myFeedback.map(fb => (
+                    <Card key={fb.id} className="shadow-lg">
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={fb.category === 'bug' ? 'destructive' : fb.category === 'feature' ? 'default' : 'secondary'}>
+                              {fb.category}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {(fb.status || 'new_feedback').replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-gray-400">{new Date(fb.created_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{fb.title}</p>
+                          <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{fb.description}</p>
+                        </div>
+                        {fb.admin_response && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-emerald-700 mb-1 flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" /> Admin Response
+                            </p>
+                            <p className="text-sm text-emerald-800 whitespace-pre-wrap">{fb.admin_response}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </motion.div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
