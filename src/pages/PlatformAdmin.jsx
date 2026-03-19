@@ -321,7 +321,7 @@ export default function PlatformAdmin() {
   const generateSlug = (name) => name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
   const resetCompetitionForm = () => {
-    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: 'indoor' });
+    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: 'indoor', gender: 'mixed', age_group: 'n/a' });
   };
 
   const handleEditCompetition = (competition) => {
@@ -329,7 +329,9 @@ export default function PlatformAdmin() {
     setCompetitionForm({
       name: competition.name, players_per_rink: competition.players_per_rink,
       home_rinks: competition.home_rinks, away_rinks: competition.away_rinks || 0,
-      season: competition.season || 'indoor'
+      season: competition.season || 'indoor',
+      gender: competition.gender || 'mixed',
+      age_group: competition.age_group || 'n/a'
     });
     setCompetitionModalOpen(true);
   };
