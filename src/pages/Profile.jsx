@@ -42,6 +42,7 @@ export default function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
   const queryClient = useQueryClient();
 
   useEffect(() => {
