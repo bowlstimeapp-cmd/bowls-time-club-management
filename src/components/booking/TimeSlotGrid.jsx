@@ -305,7 +305,7 @@ export default function TimeSlotGrid({
                           }
                           handleSlotClick(rink, slot, slotIndex);
                         }}
-                        disabled={available && !canSelect && !isDragging && selectedSlots.length > 0 && selectedSlots[0].rink === rink && !bulkDeleteMode}
+                        disabled={available && !canSelect && !selected && !isDragging && selectedSlots.length > 0 && selectedSlots[0].rink === rink && !bulkDeleteMode}
                         draggable={canDrag && !bulkDeleteMode}
                           onDragStart={canDrag ? (e) => {
                             e.dataTransfer.setData('text/plain', booking.id);
