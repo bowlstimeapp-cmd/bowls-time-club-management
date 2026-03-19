@@ -420,71 +420,107 @@ export default function LeagueAdmin() {
       ? league.league_rinks.slice().sort((a, b) => a - b)
       : allClubRinks;
 
-    let rounds = generateRoundRobinFixtures(leagueTeams);
+    // Seeded pseudo-random shuffle (Fisher-Yates) so each redraw is different
+    const seededRandom = (() => {
+      let seed = shuffleSeed * 1234567 + 42;
+      return () => {
+        seed = (seed * 16807 + 0) % 2147483647;
+        return (seed - 1) / 2147483646;
+      };
+    })();
 
-    // When shuffleSeed > 0, rotate the round order to produce a different draw
-    if (shuffleSeed > 0 && rounds.length > 1) {
-      const offset = shuffleSeed % rounds.length;
-      rounds = [...rounds.slice(offset), ...rounds.slice(0, offset)];
-    }
+    const shuffleArray = (arr) => {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(seededRandom() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
 
-    const allFixtures = [];
-    const rinkUsage = {};
-    const dateRinkUsage = {};
-
-    leagueTeams.forEach(team => {
-      rinkUsage[team.id] = {};
-      availableRinks.forEach(r => { rinkUsage[team.id][r] = 0; });
-    });
-
+    const rounds = generateRoundRobinFixtures(leagueTeams);
     const forceEven = league.force_even_fixtures !== false;
     const availableWeeks = weeks.length;
     const repetitions = forceEven ? Math.floor(availableWeeks / rounds.length) : null;
 
+    // --- Step 1: build the flat list of (match, date) pairs without rink assignments ---
+    const unassigned = []; // { home_team_id, away_team_id, match_date }
     let weekIndex = 0;
 
-    const processRound = (round, matchDate) => {
+    const collectRound = (round, matchDate) => {
       const dateKey = format(matchDate, 'yyyy-MM-dd');
-      if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
-
       for (const match of round) {
-        let bestRink = null;
-        let lowestUsage = Infinity;
-        for (const r of availableRinks) {
-          if (dateRinkUsage[dateKey].has(r)) continue;
-          const usage = (rinkUsage[match.home_team_id][r] || 0) + (rinkUsage[match.away_team_id][r] || 0);
-          if (usage < lowestUsage) { lowestUsage = usage; bestRink = r; }
-        }
-        if (bestRink === null) continue;
-
-        dateRinkUsage[dateKey].add(bestRink);
-        rinkUsage[match.home_team_id][bestRink]++;
-        rinkUsage[match.away_team_id][bestRink]++;
-
-        allFixtures.push({
-          league_id: league.id,
-          club_id: clubId,
-          home_team_id: match.home_team_id,
-          away_team_id: match.away_team_id,
-          match_date: dateKey,
-          rink_number: bestRink,
-          status: 'scheduled',
-        });
+        unassigned.push({ home_team_id: match.home_team_id, away_team_id: match.away_team_id, match_date: dateKey });
       }
     };
 
     if (forceEven) {
       for (let rep = 0; rep < repetitions && weekIndex < availableWeeks; rep++) {
         for (let roundIdx = 0; roundIdx < rounds.length && weekIndex < availableWeeks; roundIdx++) {
-          processRound(rounds[roundIdx], weeks[weekIndex]);
+          collectRound(rounds[roundIdx], weeks[weekIndex]);
           weekIndex++;
         }
       }
     } else {
       while (weekIndex < availableWeeks) {
-        processRound(rounds[weekIndex % rounds.length], weeks[weekIndex]);
+        collectRound(rounds[weekIndex % rounds.length], weeks[weekIndex]);
         weekIndex++;
       }
+    }
+
+    // --- Step 2: shuffle fixtures randomly (different each redraw) ---
+    const shuffledFixtures = shuffleArray(unassigned);
+
+    // --- Step 3: compute balanced target counts per rink ---
+    // base = floor(N / V), first `remainder` rinks get base+1
+    const N = shuffledFixtures.length;
+    const V = availableRinks.length;
+    const base = Math.floor(N / V);
+    const remainder = N % V;
+
+    // Shuffle rink order so the "extra" match rinks vary each redraw
+    const shuffledRinks = shuffleArray(availableRinks);
+    const rinkTarget = {}; // rink -> target count
+    shuffledRinks.forEach((r, i) => { rinkTarget[r] = base + (i < remainder ? 1 : 0); });
+    const rinkAssigned = {}; // rink -> assigned so far
+    availableRinks.forEach(r => { rinkAssigned[r] = 0; });
+
+    // --- Step 4: assign rinks respecting date conflicts and targets ---
+    const dateRinkUsage = {}; // dateKey -> Set of rinks used that day
+    const allFixtures = [];
+
+    for (const match of shuffledFixtures) {
+      const dateKey = match.match_date;
+      if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
+
+      // Candidate rinks: not used on this date, and still below target
+      const candidates = availableRinks.filter(
+        r => !dateRinkUsage[dateKey].has(r) && rinkAssigned[r] < rinkTarget[r]
+      );
+
+      // Fallback: any rink not used on this date (ignores target — avoids dropping fixtures)
+      const fallback = availableRinks.filter(r => !dateRinkUsage[dateKey].has(r));
+
+      const pool = candidates.length > 0 ? candidates : fallback;
+      if (pool.length === 0) continue; // truly no rink available on this date — skip
+
+      // Among pool, pick the rink with fewest assignments so far (with random tie-breaking)
+      const minAssigned = Math.min(...pool.map(r => rinkAssigned[r]));
+      const tied = pool.filter(r => rinkAssigned[r] === minAssigned);
+      const chosenRink = tied[Math.floor(seededRandom() * tied.length)];
+
+      dateRinkUsage[dateKey].add(chosenRink);
+      rinkAssigned[chosenRink]++;
+
+      allFixtures.push({
+        league_id: league.id,
+        club_id: clubId,
+        home_team_id: match.home_team_id,
+        away_team_id: match.away_team_id,
+        match_date: dateKey,
+        rink_number: chosenRink,
+        status: 'scheduled',
+      });
     }
 
     return allFixtures;
