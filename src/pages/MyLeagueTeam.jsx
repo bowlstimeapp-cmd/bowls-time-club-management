@@ -438,19 +438,19 @@ const handleGenerateRota = async (team) => {
                 <MessageSquare className="w-4 h-4 mr-1" />
                 Player Board
               </Button>
-            {myLeagues.length > 1 && (
-              <Select value={selectedLeagueFilter} onValueChange={setSelectedLeagueFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by league" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Leagues ({myLeagues.length})</SelectItem>
-                  {myLeagues.map(league => (
-                    <SelectItem key={league.id} value={league.id}>{league.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+              {myLeagues.length > 1 && (
+                <Select value={selectedLeagueFilter} onValueChange={setSelectedLeagueFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by league" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Leagues ({myLeagues.length})</SelectItem>
+                    {myLeagues.map(league => (
+                      <SelectItem key={league.id} value={league.id}>{league.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </motion.div>
