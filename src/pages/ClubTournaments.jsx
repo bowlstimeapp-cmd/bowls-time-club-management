@@ -146,6 +146,12 @@ export default function ClubTournaments() {
                           <Badge variant="secondary">Draft</Badge>
                         </div>
                         <div className="flex gap-2">
+                          <Link to={createPageUrl('TournamentView') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </Link>
                           <Link to={createPageUrl('TournamentEditor') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>
                             <Button variant="outline" size="sm">
                               <Pencil className="w-4 h-4 mr-1" />
