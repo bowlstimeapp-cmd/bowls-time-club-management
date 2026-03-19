@@ -34,7 +34,8 @@ import {
   Phone,
   Pencil,
   BarChart3,
-  CalendarX
+  CalendarX,
+  MessageSquare
 } from 'lucide-react';
 import PlayerAvailabilityDialog from '@/components/teams/PlayerAvailabilityDialog';
 import { Checkbox } from "@/components/ui/checkbox";
@@ -428,6 +429,15 @@ const handleGenerateRota = async (team) => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">My League Teams</h1>
               <p className="text-gray-600">{club?.name} • View your teams</p>
             </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(createPageUrl('PlayerBoard') + `?clubId=${clubId}`)}
+              >
+                <MessageSquare className="w-4 h-4 mr-1" />
+                Player Board
+              </Button>
             {myLeagues.length > 1 && (
               <Select value={selectedLeagueFilter} onValueChange={setSelectedLeagueFilter}>
                 <SelectTrigger className="w-48">
