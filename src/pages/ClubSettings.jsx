@@ -228,7 +228,9 @@ export default function ClubSettings() {
       players_per_rink: 4,
       home_rinks: 2,
       away_rinks: 0,
-      season: 'indoor'
+      season: 'indoor',
+      gender: 'mixed',
+      age_group: 'n/a'
     });
   };
 
@@ -239,7 +241,9 @@ export default function ClubSettings() {
       players_per_rink: competition.players_per_rink,
       home_rinks: competition.home_rinks,
       away_rinks: competition.away_rinks || 0,
-      season: competition.season || 'indoor'
+      season: competition.season || 'indoor',
+      gender: competition.gender || 'mixed',
+      age_group: competition.age_group || 'n/a'
     });
     setCompetitionModalOpen(true);
   };
