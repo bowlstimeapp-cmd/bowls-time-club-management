@@ -728,8 +728,8 @@ ${club?.name || 'Your Bowls Club'}
   // Derive home/away player lists for captain dropdowns using rink numbers
   // Home rinks: 1..effectiveHomeRinks, Away rinks: effectiveHomeRinks+1..effectiveHomeRinks+effectiveAwayRinks
   // Note: effectiveHomeRinks/effectiveAwayRinks are defined below, so we compute inline here
-  const _homeRinksCount = isFriendly ? friendlyNumRinks : homeRinks;
-  const _awayRinksCount = isFriendly ? 0 : (competitions.find(c => c.name === competition)?.away_rinks || 0);
+  const _homeRinksCount = competition === 'Friendly' ? friendlyNumRinks : homeRinks;
+  const _awayRinksCount = competition === 'Friendly' ? 0 : (competitions.find(c => c.name === competition)?.away_rinks || 0);
   const homeRinkNumbers = new Set(Array.from({ length: _homeRinksCount }, (_, i) => i + 1));
   const awayRinkNumbers = new Set(
     Array.from({ length: _awayRinksCount }, (_, i) => _homeRinksCount + i + 1)
