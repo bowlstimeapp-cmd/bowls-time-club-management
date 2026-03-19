@@ -637,6 +637,18 @@ useEffect(() => {
           </div>
         </motion.div>
 
+        {/* Floating Book Slots button */}
+        {!bulkDeleteMode && selectedSlots.length > 0 && (
+          <div className="fixed bottom-6 left-6 z-40">
+            <Button
+              onClick={handleBookSelected}
+              className="bg-emerald-600 hover:bg-emerald-700 shadow-lg rounded-full px-5 py-3 h-auto text-base font-semibold"
+            >
+              Book {selectedSlots.length} Slot{selectedSlots.length > 1 ? 's' : ''}
+            </Button>
+          </div>
+        )}
+
         <BookingModal
           open={modalOpen}
           onClose={() => {

@@ -106,12 +106,15 @@ export default function PasswordChangeCard({ user }) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat new password"
-                className="pr-10"
+                className={`pr-10 ${confirmPassword && newPassword && confirmPassword !== newPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
               />
               <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowConfirm(!showConfirm)}>
                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {confirmPassword && newPassword && confirmPassword !== newPassword && (
+              <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+            )}
           </div>
           <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
             {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Changing Password...</> : <><Lock className="w-4 h-4 mr-2" />Change Password</>}

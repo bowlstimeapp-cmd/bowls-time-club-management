@@ -726,17 +726,19 @@ ${club?.name || 'Your Bowls Club'}
   const selectedEmails = Object.values(selections).filter(Boolean);
 
   // Derive home/away player lists for captain dropdowns
+  // Home players: positions that don't have 'away' in the key
   const homePlayerEmails = [...new Set(
     Object.entries(selections)
-      .filter(([key, val]) => val && key.match(/^rink\d+_/) && !key.includes('away'))
+      .filter(([key, val]) => val && !key.includes('away'))
       .map(([, val]) => val)
   )];
+  // Away players: positions with 'away' in the key
   const awayPlayerEmails = [...new Set(
     Object.entries(selections)
       .filter(([key, val]) => val && key.includes('away'))
       .map(([, val]) => val)
   )];
-  // Fallback: if no explicit away keys, use all selected emails
+  // For home captain: only home players. For away captain: only away players (fallback to all if no away keys)
   const captainHomeOptions = homePlayerEmails.length > 0 ? homePlayerEmails : selectedEmails;
   const captainAwayOptions = awayPlayerEmails.length > 0 ? awayPlayerEmails : selectedEmails;
 
