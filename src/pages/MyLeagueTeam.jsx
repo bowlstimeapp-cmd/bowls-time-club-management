@@ -451,6 +451,7 @@ const handleGenerateRota = async (team) => {
                 </SelectContent>
               </Select>
             )}
+            </div>
           </div>
         </motion.div>
 
