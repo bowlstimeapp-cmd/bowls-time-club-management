@@ -65,6 +65,7 @@ import MembershipPaymentSuccess from './pages/MembershipPaymentSuccess';
 import MembershipPayments from './pages/MembershipPayments';
 import MyBookings from './pages/MyBookings';
 import MyLeagueTeam from './pages/MyLeagueTeam';
+import PlayerBoard from './pages/PlayerBoard';
 import Notifications from './pages/Notifications';
 import OpenCompetitions from './pages/OpenCompetitions';
 import PaymentDetail from './pages/PaymentDetail';
@@ -103,6 +104,7 @@ export const PAGES = {
     "MembershipPayments": MembershipPayments,
     "MyBookings": MyBookings,
     "MyLeagueTeam": MyLeagueTeam,
+    "PlayerBoard": PlayerBoard,
     "Notifications": Notifications,
     "OpenCompetitions": OpenCompetitions,
     "PaymentDetail": PaymentDetail,
