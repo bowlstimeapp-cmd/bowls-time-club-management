@@ -64,6 +64,7 @@ export default function PlatformAdmin() {
   
   const [user, setUser] = useState(null);
   const [emailLogFilter, setEmailLogFilter] = useState('');
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
