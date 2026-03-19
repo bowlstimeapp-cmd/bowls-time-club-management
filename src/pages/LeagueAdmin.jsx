@@ -565,7 +565,8 @@ export default function LeagueAdmin() {
   };
 
   const handleRegenerateFixtures = () => {
-    const nextSeed = regenerateCounter + 1;
+    // Use a random seed each time so each redraw produces a genuinely different distribution
+    const nextSeed = Math.floor(Math.random() * 999983) + 1;
     setRegenerateCounter(nextSeed);
     const allFixtures = buildFixtureList(pendingFixtureLeague, pendingFixtureTeams, nextSeed);
     setPendingFixtures(allFixtures);
