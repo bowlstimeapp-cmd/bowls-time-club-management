@@ -1162,7 +1162,7 @@ ${club?.name || 'Your Bowls Club'}
                 )
               ) : (
                 <RinkSelectionGrid
-                  members={members}
+                  members={filteredMembers}
                   selections={selections}
                   selectedEmails={selectedEmails}
                   onSelectionChange={handleSelectionChange}
