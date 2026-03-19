@@ -1030,9 +1030,22 @@ export default function PlatformAdmin() {
               <Button variant="outline" onClick={() => { setSelectedFeedback(null); setFeedbackResponse(''); }}>Close</Button>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => {
-                  updateFeedbackMutation.mutate({ id: selectedFeedback.id, data: { admin_response: feedbackResponse || null } });
-                  setSelectedFeedback({ ...selectedFeedback, admin_response: feedbackResponse || null });
+                onClick={async () => {
+                  const responseText = feedbackResponse || null;
+                  updateFeedbackMutation.mutate({ id: selectedFeedback.id, data: { admin_response: responseText } });
+                  setSelectedFeedback({ ...selectedFeedback, admin_response: responseText });
+                  // Send in-app notification to the user if a response was written
+                  if (responseText && selectedFeedback.user_email) {
+                    await base44.entities.Notification.create({
+                      user_email: selectedFeedback.user_email,
+                      type: 'booking_accepted', // reusing a valid enum type as closest match
+                      title: 'Response to your feedback',
+                      message: `An admin has responded to your feedback: "${selectedFeedback.title}"`,
+                      is_read: false,
+                      link_page: 'Profile',
+                      link_params: 'tab=feedback',
+                    });
+                  }
                   toast.success('Response saved');
                 }}
                 disabled={updateFeedbackMutation.isPending}
