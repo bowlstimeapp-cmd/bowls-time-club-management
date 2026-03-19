@@ -58,6 +58,12 @@ export default function Profile() {
     loadUser();
   }, []);
 
+  const { data: myFeedback = [], isLoading: loadingFeedback } = useQuery({
+    queryKey: ['myFeedback', user?.email],
+    queryFn: () => base44.entities.Feedback.filter({ user_email: user.email }, '-created_date'),
+    enabled: !!user?.email,
+  });
+
   const { data: unavailabilities = [], isLoading: loadingUnavailabilities } = useQuery({
     queryKey: ['myUnavailabilities', user?.email],
     queryFn: () => base44.entities.UserUnavailability.filter({ user_email: user.email }, 'start_date'),
