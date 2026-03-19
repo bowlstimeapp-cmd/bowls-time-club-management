@@ -725,6 +725,35 @@ ${club?.name || 'Your Bowls Club'}
 
   const selectedEmails = Object.values(selections).filter(Boolean);
 
+  // Filter members based on competition gender and age_group restrictions
+  const activeCompetition = competitions.find(c => c.name === competition);
+  const filteredMembers = React.useMemo(() => {
+    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club') return members;
+    let filtered = [...members];
+
+    // Gender filter
+    if (activeCompetition.gender === 'men') {
+      filtered = filtered.filter(m => (m.gender || '').toLowerCase() === 'male');
+    } else if (activeCompetition.gender === 'women') {
+      filtered = filtered.filter(m => (m.gender || '').toLowerCase() === 'female');
+    }
+
+    // Age filter
+    if (activeCompetition.age_group === 'o60' || activeCompetition.age_group === 'u25') {
+      const today = new Date();
+      filtered = filtered.filter(m => {
+        if (!m.date_of_birth) return false;
+        const dob = new Date(m.date_of_birth);
+        const age = Math.floor((today - dob) / (365.25 * 24 * 60 * 60 * 1000));
+        if (activeCompetition.age_group === 'o60') return age >= 60;
+        if (activeCompetition.age_group === 'u25') return age <= 25;
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [members, activeCompetition, competition]);
+
   // Derive home/away player lists for captain dropdowns using rink numbers
   // Home rinks: 1..effectiveHomeRinks, Away rinks: effectiveHomeRinks+1..effectiveHomeRinks+effectiveAwayRinks
   // Note: effectiveHomeRinks/effectiveAwayRinks are defined below, so we compute inline here
