@@ -80,7 +80,9 @@ export default function PlatformAdmin() {
     players_per_rink: 4,
     home_rinks: 2,
     away_rinks: 0,
-    season: ''
+    season: '',
+    gender: 'mixed',
+    age_group: 'n/a'
   });
   const [formData, setFormData] = useState({
     name: '',
