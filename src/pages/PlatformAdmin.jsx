@@ -642,14 +642,13 @@ export default function PlatformAdmin() {
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Category</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Title</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">User</th>
-                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Description</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Status</th>
                             <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Date</th>
                           </tr>
                         </thead>
                         <tbody>
                           {feedbacks.map(feedback => (
-                            <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50">
+                            <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedFeedback(feedback)}>
                               <td className="py-3 px-2">
                                 <Badge variant={feedback.category === 'bug' ? 'destructive' : feedback.category === 'feature' ? 'default' : 'secondary'}>
                                   {feedback.category}
@@ -660,8 +659,7 @@ export default function PlatformAdmin() {
                                 <div>{feedback.user_name}</div>
                                 <div className="text-xs text-gray-500">{feedback.user_email}</div>
                               </td>
-                              <td className="py-3 px-2 text-sm max-w-md"><p className="line-clamp-2">{feedback.description}</p></td>
-                              <td className="py-3 px-2">
+                              <td className="py-3 px-2" onClick={e => e.stopPropagation()}>
                                 <Select value={feedback.status || 'new_feedback'} onValueChange={(value) => updateFeedbackMutation.mutate({ id: feedback.id, data: { status: value } })}>
                                   <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                                   <SelectContent>
