@@ -964,8 +964,8 @@ export default function PlatformAdmin() {
         </Dialog>
 
         {/* Feedback Detail Modal */}
-        <Dialog open={!!selectedFeedback} onOpenChange={() => setSelectedFeedback(null)}>
-          <DialogContent className="max-w-lg mx-4 sm:mx-auto">
+        <Dialog open={!!selectedFeedback} onOpenChange={() => { setSelectedFeedback(null); setFeedbackResponse(''); }}>
+          <DialogContent className="max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-emerald-600" />
@@ -1011,10 +1011,34 @@ export default function PlatformAdmin() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Admin Response</p>
+                  {selectedFeedback.admin_response && (
+                    <p className="text-xs text-gray-400 mb-2">Current: <span className="italic text-gray-600">{selectedFeedback.admin_response}</span></p>
+                  )}
+                  <Textarea
+                    value={feedbackResponse}
+                    onChange={(e) => setFeedbackResponse(e.target.value)}
+                    placeholder="Write a response to the user... (they will see this in their profile)"
+                    rows={3}
+                    className="text-sm"
+                  />
+                </div>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedFeedback(null)}>Close</Button>
+              <Button variant="outline" onClick={() => { setSelectedFeedback(null); setFeedbackResponse(''); }}>Close</Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => {
+                  updateFeedbackMutation.mutate({ id: selectedFeedback.id, data: { admin_response: feedbackResponse || null } });
+                  setSelectedFeedback({ ...selectedFeedback, admin_response: feedbackResponse || null });
+                  toast.success('Response saved');
+                }}
+                disabled={updateFeedbackMutation.isPending}
+              >
+                {updateFeedbackMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Response'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
