@@ -25,6 +25,9 @@ export default function Profile() {
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
   const [phone, setPhone] = useState('');
+  const [title, setTitle] = useState('');
+  const [knownAs, setKnownAs] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');
   const [membershipStartDate, setMembershipStartDate] = useState('');
   const [emergencyContactName, setEmergencyContactName] = useState('');
@@ -46,6 +49,8 @@ export default function Profile() {
       setFirstName(currentUser.first_name || '');
       setSurname(currentUser.surname || '');
       setPhone(currentUser.phone || '');
+      setTitle(currentUser.title || '');
+      setKnownAs(currentUser.known_as || '');
     };
     loadUser();
   }, []);
@@ -106,6 +111,7 @@ export default function Profile() {
       setEmailNotifications(membership.email_notifications !== false);
       setSmsNotifications(membership.sms_notifications || false);
       setGender(membership.gender || '');
+      setDateOfBirth(membership.date_of_birth || '');
       setMembershipStartDate(membership.membership_start_date || '');
       setEmergencyContactName(membership.emergency_contact_name || '');
       setEmergencyContactPhone(membership.emergency_contact_phone || '');
@@ -162,12 +168,16 @@ export default function Profile() {
     await base44.auth.updateMe({
       first_name: firstName.trim(),
       surname: surname.trim(),
-      phone: phone.trim()
+      phone: phone.trim(),
+      title: title.trim() || null,
+      known_as: knownAs.trim() || null,
     });
     if (clubId && membership) {
       const memberUpdates = {
         phone: phone.trim() || null,
+        title: title.trim() || null,
         gender: gender || null,
+        date_of_birth: dateOfBirth || null,
         emergency_contact_name: emergencyContactName.trim() || null,
         emergency_contact_phone: emergencyContactPhone.trim() || null,
       };
@@ -289,7 +299,22 @@ export default function Profile() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="title">Title</Label>
+                      <Select value={title} onValueChange={setTitle}>
+                        <SelectTrigger id="title"><SelectValue placeholder="Title" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={null}>—</SelectItem>
+                          <SelectItem value="Mr">Mr</SelectItem>
+                          <SelectItem value="Mrs">Mrs</SelectItem>
+                          <SelectItem value="Miss">Miss</SelectItem>
+                          <SelectItem value="Ms">Ms</SelectItem>
+                          <SelectItem value="Dr">Dr</SelectItem>
+                          <SelectItem value="Prof">Prof</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" required />
@@ -300,14 +325,18 @@ export default function Profile() {
                     </div>
                   </div>
                   <div>
+                    <Label htmlFor="knownAs">Known As</Label>
+                    <Input id="knownAs" value={knownAs} onChange={(e) => setKnownAs(e.target.value)} placeholder="Preferred name or nickname" />
+                  </div>
+                  <div>
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07123 456789" />
                   </div>
                   {clubId && membership && (
                     <>
                       <div>
-                        <Label>Date of Birth</Label>
-                        <Input value={membership.date_of_birth ? (() => { try { return format(parseISO(membership.date_of_birth), 'd MMM yyyy'); } catch { return membership.date_of_birth; } })() : 'Not set'} disabled className="bg-gray-50" />
+                        <Label htmlFor="dob">Date of Birth</Label>
+                        <Input id="dob" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
