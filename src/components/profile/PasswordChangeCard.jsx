@@ -84,7 +84,7 @@ export default function PasswordChangeCard({ user }) {
                 id="currentPassword"
                 type={showCurrent ? 'text' : 'password'}
                 value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
+                onChange={(e) => { setCurrentPassword(e.target.value); setCurrentPasswordError(''); setSuccess(false); }}
                 placeholder="Enter current password"
                 className="pr-10"
               />
