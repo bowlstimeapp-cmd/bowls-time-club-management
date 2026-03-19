@@ -533,6 +533,7 @@ export default function Profile() {
             </TabsContent>
 
             <TabsContent value="feedback">
+
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                 {loadingFeedback ? (
                   <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-emerald-600" /></div>
