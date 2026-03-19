@@ -35,7 +35,10 @@ export default function PasswordChangeCard({ user }) {
     setIsLoading(true);
     try {
       // Update password via base44 auth
-      await base44.auth.updateMe({ password: newPassword, current_password: currentPassword });
+      await base44.auth.changePassword({
+        currentPassword,
+        newPassword,
+      });
 
       // Send security notification email
       await base44.functions.invoke('sendPasswordChangeEmail', {
