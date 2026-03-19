@@ -23,6 +23,7 @@ export default function Profile() {
   const location = useLocation();
   const navigate = useNavigate();
   const clubId = searchParams.get('clubId');
+  const tabParam = searchParams.get('tab');
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
