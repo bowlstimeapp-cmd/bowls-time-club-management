@@ -287,6 +287,22 @@ export default function Profile() {
         )}
         
         <div className="max-w-2xl mx-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="w-4 h-4" />Profile
+              </TabsTrigger>
+              <TabsTrigger value="feedback" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />My Feedback
+                {myFeedback.filter(f => f.admin_response).length > 0 && (
+                  <span className="ml-1 bg-emerald-500 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">
+                    {myFeedback.filter(f => f.admin_response).length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
