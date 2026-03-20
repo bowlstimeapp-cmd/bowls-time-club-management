@@ -202,7 +202,7 @@ export default function RinkClashModal({
             const resolution = resolutions[index];
             const isResolved = !!resolution?.type;
             const isExpanded = expandedMove === index;
-            const dynamicSuggestedRink = getDynamicSuggestedRink(clash);
+            const availableRinks = getDynamicAvailableRinks(clash);
 
             const date = clash.existingBooking.date;
             const availTimesForRink = moveRink ? getAvailableTimesForRink(date, parseInt(moveRink)) : allTimeSlots;
