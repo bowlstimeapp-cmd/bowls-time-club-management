@@ -239,19 +239,24 @@ export default function RinkClashModal({
 
                 {!isResolved && (
                   <div className="ml-6 space-y-2">
-                    {dynamicSuggestedRink ? (
+                    {availableRinks.length > 0 ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-gray-600">
-                          Suggested: Rink {dynamicSuggestedRink} is free at this time
+                          {availableRinks.length === 1
+                            ? `Rink ${availableRinks[0]} is free at this time`
+                            : `Rinks ${availableRinks.slice(0, -1).join(', ')} and ${availableRinks[availableRinks.length - 1]} are free at this time`}
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                          onClick={() => handleResolve(index, 'use_suggestion', { rink: dynamicSuggestedRink })}
-                        >
-                          Use Rink {dynamicSuggestedRink}
-                        </Button>
+                        {availableRinks.map(r => (
+                          <Button
+                            key={r}
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => handleResolve(index, 'use_suggestion', { rink: r })}
+                          >
+                            Use Rink {r}
+                          </Button>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-xs text-red-600 font-medium">No alternative rink available at this time</p>
