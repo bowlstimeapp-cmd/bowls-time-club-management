@@ -326,6 +326,10 @@ export default function LeagueAdmin() {
       toast.error('Please enter a league name');
       return;
     }
+    if (!leagueStartTime || !leagueEndTime) {
+      toast.error('Please select a match session');
+      return;
+    }
 
     const data = {
       club_id: clubId,
