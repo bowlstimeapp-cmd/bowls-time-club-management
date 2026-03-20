@@ -173,10 +173,10 @@ export default function BookingModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Match Session *</Label>
+            <Label>Format</Label>
             <Select value={bookingFormat} onValueChange={setBookingFormat}>
-              <SelectTrigger className={!bookingFormat ? 'border-red-300' : ''}>
-                <SelectValue placeholder="Select match session" />
+              <SelectTrigger>
+                <SelectValue placeholder="Select format (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {FORMAT_OPTIONS.map(f => (
