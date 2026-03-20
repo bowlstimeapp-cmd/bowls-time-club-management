@@ -1232,7 +1232,7 @@ export default function LeagueAdmin() {
               </div>
               {club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
                 <div>
-                  <Label>Match Session</Label>
+                  <Label>Match Session *</Label>
                   <Select
                     value={`${leagueStartTime}|${leagueEndTime}`}
                     onValueChange={(v) => {
