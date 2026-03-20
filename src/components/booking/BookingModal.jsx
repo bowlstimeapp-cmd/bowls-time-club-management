@@ -263,9 +263,8 @@ export default function BookingModal({
           </Button>
           <Button 
             onClick={handleConfirm} 
-            disabled={isLoading || (competitionType === 'Other' && !competitionOther.trim())}
+            disabled={isLoading || (competitionType === 'Other' && !competitionOther.trim()) || !bookingFormat}
             className="bg-emerald-600 hover:bg-emerald-700 min-h-0"
-            disabled={isLoading || (competitionType === 'Other' && !competitionOther.trim())}
           >
             {isLoading ? (
               <>
