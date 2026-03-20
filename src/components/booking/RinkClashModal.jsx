@@ -93,10 +93,10 @@ export default function RinkClashModal({
     return occupied;
   }, [allBookings, nonClashingBookings, clashes, resolutions]);
 
-  /** Dynamically compute the best free rink for a clash given current resolutions */
-  const getDynamicSuggestedRink = (clash) => {
+  /** Dynamically compute ALL free rinks for a clash given current resolutions */
+  const getDynamicAvailableRinks = (clash) => {
     const { date, start_time } = clash.proposedBooking;
-    return rinks.find(r => !effectiveOccupied.has(`${date}:${r}:${start_time}`)) || null;
+    return rinks.filter(r => !effectiveOccupied.has(`${date}:${r}:${start_time}`));
   };
 
   /** Available times on a specific rink+date, excluding occupied slots */
