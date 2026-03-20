@@ -1256,15 +1256,9 @@ export default function LeagueAdmin() {
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Match Start Time</Label>
-                    <Input
-                      type="time"
-                      value={leagueStartTime}
-                      onChange={(e) => setLeagueStartTime(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Match End Time</Label>
+                    <Label>Match Start Time *</Label>
+...
+                    <Label>Match End Time *</Label>
                     <Input
                       type="time"
                       value={leagueEndTime}
