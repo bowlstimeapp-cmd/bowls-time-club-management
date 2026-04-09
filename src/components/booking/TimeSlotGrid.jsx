@@ -408,15 +408,17 @@ export default function TimeSlotGrid({
                                       )}
                                     </div>
                                   ) : (
-                                    booking?.competition_type && (
-                                      <span className="text-[10px] lg:text-xs opacity-80 truncate leading-tight">
-                                        {booking.competition_type === 'Other' && booking.competition_other
-                                          ? booking.competition_other
-                                          : booking.competition_type}
-                                        {booking.booking_format && ` – ${booking.booking_format}`}
-                                      </span>
-                                    )
-                                  )}
+                                     (booking?.notes || booking?.competition_type) && (
+                                       <span className="text-[10px] lg:text-xs opacity-80 truncate leading-tight">
+                                         {booking.notes
+                                           ? booking.notes
+                                           : booking.competition_type === 'Other' && booking.competition_other
+                                             ? booking.competition_other
+                                             : booking.competition_type}
+                                         {!booking.notes && booking.booking_format && ` – ${booking.booking_format}`}
+                                       </span>
+                                     )
+                                   )}
 
                                   {isRollup && (
                                     <span className="text-[10px] font-semibold flex items-center gap-0.5 mt-auto">
