@@ -132,7 +132,7 @@ export default function SelectionEditor() {
       setSelections(existingSelection.selections || {});
       setOriginalSelections(existingSelection.selections || {});
       setHomeRinks(existingSelection.home_rinks || 2);
-      setSelectedRinks(existingSelection.selected_rinks || []);
+      setSelectedRinks((existingSelection.selected_rinks || []).map(Number));
       setMatchStartTime(existingSelection.match_start_time || '10:00');
       setMatchEndTime(existingSelection.match_end_time || '14:00');
       setHomeCaptainEmail(existingSelection.home_captain_email || '');
@@ -596,7 +596,7 @@ ${club?.name || 'Your Bowls Club'}
     const [startHour] = matchStartTime.split(':').map(Number);
     const [endHour] = matchEndTime.split(':').map(Number);
     
-    const bookerName = club?.name || `${competition}${matchName ? ` - ${matchName}` : ''}`;
+    const bookerName = `${competition}${matchName ? ` vs ${matchName}` : ''}`;
     const rinkCount = club?.rink_count || 6;
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
@@ -633,7 +633,8 @@ ${club?.name || 'Your Bowls Club'}
         competition_type: 'Club',
         booker_name: bookerName,
         booker_email: user.email,
-        notes: `${competition}${matchName ? ` - ${matchName}` : ''}`,
+        notes: `${competition}${matchName ? ` vs ${matchName}` : ''}`,
+        competition_type: 'Club',
       };
 
       if (existingBooking) {
@@ -972,8 +973,8 @@ ${club?.name || 'Your Bowls Club'}
                   <>
                     <div>
                       <Label>Number of Home Rinks</Label>
-                      <Select value={String(homeRinks)} onValueChange={handleHomeRinksChange}>
-                        <SelectTrigger>
+                      <Select value={String(homeRinks)} onValueChange={handleHomeRinksChange} disabled>
+                        <SelectTrigger className="opacity-60 cursor-not-allowed">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

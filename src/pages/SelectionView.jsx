@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane, Printer, Star } from 'lucide-react';
+import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane, Printer } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
@@ -107,6 +107,18 @@ export default function SelectionView() {
     enabled: !!clubId,
   });
 
+  const { data: allCompetitions = [] } = useQuery({
+    queryKey: ['allCompetitions', clubId],
+    queryFn: async () => {
+      const [clubComps, platformComps] = await Promise.all([
+        base44.entities.Competition.filter({ club_id: clubId }),
+        base44.entities.Competition.list().then(all => all.filter(c => !c.club_id)),
+      ]);
+      return [...clubComps, ...platformComps];
+    },
+    enabled: !!clubId,
+  });
+
   const handlePrint = () => {
     const printContent = printRef.current;
     if (!printContent) return;
@@ -180,6 +192,16 @@ export default function SelectionView() {
 
   const isTopClub = selection.competition === 'Top Club';
   const selections = selection.selections || {};
+
+  const activeComp = allCompetitions.find(c => c.name === selection?.competition);
+  const homeRinksCount = selection?.home_rinks || 2;
+  const awayRinksCount = isTopClub ? 0 : (activeComp?.away_rinks || 0);
+  const playersPerRink = activeComp?.players_per_rink || 4;
+  const dynamicRinks = [
+    ...Array.from({ length: homeRinksCount }, (_, i) => ({ number: i + 1, tag: 'Home' })),
+    ...Array.from({ length: awayRinksCount }, (_, i) => ({ number: homeRinksCount + i + 1, tag: 'Away' })),
+  ];
+  const rinkPositions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -307,7 +329,7 @@ export default function SelectionView() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {RINKS.map(rink => (
+              {dynamicRinks.map(rink => (
                 <Card key={rink.number}>
                   <CardHeader className="bg-emerald-50 py-3">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -320,7 +342,7 @@ export default function SelectionView() {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="space-y-2">
-                      {RINK_POSITIONS.map(position => {
+                      {rinkPositions.map(position => {
                         const positionKey = `rink${rink.number}_${position}`;
                         const memberEmail = selections[positionKey];
                         return (
@@ -336,7 +358,7 @@ export default function SelectionView() {
                               )}
                               {getMemberName(memberEmail)}
                               {isCaptain(memberEmail) && (
-                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" title="Captain" />
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold" title="Captain">C</span>
                               )}
                             </span>
                           </div>
