@@ -194,8 +194,9 @@ export default function SelectionView() {
   const selections = selection.selections || {};
 
   const activeComp = allCompetitions.find(c => c.name === selection?.competition);
-  const homeRinksCount = selection?.home_rinks || 2;
-  const awayRinksCount = isTopClub ? 0 : (activeComp?.away_rinks || 0);
+  // Use competition entity as source of truth when available, fall back to selection fields
+  const homeRinksCount = activeComp ? activeComp.home_rinks : (selection?.home_rinks || 2);
+  const awayRinksCount = isTopClub ? 0 : (activeComp ? (activeComp.away_rinks || 0) : 0);
   const playersPerRink = activeComp?.players_per_rink || 4;
   const dynamicRinks = [
     ...Array.from({ length: homeRinksCount }, (_, i) => ({ number: i + 1, tag: 'Home' })),
