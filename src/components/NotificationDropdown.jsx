@@ -92,7 +92,7 @@ export default function NotificationDropdown({ userEmail, clubId }) {
               {recentNotifications.map((notification) => {
                 const Icon = notificationIcons[notification.type] || Bell;
                 const link = notification.link_page 
-                  ? `${createPageUrl(notification.link_page)}${notification.link_params || ''}` 
+                  ? `${createPageUrl(notification.link_page)}${notification.link_params ? (notification.link_params.startsWith('?') ? notification.link_params : '?' + notification.link_params) : ''}` 
                   : null;
 
                 return (
