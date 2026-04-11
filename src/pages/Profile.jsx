@@ -499,7 +499,7 @@ export default function Profile() {
             </Card>
 
             {/* Accolades */}
-            {clubId && club?.module_accolades && user?.email && (
+            {clubId && user?.email && (
               <PlayerAccolades clubId={clubId} userEmail={user.email} />
             )}
 
