@@ -82,11 +82,10 @@ export default function MyBookings() {
   const leagueBookingIds = new Set(leagueFixtures.map(f => f.booking_id).filter(Boolean));
 
   // Hide league/selection-created bookings from admin's My Bookings
-  const SELECTION_COMPETITION_TYPES = ['Bramley', 'Wessex League', 'Denny', 'Top Club'];
   const bookings = isAdmin
     ? allBookings.filter(b => {
         if (leagueBookingIds.has(b.id)) return false;
-        if (SELECTION_COMPETITION_TYPES.includes(b.competition_type)) return false;
+        if (b.admin_notes === '__selection__') return false;
         return true;
       })
     : allBookings;

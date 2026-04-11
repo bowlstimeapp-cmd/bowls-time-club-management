@@ -634,7 +634,7 @@ ${club?.name || 'Your Bowls Club'}
         booker_name: bookerName,
         booker_email: user.email,
         notes: `${competition}${matchName ? ` vs ${matchName}` : ''}`,
-        competition_type: 'Club',
+        admin_notes: '__selection__',
       };
 
       if (existingBooking) {
