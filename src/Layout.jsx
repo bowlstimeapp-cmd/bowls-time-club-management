@@ -309,7 +309,7 @@ export default function Layout({ children, currentPageName }) {
               </Link>
             )}
 
-            {user?.email && <NotificationDropdown userEmail={user.email} />}
+            {user?.email && <NotificationDropdown userEmail={user.email} clubId={clubId} />}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

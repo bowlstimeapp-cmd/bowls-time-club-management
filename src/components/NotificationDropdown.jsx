@@ -21,7 +21,7 @@ const notificationIcons = {
   team_selection: Users,
 };
 
-export default function NotificationDropdown({ userEmail }) {
+export default function NotificationDropdown({ userEmail, clubId }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -126,7 +126,7 @@ export default function NotificationDropdown({ userEmail }) {
         {notifications.length > 0 && (
           <div className="p-3 border-t">
             <Link
-              to={createPageUrl('Notifications')}
+              to={createPageUrl('Notifications') + (clubId ? `?clubId=${clubId}` : '')}
               onClick={() => setOpen(false)}
               className="block text-center text-sm text-emerald-600 hover:text-emerald-700 font-medium"
             >
