@@ -63,8 +63,6 @@ export default function MyLeagueTeam() {
   const [editingRotaTeam, setEditingRotaTeam] = useState(null);
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
   const [availabilityTeam, setAvailabilityTeam] = useState(null);
-  const [rotaErrorModalOpen, setRotaErrorModalOpen] = useState(false);
-  const [rotaErrors, setRotaErrors] = useState([]); // [{fixture, date, count, required}]
   const [highlightedFixtureIds, setHighlightedFixtureIds] = useState(new Set());
 
   useEffect(() => {
@@ -371,35 +369,7 @@ const handleGenerateRota = async (team) => {
   const openRotaEdit = (team) => {
     setEditingRotaTeam(team);
     setHighlightedFixtureIds(new Set());
-    setRotaErrors([]);
     setEditRotaDialogOpen(true);
-  };
-
-  const handleRotaDone = () => {
-    const liveTeam = teams.find(t => t.id === editingRotaTeam?.id) || editingRotaTeam;
-    const league = leagues.find(l => l.id === liveTeam?.league_id);
-    const required = league?.format === 'triples' ? 3 : 4;
-    const teamFixtures = fixtures
-      .filter(f => f.home_team_id === liveTeam.id || f.away_team_id === liveTeam.id)
-      .sort((a, b) => a.match_date.localeCompare(b.match_date));
-    const rota = liveTeam.fixture_rota || {};
-
-    const errors = [];
-    teamFixtures.forEach(fixture => {
-      const assigned = (rota[fixture.id] || []).length;
-      if (assigned !== required) {
-        errors.push({ fixture, count: assigned, required });
-      }
-    });
-
-    if (errors.length > 0) {
-      setRotaErrors(errors);
-      setHighlightedFixtureIds(new Set(errors.map(e => e.fixture.id)));
-      setRotaErrorModalOpen(true);
-    } else {
-      setHighlightedFixtureIds(new Set());
-      setEditRotaDialogOpen(false);
-    }
   };
 
   const isCaptain = (team) => team.captain_email === user?.email;
@@ -891,41 +861,6 @@ const handleGenerateRota = async (team) => {
           </DialogContent>
         </Dialog>
 
-        {/* Rota Validation Error Modal */}
-        {rotaErrorModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setRotaErrorModalOpen(false)}>
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6" onClick={e => e.stopPropagation()}>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Rota has issues</h2>
-              <p className="text-sm text-gray-500 mb-4">The following fixtures have the wrong number of players assigned:</p>
-              <div className="space-y-2 max-h-64 overflow-y-auto mb-5">
-                {rotaErrors.map(({ fixture, count, required }) => {
-                  const homeTeam = teams.find(t => t.id === fixture.home_team_id);
-                  const awayTeam = teams.find(t => t.id === fixture.away_team_id);
-                  return (
-                    <div key={fixture.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{format(parseISO(fixture.match_date), 'd MMM yyyy')}</p>
-                        <p className="text-xs text-gray-500">{homeTeam?.name} vs {awayTeam?.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-red-600">{count} / {required}</span>
-                        <p className="text-xs text-gray-400">players</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <Button
-                onClick={() => setRotaErrorModalOpen(false)}
-                variant="outline"
-                className="w-full"
-              >
-                Go back to rota
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Player Availability Dialog */}
         <PlayerAvailabilityDialog
           open={availabilityDialogOpen}
@@ -1029,7 +964,7 @@ onCheckedChange={() => handleToggleRotaPlayer(liveEditingTeam, fixture.id, playe
             })()}
             
             <DialogFooter>
-              <Button onClick={handleRotaDone} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={() => setEditRotaDialogOpen(false)} className="bg-emerald-600 hover:bg-emerald-700">
                 Done
               </Button>
             </DialogFooter>
