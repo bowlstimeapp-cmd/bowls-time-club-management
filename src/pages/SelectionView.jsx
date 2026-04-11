@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane, Printer } from 'lucide-react';
+import PlayerAccoladeHover from '@/components/accolades/PlayerAccoladeHover';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
@@ -98,7 +99,7 @@ export default function SelectionView() {
     },
   });
 
-  const { data: club } = useQuery({
+  const { data: allCompetitions = [] } = useQuery({
     queryKey: ['club', clubId],
     queryFn: async () => {
       const clubs = await base44.entities.Club.filter({ id: clubId });
@@ -107,16 +108,16 @@ export default function SelectionView() {
     enabled: !!clubId,
   });
 
-  const { data: allCompetitions = [] } = useQuery({
-    queryKey: ['allCompetitions', clubId],
-    queryFn: async () => {
-      const [clubComps, platformComps] = await Promise.all([
-        base44.entities.Competition.filter({ club_id: clubId }),
-        base44.entities.Competition.list().then(all => all.filter(c => !c.club_id)),
-      ]);
-      return [...clubComps, ...platformComps];
-    },
-    enabled: !!clubId,
+  const { data: accoladeList = [] } = useQuery({
+    queryKey: ['clubAccolades', clubId],
+    queryFn: () => base44.entities.ClubAccolade.filter({ club_id: clubId }),
+    enabled: !!clubId && !!club?.module_accolades,
+  });
+
+  const { data: accoladeAssignments = [] } = useQuery({
+    queryKey: ['clubAccoladeAssignments', clubId],
+    queryFn: () => base44.entities.ClubAccoladeAssignment.filter({ club_id: clubId }),
+    enabled: !!clubId && !!club?.module_accolades,
   });
 
   const handlePrint = () => {
@@ -357,8 +358,10 @@ export default function SelectionView() {
                               ) : (
                                 <User className="w-4 h-4 text-gray-400" />
                               )}
-                              {getMemberName(memberEmail)}
-                              {isCaptain(memberEmail) && (
+                              <PlayerAccoladeHover email={memberEmail} accolades={accoladeList} assignments={accoladeAssignments}>
+                                  {getMemberName(memberEmail)}
+                                </PlayerAccoladeHover>
+                                  {isCaptain(memberEmail) && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold" title="Captain">C</span>
                               )}
                             </span>

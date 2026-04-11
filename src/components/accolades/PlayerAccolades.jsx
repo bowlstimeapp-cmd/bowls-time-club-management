@@ -14,7 +14,7 @@ export default function PlayerAccolades({ clubId, userEmail }) {
   const { data: accolades = [] } = useQuery({
     queryKey: ['clubAccolades', clubId],
     queryFn: () => base44.entities.ClubAccolade.filter({ club_id: clubId }),
-    enabled: !!clubId && assignments.length > 0,
+    enabled: !!clubId,
   });
 
   if (assignments.length === 0) return null;
