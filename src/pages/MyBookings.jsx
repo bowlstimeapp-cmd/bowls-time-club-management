@@ -54,7 +54,22 @@ export default function MyBookings() {
     enabled: !!clubId,
   });
 
-  const { data: bookings = [], isLoading } = useQuery({
+  const { data: membership } = useQuery({
+    queryKey: ['myMembership', clubId, user?.email],
+    queryFn: async () => {
+      const memberships = await base44.entities.ClubMembership.filter({ club_id: clubId, user_email: user.email });
+      return memberships[0];
+    },
+    enabled: !!user?.email && !!clubId,
+  });
+
+  const { data: leagueFixtures = [] } = useQuery({
+    queryKey: ['allLeagueFixtures', clubId],
+    queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const { data: allBookings = [], isLoading } = useQuery({
     queryKey: ['myBookings', clubId, user?.email],
     queryFn: () => base44.entities.Booking.filter({ 
       club_id: clubId, 
@@ -62,6 +77,19 @@ export default function MyBookings() {
     }, '-date'),
     enabled: !!user?.email && !!clubId,
   });
+
+  const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const leagueBookingIds = new Set(leagueFixtures.map(f => f.booking_id).filter(Boolean));
+
+  // Hide league/selection-created bookings from admin's My Bookings
+  const SELECTION_COMPETITION_TYPES = ['Bramley', 'Wessex League', 'Denny', 'Top Club'];
+  const bookings = isAdmin
+    ? allBookings.filter(b => {
+        if (leagueBookingIds.has(b.id)) return false;
+        if (SELECTION_COMPETITION_TYPES.includes(b.competition_type)) return false;
+        return true;
+      })
+    : allBookings;
 
   const cancelMutation = useMutation({
     mutationFn: (booking) => base44.entities.Booking.update(booking.id, { status: 'cancelled' }),
