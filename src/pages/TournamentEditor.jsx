@@ -35,6 +35,7 @@ export default function TournamentEditor() {
   const queryClient = useQueryClient();
   
   const [user, setUser] = useState(null);
+  const [playerSearch, setPlayerSearch] = useState('');
   const [name, setName] = useState('');
   const [tournamentType, setTournamentType] = useState('knockout');
   const [compFormat, setCompFormat] = useState('singles');
@@ -403,8 +404,18 @@ export default function TournamentEditor() {
                         <Users className="w-4 h-4" />
                         Select Players ({selectedPlayers.length})
                       </Label>
+                      <Input
+                        placeholder="Search members..."
+                        value={playerSearch}
+                        onChange={(e) => setPlayerSearch(e.target.value)}
+                        className="mb-2 text-sm"
+                      />
                       <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
-                        {members.map(member => (
+                        {members.filter(m => {
+                          if (!playerSearch) return true;
+                          const name = m.user_name || m.user_email || '';
+                          return name.toLowerCase().includes(playerSearch.toLowerCase());
+                        }).map(member => (
                           <div key={member.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer" onClick={() => togglePlayer(member.user_email)}>
                             <Checkbox checked={selectedPlayers.includes(member.user_email)} onCheckedChange={() => togglePlayer(member.user_email)} />
                             <span className="text-sm">{member.user_name}</span>

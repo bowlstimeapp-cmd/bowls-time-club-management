@@ -64,6 +64,7 @@ export default function PlatformAdmin() {
   
   const [user, setUser] = useState(null);
   const [emailLogFilter, setEmailLogFilter] = useState('');
+  const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('all');
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [feedbackResponse, setFeedbackResponse] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -630,7 +631,21 @@ export default function PlatformAdmin() {
             {/* ── FEEDBACK ── */}
             <TabsContent value="feedback">
               <Card>
-                <CardHeader><CardTitle>User Feedback</CardTitle></CardHeader>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <CardTitle>User Feedback</CardTitle>
+                    <Select value={feedbackStatusFilter} onValueChange={setFeedbackStatusFilter}>
+                      <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="new_feedback">New Feedback</SelectItem>
+                        <SelectItem value="reviewed">Reviewed</SelectItem>
+                        <SelectItem value="implemented">Implemented</SelectItem>
+                        <SelectItem value="abandoned">Abandoned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
                 <CardContent>
                   {feedbacksLoading ? (
                     <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
@@ -652,7 +667,7 @@ export default function PlatformAdmin() {
                           </tr>
                         </thead>
                         <tbody>
-                          {feedbacks.map(feedback => (
+                          {feedbacks.filter(f => feedbackStatusFilter === 'all' || f.status === feedbackStatusFilter || (!f.status && feedbackStatusFilter === 'new_feedback')).map(feedback => (
                             <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedFeedback(feedback); setFeedbackResponse(feedback.admin_response || ''); }}>
                               <td className="py-3 px-2">
                                 <Badge variant={feedback.category === 'bug' ? 'destructive' : feedback.category === 'feature' ? 'default' : 'secondary'}>
