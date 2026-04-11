@@ -421,11 +421,12 @@ useEffect(() => {
       end_time: newEndTime,
       status: booking.status,
       competition_type: booking.competition_type,
-      competition_other: booking.competition_other,
-      booking_format: booking.booking_format,
+      competition_other: booking.competition_other || '',
+      booking_format: booking.booking_format || null,
       booker_name: booking.booker_name,
       booker_email: booking.booker_email,
-      notes: booking.notes,
+      notes: booking.notes || '',
+      admin_notes: booking.admin_notes || '',
       rollup_members: booking.rollup_members || [],
     });
 
