@@ -99,11 +99,23 @@ export default function SelectionView() {
     },
   });
 
-  const { data: allCompetitions = [] } = useQuery({
+  const { data: club } = useQuery({
     queryKey: ['club', clubId],
     queryFn: async () => {
       const clubs = await base44.entities.Club.filter({ id: clubId });
       return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
+  const { data: allCompetitions = [] } = useQuery({
+    queryKey: ['allCompetitions', clubId],
+    queryFn: async () => {
+      const [clubComps, platformComps] = await Promise.all([
+        base44.entities.Competition.filter({ club_id: clubId }),
+        base44.entities.Competition.list().then(all => all.filter(c => !c.club_id)),
+      ]);
+      return [...clubComps, ...platformComps];
     },
     enabled: !!clubId,
   });
