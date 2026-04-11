@@ -32,6 +32,7 @@ import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
 import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
+import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 
 const APP_BASE_URL = window.location.origin;
 
@@ -944,27 +945,21 @@ ${club?.name || 'Your Bowls Club'}
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Captains (optional)</p>
                     <div>
                       <Label>Home Captain</Label>
-                      <Select value={homeCaptainEmail || '__none__'} onValueChange={v => setHomeCaptainEmail(v === '__none__' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="Select home captain" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— None —</SelectItem>
-                          {captainHomeOptions.map(email => (
-                            <SelectItem key={email} value={email}>{getMemberLabel(email)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <MemberSearchSelect
+                        members={members.filter(m => captainHomeOptions.includes(m.user_email))}
+                        value={homeCaptainEmail || null}
+                        onValueChange={(v) => setHomeCaptainEmail(v || '')}
+                        placeholder="Select home captain"
+                      />
                     </div>
                     <div>
                       <Label>Away Captain</Label>
-                      <Select value={awayCaptainEmail || '__none__'} onValueChange={v => setAwayCaptainEmail(v === '__none__' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="Select away captain" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— None —</SelectItem>
-                          {captainAwayOptions.map(email => (
-                            <SelectItem key={email} value={email}>{getMemberLabel(email)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <MemberSearchSelect
+                        members={members.filter(m => captainAwayOptions.includes(m.user_email))}
+                        value={awayCaptainEmail || null}
+                        onValueChange={(v) => setAwayCaptainEmail(v || '')}
+                        placeholder="Select away captain"
+                      />
                     </div>
                   </div>
                 )}

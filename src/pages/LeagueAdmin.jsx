@@ -52,6 +52,7 @@ import {
   CalendarX
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
+import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import { calculateLeagueTable, getScoringRules } from '@/lib/leagueScoring';
 import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
 import RinkClashModal from '@/components/booking/RinkClashModal';
@@ -1471,21 +1472,13 @@ export default function LeagueAdmin() {
               </div>
               <div>
                 <Label>Team Captain</Label>
-                <Select value={captainEmail} onValueChange={setCaptainEmail}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a captain (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={null}>-- No Captain --</SelectItem>
-                    {members.map((member) => (
-                      <SelectItem key={member.user_email} value={member.user_email}>
-                        {member.first_name && member.surname 
-                          ? `${member.first_name} ${member.surname}`
-                          : member.user_name || member.user_email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MemberSearchSelect
+                  members={members}
+                  value={captainEmail}
+                  onValueChange={(v) => setCaptainEmail(v || '')}
+                  placeholder="Select a captain (optional)"
+                  clearLabel="— No Captain —"
+                />
               </div>
             </div>
             <DialogFooter>

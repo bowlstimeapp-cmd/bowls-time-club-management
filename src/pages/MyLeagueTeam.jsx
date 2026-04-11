@@ -38,6 +38,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import PlayerAvailabilityDialog from '@/components/teams/PlayerAvailabilityDialog';
+import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -730,22 +731,13 @@ const handleGenerateRota = async (team) => {
             <div className="space-y-4">
               <div>
                 <Label>Select Player</Label>
-                <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {members
-                      .filter(m => !(selectedTeam?.players || []).includes(m.user_email))
-                      .map((member) => (
-                        <SelectItem key={member.user_email} value={member.user_email}>
-                          {member.first_name && member.surname 
-                            ? `${member.first_name} ${member.surname}`
-                            : member.user_name || member.user_email}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <MemberSearchSelect
+                  members={members.filter(m => !(selectedTeam?.players || []).includes(m.user_email))}
+                  value={selectedPlayer || null}
+                  onValueChange={(v) => setSelectedPlayer(v || '')}
+                  placeholder="Choose a member"
+                  clearLabel="— Clear —"
+                />
               </div>
             </div>
             <DialogFooter>
