@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function PlayerAccoladeHover({ email, accolades = [], assignments = [], children }) {
+  const [open, setOpen] = useState(false);
+
   if (!email) return children;
 
-  // Count assignments for this user
   const myAssignments = assignments.filter(a => a.user_email === email);
   const grouped = {};
   myAssignments.forEach(a => {
@@ -20,9 +21,12 @@ export default function PlayerAccoladeHover({ email, accolades = [], assignments
 
   return (
     <TooltipProvider delayDuration={200}>
-      <Tooltip>
+      <Tooltip open={open} onOpenChange={setOpen}>
         <TooltipTrigger asChild>
-          <span className="cursor-default underline decoration-dotted decoration-amber-400 underline-offset-2">
+          <span
+            className="cursor-pointer underline decoration-dotted decoration-amber-400 underline-offset-2"
+            onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+          >
             {children}
           </span>
         </TooltipTrigger>

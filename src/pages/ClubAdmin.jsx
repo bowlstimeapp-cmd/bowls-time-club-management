@@ -728,6 +728,7 @@ export default function ClubAdmin() {
           isUpdating={updateMembershipMutation.isPending}
           isAdmin={true}
           membershipTypes={membershipTypes}
+          clubId={clubId}
           onSetMemberStatus={(id, status) => {
             setMemberStatusMutation.mutate({ id, member_status: status });
             toast.success(status === 'left' ? 'Member moved to Previous Members' : 'Member reinstated');

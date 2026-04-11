@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import {
   Dialog,
   DialogContent,
@@ -50,7 +52,8 @@ export default function MemberDetailModal({
   isUpdating,
   isAdmin = false,
   membershipTypes = DEFAULT_MEMBERSHIP_TYPES,
-  onSetMemberStatus
+  onSetMemberStatus,
+  clubId
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -83,6 +86,28 @@ export default function MemberDetailModal({
       setIsEditing(false);
     }
   }, [member]);
+
+  const { data: accolades = [] } = useQuery({
+    queryKey: ['clubAccolades', clubId],
+    queryFn: () => base44.entities.ClubAccolade.filter({ club_id: clubId }),
+    enabled: !!clubId && open,
+  });
+
+  const { data: accoladeAssignments = [] } = useQuery({
+    queryKey: ['memberAccoladeAssignments', clubId, member?.user_email],
+    queryFn: () => base44.entities.ClubAccoladeAssignment.filter({ club_id: clubId, user_email: member.user_email }),
+    enabled: !!clubId && !!member?.user_email && open,
+  });
+
+  // Build earned accolades with counts
+  const earnedAccolades = (() => {
+    const grouped = {};
+    accoladeAssignments.forEach(a => { grouped[a.accolade_id] = (grouped[a.accolade_id] || 0) + 1; });
+    return Object.entries(grouped).map(([id, count]) => {
+      const acc = accolades.find(a => a.id === id);
+      return acc ? { accolade: acc, count } : null;
+    }).filter(Boolean);
+  })();
 
   if (!member) return null;
 
@@ -403,6 +428,23 @@ export default function MemberDetailModal({
                   )}
                 </div>
               </div>
+
+              {clubId && earnedAccolades.length > 0 && (
+                <div className="pt-3 border-t">
+                  <Label className="text-gray-500 text-xs mb-2 block">Accolades</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {earnedAccolades.map(({ accolade, count }) => (
+                      <div key={accolade.id} className="flex flex-col items-center bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 min-w-[56px] text-center">
+                        <span className="text-xl">{accolade.emoji || '🏆'}</span>
+                        <span className="text-xs font-medium text-amber-900 leading-tight">{accolade.name}</span>
+                        {count > 1 && (
+                          <span className="text-xs font-bold bg-amber-400 text-white rounded-full px-1.5 mt-0.5">{count}x</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
