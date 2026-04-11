@@ -1,0 +1,36 @@
+{
+  "name": "ClubAccolade",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the accolade (e.g. Club Champion)"
+    },
+    "emoji": {
+      "type": "string",
+      "description": "Emoji icon for the accolade badge"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what the accolade represents"
+    },
+    "allow_multiple_winners": {
+      "type": "boolean",
+      "default": true,
+      "description": "If true, multiple players can hold this accolade simultaneously"
+    }
+  },
+  "required": [
+    "club_id",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

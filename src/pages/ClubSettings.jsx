@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp } from 'lucide-react';
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
+import AccoladesSection from '@/components/accolades/AccoladesSection';
 import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -106,6 +107,12 @@ export default function ClubSettings() {
   const { data: competitions = [] } = useQuery({
     queryKey: ['competitions', clubId],
     queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const { data: members = [] } = useQuery({
+    queryKey: ['clubMembers', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId, status: 'approved' }),
     enabled: !!clubId,
   });
 
@@ -866,6 +873,18 @@ export default function ClubSettings() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Accolades */}
+            <AccoladesSection
+              clubId={clubId}
+              moduleEnabled={!!club?.module_accolades}
+              members={members}
+              onToggleModule={async (v) => {
+                await base44.entities.Club.update(clubId, { module_accolades: v });
+                queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+                toast.success(v ? 'Accolades enabled' : 'Accolades disabled');
+              }}
+            />
 
             {/* Import Bookings */}
             <Card>

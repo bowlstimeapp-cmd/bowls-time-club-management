@@ -11,6 +11,7 @@ import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, Clipb
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
+import PlayerAccolades from '@/components/accolades/PlayerAccolades';
 import PasswordChangeCard from '@/components/profile/PasswordChangeCard';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -496,6 +497,11 @@ export default function Profile() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Accolades */}
+            {clubId && club?.module_accolades && user?.email && (
+              <PlayerAccolades clubId={clubId} userEmail={user.email} />
+            )}
 
             {/* Membership Fee */}
             {clubId && membership && club && (

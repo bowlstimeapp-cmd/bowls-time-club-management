@@ -1,0 +1,233 @@
+{
+  "name": "Club",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Club name"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly identifier"
+    },
+    "description": {
+      "type": "string",
+      "description": "Club description"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Club logo image URL"
+    },
+    "season": {
+      "type": "string",
+      "enum": [
+        "indoor",
+        "outdoor"
+      ],
+      "description": "Whether the club is indoor or outdoor"
+    },
+    "rink_count": {
+      "type": "number",
+      "default": 6,
+      "description": "Number of rinks available"
+    },
+    "opening_time": {
+      "type": "string",
+      "default": "10:00",
+      "description": "Opening time (HH:MM)"
+    },
+    "closing_time": {
+      "type": "string",
+      "default": "21:00",
+      "description": "Closing time (HH:MM)"
+    },
+    "session_duration": {
+      "type": "number",
+      "default": 2,
+      "description": "Session duration in hours"
+    },
+    "use_custom_sessions": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use custom session time ranges instead of fixed duration"
+    },
+    "custom_sessions": {
+      "type": "array",
+      "description": "Array of {start, end} objects defining custom session times",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "primary_admin_email": {
+      "type": "string",
+      "description": "Email of the club's primary admin"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the club is active"
+    },
+    "auto_approve_bookings": {
+      "type": "boolean",
+      "default": false,
+      "description": "Automatically approve new bookings"
+    },
+    "open_rollups": {
+      "type": "boolean",
+      "default": false,
+      "description": "Allow members to join open roll-up sessions booked by other members"
+    },
+    "private_rollups": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Private Roll-up competition type (requires open_rollups)"
+    },
+    "membership_types": {
+      "type": "array",
+      "description": "Available membership types",
+      "default": [
+        "Winter Indoor Member",
+        "Summer Indoor Member",
+        "Outdoor Member",
+        "Social Member"
+      ]
+    },
+    "email_member_notifications": {
+      "type": "boolean",
+      "default": true,
+      "description": "Send email notifications to members when selected"
+    },
+    "sms_member_notifications": {
+      "type": "boolean",
+      "default": false,
+      "description": "Send SMS notifications to members when selected"
+    },
+    "module_rink_booking": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable Rink Booking module"
+    },
+    "module_selection": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable Match Selection module"
+    },
+    "module_competitions": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable Competitions module"
+    },
+    "module_leagues": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable Leagues module"
+    },
+    "module_sms_notifications": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable SMS Notifications module"
+    },
+    "module_homepage": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Club Homepage module (platform admin toggle)"
+    },
+    "module_function_rooms": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Function Room Bookings module"
+    },
+    "module_custom_branding": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Custom Branding module (scorecard layout editor)"
+    },
+    "module_accolades": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Accolades / badge system for members"
+    },
+    "default_landing_page": {
+      "type": "string",
+      "enum": [
+        "rink_booking",
+        "homepage"
+      ],
+      "default": "rink_booking",
+      "description": "Default page members see after selecting the club"
+    },
+    "stripe_secret_key": {
+      "type": "string",
+      "description": "Club's own Stripe secret key (optional, overrides platform key)"
+    },
+    "stripe_publishable_key": {
+      "type": "string",
+      "description": "Club's own Stripe publishable key (optional)"
+    },
+    "membership_fee_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether membership fee collection is enabled"
+    },
+    "membership_fee_amount_pence": {
+      "type": "number",
+      "description": "Default membership fee in pence (e.g. 5000 = \u00a350)"
+    },
+    "membership_fee_description": {
+      "type": "string",
+      "description": "Description shown on the payment page"
+    },
+    "tv_display_cycle_seconds": {
+      "type": "number",
+      "default": 30,
+      "description": "Seconds to display each day before cycling on the TV rink display"
+    },
+    "alt_view_selection": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use alternative table view for the Selection page"
+    },
+    "alt_view_leagues": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use alternative table view for the Leagues page"
+    },
+    "scorecard_format": {
+      "type": "string",
+      "enum": [
+        "pdf",
+        "xlsx"
+      ],
+      "default": "pdf",
+      "description": "Format for generated scorecards (PDF or Excel/XLSX)"
+    },
+    "use_custom_scorecard_layout": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the club is using a custom scorecard layout"
+    },
+    "function_room_api_key": {
+      "type": "string",
+      "description": "API key for the public function room booking REST endpoint"
+    }
+  },
+  "required": [
+    "name",
+    "slug",
+    "primary_admin_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
