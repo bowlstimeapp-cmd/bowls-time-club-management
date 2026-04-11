@@ -144,7 +144,17 @@ export default function BulkBookingModal({
           </div>
 
           <div>
-            <Label className="mb-2 block">Select Rinks *</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Select Rinks *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedRinks(selectedRinks.length === rinks.length ? [] : [...rinks])}
+              >
+                {selectedRinks.length === rinks.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {rinks.map(rinkNumber => (
                 <div
