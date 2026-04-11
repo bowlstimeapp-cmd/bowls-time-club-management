@@ -916,7 +916,10 @@ const handleGenerateRota = async (team) => {
                 })}
               </div>
               <Button
-                onClick={() => setRotaErrorModalOpen(false)}
+                onClick={() => {
+                  setRotaErrorModalOpen(false);
+                  setEditRotaDialogOpen(true);
+                }}
                 variant="outline"
                 className="w-full"
               >
