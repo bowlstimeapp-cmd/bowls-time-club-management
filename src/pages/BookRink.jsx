@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfToday } from 'date-fns';
@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import NewUserTour, { isTourEnabled, hasTourBeenDismissed, TOUR_DATE, TOUR_DATE_STRING } from '@/components/tour/NewUserTour';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -44,12 +45,23 @@ export default function BookRink() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
 
+  // Tour state
+  const [tourStep, setTourStep] = useState(-1); // -1 = not started
+  const [tourBooking, setTourBooking] = useState(null); // temp in-memory booking
+  const tourSlot1Ref = useRef(null);
+  const tourSlot2Ref = useRef(null);
+  const tourBookBtnRef = useRef(null);
+
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const loadUser = async () => {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
+      // Check if tour should be shown
+      if (isTourEnabled() && !(await hasTourBeenDismissed(currentUser))) {
+        setTourStep(0);
+      }
     };
     loadUser();
   }, []);
@@ -123,11 +135,17 @@ useEffect(() => {
     enabled: !!clubId,
   });
 
-  const { data: bookings = [], isLoading } = useQuery({
+  const { data: bookingsFromDB = [], isLoading } = useQuery({
     queryKey: ['bookings', clubId, dateString],
     queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: dateString }),
     enabled: !!clubId,
   });
+
+  // Merge in tour booking (non-persistent) if on tour date
+  const isTourDate = dateString === TOUR_DATE_STRING;
+  const bookings = isTourDate && tourBooking
+    ? [...bookingsFromDB, tourBooking]
+    : bookingsFromDB;
 
   const createBookingMutation = useMutation({
     mutationFn: (bookingData) => base44.entities.Booking.create(bookingData),
@@ -180,7 +198,30 @@ useEffect(() => {
     setDeletingBooking(false);
   };
 
+  const handleTourMoveBooking = (booking, newRink, newStartTime) => {
+    if (booking.id !== 'tour-booking') return;
+    let newEndTime;
+    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
+      const session = club.custom_sessions.find(s => s.start === newStartTime);
+      newEndTime = session ? session.end : newStartTime;
+    } else {
+      const duration = club?.session_duration || 2;
+      const [startHour, startMin = 0] = newStartTime.split(':').map(Number);
+      const endMins = startHour * 60 + startMin + duration * 60;
+      newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
+    }
+    setTourBooking(prev => prev ? { ...prev, rink_number: newRink, start_time: newStartTime, end_time: newEndTime } : prev);
+    setTourStep(4);
+  };
+
   const handleMoveBooking = async (booking, newRink, newStartTime) => {
+    // Intercept tour move — only allow dropping onto rink 2 at 09:00
+    if (tourStep === 3 && booking.id === 'tour-booking') {
+      if (newRink === 2 && newStartTime === '09:00') {
+        handleTourMoveBooking(booking, newRink, newStartTime);
+      }
+      return;
+    }
     // Find end time from custom sessions or compute from duration
     let newEndTime;
     if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
@@ -310,7 +351,33 @@ useEffect(() => {
 
   const handleBookSelected = () => {
     if (selectedSlots.length === 0) return;
-    
+
+    // Tour: step 2 - create a temp booking instead of persisting
+    if (tourStep === 2) {
+      const bookerName = user?.first_name && user?.surname
+        ? `${user.first_name} ${user.surname}`
+        : (user?.full_name || user?.email || 'You');
+      const slot = selectedSlots[0];
+      const tempBooking = {
+        id: 'tour-booking',
+        club_id: clubId,
+        rink_number: slot.rink,
+        date: TOUR_DATE_STRING,
+        start_time: slot.slot.start,
+        end_time: slot.slot.end,
+        status: 'approved',
+        competition_type: 'Club',
+        booker_name: bookerName,
+        booker_email: user?.email,
+        notes: 'Tour booking',
+        rollup_members: [],
+      };
+      setTourBooking(tempBooking);
+      setSelectedSlots([]);
+      setTourStep(3);
+      return;
+    }
+
     // Validate booking is not in the past
     const now = new Date();
     const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
@@ -567,6 +634,7 @@ useEffect(() => {
                   )}
                   {!bulkDeleteMode && selectedSlots.length > 0 && (
                     <Button 
+                      ref={tourBookBtnRef}
                       onClick={handleBookSelected}
                       className="bg-emerald-600 hover:bg-emerald-700"
                     >
@@ -590,8 +658,22 @@ useEffect(() => {
                   currentUserEmail={user?.email}
                   club={club}
                   selectedSlots={selectedSlots}
-                  onMultiSlotSelect={setSelectedSlots}
+                  onMultiSlotSelect={(slots) => {
+                    // Tour step 1: only allow clicking rink 1 at 9am
+                    if (tourStep === 1) {
+                      const isHighlightedSlot = slots.some(s => s.rink === 1 && s.slot.start === '09:00');
+                      if (isHighlightedSlot) {
+                        setSelectedSlots(slots);
+                        setTourStep(2);
+                      }
+                      return;
+                    }
+                    // During tour steps 2-3, block further slot changes
+                    if (tourStep >= 2 && tourStep <= 3) return;
+                    setSelectedSlots(slots);
+                  }}
                   onBookingClick={(booking) => {
+                    if (tourStep >= 1 && tourStep <= 3) return; // block during tour
                     setSelectedBooking(booking);
                     setBookingDetailOpen(true);
                   }}
@@ -599,7 +681,7 @@ useEffect(() => {
                   joinLoading={joiningRollup}
                   isAdmin={isAdmin}
                   onMoveBooking={handleMoveBooking}
-                  onSwapBookings={handleSwapBookings}
+                  onSwapBookings={tourStep >= 1 && tourStep <= 3 ? undefined : handleSwapBookings}
                   leagueFixtures={leagueFixtures}
                   leagueTeams={leagueTeams}
                   leagues={leagues}
@@ -608,6 +690,8 @@ useEffect(() => {
                   onToggleBulkDelete={toggleBulkDeleteBooking}
                   copyMode={copyMode}
                   onCopyBooking={handleCopyBooking}
+                  tourSlot1Ref={tourSlot1Ref}
+                  tourSlot2Ref={tourSlot2Ref}
                 />
               )}
             </CardContent>
@@ -642,6 +726,7 @@ useEffect(() => {
         {!bulkDeleteMode && selectedSlots.length > 0 && (
           <div className="fixed bottom-6 left-6 z-40">
             <Button
+              ref={tourStep === 2 ? tourBookBtnRef : null}
               onClick={handleBookSelected}
               className="bg-emerald-600 hover:bg-emerald-700 shadow-lg rounded-full px-5 py-3 h-auto text-base font-semibold"
             >
@@ -704,6 +789,32 @@ useEffect(() => {
           onDelete={handleDeleteBooking}
           deleteLoading={deletingBooking}
         />
+
+        {/* New User Tour */}
+        {tourStep >= 0 && (
+          <NewUserTour
+            user={user}
+            step={tourStep}
+            setStep={setTourStep}
+            onDismiss={() => {
+              setTourStep(-1);
+              setTourBooking(null);
+              setSelectedSlots([]);
+              setSelectedDate(startOfToday());
+            }}
+            onComplete={() => {
+              setTourStep(-1);
+              setTourBooking(null);
+              setSelectedSlots([]);
+              setSelectedDate(startOfToday());
+            }}
+            onTourDateChange={(date) => setSelectedDate(date)}
+            tourBooking={tourBooking}
+            slot1Ref={tourSlot1Ref}
+            slot2Ref={tourSlot2Ref}
+            bookButtonRef={tourBookBtnRef}
+          />
+        )}
       </div>
     </div>
   );

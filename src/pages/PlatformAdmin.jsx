@@ -56,6 +56,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
 import MarketingPDFGenerator from '@/components/admin/MarketingPDFGenerator';
+import PlatformSettings from '@/components/admin/PlatformSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -494,7 +495,7 @@ export default function PlatformAdmin() {
         >
           <Tabs defaultValue="clubs" className="w-full">
             <div className="overflow-x-auto mb-6">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6">
                 <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
                 <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
                 <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
@@ -508,6 +509,7 @@ export default function PlatformAdmin() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="emails" className="whitespace-nowrap">Sent Emails</TabsTrigger>
+                <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
               </TabsList>
             </div>
 
@@ -844,6 +846,10 @@ export default function PlatformAdmin() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+            {/* ── SETTINGS ── */}
+            <TabsContent value="settings">
+              <PlatformSettings />
             </TabsContent>
           </Tabs>
         </motion.div>
