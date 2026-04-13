@@ -116,19 +116,7 @@ export default function ProspectCRM() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['prospects'] }),
   });
 
-  if (user && user.role !== 'admin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center p-8">
-          <ShieldAlert className="w-16 h-16 mx-auto mb-4 text-red-400" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <Link to={createPageUrl('ClubSelector')}><Button>Go Home</Button></Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Stats
+  // Stats — must be before any conditional return
   const stats = useMemo(() => {
     const total = prospects.length;
     const byStatus = {};
@@ -147,6 +135,18 @@ export default function ProspectCRM() {
     const matchStatus = statusFilter === 'all' || p.contact_status === statusFilter;
     return matchSearch && matchStatus;
   }), [prospects, search, statusFilter]);
+
+  if (user && user.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8">
+          <ShieldAlert className="w-16 h-16 mx-auto mb-4 text-red-400" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <Link to={createPageUrl('ClubSelector')}><Button>Go Home</Button></Link>
+        </div>
+      </div>
+    );
+  }
 
   const openCreate = () => { setEditingProspect(null); setFormData(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (p) => { setEditingProspect(p); setFormData({ ...EMPTY_FORM, ...p }); setDialogOpen(true); };
@@ -175,7 +175,6 @@ export default function ProspectCRM() {
         body: emailPreview.body.replace(/\n/g, '<br/>'),
         from_name: 'BowlsTime',
       });
-      // Mark as contacted and update date
       await base44.entities.ProspectClub.update(emailTarget.id, {
         contact_status: emailTarget.contact_status === 'not_contacted' ? 'contacted' : emailTarget.contact_status,
         last_contacted_date: new Date().toISOString().split('T')[0],

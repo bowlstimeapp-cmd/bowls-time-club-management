@@ -1,0 +1,166 @@
+{
+  "name": "League",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "name": {
+      "type": "string",
+      "description": "League name"
+    },
+    "description": {
+      "type": "string",
+      "description": "League description"
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "triples",
+        "fours"
+      ],
+      "default": "fours",
+      "description": "League format - triples (3 players) or fours (4 players)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "League start date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "League end date"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Weekly match start time (HH:MM)"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Weekly match end time (HH:MM)"
+    },
+    "multi_session": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the league spans multiple sessions"
+    },
+    "selected_sessions": {
+      "type": "array",
+      "description": "Array of {start, end} session objects when multi_session is true",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "draft"
+      ],
+      "default": "draft",
+      "description": "League status"
+    },
+    "fixtures_generated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether fixtures have been generated"
+    },
+    "bookings_created": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether rink bookings have been created"
+    },
+    "force_even_fixtures": {
+      "type": "boolean",
+      "default": true,
+      "description": "Force even number of games between all teams"
+    },
+    "league_rinks": {
+      "type": "array",
+      "description": "Rink numbers available for this league's fixtures.",
+      "items": {
+        "type": "number"
+      },
+      "default": []
+    },
+    "blacklisted_dates": {
+      "type": "array",
+      "description": "Individual dates where no fixtures should be scheduled",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "scorecards_pdf_url": {
+      "type": "string",
+      "description": "URL of the generated scorecards PDF"
+    },
+    "is_sets": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the league uses sets scoring"
+    },
+    "sets_ends": {
+      "type": "number",
+      "description": "Number of ends per set (e.g. 8)"
+    },
+    "scoring_points_per_set": {
+      "type": "boolean",
+      "default": false,
+      "description": "Award points per set win"
+    },
+    "scoring_points_per_set_value": {
+      "type": "number",
+      "description": "Points awarded per set win"
+    },
+    "scoring_game_win": {
+      "type": "boolean",
+      "default": false,
+      "description": "Award points for overall game win (winning more sets)"
+    },
+    "scoring_game_win_value": {
+      "type": "number",
+      "description": "Points awarded for winning the game"
+    },
+    "scoring_standard_win": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use standard 2 points per win scoring"
+    },
+    "scoring_highest_shots": {
+      "type": "boolean",
+      "default": false,
+      "description": "Award a point for highest combined shots across all sets"
+    }
+  },
+  "required": [
+    "club_id",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

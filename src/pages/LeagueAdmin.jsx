@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { 
   Plus, 
   Trophy, 
@@ -89,6 +90,9 @@ export default function LeagueAdmin() {
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
   const [leagueForceEven, setLeagueForceEven] = useState(true);
   const [leagueRinks, setLeagueRinks] = useState([]);
+  const [leagueMultiSession, setLeagueMultiSession] = useState(false);
+  const [leagueSelectedSessions, setLeagueSelectedSessions] = useState([]);
+
   // Sets scoring config
   const [scoringPointsPerSet, setScoringPointsPerSet] = useState(false);
   const [scoringPointsPerSetValue, setScoringPointsPerSetValue] = useState(1);
@@ -276,6 +280,8 @@ export default function LeagueAdmin() {
     setLeagueSetsEnds(8);
     setLeagueForceEven(true);
     setLeagueRinks([]);
+    setLeagueMultiSession(false);
+    setLeagueSelectedSessions([]);
     setScoringPointsPerSet(false);
     setScoringPointsPerSetValue(1);
     setScoringGameWin(false);
@@ -305,6 +311,8 @@ export default function LeagueAdmin() {
     setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueForceEven(league.force_even_fixtures !== false);
     setLeagueRinks(league.league_rinks || []);
+    setLeagueMultiSession(league.multi_session || false);
+    setLeagueSelectedSessions(league.selected_sessions || []);
     setScoringPointsPerSet(league.scoring_points_per_set || false);
     setScoringPointsPerSetValue(league.scoring_points_per_set_value ?? 1);
     setScoringGameWin(league.scoring_game_win || false);
@@ -346,6 +354,8 @@ export default function LeagueAdmin() {
       sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
       force_even_fixtures: leagueForceEven,
       league_rinks: leagueRinks,
+      multi_session: leagueMultiSession,
+      selected_sessions: leagueMultiSession ? leagueSelectedSessions : [],
       scoring_points_per_set: leagueIsSets ? scoringPointsPerSet : false,
       scoring_points_per_set_value: leagueIsSets && scoringPointsPerSet ? (parseFloat(scoringPointsPerSetValue) || 1) : null,
       scoring_game_win: leagueIsSets ? scoringGameWin : false,
@@ -604,6 +614,10 @@ export default function LeagueAdmin() {
     const leagueEndTime = league.end_time || '21:00';
 
     const getSessionSlots = () => {
+      // If multi-session is enabled and sessions are selected, use those directly
+      if (league.multi_session && league.selected_sessions && league.selected_sessions.length > 0) {
+        return league.selected_sessions.map(s => ({ start_time: s.start, end_time: s.end }));
+      }
       if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
         const timeToMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
         const startMins = timeToMins(leagueStartTime);
@@ -1232,39 +1246,90 @@ export default function LeagueAdmin() {
                 </div>
               </div>
               {club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
-                <div>
-                  <Label>Match Session *</Label>
-                  <Select
-                    value={`${leagueStartTime}|${leagueEndTime}`}
-                    onValueChange={(v) => {
-                      const [s, e] = v.split('|');
-                      setLeagueStartTime(s);
-                      setLeagueEndTime(e);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a session" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {club.custom_sessions.map((session, i) => (
-                        <SelectItem key={i} value={`${session.start}|${session.end}`}>
-                          {session.start} – {session.end}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Match Session *</Label>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="multi-session"
+                        checked={leagueMultiSession}
+                        onCheckedChange={(checked) => {
+                          setLeagueMultiSession(checked);
+                          setLeagueSelectedSessions([]);
+                          if (!checked) {
+                            // reset to single session defaults
+                            setLeagueStartTime(club.custom_sessions[0]?.start || '18:00');
+                            setLeagueEndTime(club.custom_sessions[0]?.end || '21:00');
+                          }
+                        }}
+                      />
+                      <Label htmlFor="multi-session" className="cursor-pointer text-sm font-normal">League spans multiple sessions</Label>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">Toggle this for when a league takes up multiple sessions e.g. 6–7pm and 7–8pm.</p>
+                  {leagueMultiSession ? (
+                    <div className="space-y-2">
+                      {club.custom_sessions.map((session, i) => {
+                        const key = `${session.start}|${session.end}`;
+                        const isSelected = leagueSelectedSessions.some(s => s.start === session.start && s.end === session.end);
+                        return (
+                          <label key={i} className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                setLeagueSelectedSessions(prev =>
+                                  checked
+                                    ? [...prev, { start: session.start, end: session.end }]
+                                    : prev.filter(s => !(s.start === session.start && s.end === session.end))
+                                );
+                              }}
+                            />
+                            <span className="text-sm">{session.start} – {session.end}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Select
+                      value={`${leagueStartTime}|${leagueEndTime}`}
+                      onValueChange={(v) => {
+                        const [s, e] = v.split('|');
+                        setLeagueStartTime(s);
+                        setLeagueEndTime(e);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a session" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {club.custom_sessions.map((session, i) => (
+                          <SelectItem key={i} value={`${session.start}|${session.end}`}>
+                            {session.start} – {session.end}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Match Start Time *</Label>
-...
-                    <Label>Match End Time *</Label>
-                    <Input
-                      type="time"
-                      value={leagueEndTime}
-                      onChange={(e) => setLeagueEndTime(e.target.value)}
-                    />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Match Start Time *</Label>
+                      <Input
+                        type="time"
+                        value={leagueStartTime}
+                        onChange={(e) => setLeagueStartTime(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Match End Time *</Label>
+                      <Input
+                        type="time"
+                        value={leagueEndTime}
+                        onChange={(e) => setLeagueEndTime(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
