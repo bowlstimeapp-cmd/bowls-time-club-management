@@ -906,6 +906,7 @@ useEffect(() => {
             user={user}
             step={tourStep}
             setStep={setTourStep}
+            hasSlotSelected={selectedSlots.length > 0}
             onDismiss={() => {
               setTourStep(-1);
               setTourBooking(null);

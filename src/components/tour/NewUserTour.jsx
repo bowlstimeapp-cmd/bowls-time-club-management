@@ -131,6 +131,7 @@ export default function NewUserTour({
   bookingDetailCancelRef, // ref to "Cancel Booking" button inside detail modal
   step,
   setStep,
+  hasSlotSelected, // true when a slot is currently selected (to trigger book button measurement)
   // callbacks
   onTourBookingModalOpen,   // () => void – tell parent to show tour booking modal
   onTourBookingModalClose,  // () => void
@@ -144,6 +145,11 @@ export default function NewUserTour({
   const [slot2Rect, setSlot2Rect] = useState(null);
   const [slot1_10Rect, setSlot1_10Rect] = useState(null);
   const [bookBtnRect, setBookBtnRect] = useState(null);
+
+  // Clear book button rect when entering step 1 so it only shows after slot is selected
+  useEffect(() => {
+    if (step === 1 && !hasSlotSelected) setBookBtnRect(null);
+  }, [step, hasSlotSelected]);
   const [tourBookingRect, setTourBookingRect] = useState(null);
   const [cancelBtnRect, setCancelBtnRect] = useState(null);
   const [navRinkRect, setNavRinkRect] = useState(null);
@@ -172,7 +178,7 @@ export default function NewUserTour({
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
-  }, [step, slot1Ref, slot2Ref, slot1_10Ref, bookButtonRef, tourBookingRef, bookingDetailCancelRef]);
+  }, [step, hasSlotSelected, slot1Ref, slot2Ref, slot1_10Ref, bookButtonRef, tourBookingRef, bookingDetailCancelRef]);
 
   const handleDismiss = async () => {
     await dismissTour();
@@ -192,13 +198,16 @@ export default function NewUserTour({
     );
   }
 
-  // Step 1: Select rink 1 @ 9am
+  // Step 1: Select rink 1 @ 9am — once selected, also highlight the Book button
   if (step === 1) {
     return (
       <>
         <HighlightRing rect={slot1Rect} />
+        {bookBtnRect && <HighlightRing rect={bookBtnRect} />}
         <TourModal
-          message="To choose a session to book, click a rink on a time where a booking doesn't already exist. For the example, choose the highlighted session."
+          message={bookBtnRect
+            ? "Great! Now click the 'Book 1 Slot' button to continue."
+            : "To choose a session to book, click a rink on a time where a booking doesn't already exist. For the example, choose the highlighted session."}
           onDismiss={handleDismiss}
         />
       </>
