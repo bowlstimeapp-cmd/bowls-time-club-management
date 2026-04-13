@@ -17,7 +17,7 @@ export default function LeagueAdminTableView({
   leagues, teams, fixtures, club, members,
   onEditLeague, onDeleteLeague, onAddTeam, onEditTeam, onDeleteTeam,
   onGenerateFixtures, onBookRinks, onViewFixtures, onViewTable, onBlacklist,
-  generatingFixtures, bookingRinks, onGenerateScorecards,
+  generatingFixtures, bookingRinks, onGenerateScorecards, onOpenScores,
 }) {
   const [expandedLeague, setExpandedLeague] = useState(null);
   const toggle = (id) => setExpandedLeague(prev => prev === id ? null : id);
@@ -92,6 +92,9 @@ export default function LeagueAdminTableView({
                 )}
                 {league.fixtures_generated && (
                   <>
+                    <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onOpenScores(league)} title="Scores">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onViewFixtures(league)} title="View Fixtures">
                       <List className="w-3.5 h-3.5" />
                     </Button>

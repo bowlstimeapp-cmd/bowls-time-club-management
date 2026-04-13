@@ -968,6 +968,7 @@ export default function LeagueAdmin() {
             onBookRinks={handleBookRinks}
             onViewFixtures={viewFixtures}
             onViewTable={viewLeagueTable}
+            onOpenScores={openScoresModal}
             onBlacklist={(league) => { setBlacklistLeague(league); setBlacklistDialogOpen(true); }}
             generatingFixtures={generatingFixtures}
             bookingRinks={bookingRinks}
