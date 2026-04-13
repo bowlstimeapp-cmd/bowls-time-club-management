@@ -7,13 +7,9 @@ import { ArrowRight } from 'lucide-react';
 export const TOUR_DATE = new Date(2999, 0, 1);
 export const TOUR_DATE_STRING = '2999-01-01';
 
-// Check if the platform tour is enabled
+// Tour is always enabled by default for all users
 export function isTourEnabled() {
-  try {
-    return localStorage.getItem('bowlstime_tour_enabled') === 'true';
-  } catch {
-    return false;
-  }
+  return true;
 }
 
 // Check if user has already completed/dismissed
@@ -288,10 +284,7 @@ export default function NewUserTour({
             </p>
             <div className="mt-6 flex justify-center">
               <Button
-                onClick={async () => {
-                  await dismissTour();
-                  onComplete();
-                }}
+                onClick={onComplete}
                 className="bg-emerald-600 hover:bg-emerald-700"
               >
                 Finish Tour

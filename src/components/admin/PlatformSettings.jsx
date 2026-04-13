@@ -1,21 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Settings } from 'lucide-react';
 
-const TOUR_KEY = 'bowlstime_tour_enabled';
-
 export default function PlatformSettings() {
-  const [tourEnabled, setTourEnabled] = useState(() => {
-    try { return localStorage.getItem(TOUR_KEY) === 'true'; } catch { return false; }
-  });
-
-  const handleToggleTour = (checked) => {
-    setTourEnabled(checked);
-    try { localStorage.setItem(TOUR_KEY, checked ? 'true' : 'false'); } catch {}
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -26,20 +13,14 @@ export default function PlatformSettings() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">New User Tour</Label>
-              <p className="text-sm text-gray-500 mt-0.5">
-                When enabled, new users who visit the Rink Booking page for the first time will be shown an interactive guided tour.
-              </p>
-            </div>
-            <Switch
-              checked={tourEnabled}
-              onCheckedChange={handleToggleTour}
-            />
+          <div>
+            <p className="text-base font-medium">New User Tour</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              The interactive new user tour is shown to all users by default when they visit the Rink Booking page. It will continue to appear each session until the user clicks "Close the New User Tour and do not show again".
+            </p>
           </div>
-          <p className="text-xs text-amber-600 mt-3 bg-amber-50 rounded p-2 border border-amber-100">
-            ⚠ This setting is stored locally in the browser. It must be enabled on each device/browser where you want the tour to be active.
+          <p className="text-xs text-emerald-700 mt-3 bg-emerald-50 rounded p-2 border border-emerald-100">
+            ✓ Tour is active for all users who haven't permanently dismissed it.
           </p>
         </div>
       </CardContent>
