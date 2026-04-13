@@ -200,6 +200,14 @@ useEffect(() => {
   };
 
   const handleDeleteBooking = async (booking) => {
+    // Tour bookings are in-memory only — just remove them locally
+    if (booking.id?.startsWith('tour-')) {
+      setTourBooking(null);
+      setTourBookings2([]);
+      setBookingDetailOpen(false);
+      setSelectedBooking(null);
+      return;
+    }
     setDeletingBooking(true);
     await base44.entities.Booking.update(booking.id, { status: 'cancelled' });
     if (isAdmin && booking.booker_email !== user?.email) {
