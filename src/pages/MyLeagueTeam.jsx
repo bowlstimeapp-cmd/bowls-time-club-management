@@ -409,6 +409,10 @@ const handleGenerateRota = async (team) => {
     if (!printContent) return;
     
     const league = viewingRotaTeam ? leagues.find(l => l.id === viewingRotaTeam.league_id) : null;
+    const dateRange = (league?.start_date && league?.end_date)
+      ? `${format(parseISO(league.start_date), 'd MMM yyyy')} – ${format(parseISO(league.end_date), 'd MMM yyyy')}`
+      : '';
+    const leagueLine = [league?.name, league?.start_time ? league.start_time : null].filter(Boolean).join(' - ');
     
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -416,22 +420,31 @@ const handleGenerateRota = async (team) => {
         <head>
           <title>${viewingRotaTeam?.name} - Player Rota</title>
           <style>
+            @page { margin: 15mm; }
+            html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .logo { max-height: 60px; margin-bottom: 10px; }
-            h1 { font-size: 18px; margin-bottom: 10px; }
-            h2 { font-size: 14px; margin-bottom: 20px; color: #666; }
+            .header { text-align: center; margin-bottom: 16px; }
+            .logo { max-height: 60px; margin-bottom: 8px; }
+            .club-name { font-size: 13px; color: #555; margin-bottom: 4px; }
+            h1 { font-size: 20px; font-weight: bold; margin: 0 0 4px 0; }
+            h2 { font-size: 14px; margin: 0 0 4px 0; color: #444; }
+            .date-range { font-size: 12px; color: #777; margin-bottom: 16px; }
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-            th { background: #f5f5f5; font-weight: bold; }
+            th { background: #f0f0f0; font-weight: bold; }
             .fixture-cell { text-align: left; white-space: nowrap; }
             .x-mark { font-weight: bold; color: #059669; }
+            tbody tr:nth-child(even) { background-color: #f7f7f7; }
+            tbody tr:last-child { background-color: #efefef; }
           </style>
         </head>
         <body>
           <div class="header">
             ${club?.logo_url ? `<img src="${club.logo_url}" class="logo" alt="${club?.name}" />` : ''}
-            <div>${club?.name || ''}</div>
+            <div class="club-name">${club?.name || ''}</div>
+            <h1>${viewingRotaTeam?.name || ''}</h1>
+            <h2>${leagueLine}</h2>
+            ${dateRange ? `<div class="date-range">${dateRange}</div>` : ''}
           </div>
           ${printContent.innerHTML}
         </body>
@@ -812,9 +825,6 @@ const handleGenerateRota = async (team) => {
                 
                 return (
                   <>
-                    <h1>{viewingRotaTeam.name}</h1>
-                    <h2>{league?.name} - {league?.format === 'triples' ? 'Triples' : 'Fours'}</h2>
-                    
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse text-sm">
                         <thead>
@@ -839,7 +849,7 @@ const handleGenerateRota = async (team) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {teamFixtures.map(fixture => {
+                          {teamFixtures.map((fixture, rowIdx) => {
                             const homeTeam = teams.find(t => t.id === fixture.home_team_id);
                             const awayTeam = teams.find(t => t.id === fixture.away_team_id);
                             const isHome = fixture.home_team_id === viewingRotaTeam.id;
@@ -847,7 +857,7 @@ const handleGenerateRota = async (team) => {
                             const rotaPlayers = rota[fixture.id] || [];
                             
                             return (
-                              <tr key={fixture.id}>
+                              <tr key={fixture.id} className={rowIdx % 2 === 1 ? 'bg-gray-50' : ''}>
                                 <td className="border p-2 fixture-cell">
                                   vs {opponent?.name}
                                 </td>
