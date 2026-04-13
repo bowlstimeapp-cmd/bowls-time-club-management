@@ -80,25 +80,34 @@ function WelcomeModal({ onStart, onDismiss }) {
   );
 }
 
-// Highlight ring helper
-function HighlightRing({ rect, color = '#10b981', shadowColor = 'rgba(16,185,129,0.2)' }) {
+// Highlight ring helper — dashed border with flashing background fill
+function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.18)', shadowColor = 'rgba(16,185,129,0.2)' }) {
   if (!rect) return null;
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: rect.top - 4,
-        left: rect.left - 4,
-        width: rect.width + 8,
-        height: rect.height + 8,
-        zIndex: 9050,
-        border: `2px dashed ${color}`,
-        borderRadius: 10,
-        boxShadow: `0 0 0 4px ${shadowColor}`,
-        pointerEvents: 'none',
-        animation: 'pulse 1.5s infinite',
-      }}
-    />
+    <>
+      <style>{`
+        @keyframes tourFlash {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
+      <div
+        style={{
+          position: 'fixed',
+          top: rect.top - 4,
+          left: rect.left - 4,
+          width: rect.width + 8,
+          height: rect.height + 8,
+          zIndex: 9050,
+          border: `2px solid ${color}`,
+          borderRadius: 10,
+          backgroundColor: bgColor,
+          boxShadow: `0 0 0 4px ${shadowColor}`,
+          pointerEvents: 'none',
+          animation: 'tourFlash 1s ease-in-out infinite',
+        }}
+      />
+    </>
   );
 }
 
@@ -202,10 +211,12 @@ export default function NewUserTour({
   if (step === 1) {
     return (
       <>
-        <HighlightRing rect={slot1Rect} />
-        {bookBtnRect && <HighlightRing rect={bookBtnRect} />}
+        {!hasSlotSelected && <HighlightRing rect={slot1Rect} />}
+        {hasSlotSelected && bookBtnRect && (
+          <HighlightRing rect={bookBtnRect} color="#059669" bgColor="rgba(5,150,105,0.22)" shadowColor="rgba(5,150,105,0.25)" />
+        )}
         <TourModal
-          message={bookBtnRect
+          message={hasSlotSelected
             ? "Great! Now click the 'Book 1 Slot' button to continue."
             : "To choose a session to book, click a rink on a time where a booking doesn't already exist. For the example, choose the highlighted session."}
           onDismiss={handleDismiss}
