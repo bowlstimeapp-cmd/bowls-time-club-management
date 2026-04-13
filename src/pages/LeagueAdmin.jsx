@@ -58,6 +58,7 @@ import { calculateLeagueTable, getScoringRules } from '@/lib/leagueScoring';
 import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
+import LeagueScoresModal from '@/components/leagues/LeagueScoresModal';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -125,6 +126,8 @@ export default function LeagueAdmin() {
   const [awaySets, setAwaySets] = useState('');
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
+  const [scoresModalOpen, setScoresModalOpen] = useState(false);
+  const [scoresModalLeague, setScoresModalLeague] = useState(null);
   const tableRef = useRef();
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [blacklistLeague, setBlacklistLeague] = useState(null);
@@ -794,6 +797,11 @@ export default function LeagueAdmin() {
     setTableDialogOpen(true);
   };
 
+  const openScoresModal = (league) => {
+    setScoresModalLeague(league);
+    setScoresModalOpen(true);
+  };
+
   const getLeagueTable = (league) => {
     const leagueTeams = teams.filter(t => t.league_id === league.id);
     const leagueFixtures = fixtures.filter(f => f.league_id === league.id);
@@ -1085,6 +1093,14 @@ export default function LeagueAdmin() {
                               >
                                 <List className="w-4 h-4 mr-1" />
                                 Fixtures
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openScoresModal(league)}
+                              >
+                                <Pencil className="w-4 h-4 mr-1" />
+                                Scores
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -1827,6 +1843,16 @@ export default function LeagueAdmin() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* League Scores Modal */}
+        <LeagueScoresModal
+          open={scoresModalOpen}
+          onClose={() => setScoresModalOpen(false)}
+          league={scoresModalLeague}
+          fixtures={fixtures}
+          teams={teams}
+          clubId={clubId}
+        />
 
         {/* Rink Distribution Preview Modal */}
         <RinkDistributionModal
