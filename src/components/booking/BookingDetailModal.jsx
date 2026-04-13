@@ -22,7 +22,7 @@ const statusColors = {
 };
 
 export default function BookingDetailModal({
-  booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club, onDelete, deleteLoading,
+  booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club, onDelete, deleteLoading, cancelBtnRef,
 }) {
   if (!booking) return null;
 
@@ -140,6 +140,7 @@ export default function BookingDetailModal({
             <div className="flex items-center gap-2 flex-wrap">
               {canDelete && (
                 <Button
+                  ref={cancelBtnRef}
                   variant="outline"
                   size="sm"
                   onClick={() => onDelete(booking)}

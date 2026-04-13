@@ -86,6 +86,8 @@ export default function TimeSlotGrid({
   onCopyBooking,
   tourSlot1Ref,
   tourSlot2Ref,
+  tourSlot1_10Ref,
+  tourBookingCellRef,
 }) {
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
@@ -296,15 +298,17 @@ export default function TimeSlotGrid({
                   const isMobileCopySource = copyMode && isAdmin && mobileCopySource?.id === booking?.id;
                   const isMobileCopyTarget = false;
 
-                  // Attach tour refs to rink 1 & 2 at 09:00
+                  // Attach tour refs
                   const isTourSlot1 = rink === 1 && slot.start === '09:00';
                   const isTourSlot2 = rink === 2 && slot.start === '09:00';
+                  const isTourSlot1_10 = rink === 1 && slot.start === '10:00';
+                  const isTourBookingCell = booking?.id === 'tour-booking';
 
                   return (
                     <Tooltip key={rink}>
                       <TooltipTrigger asChild>
                         <button
-                        ref={isTourSlot1 ? tourSlot1Ref : isTourSlot2 ? tourSlot2Ref : undefined}
+                        ref={isTourSlot1 ? tourSlot1Ref : isTourSlot2 ? tourSlot2Ref : isTourSlot1_10 ? tourSlot1_10Ref : isTourBookingCell ? tourBookingCellRef : undefined}
                         onClick={() => {
                           if (bulkDeleteMode && !available && booking) {
                             onToggleBulkDelete?.(booking.id);

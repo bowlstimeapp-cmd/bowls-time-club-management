@@ -24,6 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import NewUserTour, { isTourEnabled, hasTourBeenDismissed, TOUR_DATE, TOUR_DATE_STRING } from '@/components/tour/NewUserTour';
+import TourBookingModal from '@/components/tour/TourBookingModal';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -47,9 +48,18 @@ export default function BookRink() {
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started
-  const [tourBooking, setTourBooking] = useState(null); // temp in-memory booking
+  const [tourBooking, setTourBooking] = useState(null); // temp in-memory booking (single)
+  const [tourBookings2, setTourBookings2] = useState([]); // temp double session bookings
+  const [tourModalOpen, setTourModalOpen] = useState(false); // tour booking modal step 2
+  const [tourModal2Open, setTourModal2Open] = useState(false); // tour booking modal step 8
+  const [tourModalSubStep, setTourModalSubStep] = useState('select'); // 'select' | 'submit'
   const tourSlot1Ref = useRef(null);
   const tourSlot2Ref = useRef(null);
+  const tourSlot1_10Ref = useRef(null); // rink 1 @ 10:00
+  const tourBookingCellRef = useRef(null); // ref to the moved booking cell
+  const tourCancelBtnRef = useRef(null); // ref to cancel button in detail modal
+  const tourNavRinkRef = useRef(null); // ref to "Rink Booking" nav button
+  const tourNavMyBookingsRef = useRef(null); // ref to "My Bookings" nav item
   const tourBookBtnRef = useRef(null);
 
   const queryClient = useQueryClient();
@@ -141,10 +151,14 @@ useEffect(() => {
     enabled: !!clubId,
   });
 
-  // Merge in tour booking (non-persistent) if on tour date
+  // Merge in tour bookings (non-persistent) if on tour date
   const isTourDate = dateString === TOUR_DATE_STRING;
-  const bookings = isTourDate && tourBooking
-    ? [...bookingsFromDB, tourBooking]
+  const bookings = isTourDate
+    ? [
+        ...bookingsFromDB,
+        ...(tourBooking ? [tourBooking] : []),
+        ...tourBookings2,
+      ]
     : bookingsFromDB;
 
   const createBookingMutation = useMutation({
@@ -211,7 +225,7 @@ useEffect(() => {
       newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
     }
     setTourBooking(prev => prev ? { ...prev, rink_number: newRink, start_time: newStartTime, end_time: newEndTime } : prev);
-    setTourStep(4);
+    setTourStep(4); // next: click the booking
   };
 
   const handleMoveBooking = async (booking, newRink, newStartTime) => {
@@ -352,29 +366,18 @@ useEffect(() => {
   const handleBookSelected = () => {
     if (selectedSlots.length === 0) return;
 
-    // Tour: step 2 - create a temp booking instead of persisting
+    // Tour step 2: open the tour booking modal (single slot)
     if (tourStep === 2) {
-      const bookerName = user?.first_name && user?.surname
-        ? `${user.first_name} ${user.surname}`
-        : (user?.full_name || user?.email || 'You');
-      const slot = selectedSlots[0];
-      const tempBooking = {
-        id: 'tour-booking',
-        club_id: clubId,
-        rink_number: slot.rink,
-        date: TOUR_DATE_STRING,
-        start_time: slot.slot.start,
-        end_time: slot.slot.end,
-        status: 'approved',
-        competition_type: 'Club',
-        booker_name: bookerName,
-        booker_email: user?.email,
-        notes: 'Tour booking',
-        rollup_members: [],
-      };
-      setTourBooking(tempBooking);
-      setSelectedSlots([]);
-      setTourStep(3);
+      setTourModalSubStep('select');
+      setTourModalOpen(true);
+      return;
+    }
+
+    // Tour step 7: open the tour booking modal (double session)
+    if (tourStep === 7) {
+      setTourModalSubStep('submit');
+      setTourModal2Open(true);
+      setTourStep(8);
       return;
     }
 
@@ -393,6 +396,58 @@ useEffect(() => {
     }
     
     setModalOpen(true);
+  };
+
+  // Handle tour booking modal confirm (step 2 - single session)
+  const handleTourBookingConfirm = (competitionType) => {
+    const bookerName = user?.first_name && user?.surname
+      ? `${user.first_name} ${user.surname}`
+      : (user?.full_name || user?.email || 'You');
+    const slot = selectedSlots[0];
+    const tempBooking = {
+      id: 'tour-booking',
+      club_id: clubId,
+      rink_number: slot.rink,
+      date: TOUR_DATE_STRING,
+      start_time: slot.slot.start,
+      end_time: slot.slot.end,
+      status: 'approved',
+      competition_type: competitionType,
+      booker_name: bookerName,
+      booker_email: user?.email,
+      notes: '',
+      rollup_members: [],
+    };
+    setTourBooking(tempBooking);
+    setTourModalOpen(false);
+    setSelectedSlots([]);
+    setTourStep(3);
+  };
+
+  // Handle tour booking modal confirm (step 8 - double session)
+  const handleTourBookingConfirm2 = () => {
+    const bookerName = user?.first_name && user?.surname
+      ? `${user.first_name} ${user.surname}`
+      : (user?.full_name || user?.email || 'You');
+    const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
+    const newBookings = sortedSlots.map((s, i) => ({
+      id: `tour-booking-double-${i}`,
+      club_id: clubId,
+      rink_number: s.rink,
+      date: TOUR_DATE_STRING,
+      start_time: s.slot.start,
+      end_time: s.slot.end,
+      status: 'approved',
+      competition_type: 'Club',
+      booker_name: bookerName,
+      booker_email: user?.email,
+      notes: '',
+      rollup_members: [],
+    }));
+    setTourBookings2(newBookings);
+    setTourModal2Open(false);
+    setSelectedSlots([]);
+    setTourStep(9);
   };
 
   const handleBulkBooking = async (bulkData) => {
@@ -670,10 +725,32 @@ useEffect(() => {
                     }
                     // During tour steps 2-3, block further slot changes
                     if (tourStep >= 2 && tourStep <= 3) return;
+                    // Tour step 6: only allow selecting rink 1 @ 9am and 10am
+                    if (tourStep === 6) {
+                      const validSlots = slots.filter(s => s.rink === 1 && (s.slot.start === '09:00' || s.slot.start === '10:00'));
+                      setSelectedSlots(validSlots);
+                      // When both are selected, advance to step 7
+                      if (validSlots.length === 2) setTourStep(7);
+                      return;
+                    }
+                    // Block interactions during other active tour steps
+                    if ([4, 5, 7, 8, 9].includes(tourStep)) return;
                     setSelectedSlots(slots);
                   }}
                   onBookingClick={(booking) => {
-                    if (tourStep >= 1 && tourStep <= 3) return; // block during tour
+                    // Block during early tour steps
+                    if (tourStep >= 1 && tourStep <= 3) return;
+                    // Tour step 4: only allow clicking the tour booking
+                    if (tourStep === 4) {
+                      if (booking.id === 'tour-booking') {
+                        setSelectedBooking(booking);
+                        setBookingDetailOpen(true);
+                        setTourStep(5);
+                      }
+                      return;
+                    }
+                    // Block during steps 5-9
+                    if ([5, 6, 7, 8, 9].includes(tourStep)) return;
                     setSelectedBooking(booking);
                     setBookingDetailOpen(true);
                   }}
@@ -681,7 +758,7 @@ useEffect(() => {
                   joinLoading={joiningRollup}
                   isAdmin={isAdmin}
                   onMoveBooking={handleMoveBooking}
-                  onSwapBookings={tourStep >= 1 && tourStep <= 3 ? undefined : handleSwapBookings}
+                  onSwapBookings={[1,2,3,4,5,6,7,8,9].includes(tourStep) ? undefined : handleSwapBookings}
                   leagueFixtures={leagueFixtures}
                   leagueTeams={leagueTeams}
                   leagues={leagues}
@@ -692,6 +769,8 @@ useEffect(() => {
                   onCopyBooking={handleCopyBooking}
                   tourSlot1Ref={tourSlot1Ref}
                   tourSlot2Ref={tourSlot2Ref}
+                  tourSlot1_10Ref={tourSlot1_10Ref}
+                  tourBookingCellRef={tourBookingCellRef}
                 />
               )}
             </CardContent>
@@ -726,7 +805,7 @@ useEffect(() => {
         {!bulkDeleteMode && selectedSlots.length > 0 && (
           <div className="fixed bottom-6 left-6 z-40">
             <Button
-              ref={tourStep === 2 ? tourBookBtnRef : null}
+              ref={[2, 7].includes(tourStep) ? tourBookBtnRef : null}
               onClick={handleBookSelected}
               className="bg-emerald-600 hover:bg-emerald-700 shadow-lg rounded-full px-5 py-3 h-auto text-base font-semibold"
             >
@@ -781,6 +860,8 @@ useEffect(() => {
           onClose={() => {
             setBookingDetailOpen(false);
             setSelectedBooking(null);
+            // Tour step 5: closing detail modal advances to step 6
+            if (tourStep === 5) setTourStep(6);
           }}
           currentUserEmail={user?.email}
           onJoinRollup={handleJoinRollup}
@@ -788,6 +869,27 @@ useEffect(() => {
           club={club}
           onDelete={handleDeleteBooking}
           deleteLoading={deletingBooking}
+          cancelBtnRef={tourStep === 5 ? tourCancelBtnRef : undefined}
+        />
+
+        {/* Tour Booking Modals */}
+        <TourBookingModal
+          open={tourModalOpen}
+          selectedSlots={selectedSlots}
+          selectedDate={selectedDate}
+          onConfirm={handleTourBookingConfirm}
+          club={club}
+          tourSubStep={tourModalSubStep}
+          onSubStepChange={setTourModalSubStep}
+        />
+        <TourBookingModal
+          open={tourModal2Open}
+          selectedSlots={selectedSlots}
+          selectedDate={selectedDate}
+          onConfirm={handleTourBookingConfirm2}
+          club={club}
+          tourSubStep="submit"
+          onSubStepChange={setTourModalSubStep}
         />
 
         {/* New User Tour */}
@@ -799,12 +901,18 @@ useEffect(() => {
             onDismiss={() => {
               setTourStep(-1);
               setTourBooking(null);
+              setTourBookings2([]);
+              setTourModalOpen(false);
+              setTourModal2Open(false);
               setSelectedSlots([]);
               setSelectedDate(startOfToday());
             }}
             onComplete={() => {
               setTourStep(-1);
               setTourBooking(null);
+              setTourBookings2([]);
+              setTourModalOpen(false);
+              setTourModal2Open(false);
               setSelectedSlots([]);
               setSelectedDate(startOfToday());
             }}
@@ -812,7 +920,14 @@ useEffect(() => {
             tourBooking={tourBooking}
             slot1Ref={tourSlot1Ref}
             slot2Ref={tourSlot2Ref}
+            slot1_10Ref={tourSlot1_10Ref}
+            tourBookingRef={tourBookingCellRef}
+            bookingDetailCancelRef={tourCancelBtnRef}
+            navRinkBookingRef={tourNavRinkRef}
+            navMyBookingsRef={tourNavMyBookingsRef}
             bookButtonRef={tourBookBtnRef}
+            tourModalSubStep={tourModalSubStep}
+            setTourModalSubStep={setTourModalSubStep}
           />
         )}
       </div>
