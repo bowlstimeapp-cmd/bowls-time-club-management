@@ -62,6 +62,35 @@
         }
       }
     },
+    "adjacent_rinks": {
+      "type": "boolean",
+      "default": false,
+      "description": "Cluster fixtures together on adjacent rinks (outdoor only)"
+    },
+    "adjacent_rinks_periods": {
+      "type": "array",
+      "description": "Array of {start_date, end_date, rinks:[]} defining rink clustering periods",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "rinks": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
     "status": {
       "type": "string",
       "enum": [

@@ -92,6 +92,8 @@ export default function LeagueAdmin() {
   const [leagueRinks, setLeagueRinks] = useState([]);
   const [leagueMultiSession, setLeagueMultiSession] = useState(false);
   const [leagueSelectedSessions, setLeagueSelectedSessions] = useState([]);
+  const [leagueAdjacentRinks, setLeagueAdjacentRinks] = useState(false);
+  const [leagueAdjacentPeriods, setLeagueAdjacentPeriods] = useState([]); // [{start_date, end_date, rinks:[]}]
 
   // Sets scoring config
   const [scoringPointsPerSet, setScoringPointsPerSet] = useState(false);
@@ -282,6 +284,8 @@ export default function LeagueAdmin() {
     setLeagueRinks([]);
     setLeagueMultiSession(false);
     setLeagueSelectedSessions([]);
+    setLeagueAdjacentRinks(false);
+    setLeagueAdjacentPeriods([]);
     setScoringPointsPerSet(false);
     setScoringPointsPerSetValue(1);
     setScoringGameWin(false);
@@ -313,6 +317,8 @@ export default function LeagueAdmin() {
     setLeagueRinks(league.league_rinks || []);
     setLeagueMultiSession(league.multi_session || false);
     setLeagueSelectedSessions(league.selected_sessions || []);
+    setLeagueAdjacentRinks(league.adjacent_rinks || false);
+    setLeagueAdjacentPeriods(league.adjacent_rinks_periods || []);
     setScoringPointsPerSet(league.scoring_points_per_set || false);
     setScoringPointsPerSetValue(league.scoring_points_per_set_value ?? 1);
     setScoringGameWin(league.scoring_game_win || false);
@@ -356,6 +362,8 @@ export default function LeagueAdmin() {
       league_rinks: leagueRinks,
       multi_session: leagueMultiSession,
       selected_sessions: leagueMultiSession ? leagueSelectedSessions : [],
+      adjacent_rinks: leagueAdjacentRinks,
+      adjacent_rinks_periods: leagueAdjacentRinks ? leagueAdjacentPeriods : [],
       scoring_points_per_set: leagueIsSets ? scoringPointsPerSet : false,
       scoring_points_per_set_value: leagueIsSets && scoringPointsPerSet ? (parseFloat(scoringPointsPerSetValue) || 1) : null,
       scoring_game_win: leagueIsSets ? scoringGameWin : false,
@@ -1360,6 +1368,91 @@ export default function LeagueAdmin() {
                   </Select>
                 </div>
               </div>
+              {/* Adjacent Rinks (outdoor only) */}
+              {club?.season === 'outdoor' && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="adjacent-rinks"
+                      checked={leagueAdjacentRinks}
+                      onCheckedChange={(checked) => {
+                        setLeagueAdjacentRinks(checked);
+                        if (checked && leagueAdjacentPeriods.length === 0) {
+                          setLeagueAdjacentPeriods([{ start_date: leagueStartDate || '', end_date: leagueEndDate || '', rinks: [] }]);
+                        }
+                      }}
+                    />
+                    <div>
+                      <Label htmlFor="adjacent-rinks" className="cursor-pointer">Adjacent Rinks</Label>
+                      <p className="text-xs text-gray-500">Cluster fixtures together on adjacent rinks</p>
+                    </div>
+                  </div>
+                  {leagueAdjacentRinks && (
+                    <div className="space-y-4">
+                      {leagueAdjacentPeriods.map((period, idx) => {
+                        const rinkCount = club?.rink_count || 6;
+                        const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
+                        // Check overlap with other periods
+                        const overlaps = leagueAdjacentPeriods.some((p, i) => {
+                          if (i === idx) return false;
+                          return period.start_date && period.end_date && p.start_date && p.end_date &&
+                            period.start_date <= p.end_date && period.end_date >= p.start_date;
+                        });
+                        return (
+                          <div key={idx} className={`border rounded-lg p-3 space-y-3 ${overlaps ? 'border-red-400 bg-red-50' : 'bg-gray-50'}`}>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-700">Period {idx + 1}</p>
+                              {leagueAdjacentPeriods.length > 1 && (
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500"
+                                  onClick={() => setLeagueAdjacentPeriods(prev => prev.filter((_, i) => i !== idx))}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                            {overlaps && <p className="text-xs text-red-600">⚠ This period overlaps with another period</p>}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Start Date</Label>
+                                <Input type="date" value={period.start_date}
+                                  onChange={(e) => setLeagueAdjacentPeriods(prev => prev.map((p, i) => i === idx ? { ...p, start_date: e.target.value } : p))} />
+                              </div>
+                              <div>
+                                <Label className="text-xs">End Date</Label>
+                                <Input type="date" value={period.end_date}
+                                  onChange={(e) => setLeagueAdjacentPeriods(prev => prev.map((p, i) => i === idx ? { ...p, end_date: e.target.value } : p))} />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs mb-2 block">Cluster Rinks</Label>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {allRinks.map(rinkNum => (
+                                  <label key={rinkNum} className="flex items-center gap-2 cursor-pointer select-none">
+                                    <Checkbox
+                                      checked={period.rinks.includes(rinkNum)}
+                                      onCheckedChange={(checked) => {
+                                        setLeagueAdjacentPeriods(prev => prev.map((p, i) =>
+                                          i === idx ? { ...p, rinks: checked ? [...p.rinks, rinkNum].sort((a,b)=>a-b) : p.rinks.filter(r => r !== rinkNum) } : p
+                                        ));
+                                      }}
+                                    />
+                                    <span className="text-sm">Rink {rinkNum}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <Button variant="outline" size="sm" onClick={() =>
+                        setLeagueAdjacentPeriods(prev => [...prev, { start_date: '', end_date: '', rinks: [] }])
+                      }>
+                        <Plus className="w-3 h-3 mr-1" /> Add Period
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Rink selection */}
               {club && (
                 <div className="border rounded-lg p-4 space-y-3">
