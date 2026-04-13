@@ -1086,14 +1086,6 @@ export default function LeagueAdmin() {
                           )}
                           {league.fixtures_generated && (
                             <>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => viewFixtures(league)}
-                              >
-                                <List className="w-4 h-4 mr-1" />
-                                Fixtures
-                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1101,6 +1093,14 @@ export default function LeagueAdmin() {
                               >
                                 <Pencil className="w-4 h-4 mr-1" />
                                 Scores
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => viewFixtures(league)}
+                              >
+                                <List className="w-4 h-4 mr-1" />
+                                Fixtures
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -1380,32 +1380,17 @@ export default function LeagueAdmin() {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Format</Label>
-                  <Select value={leagueFormat} onValueChange={setLeagueFormat}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="triples">Triples (3 players)</SelectItem>
-                      <SelectItem value="fours">Fours (4 players)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Status</Label>
-                  <Select value={leagueStatus} onValueChange={setLeagueStatus}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label>Format</Label>
+                <Select value={leagueFormat} onValueChange={setLeagueFormat}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="triples">Triples (3 players)</SelectItem>
+                    <SelectItem value="fours">Fours (4 players)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {/* Adjacent Rinks (outdoor only) */}
               {club?.season === 'outdoor' && (
