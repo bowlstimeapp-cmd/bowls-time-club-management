@@ -217,7 +217,7 @@ export default function NewUserTour({
         )}
         <TourModal
           message={hasSlotSelected
-            ? "Great! Now click the 'Book 1 Slot' button to continue."
+            ? "Click the 'Book 1 Slot' button to book the selected rink."
             : "To choose a session to book, click a rink on a time where a booking doesn't already exist. For the example, choose the highlighted session."}
           onDismiss={handleDismiss}
         />
@@ -233,6 +233,7 @@ export default function NewUserTour({
           tourModalSubStep === 'submit'
             ? "Great, now you can submit your request. If your club has set bookings to auto-approve, your booking will be confirmed automatically. If your club has opted for a Club Admin or Secretary to approve bookings, they will be notified of your booking. For this example, the booking is automatically approved."
             : "Here you can provide details of your booking. Try booking a Private Roll-up."
+
         }
         onDismiss={handleDismiss}
       />
