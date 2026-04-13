@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
@@ -7,35 +7,64 @@ import { ArrowRight } from 'lucide-react';
 export const TOUR_DATE = new Date(2999, 0, 1);
 export const TOUR_DATE_STRING = '2999-01-01';
 
-// Tour is always enabled by default for all users
 export function isTourEnabled() {
   return true;
 }
 
-// Check if user has already completed/dismissed
 export async function hasTourBeenDismissed(user) {
   return !!(user?.tour_completed);
 }
 
-// Mark tour as permanently dismissed
 export async function dismissTour() {
   await base44.auth.updateMe({ tour_completed: true });
 }
 
-// Step modal panel (right-aligned)
-function TourModal({ title, message, onNext, nextLabel = 'Next', onDismiss, showDismiss = true }) {
+// ─── Keyframe injection ────────────────────────────────────────────────────
+const FLASH_STYLE = `
+  @keyframes tourFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+`;
+
+function StyleInjector() {
+  return <style>{FLASH_STYLE}</style>;
+}
+
+// ─── Highlight overlay ─────────────────────────────────────────────────────
+function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.18)' }) {
+  if (!rect) return null;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: rect.top - 4,
+        left: rect.left - 4,
+        width: rect.width + 8,
+        height: rect.height + 8,
+        zIndex: 9050,
+        border: `2px dashed ${color}`,
+        borderRadius: 10,
+        backgroundColor: bgColor,
+        boxShadow: `0 0 0 4px ${color}33`,
+        pointerEvents: 'none',
+        animation: 'tourFlash 1s ease-in-out infinite',
+      }}
+    />
+  );
+}
+
+// ─── Side panel modal ──────────────────────────────────────────────────────
+function TourModal({ message, onNext, nextLabel = 'Next', onDismiss }) {
   return (
     <div className="fixed right-4 sm:right-8 top-1/2 -translate-y-1/2 z-[9100] bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-80 max-w-[calc(100vw-2rem)] pointer-events-auto">
-      {showDismiss && (
-        <button
-          onClick={onDismiss}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xs underline leading-none"
-        >
-          Close the New User Tour and do not show again
-        </button>
-      )}
+      <button
+        onClick={onDismiss}
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xs underline leading-none"
+      >
+        Close the New User Tour and do not show again
+      </button>
       <div className="mt-6">
-        {title && <p className="font-semibold text-gray-900 mb-2 text-sm">{title}</p>}
         <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
       </div>
       {onNext && (
@@ -50,6 +79,7 @@ function TourModal({ title, message, onNext, nextLabel = 'Next', onDismiss, show
   );
 }
 
+// ─── Welcome modal ─────────────────────────────────────────────────────────
 function WelcomeModal({ onStart, onDismiss }) {
   return (
     <div className="fixed inset-0 z-[9100] flex items-center justify-center pointer-events-none">
@@ -80,89 +110,73 @@ function WelcomeModal({ onStart, onDismiss }) {
   );
 }
 
-// Highlight ring helper — dashed border with flashing background fill
-function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.18)', shadowColor = 'rgba(16,185,129,0.2)' }) {
-  if (!rect) return null;
+// ─── Completion modal ──────────────────────────────────────────────────────
+function CompletionModal({ onFinish }) {
   return (
-    <>
-      <style>{`
-        @keyframes tourFlash {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-      `}</style>
-      <div
-        style={{
-          position: 'fixed',
-          top: rect.top - 4,
-          left: rect.left - 4,
-          width: rect.width + 8,
-          height: rect.height + 8,
-          zIndex: 9050,
-          border: `2px solid ${color}`,
-          borderRadius: 10,
-          backgroundColor: bgColor,
-          boxShadow: `0 0 0 4px ${shadowColor}`,
-          pointerEvents: 'none',
-          animation: 'tourFlash 1s ease-in-out infinite',
-        }}
-      />
-    </>
+    <div className="fixed inset-0 z-[9100] flex items-center justify-center pointer-events-none">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-md mx-4 pointer-events-auto text-center">
+        <div className="mb-4 flex justify-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+            <span className="text-3xl">🎉</span>
+          </div>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-3">Nice work!</h2>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          You've completed the tour! You now know how to book a rink, move a booking, view details, and navigate to your bookings. Enjoy using BowlsTime!
+        </p>
+        <div className="mt-6 flex justify-center">
+          <Button onClick={onFinish} className="bg-emerald-600 hover:bg-emerald-700">
+            Finish Tour
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
 /**
  * Steps:
  *  0  – Welcome
- *  1  – Select rink 1 @ 9am
- *  2  – Booking modal open (sub: 'select' | 'submit')
- *  3  – Drag booking to rink 2 @ 9am
- *  4  – Click the booking to view details
- *  5  – Cancel booking (view details modal open)
- *  6  – Select double session (rink1 9am + 10am)
- *  7  – Click "Book 2 Slots"
- *  8  – Double booking modal open (sub: 'submit')
- *  9  – Navigate to My Bookings
- *  10 – Completion
+ *  1  – Select Rink 1 @ 9am (highlight slot)
+ *  2  – Click "Book 1 Slot" button (highlight button)
+ *  3  – Booking modal: select Private Roll-up (handled by TourBookingModal)
+ *  4  – Booking modal: submit (handled by TourBookingModal)
+ *  5  – Drag booking to Rink 2 @ 9am
+ *  6  – Move confirmation (Next button)
+ *  7  – Click booking to view details (highlight booking cell)
+ *  8  – Cancel booking (highlight cancel button in detail modal, Next to continue)
+ *  9  – Select double session (Rink 1 @ 9am + 10am)
+ *  10 – Click "Book 2 Slots" (highlight book button)
+ *  11 – Double booking modal: submit (handled by TourBookingModal)
+ *  12 – Navigate to My Bookings
+ *  13 – Completion
  */
 export default function NewUserTour({
-  user,
-  onDismiss,
-  onTourDateChange,
-  tourBooking,
-  tourBooking2, // second tour booking (double session)
-  onComplete,
-  bookButtonRef,
-  slot1Ref,
-  slot2Ref,
-  slot1_10Ref,   // rink 1 @ 10:00
-  tourBookingRef, // ref to the tour booking cell (rink1@9am after it's booked)
-  bookingDetailCancelRef, // ref to "Cancel Booking" button inside detail modal
   step,
   setStep,
-  hasSlotSelected, // true when a slot is currently selected (to trigger book button measurement)
-  // callbacks
-  onTourBookingModalOpen,   // () => void – tell parent to show tour booking modal
-  onTourBookingModalClose,  // () => void
-  onTourBookingConfirm,     // (competitionType) => void – create temp booking
-  onTourBookingModalOpen2,  // for double session modal
-  onTourBookingConfirm2,    // create temp double bookings
-  tourModalSubStep,         // 'select' | 'submit' for booking modal
+  onDismiss,
+  onComplete,
+  onTourDateChange,
+  // slot refs
+  slot1Ref,        // Rink 1 @ 9am cell
+  slot2Ref,        // Rink 2 @ 9am cell
+  slot1_10Ref,     // Rink 1 @ 10am cell
+  tourBookingRef,  // the tour booking cell (after move = Rink 2 @ 9am)
+  bookingDetailCancelRef, // Cancel button inside BookingDetailModal
+  bookButtonRef,   // "Book N Slots" floating button
+  hasSlotSelected, // true when ≥1 slot selected
+  tourModalSubStep,    // 'select' | 'submit'
   setTourModalSubStep,
 }) {
   const [slot1Rect, setSlot1Rect] = useState(null);
   const [slot2Rect, setSlot2Rect] = useState(null);
   const [slot1_10Rect, setSlot1_10Rect] = useState(null);
   const [bookBtnRect, setBookBtnRect] = useState(null);
-
-  // Clear book button rect when entering step 1 so it only shows after slot is selected
-  useEffect(() => {
-    if (step === 1 && !hasSlotSelected) setBookBtnRect(null);
-  }, [step, hasSlotSelected]);
   const [tourBookingRect, setTourBookingRect] = useState(null);
   const [cancelBtnRect, setCancelBtnRect] = useState(null);
   const [navRinkRect, setNavRinkRect] = useState(null);
 
+  // Measure refs on each step / slot-selection change
   useEffect(() => {
     const measure = () => {
       if (slot1Ref?.current) setSlot1Rect(slot1Ref.current.getBoundingClientRect());
@@ -171,9 +185,9 @@ export default function NewUserTour({
       if (bookButtonRef?.current) setBookBtnRect(bookButtonRef.current.getBoundingClientRect());
       if (tourBookingRef?.current) setTourBookingRect(tourBookingRef.current.getBoundingClientRect());
       if (bookingDetailCancelRef?.current) setCancelBtnRect(bookingDetailCancelRef.current.getBoundingClientRect());
-      // Find the "Rink Booking" nav button by text content
-      const navButtons = document.querySelectorAll('nav button, header button');
-      for (const btn of navButtons) {
+      // Find "Rink Booking" nav button by text
+      const allButtons = document.querySelectorAll('nav button, header button');
+      for (const btn of allButtons) {
         if (btn.textContent?.includes('Rink Booking')) {
           setNavRinkRect(btn.getBoundingClientRect());
           break;
@@ -181,9 +195,12 @@ export default function NewUserTour({
       }
     };
     measure();
+    // Re-measure after short delay so refs have rendered
+    const t = setTimeout(measure, 120);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
     return () => {
+      clearTimeout(t);
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
@@ -194,10 +211,11 @@ export default function NewUserTour({
     onDismiss();
   };
 
-  // Step 0: Welcome
+  // ── Step 0: Welcome ──────────────────────────────────────────────────────
   if (step === 0) {
     return (
       <>
+        <StyleInjector />
         <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
         <WelcomeModal
           onStart={() => { onTourDateChange(TOUR_DATE); setStep(1); }}
@@ -207,44 +225,66 @@ export default function NewUserTour({
     );
   }
 
-  // Step 1: Select rink 1 @ 9am — once selected, also highlight the Book button
+  // ── Step 1: Highlight Rink 1 @ 9am ───────────────────────────────────────
   if (step === 1) {
     return (
       <>
-        {!hasSlotSelected && <HighlightRing rect={slot1Rect} />}
-        {hasSlotSelected && bookBtnRect && (
-          <HighlightRing rect={bookBtnRect} color="#059669" bgColor="rgba(5,150,105,0.22)" shadowColor="rgba(5,150,105,0.25)" />
-        )}
+        <StyleInjector />
+        <HighlightRing rect={slot1Rect} />
         <TourModal
-          message={hasSlotSelected
-            ? "Click the 'Book 1 Slot' button to book the selected rink."
-            : "To choose a session to book, click a rink on a time where a booking doesn't already exist. For the example, choose the highlighted session."}
+          message="To choose a session to book, click a rink on a time where a booking doesn't already exist. For the example, choose the highlighted session."
           onDismiss={handleDismiss}
         />
       </>
     );
   }
 
-  // Step 2: Booking modal guidance (handled by TourBookingModal in parent, we just show the side panel)
+  // ── Step 2: Highlight "Book 1 Slot" button ───────────────────────────────
   if (step === 2) {
     return (
-      <TourModal
-        message={
-          tourModalSubStep === 'submit'
-            ? "Great, now you can submit your request. If your club has set bookings to auto-approve, your booking will be confirmed automatically. If your club has opted for a Club Admin or Secretary to approve bookings, they will be notified of your booking. For this example, the booking is automatically approved."
-            : "Here you can provide details of your booking. Try booking a Private Roll-up."
-
-        }
-        onDismiss={handleDismiss}
-      />
+      <>
+        <StyleInjector />
+        <HighlightRing rect={bookBtnRect} />
+        <TourModal
+          message="Click the 'Book 1 Slot' button to book the selected rink."
+          onDismiss={handleDismiss}
+        />
+      </>
     );
   }
 
-  // Step 3: Drag booking to rink 2 @ 9am
+  // ── Steps 3 & 4: Inside TourBookingModal — modal renders its own overlays ─
+  // TourModal side-panel only
   if (step === 3) {
     return (
       <>
-        <HighlightRing rect={slot2Rect} color="#3b82f6" shadowColor="rgba(59,130,246,0.2)" />
+        <StyleInjector />
+        <TourModal
+          message="Here you can provide details of your booking. Try booking a Private Roll-up."
+          onDismiss={handleDismiss}
+        />
+      </>
+    );
+  }
+
+  if (step === 4) {
+    return (
+      <>
+        <StyleInjector />
+        <TourModal
+          message="Great, now you can submit your request. If your club has set bookings to auto-approve, your booking will be confirmed automatically. If your club has opted for a Club Admin or Secretary to approve bookings, they will be notified of your booking. For this example, the booking is automatically approved."
+          onDismiss={handleDismiss}
+        />
+      </>
+    );
+  }
+
+  // ── Step 5: Drag booking to Rink 2 @ 9am ────────────────────────────────
+  if (step === 5) {
+    return (
+      <>
+        <StyleInjector />
+        <HighlightRing rect={slot2Rect} color="#3b82f6" bgColor="rgba(59,130,246,0.18)" />
         <TourModal
           message="Great, your first rink has been booked! Now let's see if we can move your booking to another time. Drag and drop your booking into the highlighted free slot."
           onDismiss={handleDismiss}
@@ -253,10 +293,26 @@ export default function NewUserTour({
     );
   }
 
-  // Step 4: Click the booking to view details
-  if (step === 4) {
+  // ── Step 6: Move confirmation ────────────────────────────────────────────
+  if (step === 6) {
     return (
       <>
+        <StyleInjector />
+        <TourModal
+          message="Nice! So now your original booking for 9am on Rink 1 has been moved to 9am on Rink 2 - easy!"
+          onNext={() => setStep(7)}
+          nextLabel="Next"
+          onDismiss={handleDismiss}
+        />
+      </>
+    );
+  }
+
+  // ── Step 7: Click booking to view details ────────────────────────────────
+  if (step === 7) {
+    return (
+      <>
+        <StyleInjector />
         <HighlightRing rect={tourBookingRect} />
         <TourModal
           message="Click your booking to view the details."
@@ -266,14 +322,15 @@ export default function NewUserTour({
     );
   }
 
-  // Step 5: Booking details open – highlight cancel button
-  if (step === 5) {
+  // ── Step 8: Cancel booking button ────────────────────────────────────────
+  if (step === 8) {
     return (
       <>
-        <HighlightRing rect={cancelBtnRect} color="#ef4444" shadowColor="rgba(239,68,68,0.2)" />
+        <StyleInjector />
+        <HighlightRing rect={cancelBtnRect} color="#ef4444" bgColor="rgba(239,68,68,0.15)" />
         <TourModal
           message="To cancel a booking just click the 'Cancel Booking' button."
-          onNext={() => setStep(6)}
+          onNext={() => setStep(9)}
           nextLabel="Next"
           onDismiss={handleDismiss}
         />
@@ -281,10 +338,11 @@ export default function NewUserTour({
     );
   }
 
-  // Step 6: Select double session (rink 1 @ 9am + 10am)
-  if (step === 6) {
+  // ── Step 9: Select double session ────────────────────────────────────────
+  if (step === 9) {
     return (
       <>
+        <StyleInjector />
         <HighlightRing rect={slot1Rect} />
         <HighlightRing rect={slot1_10Rect} />
         <TourModal
@@ -295,10 +353,11 @@ export default function NewUserTour({
     );
   }
 
-  // Step 7: Click "Book 2 Slots"
-  if (step === 7) {
+  // ── Step 10: Highlight "Book 2 Slots" button ─────────────────────────────
+  if (step === 10) {
     return (
       <>
+        <StyleInjector />
         <HighlightRing rect={bookBtnRect} />
         <TourModal
           message="Now click 'Book 2 Slots' to continue."
@@ -308,24 +367,28 @@ export default function NewUserTour({
     );
   }
 
-  // Step 8: Double booking modal – submit
-  if (step === 8) {
+  // ── Step 11: Double booking modal – submit ────────────────────────────────
+  if (step === 11) {
     return (
-      <TourModal
-        message="Submit your booking request for multiple sessions."
-        onDismiss={handleDismiss}
-      />
+      <>
+        <StyleInjector />
+        <TourModal
+          message="Submit your booking request for multiple sessions."
+          onDismiss={handleDismiss}
+        />
+      </>
     );
   }
 
-  // Step 9: Navigate to My Bookings
-  if (step === 9) {
+  // ── Step 12: Navigate to My Bookings ─────────────────────────────────────
+  if (step === 12) {
     return (
       <>
-        <HighlightRing rect={navRinkRect} />
+        <StyleInjector />
+        <HighlightRing rect={navRinkRect} color="#8b5cf6" bgColor="rgba(139,92,246,0.15)" />
         <TourModal
           message="Now let's look at the 'My Bookings' section. Click 'Rink Booking' in the navigation, then select 'My Bookings'."
-          onNext={() => setStep(10)}
+          onNext={() => setStep(13)}
           nextLabel="Skip"
           onDismiss={handleDismiss}
         />
@@ -333,29 +396,13 @@ export default function NewUserTour({
     );
   }
 
-  // Step 10: Completion
-  if (step === 10) {
+  // ── Step 13: Completion ───────────────────────────────────────────────────
+  if (step === 13) {
     return (
       <>
+        <StyleInjector />
         <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
-        <div className="fixed inset-0 z-[9100] flex items-center justify-center pointer-events-none">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-md mx-4 pointer-events-auto text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                <span className="text-3xl">🎉</span>
-              </div>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-3">Nice work!</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              You've completed the tour! You now know how to book a rink, move a booking, and navigate to your bookings. Enjoy using BowlsTime!
-            </p>
-            <div className="mt-6 flex justify-center">
-              <Button onClick={onComplete} className="bg-emerald-600 hover:bg-emerald-700">
-                Finish Tour
-              </Button>
-            </div>
-          </div>
-        </div>
+        <CompletionModal onFinish={async () => { await dismissTour(); onComplete(); }} />
       </>
     );
   }

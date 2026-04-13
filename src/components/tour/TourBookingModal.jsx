@@ -16,15 +16,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
+const FLASH_STYLE = `
+  @keyframes tourFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+`;
+
+function TourFlashOverlay({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.18)' }) {
+  if (!rect) return null;
+  return (
+    <>
+      <style>{FLASH_STYLE}</style>
+      <div
+        style={{
+          position: 'fixed',
+          top: rect.top - 4,
+          left: rect.left - 4,
+          width: rect.width + 8,
+          height: rect.height + 8,
+          zIndex: 9300,
+          border: `2px dashed ${color}`,
+          borderRadius: 8,
+          backgroundColor: bgColor,
+          boxShadow: `0 0 0 4px ${color}33`,
+          pointerEvents: 'none',
+          animation: 'tourFlash 1s ease-in-out infinite',
+        }}
+      />
+    </>
+  );
+}
+
 /**
- * A tour-specific booking modal that:
- * - Only allows selecting "Private Roll-up"
- * - Highlights the competition type dropdown, then the submit button
- * - tourSubStep: 'select' | 'submit'
- * - Shows tour guidance overlay text
+ * Tour-specific booking modal.
+ * tourSubStep: 'select' → highlight dropdown (step 3)
+ * tourSubStep: 'submit' → highlight submit button (step 4)
  */
 export default function TourBookingModal({
   open,
@@ -32,7 +62,7 @@ export default function TourBookingModal({
   selectedDate,
   onConfirm,
   club,
-  tourSubStep, // 'select' | 'submit'
+  tourSubStep,      // 'select' | 'submit'
   onSubStepChange,
 }) {
   const [competitionType, setCompetitionType] = useState('');
@@ -42,28 +72,21 @@ export default function TourBookingModal({
   const [submitRect, setSubmitRect] = useState(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) { setCompetitionType(''); return; }
     const measure = () => {
       if (selectTriggerRef.current) setSelectRect(selectTriggerRef.current.getBoundingClientRect());
       if (submitBtnRef.current) setSubmitRect(submitBtnRef.current.getBoundingClientRect());
     };
     measure();
-    const t = setTimeout(measure, 100);
+    const t = setTimeout(measure, 120);
     window.addEventListener('resize', measure);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', measure);
-    };
+    return () => { clearTimeout(t); window.removeEventListener('resize', measure); };
   }, [open, tourSubStep, competitionType]);
 
   const handleCompetitionChange = (val) => {
-    if (val !== 'Private Roll-up') return; // only allow private roll-up
+    if (val !== 'Private Roll-up') return;
     setCompetitionType(val);
     onSubStepChange('submit');
-    // re-measure after state update
-    setTimeout(() => {
-      if (submitBtnRef.current) setSubmitRect(submitBtnRef.current.getBoundingClientRect());
-    }, 100);
   };
 
   const handleSubmit = () => {
@@ -71,7 +94,7 @@ export default function TourBookingModal({
     setCompetitionType('');
   };
 
-  if (!selectedSlots || selectedSlots.length === 0) return null;
+  if (!open || !selectedSlots || selectedSlots.length === 0) return null;
 
   const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
   const firstSlot = sortedSlots[0];
@@ -144,12 +167,12 @@ export default function TourBookingModal({
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter>
             <Button
               ref={submitBtnRef}
               onClick={handleSubmit}
               disabled={tourSubStep !== 'submit'}
-              className="bg-emerald-600 hover:bg-emerald-700 min-h-0"
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
               Submit Request
             </Button>
@@ -157,41 +180,9 @@ export default function TourBookingModal({
         </DialogContent>
       </Dialog>
 
-      {/* Tour highlight overlays on top of modal */}
-      {open && tourSubStep === 'select' && selectRect && (
-        <div
-          style={{
-            position: 'fixed',
-            top: selectRect.top - 4,
-            left: selectRect.left - 4,
-            width: selectRect.width + 8,
-            height: selectRect.height + 8,
-            zIndex: 9300,
-            border: '2px dashed #10b981',
-            borderRadius: 8,
-            boxShadow: '0 0 0 4px rgba(16,185,129,0.2)',
-            pointerEvents: 'none',
-            animation: 'pulse 1.5s infinite',
-          }}
-        />
-      )}
-      {open && tourSubStep === 'submit' && submitRect && (
-        <div
-          style={{
-            position: 'fixed',
-            top: submitRect.top - 4,
-            left: submitRect.left - 4,
-            width: submitRect.width + 8,
-            height: submitRect.height + 8,
-            zIndex: 9300,
-            border: '2px dashed #10b981',
-            borderRadius: 8,
-            boxShadow: '0 0 0 4px rgba(16,185,129,0.2)',
-            pointerEvents: 'none',
-            animation: 'pulse 1.5s infinite',
-          }}
-        />
-      )}
+      {/* Flashing highlight overlays */}
+      {tourSubStep === 'select' && <TourFlashOverlay rect={selectRect} />}
+      {tourSubStep === 'submit' && <TourFlashOverlay rect={submitRect} />}
     </>
   );
 }
