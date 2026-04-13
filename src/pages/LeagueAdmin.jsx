@@ -219,11 +219,22 @@ export default function LeagueAdmin() {
 
   const deleteLeagueMutation = useMutation({
     mutationFn: async (id) => {
+      // Find the league to get its name for booking lookup
+      const leagueToDelete = leagues.find(l => l.id === id);
       // Delete associated fixtures and their bookings
       const leagueFixturesList = await base44.entities.LeagueFixture.filter({ league_id: id });
-      // Cancel bookings linked to this league's fixtures
+      // Cancel bookings linked via fixture booking_id (primary slot)
       const bookingIds = leagueFixturesList.map(f => f.booking_id).filter(Boolean);
       await Promise.all(bookingIds.map(bid => base44.entities.Booking.update(bid, { status: 'cancelled' })));
+      // Also cancel ALL bookings for this league by booker_name (covers multi-session extra slots)
+      if (leagueToDelete) {
+        const leagueBookings = await base44.entities.Booking.filter({ 
+          club_id: clubId, 
+          booker_name: `League - ${leagueToDelete.name}` 
+        });
+        const extraIds = leagueBookings.map(b => b.id).filter(bid => !bookingIds.includes(bid));
+        await Promise.all(extraIds.map(bid => base44.entities.Booking.update(bid, { status: 'cancelled' })));
+      }
       // Delete fixtures
       await Promise.all(leagueFixturesList.map(f => base44.entities.LeagueFixture.delete(f.id)));
       // Delete teams
