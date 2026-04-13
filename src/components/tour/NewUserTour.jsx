@@ -169,8 +169,6 @@ export default function NewUserTour({
   if (step === 1) {
     return (
       <>
-        {/* Dimmed background — but with a hole where slot1 is */}
-        <div className="fixed inset-0 z-[9000] bg-black/40" style={{ pointerEvents: 'none' }} />
         {/* Highlight layer - no pointer blocking */}
         <div className="fixed inset-0 z-[9001] pointer-events-none" style={{ background: 'transparent' }}>
           {/* We place a transparent "pass-through" over the slot */}
@@ -218,7 +216,6 @@ export default function NewUserTour({
   if (step === 2) {
     return (
       <>
-        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
         {bookBtnRect && (
           <div
             style={{
@@ -248,7 +245,6 @@ export default function NewUserTour({
   if (step === 3) {
     return (
       <>
-        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
         {slot2Rect && (
           <div
             style={{
