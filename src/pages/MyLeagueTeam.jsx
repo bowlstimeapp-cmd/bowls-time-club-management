@@ -807,7 +807,7 @@ const handleGenerateRota = async (team) => {
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span>{viewingRotaTeam?.name} - Player Rota</span>
+                <span>Player Rota</span>
                 <Button variant="outline" size="sm" onClick={handlePrint}>
                   <Printer className="w-4 h-4 mr-1" />
                   Print
