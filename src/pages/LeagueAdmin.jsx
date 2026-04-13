@@ -436,9 +436,29 @@ export default function LeagueAdmin() {
       currentDate = addDays(currentDate, 7);
     }
 
-    // Determine which rinks to use
+    // Determine which rinks to use (may be date-specific for adjacent rinks)
     const rinkCount = club?.rink_count || 6;
     const allClubRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
+
+    // Helper: get rinks available for a given date string
+    const getRinksForDate = (dateKey) => {
+      if (league.adjacent_rinks && league.adjacent_rinks_periods && league.adjacent_rinks_periods.length > 0) {
+        const period = league.adjacent_rinks_periods.find(p =>
+          p.start_date && p.end_date && dateKey >= p.start_date && dateKey <= p.end_date
+        );
+        if (period && period.rinks && period.rinks.length > 0) {
+          return period.rinks.slice().sort((a, b) => a - b);
+        }
+        // Date not covered by any period — fall back to all rinks
+        return allClubRinks;
+      }
+      // Not adjacent mode — use league_rinks or all
+      return (league.league_rinks && league.league_rinks.length > 0)
+        ? league.league_rinks.slice().sort((a, b) => a - b)
+        : allClubRinks;
+    };
+
+    // For overall distribution stats we still need a flat list of all rinks used
     const availableRinks = (league.league_rinks && league.league_rinks.length > 0)
       ? league.league_rinks.slice().sort((a, b) => a - b)
       : allClubRinks;
@@ -516,13 +536,16 @@ export default function LeagueAdmin() {
       const dateKey = match.match_date;
       if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
 
+      // Use date-specific rinks when adjacent rinks mode is enabled
+      const dateRinks = getRinksForDate(dateKey);
+
       // Candidate rinks: not used on this date, and still below target
-      const candidates = availableRinks.filter(
+      const candidates = dateRinks.filter(
         r => !dateRinkUsage[dateKey].has(r) && rinkAssigned[r] < rinkTarget[r]
       );
 
       // Fallback: any rink not used on this date (ignores target — avoids dropping fixtures)
-      const fallback = availableRinks.filter(r => !dateRinkUsage[dateKey].has(r));
+      const fallback = dateRinks.filter(r => !dateRinkUsage[dateKey].has(r));
 
       const pool = candidates.length > 0 ? candidates : fallback;
       if (pool.length === 0) continue; // truly no rink available on this date — skip
@@ -1453,8 +1476,8 @@ export default function LeagueAdmin() {
                 </div>
               )}
 
-              {/* Rink selection */}
-              {club && (
+              {/* Rink selection — hidden when Adjacent Rinks is on */}
+              {club && !leagueAdjacentRinks && (
                 <div className="border rounded-lg p-4 space-y-3">
                   <div>
                     <Label className="font-medium">Rinks for this league</Label>
