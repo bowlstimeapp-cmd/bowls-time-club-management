@@ -420,8 +420,9 @@ const handleGenerateRota = async (team) => {
         <head>
           <title>${viewingRotaTeam?.name} - Player Rota</title>
           <style>
-            @page { margin: 15mm; }
+            @page { margin: 15mm; margin-top: 10mm; margin-bottom: 10mm; }
             html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            head title { display: none; }
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 16px; }
             .logo { max-height: 60px; margin-bottom: 8px; }
@@ -442,9 +443,9 @@ const handleGenerateRota = async (team) => {
           <div class="header">
             ${club?.logo_url ? `<img src="${club.logo_url}" class="logo" alt="${club?.name}" />` : ''}
             <div class="club-name">${club?.name || ''}</div>
-            <h1>${viewingRotaTeam?.name || ''}</h1>
-            <h2>${leagueLine}</h2>
-            ${dateRange ? `<div class="date-range">${dateRange}</div>` : ''}
+            <h1>${leagueLine}</h1>
+            <h2>${viewingRotaTeam?.name || ''}</h2>
+            ${dateRange ? `<div class="date-range">League Dates: ${dateRange}</div>` : ''}
           </div>
           ${printContent.innerHTML}
         </body>
@@ -839,8 +840,7 @@ const handleGenerateRota = async (team) => {
                                   {getMemberName(player)}
                                 </div>
                                 {getMemberPhone(player) && (
-                                  <div className="text-xs font-normal text-gray-400 flex items-center justify-center gap-1">
-                                    <Phone className="w-2 h-2" />
+                                  <div className="text-xs font-normal text-gray-400">
                                     {getMemberPhone(player)}
                                   </div>
                                 )}
