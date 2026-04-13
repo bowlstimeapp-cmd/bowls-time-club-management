@@ -153,7 +153,7 @@ export default function NewUserTour({
   if (step === 0) {
     return (
       <>
-        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-auto" />
+        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
         <WelcomeModal
           onStart={() => {
             onTourDateChange(TOUR_DATE);
@@ -171,8 +171,8 @@ export default function NewUserTour({
       <>
         {/* Dimmed background — but with a hole where slot1 is */}
         <div className="fixed inset-0 z-[9000] bg-black/40" style={{ pointerEvents: 'none' }} />
-        {/* Pointer-blocking layer everywhere EXCEPT the slot */}
-        <div className="fixed inset-0 z-[9001] pointer-events-auto" style={{ background: 'transparent' }}>
+        {/* Highlight layer - no pointer blocking */}
+        <div className="fixed inset-0 z-[9001] pointer-events-none" style={{ background: 'transparent' }}>
           {/* We place a transparent "pass-through" over the slot */}
           {slot1Rect && (
             <div
@@ -278,7 +278,7 @@ export default function NewUserTour({
   if (step === 4) {
     return (
       <>
-        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-auto" />
+        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
         <div className="fixed inset-0 z-[9100] flex items-center justify-center pointer-events-none">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-md mx-4 pointer-events-auto text-center">
             <div className="mb-4 flex justify-center">
