@@ -32,7 +32,9 @@ export default function SelectionCard({
   isSettingAvailability,
   availabilities = [],
   members = [],
-  onDelete
+  onDelete,
+  viewBtnRef,
+  onViewClick,
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
   const navigate = useNavigate();
@@ -89,11 +91,17 @@ export default function SelectionCard({
 
               {/* Desktop buttons */}
               <div className="hidden sm:flex gap-2 flex-wrap shrink-0">
-                <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                  <Button variant="outline" size="sm">
+                {onViewClick ? (
+                  <Button ref={viewBtnRef} variant="outline" size="sm" onClick={onViewClick}>
                     <Eye className="w-4 h-4 mr-1" />View
                   </Button>
-                </Link>
+                ) : (
+                  <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                    <Button ref={viewBtnRef} variant="outline" size="sm">
+                      <Eye className="w-4 h-4 mr-1" />View
+                    </Button>
+                  </Link>
+                )}
                 {selection.status === 'published' && (
                   <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
                     <Button variant="outline" size="sm">

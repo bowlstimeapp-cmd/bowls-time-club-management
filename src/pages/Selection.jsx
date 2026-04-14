@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,6 +44,8 @@ export default function Selection() {
   const [competitionFilter, setCompetitionFilter] = useState('all');
   const [upcomingOnly, setUpcomingOnly] = useState(false);
   const [tourStep, setTourStep] = useState(-1);
+  const tourDemoCardRef = useRef(null);
+  const tourDemoViewBtnRef = useRef(null);
 
   // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
   useEffect(() => {
@@ -322,41 +324,77 @@ export default function Selection() {
             <TabsContent value="published">
               {isLoading ? (
                 <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
-              ) : publishedSelections.length > 0 ? (
-                club?.alt_view_selection ? (
-                  <SelectionTableView
-                    selections={publishedSelections}
-                    isSelector={isSelector}
-                    clubId={clubId}
-                    getMyAvailability={getMyAvailability}
-                    onSetAvailability={(selectionId, isAvailable) =>
-                      setAvailabilityMutation.mutate({ selectionId, isAvailable })
-                    }
-                    isSettingAvailability={setAvailabilityMutation.isPending}
-                    onDelete={handleDeleteSelection}
-                  />
-                ) : (
-                  <div className="space-y-4">
-                    {publishedSelections.map(selection => (
+              ) : (
+                <div className="space-y-4">
+                  {/* Tour demo card — injected at top when tour is at step 17+ */}
+                  {tourStep >= 17 && (
+                    <div ref={tourDemoCardRef}>
                       <SelectionCard
-                        key={selection.id}
-                        selection={selection}
+                        selection={{
+                          id: 'tour-selection',
+                          competition: 'Friendly',
+                          match_date: '2026-05-10',
+                          match_name: 'vs Atherley Bowling Club',
+                          status: 'published',
+                          selections: {
+                            'rink1_Lead': user?.email,
+                            'rink1_2': 'alice@example.com',
+                            'rink1_3': 'bob@example.com',
+                            'rink1_Skip': 'charlie@example.com',
+                            'rink2_Lead': 'diana@example.com',
+                            'rink2_2': 'edward@example.com',
+                            'rink2_3': 'fiona@example.com',
+                            'rink2_Skip': 'george@example.com',
+                          },
+                        }}
+                        isSelector={false}
+                        clubId={clubId}
+                        myAvailability={undefined}
+                        onSetAvailability={undefined}
+                        availabilities={[]}
+                        members={[]}
+                        viewBtnRef={tourDemoViewBtnRef}
+                        onViewClick={() => setTourStep(18)}
+                      />
+                    </div>
+                  )}
+                  {publishedSelections.length > 0 ? (
+                    club?.alt_view_selection ? (
+                      <SelectionTableView
+                        selections={publishedSelections}
                         isSelector={isSelector}
                         clubId={clubId}
-                        myAvailability={getMyAvailability(selection.id)}
-                        onSetAvailability={(isAvailable) =>
-                          setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
+                        getMyAvailability={getMyAvailability}
+                        onSetAvailability={(selectionId, isAvailable) =>
+                          setAvailabilityMutation.mutate({ selectionId, isAvailable })
                         }
                         isSettingAvailability={setAvailabilityMutation.isPending}
-                        availabilities={getAvailabilityForSelection(selection.id)}
-                        members={members}
                         onDelete={handleDeleteSelection}
                       />
-                    ))}
-                  </div>
-                )
-              ) : (
-                <EmptyState title="No published selections" description="Team selections will appear here once published" />
+                    ) : (
+                      <>
+                        {publishedSelections.map(selection => (
+                          <SelectionCard
+                            key={selection.id}
+                            selection={selection}
+                            isSelector={isSelector}
+                            clubId={clubId}
+                            myAvailability={getMyAvailability(selection.id)}
+                            onSetAvailability={(isAvailable) =>
+                              setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })
+                            }
+                            isSettingAvailability={setAvailabilityMutation.isPending}
+                            availabilities={getAvailabilityForSelection(selection.id)}
+                            members={members}
+                            onDelete={handleDeleteSelection}
+                          />
+                        ))}
+                      </>
+                    )
+                  ) : tourStep < 17 ? (
+                    <EmptyState title="No published selections" description="Team selections will appear here once published" />
+                  ) : null}
+                </div>
               )}
             </TabsContent>
 
@@ -445,7 +483,7 @@ export default function Selection() {
         </motion.div>
       </div>
 
-      {/* Selection Tour (steps 16-17) */}
+      {/* Selection Tour (steps 16-18) */}
       {tourStep >= 16 && (
         <SelectionTour
           step={tourStep}
@@ -454,6 +492,8 @@ export default function Selection() {
           userName={user ? (user.first_name && user.surname ? `${user.first_name} ${user.surname}` : (user.full_name || user.email)) : ''}
           onDismiss={() => setTourStep(-1)}
           onComplete={() => setTourStep(-1)}
+          demoCardRef={tourDemoCardRef}
+          demoViewBtnRef={tourDemoViewBtnRef}
         />
       )}
     </div>
