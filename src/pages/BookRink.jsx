@@ -15,7 +15,7 @@ import BookingModal from '@/components/booking/BookingModal';
 import BulkBookingModal from '@/components/booking/BulkBookingModal';
 import BookingDetailModal from '@/components/booking/BookingDetailModal';
 import InfoTooltip from '@/components/InfoTooltip';
-import { CalendarRange, Copy } from 'lucide-react';
+import { CalendarRange, Copy, PlayCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -688,6 +688,26 @@ useEffect(() => {
               Book a Rink
             </h1>
             <InfoTooltip content="Click an available slot to select it. You can select multiple consecutive slots on the same rink for a longer session. Booked slots can be clicked to view booking details. Once happy with your selection, press 'Book Slots' to confirm." />
+            {tourStep < 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                onClick={async () => {
+                  await base44.auth.updateMe({ tour_completed: false });
+                  setTourBooking(null);
+                  setTourBookings2([]);
+                  setTourModalOpen(false);
+                  setTourModal2Open(false);
+                  setSelectedSlots([]);
+                  setSelectedDate(TOUR_DATE);
+                  setTourStep(0);
+                }}
+              >
+                <PlayCircle className="w-4 h-4 mr-1" />
+                Take the Tour
+              </Button>
+            )}
           </div>
          <p className="text-gray-600">
   <span className="text-lg sm:text-xl font-semibold text-gray-900">
