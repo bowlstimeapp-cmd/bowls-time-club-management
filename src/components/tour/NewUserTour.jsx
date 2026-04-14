@@ -78,29 +78,40 @@ export function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,
 }
 
 // ─── Side panel modal ──────────────────────────────────────────────────────
+// On mobile: anchored to the bottom so it doesn't cover important UI elements
+// On desktop: centred vertically on the right side
 export function TourModal({ message, onNext, nextLabel = 'Next', onDismiss, extraButtons }) {
   return (
-    <div className="fixed right-4 sm:right-8 top-1/2 -translate-y-1/2 z-[9100] bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-80 max-w-[calc(100vw-2rem)] pointer-events-auto">
-      <button
-        onClick={onDismiss}
-        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xs underline leading-none"
-      >
-        Close the New User Tour and do not show again
-      </button>
-      <div className="mt-6">
+    <div className="
+      fixed z-[9100] bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 pointer-events-auto
+      bottom-0 left-0 right-0
+      sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:right-4 sm:left-auto sm:w-80 sm:max-w-[calc(100vw-2rem)]
+      w-full rounded-b-none sm:rounded-2xl
+    ">
+      <div className="mb-4">
         <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
       </div>
       {extraButtons && (
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           {extraButtons}
         </div>
       )}
       {onNext && !extraButtons && (
-        <div className="mt-5 flex justify-end">
+        <div className="flex justify-end mb-3">
           <Button onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700 text-sm" size="sm">
             {nextLabel}
             <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </Button>
+        </div>
+      )}
+      {onDismiss && (
+        <div className="mt-3 pt-3 border-t border-gray-100 text-center">
+          <button
+            onClick={onDismiss}
+            className="text-red-500 hover:text-red-700 text-xs underline leading-none"
+          >
+            Close the New User Tour and do not show again
+          </button>
         </div>
       )}
     </div>
@@ -112,12 +123,6 @@ function WelcomeModal({ onStart, onDismiss }) {
   return (
     <div className="fixed inset-0 z-[9100] flex items-center justify-center pointer-events-none">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-lg mx-4 pointer-events-auto relative">
-        <button
-          onClick={onDismiss}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xs underline leading-none"
-        >
-          Close the New User Tour and do not show again
-        </button>
         <div className="mb-5 flex justify-center">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
             <span className="text-3xl">🎳</span>
@@ -132,6 +137,14 @@ function WelcomeModal({ onStart, onDismiss }) {
             Book my first rink
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
+        </div>
+        <div className="mt-4 text-center">
+          <button
+            onClick={onDismiss}
+            className="text-red-500 hover:text-red-700 text-xs underline leading-none"
+          >
+            Close the New User Tour and do not show again
+          </button>
         </div>
       </div>
     </div>
@@ -188,6 +201,9 @@ export function ResumeTourModal({ onResume, onDecline }) {
  *  16 – Selection nav: highlight Selection in nav
  *  -- Selection page picks up from here --
  *  17 – Selection demo card: highlight card + View button
+ *  18 – SelectionView overlay: availability buttons
+ *  19 – Back on Selection page: show live banner + highlight Live Scoring btn
+ *  20 – After clicking Live Scoring: final modal + Finish Tour
  */
 export default function NewUserTour({
   step,

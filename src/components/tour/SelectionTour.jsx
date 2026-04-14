@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Trophy, Eye, Users, CheckCircle, XCircle, User, ArrowLeft, Printer } from 'lucide-react';
+import { Calendar, Trophy, Eye, Users, CheckCircle, XCircle, User, ArrowLeft, ClipboardList, ExternalLink } from 'lucide-react';
 import { HighlightRing, TourModal, dismissTour, pauseTour } from './NewUserTour';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -54,8 +54,22 @@ const DEMO_MEMBER_NAMES = {
   'george@example.com': 'George Black',
 };
 
+// ── Fake Live Match Banner (tour only) ───────────────────────────────────────
+function TourLiveBanner() {
+  return (
+    <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg">
+      <div className="py-3 px-4 max-w-7xl mx-auto flex items-center gap-3">
+        <Trophy className="w-5 h-5 animate-pulse shrink-0" />
+        <span className="font-semibold">LIVE NOW:</span>
+        <span className="font-medium">Friendly - vs Atherley Bowling Club is in progress</span>
+        <ExternalLink className="w-4 h-4 shrink-0" />
+      </div>
+    </div>
+  );
+}
+
 // ── Tour Selection View Overlay (Step 18) ────────────────────────────────────
-function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavailBtnRef }) {
+function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavailBtnRef, onAvailabilitySet }) {
   const [myAvailability, setMyAvailability] = useState(null);
 
   const getMemberName = (email) => {
@@ -70,6 +84,11 @@ function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavai
   ];
   const rinkPositions = ['Lead', '2', '3', 'Skip'];
   const selections = selection.selections || {};
+
+  const handleAvailabilityClick = (val) => {
+    setMyAvailability(val);
+    onAvailabilitySet?.();
+  };
 
   return (
     <div className="fixed inset-0 z-[9010] bg-gradient-to-br from-emerald-50 via-white to-emerald-50 overflow-y-auto">
@@ -101,14 +120,14 @@ function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavai
                 Sunday, 10 May 2026
               </p>
             </div>
-            {/* Availability buttons — these are highlighted by the tour */}
+            {/* Availability buttons — highlighted by tour */}
             <div className="flex gap-2">
               <Button
                 ref={availBtnRef}
                 size="sm"
                 variant={myAvailability === true ? 'default' : 'outline'}
                 className={myAvailability === true ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                onClick={() => setMyAvailability(true)}
+                onClick={() => handleAvailabilityClick(true)}
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
                 Available
@@ -117,7 +136,7 @@ function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavai
                 ref={unavailBtnRef}
                 size="sm"
                 variant={myAvailability === false ? 'destructive' : 'outline'}
-                onClick={() => setMyAvailability(false)}
+                onClick={() => handleAvailabilityClick(false)}
               >
                 <XCircle className="w-4 h-4 mr-1" />
                 Unavailable
@@ -182,8 +201,11 @@ function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavai
  * Tour overlay for the Selection page.
  * Steps:
  *   16 — highlight Selection nav (auto-advances)
- *   17 — demo SelectionCard injected into published list; highlight card + View btn
- *   18 — SelectionView overlay with Available/Unavailable highlight + info modal
+ *   17 — demo SelectionCard injected; highlight card + View btn
+ *   18 — SelectionView overlay with Available/Unavailable; after clicking → modal changes
+ *   18b— post-availability modal: "now let's look at Live Scoring"
+ *   19 — back on Selection page: fake live banner + highlight Live Scoring btn
+ *   20 — after clicking Live Scoring: final modal + Finish Tour
  */
 export default function SelectionTour({
   step,
@@ -192,15 +214,18 @@ export default function SelectionTour({
   onComplete,
   userEmail,
   userName,
-  // Refs passed in from Selection.jsx to anchor demo card
+  // Refs passed from Selection.jsx
   demoCardRef,
   demoViewBtnRef,
+  liveScoreBtnRef,
 }) {
   const [navSelectionRect, setNavSelectionRect] = useState(null);
   const [cardRect, setCardRect] = useState(null);
   const [viewBtnRect, setViewBtnRect] = useState(null);
   const [availBtnRect, setAvailBtnRect] = useState(null);
   const [unavailBtnRect, setUnavailBtnRect] = useState(null);
+  const [liveScoreRect, setLiveScoreRect] = useState(null);
+  const [availabilityClicked, setAvailabilityClicked] = useState(false);
 
   const availBtnRef = useRef(null);
   const unavailBtnRef = useRef(null);
@@ -221,6 +246,7 @@ export default function SelectionTour({
       if (demoViewBtnRef?.current) setViewBtnRect(demoViewBtnRef.current.getBoundingClientRect());
       if (availBtnRef.current) setAvailBtnRect(availBtnRef.current.getBoundingClientRect());
       if (unavailBtnRef.current) setUnavailBtnRect(unavailBtnRef.current.getBoundingClientRect());
+      if (liveScoreBtnRef?.current) setLiveScoreRect(liveScoreBtnRef.current.getBoundingClientRect());
     };
     measure();
     const t = setTimeout(measure, 150);
@@ -231,7 +257,7 @@ export default function SelectionTour({
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
-  }, [step, demoCardRef, demoViewBtnRef]);
+  }, [step, demoCardRef, demoViewBtnRef, liveScoreBtnRef, availabilityClicked]);
 
   const handleDismiss = async () => {
     await dismissTour();
@@ -255,7 +281,7 @@ export default function SelectionTour({
         <style>{FLASH_STYLE}</style>
         <HighlightRing rect={navSelectionRect} color="#6366f1" bgColor="rgba(99,102,241,0.15)" />
         <TourModal
-          message="Selection - click the highlighted Selection link in the navigation bar."
+          message="Now let's look at the Selection page — click the highlighted Selection link in the navigation bar."
           onDismiss={handleDismiss}
         />
       </>
@@ -270,7 +296,7 @@ export default function SelectionTour({
         <HighlightRing rect={cardRect} color="#6366f1" bgColor="rgba(99,102,241,0.08)" />
         <HighlightRing rect={viewBtnRect} color="#10b981" bgColor="rgba(16,185,129,0.18)" />
         <TourModal
-          message="Here you can see what matches have been arranged by your club. Click the 'View' button to see the full selection."
+          message="Here you can see what matches have been arranged by your club. Click the 'View' button on the demo match to see the full selection."
           onDismiss={handleDismiss}
           extraButtons={
             <>
@@ -296,7 +322,7 @@ export default function SelectionTour({
     );
   }
 
-  // ── Step 18: SelectionView overlay + highlight availability buttons ───────
+  // ── Step 18: SelectionView overlay + availability highlights ─────────────
   if (step === 18) {
     return (
       <>
@@ -307,11 +333,71 @@ export default function SelectionTour({
           userName={userName}
           availBtnRef={availBtnRef}
           unavailBtnRef={unavailBtnRef}
+          onAvailabilitySet={() => setAvailabilityClicked(true)}
         />
-        <HighlightRing rect={availBtnRect} color="#10b981" bgColor="rgba(16,185,129,0.18)" />
-        <HighlightRing rect={unavailBtnRect} color="#ef4444" bgColor="rgba(239,68,68,0.15)" />
+        {!availabilityClicked && (
+          <>
+            <HighlightRing rect={availBtnRect} color="#10b981" bgColor="rgba(16,185,129,0.18)" />
+            <HighlightRing rect={unavailBtnRect} color="#ef4444" bgColor="rgba(239,68,68,0.15)" />
+          </>
+        )}
         <TourModal
-          message="Here you can see the players selected for the match, along with the match details. You can select whether you are available or unavailable, which will change the icon next to your name, and inform the Club Selectors of your availability status."
+          message={
+            availabilityClicked
+              ? "Now that seeing the selection and providing availability has been sorted, let's go back to the Selection page and look at the Live Scoring."
+              : "Here you can see the players selected for the match, along with the match details. You can select whether you are available or unavailable, which will change the icon next to your name, and inform the Club Selectors of your availability status."
+          }
+          onDismiss={handleDismiss}
+          extraButtons={
+            availabilityClicked ? (
+              <Button
+                onClick={() => setStep(19)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-sm w-full"
+                size="sm"
+              >
+                Continue Tour
+              </Button>
+            ) : null
+          }
+        />
+      </>
+    );
+  }
+
+  // ── Step 19: Back on Selection page — fake banner + highlight Live Scoring btn ──
+  if (step === 19) {
+    return (
+      <>
+        <style>{FLASH_STYLE}</style>
+        {/* Fake live banner injected above the header */}
+        <div className="fixed top-0 left-0 right-0 z-[9020]">
+          <TourLiveBanner />
+        </div>
+        <HighlightRing rect={liveScoreRect} color="#10b981" bgColor="rgba(16,185,129,0.18)" />
+        <TourModal
+          message="When a game is in progress, you will see a banner across the top of the application showing what game is in progress, which when clicked takes you to the live scoring for that game. You can also access it through the Selection page and clicking 'Live Scoring' on that game you're interested in. Look, the banner is there now!"
+          onDismiss={handleDismiss}
+          extraButtons={
+            <Button
+              onClick={() => setStep(20)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-sm w-full"
+              size="sm"
+            >
+              Click Live Scoring
+            </Button>
+          }
+        />
+      </>
+    );
+  }
+
+  // ── Step 20: Final modal + Finish Tour ────────────────────────────────────
+  if (step === 20) {
+    return (
+      <>
+        <style>{FLASH_STYLE}</style>
+        <TourModal
+          message="As mentioned, Live Scoring can be accessed easily to see how your team is getting on!"
           onDismiss={handleDismiss}
           extraButtons={
             <Button
@@ -319,7 +405,7 @@ export default function SelectionTour({
               className="bg-emerald-600 hover:bg-emerald-700 text-sm w-full"
               size="sm"
             >
-              Continue Tour
+              Finish Tour 🎳
             </Button>
           }
         />

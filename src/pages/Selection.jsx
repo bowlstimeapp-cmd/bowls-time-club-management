@@ -46,6 +46,7 @@ export default function Selection() {
   const [tourStep, setTourStep] = useState(-1);
   const tourDemoCardRef = useRef(null);
   const tourDemoViewBtnRef = useRef(null);
+  const tourLiveScoreBtnRef = useRef(null);
 
   // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
   useEffect(() => {
@@ -326,7 +327,7 @@ export default function Selection() {
                 <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
               ) : (
                 <div className="space-y-4">
-                  {/* Tour demo card — injected at top when tour is at step 17+ */}
+                  {/* Tour demo card — injected when step 17+ (overlay covers it at step 18, visible at 19/20) */}
                   {tourStep >= 17 && (
                     <div ref={tourDemoCardRef}>
                       <SelectionCard
@@ -355,6 +356,8 @@ export default function Selection() {
                         members={[]}
                         viewBtnRef={tourDemoViewBtnRef}
                         onViewClick={() => setTourStep(18)}
+                        liveScoreBtnRef={tourLiveScoreBtnRef}
+                        onLiveScoreClick={() => setTourStep(20)}
                       />
                     </div>
                   )}
@@ -483,7 +486,7 @@ export default function Selection() {
         </motion.div>
       </div>
 
-      {/* Selection Tour (steps 16-18) */}
+      {/* Selection Tour (steps 16-20) */}
       {tourStep >= 16 && (
         <SelectionTour
           step={tourStep}
@@ -494,6 +497,7 @@ export default function Selection() {
           onComplete={() => setTourStep(-1)}
           demoCardRef={tourDemoCardRef}
           demoViewBtnRef={tourDemoViewBtnRef}
+          liveScoreBtnRef={tourLiveScoreBtnRef}
         />
       )}
     </div>

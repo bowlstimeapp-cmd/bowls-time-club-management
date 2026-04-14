@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
-import { HighlightRing, TourModal, dismissTour, pauseTour, clearTourPause, TOUR_DATE_STRING } from './NewUserTour';
+import { HighlightRing, TourModal, dismissTour, pauseTour } from './NewUserTour';
 
 // ─── Keyframe injection ────────────────────────────────────────────────────
 const FLASH_STYLE = `

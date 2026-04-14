@@ -35,6 +35,8 @@ export default function SelectionCard({
   onDelete,
   viewBtnRef,
   onViewClick,
+  liveScoreBtnRef,
+  onLiveScoreClick,
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
   const navigate = useNavigate();
@@ -103,11 +105,17 @@ export default function SelectionCard({
                   </Link>
                 )}
                 {selection.status === 'published' && (
-                  <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                    <Button variant="outline" size="sm">
+                  onLiveScoreClick ? (
+                    <Button ref={liveScoreBtnRef} variant="outline" size="sm" onClick={onLiveScoreClick}>
                       <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
+                      <Button ref={liveScoreBtnRef} variant="outline" size="sm">
+                        <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
+                      </Button>
+                    </Link>
+                  )
                 )}
                 {isSelector && (
                   <>

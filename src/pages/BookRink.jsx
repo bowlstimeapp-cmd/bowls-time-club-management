@@ -973,7 +973,7 @@ useEffect(() => {
               clearTourPause();
               setShowResumeTour(false);
               // Navigate to Selection page for step 16+
-              if (pausedStep !== null && pausedStep >= 16) {
+              if (pausedStep !== null && pausedStep >= 16 && pausedStep <= 20) {
                 pauseTour(pausedStep);
                 navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
               } else if (pausedStep !== null) {
