@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import NewUserTour, { isTourEnabled, hasTourBeenDismissed, TOUR_DATE, TOUR_DATE_STRING } from '@/components/tour/NewUserTour';
+import NewUserTour, { isTourEnabled, hasTourBeenDismissed, TOUR_DATE, TOUR_DATE_STRING, pauseTour, getTourPausedStep, clearTourPause, dismissTour, ResumeTourModal } from '@/components/tour/NewUserTour';
 import TourBookingModal from '@/components/tour/TourBookingModal';
 
 export default function BookRink() {
@@ -48,6 +48,7 @@ export default function BookRink() {
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started
+  const [showResumeTour, setShowResumeTour] = useState(false);
   const [tourBooking, setTourBooking] = useState(null); // temp in-memory booking (single)
   const [tourBookings2, setTourBookings2] = useState([]); // temp double session bookings
   const [tourModalOpen, setTourModalOpen] = useState(false); // tour booking modal (single)
@@ -68,7 +69,13 @@ export default function BookRink() {
     const loadUser = async () => {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
-      // Check if tour should be shown
+      // Check for paused tour first (resume prompt)
+      const pausedStep = getTourPausedStep();
+      if (pausedStep !== null && !(await hasTourBeenDismissed(currentUser))) {
+        setShowResumeTour(true);
+        return;
+      }
+      // Check if tour should be shown fresh
       if (isTourEnabled() && !(await hasTourBeenDismissed(currentUser))) {
         setTourStep(0);
       }
@@ -76,10 +83,24 @@ export default function BookRink() {
     loadUser();
   }, []);
 
-// ADD THIS:
 useEffect(() => {
   window.scrollTo(0, 0);
 }, []);
+
+// Step 12: detect when user clicks "My Bookings" nav item and pause tour at 13
+useEffect(() => {
+  if (tourStep !== 12) return;
+  const handler = (e) => {
+    const target = e.target.closest('a');
+    if (!target) return;
+    const href = target.getAttribute('href') || '';
+    if (href.includes('MyBookings')) {
+      pauseTour(13);
+    }
+  };
+  document.addEventListener('click', handler, true);
+  return () => document.removeEventListener('click', handler, true);
+}, [tourStep]);
 
   // Redirect to club selector if no club selected
   useEffect(() => {
@@ -943,6 +964,29 @@ useEffect(() => {
           tourSubStep={tourModalSubStep}
           onSubStepChange={setTourModalSubStep}
         />
+
+        {/* Resume Tour Modal */}
+        {showResumeTour && (
+          <ResumeTourModal
+            onResume={() => {
+              const pausedStep = getTourPausedStep();
+              clearTourPause();
+              setShowResumeTour(false);
+              // Navigate to Selection page for step 16+
+              if (pausedStep !== null && pausedStep >= 16) {
+                pauseTour(pausedStep);
+                navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+              } else if (pausedStep !== null) {
+                setTourStep(pausedStep);
+              }
+            }}
+            onDecline={async () => {
+              await dismissTour();
+              clearTourPause();
+              setShowResumeTour(false);
+            }}
+          />
+        )}
 
         {/* New User Tour */}
         {tourStep >= 0 && (

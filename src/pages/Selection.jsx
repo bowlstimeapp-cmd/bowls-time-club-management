@@ -31,6 +31,8 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import SelectionCard from '@/components/selection/SelectionCard';
 import SelectionTableView from '@/components/selection/SelectionTableView';
+import SelectionTour from '@/components/tour/SelectionTour';
+import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
 
 export default function Selection() {
   const [searchParams] = useSearchParams();
@@ -41,11 +43,29 @@ export default function Selection() {
   const [activeTab, setActiveTab] = useState('published');
   const [competitionFilter, setCompetitionFilter] = useState('all');
   const [upcomingOnly, setUpcomingOnly] = useState(false);
+  const [tourStep, setTourStep] = useState(-1);
+
+  // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
+  useEffect(() => {
+    if (tourStep === 16) {
+      const t = setTimeout(() => setTourStep(17), 1800);
+      return () => clearTimeout(t);
+    }
+  }, [tourStep]);
 
   useEffect(() => {
     const loadUser = async () => {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
+      // Pick up paused tour step
+      const pausedStep = getTourPausedStep();
+      if (pausedStep !== null && !(await hasTourBeenDismissed(currentUser))) {
+        clearTourPause();
+        // Step 16 = show "click Selection nav" instruction on Selection page
+        // Step 17 = show demo card
+        // If we arrived here from My Bookings onContinueTour, start at step 16
+        setTourStep(pausedStep);
+      }
     };
     loadUser();
   }, []);
@@ -424,6 +444,18 @@ export default function Selection() {
           </Tabs>
         </motion.div>
       </div>
+
+      {/* Selection Tour (steps 16-17) */}
+      {tourStep >= 16 && (
+        <SelectionTour
+          step={tourStep}
+          setStep={setTourStep}
+          userEmail={user?.email}
+          userName={user ? (user.first_name && user.surname ? `${user.first_name} ${user.surname}` : (user.full_name || user.email)) : ''}
+          onDismiss={() => setTourStep(-1)}
+          onComplete={() => setTourStep(-1)}
+        />
+      )}
     </div>
   );
 }

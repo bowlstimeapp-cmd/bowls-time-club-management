@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
@@ -6,6 +6,10 @@ import { ArrowRight } from 'lucide-react';
 // Tour date: 1st Jan 2999
 export const TOUR_DATE = new Date(2999, 0, 1);
 export const TOUR_DATE_STRING = '2999-01-01';
+
+// Local storage keys
+const TOUR_STEP_KEY = 'bowlstime_tour_step';
+const TOUR_PAUSED_KEY = 'bowlstime_tour_paused';
 
 export function isTourEnabled() {
   return true;
@@ -17,6 +21,25 @@ export async function hasTourBeenDismissed(user) {
 
 export async function dismissTour() {
   await base44.auth.updateMe({ tour_completed: true });
+  localStorage.removeItem(TOUR_STEP_KEY);
+  localStorage.removeItem(TOUR_PAUSED_KEY);
+}
+
+export function pauseTour(step) {
+  localStorage.setItem(TOUR_STEP_KEY, String(step));
+  localStorage.setItem(TOUR_PAUSED_KEY, 'true');
+}
+
+export function getTourPausedStep() {
+  const paused = localStorage.getItem(TOUR_PAUSED_KEY);
+  const step = localStorage.getItem(TOUR_STEP_KEY);
+  if (paused === 'true' && step !== null) return parseInt(step);
+  return null;
+}
+
+export function clearTourPause() {
+  localStorage.removeItem(TOUR_STEP_KEY);
+  localStorage.removeItem(TOUR_PAUSED_KEY);
 }
 
 // ─── Keyframe injection ────────────────────────────────────────────────────
@@ -32,7 +55,7 @@ function StyleInjector() {
 }
 
 // ─── Highlight overlay ─────────────────────────────────────────────────────
-function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.18)' }) {
+export function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.18)' }) {
   if (!rect) return null;
   return (
     <div
@@ -55,7 +78,7 @@ function HighlightRing({ rect, color = '#10b981', bgColor = 'rgba(16,185,129,0.1
 }
 
 // ─── Side panel modal ──────────────────────────────────────────────────────
-function TourModal({ message, onNext, nextLabel = 'Next', onDismiss }) {
+export function TourModal({ message, onNext, nextLabel = 'Next', onDismiss, extraButtons }) {
   return (
     <div className="fixed right-4 sm:right-8 top-1/2 -translate-y-1/2 z-[9100] bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-80 max-w-[calc(100vw-2rem)] pointer-events-auto">
       <button
@@ -67,7 +90,12 @@ function TourModal({ message, onNext, nextLabel = 'Next', onDismiss }) {
       <div className="mt-6">
         <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
       </div>
-      {onNext && (
+      {extraButtons && (
+        <div className="mt-5 flex flex-col gap-2">
+          {extraButtons}
+        </div>
+      )}
+      {onNext && !extraButtons && (
         <div className="mt-5 flex justify-end">
           <Button onClick={onNext} className="bg-emerald-600 hover:bg-emerald-700 text-sm" size="sm">
             {nextLabel}
@@ -110,23 +138,26 @@ function WelcomeModal({ onStart, onDismiss }) {
   );
 }
 
-// ─── Completion modal ──────────────────────────────────────────────────────
-function CompletionModal({ onFinish }) {
+// ─── Resume Tour modal (shown on BookRink when paused) ─────────────────────
+export function ResumeTourModal({ onResume, onDecline }) {
   return (
     <div className="fixed inset-0 z-[9100] flex items-center justify-center pointer-events-none">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-md mx-4 pointer-events-auto text-center">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-md mx-4 pointer-events-auto relative text-center">
         <div className="mb-4 flex justify-center">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-            <span className="text-3xl">🎉</span>
+            <span className="text-3xl">🎳</span>
           </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-3">Nice work!</h2>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          You've completed the tour! You now know how to book a rink, move a booking, view details, and navigate to your bookings. Enjoy using BowlsTime!
+        <h2 className="text-xl font-bold text-gray-900 mb-3">Continue your Bowls Time New User Tour</h2>
+        <p className="text-sm text-gray-600 leading-relaxed mb-6">
+          Would you like to continue from where you left off?
         </p>
-        <div className="mt-6 flex justify-center">
-          <Button onClick={onFinish} className="bg-emerald-600 hover:bg-emerald-700">
-            Finish Tour
+        <div className="flex gap-3 justify-center">
+          <Button onClick={onResume} className="bg-emerald-600 hover:bg-emerald-700">
+            Yes
+          </Button>
+          <Button variant="outline" onClick={onDecline}>
+            No
           </Button>
         </div>
       </div>
@@ -139,17 +170,24 @@ function CompletionModal({ onFinish }) {
  *  0  – Welcome
  *  1  – Select Rink 1 @ 9am (highlight slot)
  *  2  – Click "Book 1 Slot" button (highlight button)
- *  3  – Booking modal: select Private Roll-up (handled by TourBookingModal)
- *  4  – Booking modal: submit (handled by TourBookingModal)
+ *  3  – Booking modal: select Private Roll-up
+ *  4  – Booking modal: submit
  *  5  – Drag booking to Rink 2 @ 9am
  *  6  – Move confirmation (Next button)
- *  7  – Click booking to view details (highlight booking cell)
- *  8  – Cancel booking (highlight cancel button in detail modal, Next to continue)
+ *  7  – Click booking to view details
+ *  8  – Cancel booking (highlight cancel button)
  *  9  – Select double session (Rink 1 @ 9am + 10am)
  *  10 – Click "Book 2 Slots" (highlight book button)
- *  11 – Double booking modal: submit (handled by TourBookingModal)
- *  12 – Navigate to My Bookings
- *  13 – Completion
+ *  11 – Double booking modal: submit
+ *  12 – Navigate to My Bookings (no skip/next button; nav detection)
+ *  -- MyBookings page picks up from here --
+ *  13 – Upcoming tab: show tour bookings, explain tags
+ *  14 – Highlight Past & Cancelled tab
+ *  15 – Past tab clicked: show cancelled booking, offer Continue/Later
+ *  -- pause here if "Continue Later" --
+ *  16 – Selection nav: highlight Selection in nav
+ *  -- Selection page picks up from here --
+ *  17 – Selection demo card: highlight card + View button
  */
 export default function NewUserTour({
   step,
@@ -158,14 +196,14 @@ export default function NewUserTour({
   onComplete,
   onTourDateChange,
   // slot refs
-  slot1Ref,        // Rink 1 @ 9am cell
-  slot2Ref,        // Rink 2 @ 9am cell
-  slot1_10Ref,     // Rink 1 @ 10am cell
-  tourBookingRef,  // the tour booking cell (after move = Rink 2 @ 9am)
-  bookingDetailCancelRef, // Cancel button inside BookingDetailModal
-  bookButtonRef,   // "Book N Slots" floating button
-  hasSlotSelected, // true when ≥1 slot selected
-  tourModalSubStep,    // 'select' | 'submit'
+  slot1Ref,
+  slot2Ref,
+  slot1_10Ref,
+  tourBookingRef,
+  bookingDetailCancelRef,
+  bookButtonRef,
+  hasSlotSelected,
+  tourModalSubStep,
   setTourModalSubStep,
 }) {
   const [slot1Rect, setSlot1Rect] = useState(null);
@@ -176,7 +214,6 @@ export default function NewUserTour({
   const [cancelBtnRect, setCancelBtnRect] = useState(null);
   const [navRinkRect, setNavRinkRect] = useState(null);
 
-  // Measure refs on each step / slot-selection change
   useEffect(() => {
     const measure = () => {
       if (slot1Ref?.current) setSlot1Rect(slot1Ref.current.getBoundingClientRect());
@@ -185,7 +222,6 @@ export default function NewUserTour({
       if (bookButtonRef?.current) setBookBtnRect(bookButtonRef.current.getBoundingClientRect());
       if (tourBookingRef?.current) setTourBookingRect(tourBookingRef.current.getBoundingClientRect());
       if (bookingDetailCancelRef?.current) setCancelBtnRect(bookingDetailCancelRef.current.getBoundingClientRect());
-      // Find "Rink Booking" nav button by text
       const allButtons = document.querySelectorAll('nav button, header button');
       for (const btn of allButtons) {
         if (btn.textContent?.includes('Rink Booking')) {
@@ -195,7 +231,6 @@ export default function NewUserTour({
       }
     };
     measure();
-    // Re-measure after short delay so refs have rendered
     const t = setTimeout(measure, 120);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
@@ -253,8 +288,6 @@ export default function NewUserTour({
     );
   }
 
-  // ── Steps 3 & 4: Inside TourBookingModal — modal renders its own overlays ─
-  // TourModal side-panel only
   if (step === 3) {
     return (
       <>
@@ -380,7 +413,7 @@ export default function NewUserTour({
     );
   }
 
-  // ── Step 12: Navigate to My Bookings ─────────────────────────────────────
+  // ── Step 12: Navigate to My Bookings (no button — nav-triggered) ──────────
   if (step === 12) {
     return (
       <>
@@ -388,21 +421,8 @@ export default function NewUserTour({
         <HighlightRing rect={navRinkRect} color="#8b5cf6" bgColor="rgba(139,92,246,0.15)" />
         <TourModal
           message="Now let's look at the 'My Bookings' section. Click 'Rink Booking' in the navigation, then select 'My Bookings'."
-          onNext={() => setStep(13)}
-          nextLabel="Skip"
           onDismiss={handleDismiss}
         />
-      </>
-    );
-  }
-
-  // ── Step 13: Completion ───────────────────────────────────────────────────
-  if (step === 13) {
-    return (
-      <>
-        <StyleInjector />
-        <div className="fixed inset-0 z-[9000] bg-black/40 pointer-events-none" />
-        <CompletionModal onFinish={async () => { await dismissTour(); onComplete(); }} />
       </>
     );
   }

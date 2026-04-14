@@ -191,7 +191,7 @@ export default function BookingCard({
                     </Button>
                   )}
                   
-                  {isOwn && (booking.status === 'pending' || booking.status === 'approved') && (
+                  {isOwn && onCancel && (booking.status === 'pending' || booking.status === 'approved') && (
                     <Button
                       size="sm"
                       variant="outline"
