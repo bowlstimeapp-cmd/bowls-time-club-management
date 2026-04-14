@@ -554,13 +554,20 @@ useEffect(() => {
       }
     }
 
-    await Promise.all(bookingPromises);
+    const createdBookings = await Promise.all(bookingPromises);
+
+    // Audit log: one entry per created booking
+    if (isPrivileged) {
+      await Promise.all(createdBookings.map(created =>
+        writeAuditLog(created, 'bulk_booked', `Bulk booking: ${bulkData.rinks.length} rink(s), ${slots.length} session(s), type: ${bulkData.competitionType || 'N/A'}`)
+      ));
+    }
     
     setBulkModalOpen(false);
     
     const message = status === 'approved' 
-      ? `${bookingPromises.length} booking(s) created for ${bulkData.rinks.length} rink(s)!` 
-      : `${bookingPromises.length} booking request(s) submitted! Awaiting approval.`;
+      ? `${createdBookings.length} booking(s) created for ${bulkData.rinks.length} rink(s)!` 
+      : `${createdBookings.length} booking request(s) submitted! Awaiting approval.`;
     toast.success(message);
   };
 
@@ -593,6 +600,11 @@ useEffect(() => {
       rollup_members: booking.rollup_members || [],
     });
 
+    await writeAuditLog(
+      { ...booking, rink_number: newRink, start_time: newStartTime, end_time: newEndTime },
+      'copied',
+      `Copied from Rink ${booking.rink_number} at ${booking.start_time} to Rink ${newRink} at ${newStartTime}`
+    );
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`Booking copied to Rink ${newRink} at ${newStartTime}`);
   };
@@ -613,6 +625,9 @@ useEffect(() => {
       await base44.entities.Booking.update(bookingId, { status: 'cancelled' });
       if (booking && booking.booker_email !== user?.email) {
         await sendBookingChangeNotification(booking, 'deleted');
+      }
+      if (booking) {
+        await writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bulkDeleteSelected.length} bookings in batch)`);
       }
     }
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -675,7 +690,7 @@ useEffect(() => {
                   onDateChange={setSelectedDate} 
                 />
                 <div className="flex gap-2 flex-wrap">
-                  {membership?.role === 'admin' && (
+                  {(membership?.role === 'admin' || membership?.role === 'steward') && (
                     <>
                       <Button 
                         onClick={() => setBulkModalOpen(true)}

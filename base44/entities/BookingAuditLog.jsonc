@@ -19,7 +19,10 @@
         "moved",
         "swapped",
         "deleted",
-        "edited"
+        "edited",
+        "bulk_booked",
+        "bulk_deleted",
+        "copied"
       ],
       "description": "The action taken on the booking"
     },

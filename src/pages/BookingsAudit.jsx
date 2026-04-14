@@ -16,13 +16,16 @@ import {
 import { format, parseISO } from 'date-fns';
 
 const actionConfig = {
-  approved:  { label: 'Approved',  color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: CheckCircle },
-  rejected:  { label: 'Rejected',  color: 'bg-red-100 text-red-800 border-red-300',             icon: XCircle },
-  cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-700 border-gray-300',          icon: XCircle },
-  deleted:   { label: 'Deleted',   color: 'bg-red-100 text-red-800 border-red-300',             icon: Trash2 },
-  moved:     { label: 'Moved',     color: 'bg-blue-100 text-blue-800 border-blue-300',          icon: ArrowRightLeft },
-  swapped:   { label: 'Swapped',   color: 'bg-purple-100 text-purple-800 border-purple-300',    icon: ArrowRightLeft },
-  edited:    { label: 'Edited',    color: 'bg-amber-100 text-amber-800 border-amber-300',       icon: Pencil },
+  approved:     { label: 'Approved',     color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: CheckCircle },
+  rejected:     { label: 'Rejected',     color: 'bg-red-100 text-red-800 border-red-300',             icon: XCircle },
+  cancelled:    { label: 'Cancelled',    color: 'bg-gray-100 text-gray-700 border-gray-300',          icon: XCircle },
+  deleted:      { label: 'Deleted',      color: 'bg-red-100 text-red-800 border-red-300',             icon: Trash2 },
+  moved:        { label: 'Moved',        color: 'bg-blue-100 text-blue-800 border-blue-300',          icon: ArrowRightLeft },
+  swapped:      { label: 'Swapped',      color: 'bg-purple-100 text-purple-800 border-purple-300',    icon: ArrowRightLeft },
+  edited:       { label: 'Edited',       color: 'bg-amber-100 text-amber-800 border-amber-300',       icon: Pencil },
+  bulk_booked:  { label: 'Bulk Booked',  color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: CheckCircle },
+  bulk_deleted: { label: 'Bulk Deleted', color: 'bg-red-100 text-red-800 border-red-300',             icon: Trash2 },
+  copied:       { label: 'Copied',       color: 'bg-indigo-100 text-indigo-800 border-indigo-300',    icon: ArrowRightLeft },
 };
 
 export default function BookingsAudit() {
