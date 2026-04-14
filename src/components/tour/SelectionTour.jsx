@@ -197,6 +197,144 @@ function TourSelectionView({ selection, userEmail, userName, availBtnRef, unavai
   );
 }
 
+// Demo scores for the tour live scoring view
+const DEMO_SCORES = {
+  rink1: { club: 14, opposition: 9, ends: 10 },
+  rink2: { club: 7, opposition: 18, ends: 10 },
+};
+
+// ── Tour Live Scoring Overlay (Step 20) ──────────────────────────────────────
+function TourLiveScoringView({ userEmail, userName, onFinish, onDismiss }) {
+  const getMemberName = (email) => {
+    if (!email) return 'TBD';
+    if (email === userEmail) return userName;
+    return DEMO_MEMBER_NAMES[email] || email;
+  };
+
+  const rinks = [
+    {
+      number: 1,
+      clubPlayers: ['rink1_Lead', 'rink1_2', 'rink1_3', 'rink1_Skip'],
+      oppPlayers: ['Lead', '2', '3', 'Skip'],
+      emails: {
+        'rink1_Lead': userEmail,
+        'rink1_2': 'alice@example.com',
+        'rink1_3': 'bob@example.com',
+        'rink1_Skip': 'charlie@example.com',
+      },
+      ...DEMO_SCORES.rink1,
+    },
+    {
+      number: 2,
+      clubPlayers: ['rink2_Lead', 'rink2_2', 'rink2_3', 'rink2_Skip'],
+      oppPlayers: ['Lead', '2', '3', 'Skip'],
+      emails: {
+        'rink2_Lead': 'diana@example.com',
+        'rink2_2': 'edward@example.com',
+        'rink2_3': 'fiona@example.com',
+        'rink2_Skip': 'george@example.com',
+      },
+      ...DEMO_SCORES.rink2,
+    },
+  ];
+
+  const totalClub = rinks.reduce((sum, r) => sum + r.club, 0);
+  const totalOpp = rinks.reduce((sum, r) => sum + r.opposition, 0);
+  const positions = ['Lead', '2', '3', 'Skip'];
+
+  return (
+    <div className="fixed inset-0 z-[9010] bg-gradient-to-br from-emerald-50 via-white to-emerald-50 overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-48">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <span className="inline-flex items-center text-gray-600 mb-4 cursor-default">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Selections
+          </span>
+          <div className="flex items-center gap-3 mb-2">
+            <Badge className="border text-base px-3 py-1 bg-blue-100 text-blue-800 border-blue-200">
+              <Trophy className="w-4 h-4 mr-2" />
+              Friendly
+            </Badge>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-3 py-1 animate-pulse">
+              <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
+              LIVE
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">vs Atherley Bowling Club</h1>
+          <p className="text-gray-600 flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Sunday, 10 May 2026
+          </p>
+        </motion.div>
+
+        {/* Total score */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className="mb-6 bg-white rounded-xl border shadow p-4 flex items-center justify-between text-center"
+        >
+          <div className="flex-1">
+            <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">Our Club</p>
+            <p className={`text-5xl font-bold ${totalClub >= totalOpp ? 'text-emerald-600' : 'text-gray-800'}`}>{totalClub}</p>
+          </div>
+          <div className="px-6 text-gray-400 font-semibold text-xl">vs</div>
+          <div className="flex-1">
+            <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">Atherley BC</p>
+            <p className={`text-5xl font-bold ${totalOpp > totalClub ? 'text-red-600' : 'text-gray-800'}`}>{totalOpp}</p>
+          </div>
+        </motion.div>
+
+        {/* Per-rink cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {rinks.map((rink, idx) => (
+            <motion.div key={rink.number} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + idx * 0.05 }}>
+              <Card>
+                <CardHeader className="bg-emerald-50 py-3">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <ClipboardList className="w-5 h-5 text-emerald-600" />
+                      Rink {rink.number}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-600">Ends: {rink.ends}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {/* Score row */}
+                  <div className="grid grid-cols-3 text-center bg-gray-50 border-b py-3 px-4 font-semibold text-sm">
+                    <span className="text-left text-gray-500">Club</span>
+                    <span className="text-gray-400">vs</span>
+                    <span className="text-right text-gray-500">Opposition</span>
+                  </div>
+                  <div className="grid grid-cols-3 text-center py-3 px-4 border-b">
+                    <span className={`text-3xl font-bold text-left ${rink.club >= rink.opposition ? 'text-emerald-600' : 'text-gray-700'}`}>{rink.club}</span>
+                    <span></span>
+                    <span className={`text-3xl font-bold text-right ${rink.opposition > rink.club ? 'text-red-500' : 'text-gray-700'}`}>{rink.opposition}</span>
+                  </div>
+                  {/* Players */}
+                  <div className="p-4 space-y-2">
+                    {positions.map(pos => {
+                      const key = `rink${rink.number}_${pos}`;
+                      const email = rink.emails[key];
+                      return (
+                        <div key={pos} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
+                          <span className="text-gray-400 w-10">{pos}</span>
+                          <span className={email === userEmail ? 'font-semibold text-emerald-700' : 'text-gray-700'}>
+                            {getMemberName(email)}
+                            {email === userEmail && <span className="text-xs text-emerald-600 ml-1">(You)</span>}
+                          </span>
+                          <span className="text-gray-400 text-xs">Atherley BC</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Tour overlay for the Selection page.
  * Steps:
@@ -391,13 +529,14 @@ export default function SelectionTour({
     );
   }
 
-  // ── Step 20: Final modal + Finish Tour ────────────────────────────────────
+  // ── Step 20: Live scoring view + finish modal ─────────────────────────────
   if (step === 20) {
     return (
       <>
         <style>{FLASH_STYLE}</style>
+        <TourLiveScoringView userEmail={userEmail} userName={userName} onFinish={handleFinish} onDismiss={handleDismiss} />
         <TourModal
-          message="As mentioned, Live Scoring can be accessed easily to see how your team is getting on!"
+          message="This is the Live Scoring page! Here you can see the real-time scores for each rink and track how your team is performing during the match. That's the end of the tour — enjoy using BowlsTime!"
           onDismiss={handleDismiss}
           extraButtons={
             <Button
