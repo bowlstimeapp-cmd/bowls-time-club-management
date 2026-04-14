@@ -898,7 +898,7 @@ useEffect(() => {
 
         {/* Floating Book Slots button */}
         {!bulkDeleteMode && selectedSlots.length > 0 && (
-          <div className="fixed bottom-6 left-6 z-40">
+          <div className={`fixed left-6 z-40 ${tourStep >= 0 ? 'bottom-64 sm:bottom-6' : 'bottom-6'}`}>
             <Button
               ref={[2, 10].includes(tourStep) ? tourBookBtnRef : null}
               onClick={handleBookSelected}
