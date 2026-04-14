@@ -96,6 +96,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const isClubSteward = membership?.role === 'steward' && membership?.status === 'approved';
   const isSelector = (membership?.role === 'selector' || membership?.role === 'admin') && membership?.status === 'approved';
   const isPlatformAdmin = user?.role === 'admin';
 
@@ -237,6 +238,22 @@ export default function Layout({ children, currentPageName }) {
                   >
                     <Users className="w-4 h-4" />
                     My Teams
+                  </Link>
+                )}
+
+                {/* Bookings Admin link for stewards */}
+                {isClubSteward && (
+                  <Link
+                    to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('AdminBookings'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Bookings
                   </Link>
                 )}
 
@@ -411,6 +428,21 @@ export default function Layout({ children, currentPageName }) {
                   {item.name}
                 </Link>
               ))}
+              {isClubSteward && (
+                <Link
+                  to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
+                    isActive(createPageUrl('AdminBookings'))
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  <ShieldCheck className="w-5 h-5" />
+                  Bookings
+                </Link>
+              )}
               {isClubAdmin && (
                 <>
                   <Link

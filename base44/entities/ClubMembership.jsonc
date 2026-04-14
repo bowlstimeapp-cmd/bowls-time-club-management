@@ -1,0 +1,124 @@
+{
+  "name": "ClubMembership",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User's email"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "User's display name"
+    },
+    "title": {
+      "type": "string",
+      "description": "Member's title (Mr, Mrs, Miss, Ms, Dr, etc.)"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "User's first name"
+    },
+    "surname": {
+      "type": "string",
+      "description": "User's surname"
+    },
+    "phone": {
+      "type": "string",
+      "description": "User's phone number"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Member's date of birth"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "Male",
+        "Female",
+        "Other",
+        "Prefer not to say"
+      ],
+      "description": "Member's gender"
+    },
+    "membership_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the member joined the club"
+    },
+    "locker_number": {
+      "type": "string",
+      "description": "Member's assigned locker number"
+    },
+    "locker_number_2": {
+      "type": "string",
+      "description": "Member's second locker number (admin-only editable)"
+    },
+    "emergency_contact_name": {
+      "type": "string",
+      "description": "Name of the member's emergency contact"
+    },
+    "emergency_contact_phone": {
+      "type": "string",
+      "description": "Phone number of the member's emergency contact"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "steward",
+        "selector",
+        "live_scorer",
+        "member"
+      ],
+      "default": "member",
+      "description": "User's role within the club. Stewards have access to Booking Management."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Membership status"
+    },
+    "member_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "left"
+      ],
+      "default": "active",
+      "description": "Whether the member is active or has left the club"
+    },
+    "membership_groups": {
+      "type": "array",
+      "description": "Membership types the user belongs to"
+    },
+    "email_notifications": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether member wants to receive email notifications"
+    },
+    "sms_notifications": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether member wants to receive SMS notifications"
+    }
+  },
+  "required": [
+    "club_id",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

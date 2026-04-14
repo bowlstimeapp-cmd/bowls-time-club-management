@@ -1,0 +1,81 @@
+{
+  "name": "BookingAuditLog",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "booking_id": {
+      "type": "string",
+      "description": "Reference to the booking (may no longer exist)"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "rejected",
+        "cancelled",
+        "moved",
+        "swapped",
+        "deleted",
+        "edited"
+      ],
+      "description": "The action taken on the booking"
+    },
+    "performed_by_email": {
+      "type": "string",
+      "description": "Email of the admin/steward who performed the action"
+    },
+    "performed_by_name": {
+      "type": "string",
+      "description": "Name of the admin/steward who performed the action"
+    },
+    "performed_by_role": {
+      "type": "string",
+      "description": "Role of the person who performed the action (admin/steward)"
+    },
+    "booking_rink": {
+      "type": "number",
+      "description": "Rink number of the booking"
+    },
+    "booking_date": {
+      "type": "string",
+      "description": "Date of the booking"
+    },
+    "booking_start_time": {
+      "type": "string",
+      "description": "Start time of the booking"
+    },
+    "booking_end_time": {
+      "type": "string",
+      "description": "End time of the booking"
+    },
+    "booker_name": {
+      "type": "string",
+      "description": "Name of the person who made the original booking"
+    },
+    "booker_email": {
+      "type": "string",
+      "description": "Email of the person who made the original booking"
+    },
+    "competition_type": {
+      "type": "string",
+      "description": "Competition type of the original booking"
+    },
+    "details": {
+      "type": "string",
+      "description": "Additional details about the action (e.g. moved from/to, reason for rejection)"
+    }
+  },
+  "required": [
+    "club_id",
+    "action",
+    "performed_by_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

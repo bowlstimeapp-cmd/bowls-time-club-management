@@ -172,6 +172,31 @@ useEffect(() => {
   });
 
   const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const isSteward = membership?.role === 'steward' && membership?.status === 'approved';
+  const isPrivileged = isAdmin || isSteward;
+
+  const writeAuditLog = async (booking, action, details = '') => {
+    if (!isPrivileged || !user) return;
+    const performerName = user.first_name && user.surname
+      ? `${user.first_name} ${user.surname}`
+      : (user.full_name || user.email);
+    await base44.entities.BookingAuditLog.create({
+      club_id: clubId,
+      booking_id: booking.id,
+      action,
+      performed_by_email: user.email,
+      performed_by_name: performerName,
+      performed_by_role: membership?.role,
+      booking_rink: booking.rink_number,
+      booking_date: booking.date,
+      booking_start_time: booking.start_time,
+      booking_end_time: booking.end_time,
+      booker_name: booking.booker_name,
+      booker_email: booking.booker_email,
+      competition_type: booking.competition_type || '',
+      details,
+    });
+  };
 
   const sendBookingChangeNotification = async (booking, type, extraMessage = '') => {
     if (!booking?.booker_email || booking.booker_email === user?.email) return;
@@ -210,9 +235,10 @@ useEffect(() => {
     }
     setDeletingBooking(true);
     await base44.entities.Booking.update(booking.id, { status: 'cancelled' });
-    if (isAdmin && booking.booker_email !== user?.email) {
+    if (isPrivileged && booking.booker_email !== user?.email) {
       await sendBookingChangeNotification(booking, 'deleted');
     }
+    await writeAuditLog(booking, 'cancelled');
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success('Booking cancelled');
     setBookingDetailOpen(false);
@@ -262,13 +288,14 @@ useEffect(() => {
       end_time: newEndTime,
     });
 
-    if (isAdmin && booking.booker_email !== user?.email) {
+    if (isPrivileged && booking.booker_email !== user?.email) {
       await sendBookingChangeNotification(
         booking, 'moved',
         ` It has been moved to Rink ${newRink} at ${newStartTime}.`
       );
     }
 
+    await writeAuditLog(booking, 'moved', `Moved to Rink ${newRink} at ${newStartTime}`);
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`Booking moved to Rink ${newRink} at ${newStartTime}`);
   };
@@ -292,6 +319,11 @@ useEffect(() => {
     await Promise.all([
       sendBookingChangeNotification(bookingA, 'swapped', ` It has been swapped to Rink ${bookingB.rink_number} at ${bookingB.start_time}.`),
       sendBookingChangeNotification(bookingB, 'swapped', ` It has been swapped to Rink ${bookingA.rink_number} at ${bookingA.start_time}.`),
+    ]);
+
+    await Promise.all([
+      writeAuditLog(bookingA, 'swapped', `Swapped with ${bookingB.booker_name} (Rink ${bookingB.rink_number} at ${bookingB.start_time})`),
+      writeAuditLog(bookingB, 'swapped', `Swapped with ${bookingA.booker_name} (Rink ${bookingA.rink_number} at ${bookingA.start_time})`),
     ]);
 
     queryClient.invalidateQueries({ queryKey: ['bookings'] });

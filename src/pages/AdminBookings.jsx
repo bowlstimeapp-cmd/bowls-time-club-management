@@ -110,9 +110,34 @@ export default function AdminBookings() {
   });
 
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
+  const isClubSteward = myMembership?.role === 'steward' && myMembership?.status === 'approved';
+  const canAccessPage = isClubAdmin || isClubSteward;
 
-  // Check if user is club admin
-  if (!membershipLoading && user && !isClubAdmin) {
+  const writeAuditLog = async (booking, action, details = '') => {
+    if (!user || !myMembership) return;
+    const performerName = user.first_name && user.surname
+      ? `${user.first_name} ${user.surname}`
+      : (user.full_name || user.email);
+    await base44.entities.BookingAuditLog.create({
+      club_id: clubId,
+      booking_id: booking.id,
+      action,
+      performed_by_email: user.email,
+      performed_by_name: performerName,
+      performed_by_role: myMembership.role,
+      booking_rink: booking.rink_number,
+      booking_date: booking.date,
+      booking_start_time: booking.start_time,
+      booking_end_time: booking.end_time,
+      booker_name: booking.booker_name,
+      booker_email: booking.booker_email,
+      competition_type: booking.competition_type || '',
+      details,
+    });
+  };
+
+  // Check if user is club admin or steward
+  if (!membershipLoading && user && !canAccessPage) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
         <motion.div
@@ -124,7 +149,7 @@ export default function AdminBookings() {
             <ShieldAlert className="w-10 h-10 text-red-500" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-6">You need club admin privileges to access this page.</p>
+          <p className="text-gray-600 mb-6">You need club admin or steward privileges to access this page.</p>
           <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
             <Button className="bg-emerald-600 hover:bg-emerald-700">
               Go to Bookings
@@ -137,7 +162,6 @@ export default function AdminBookings() {
 
   const handleApprove = async (booking) => {
     await updateMutation.mutateAsync({ id: booking.id, data: { status: 'approved' } });
-    // Create notification
     await base44.entities.Notification.create({
       user_email: booking.booker_email,
       type: 'booking_accepted',
@@ -147,6 +171,7 @@ export default function AdminBookings() {
       link_params: `?clubId=${clubId}`,
       related_id: booking.id
     });
+    await writeAuditLog(booking, 'approved');
     toast.success(`Booking for ${booking.booker_name} approved`);
   };
 
@@ -176,6 +201,7 @@ export default function AdminBookings() {
         link_params: `?clubId=${clubId}`,
         related_id: bookingToReject.id
       });
+      await writeAuditLog(bookingToReject, 'rejected', rejectReason ? `Reason: ${rejectReason}` : '');
       toast.success(`Booking for ${bookingToReject.booker_name} rejected`);
       setRejectDialogOpen(false);
       setBookingToReject(null);
@@ -206,6 +232,11 @@ export default function AdminBookings() {
       });
     }
     
+    await writeAuditLog(
+      { ...editBooking, ...updates },
+      hasChanged ? 'moved' : 'edited',
+      hasChanged ? `Moved to Rink ${updates.rink_number} on ${updates.date} at ${updates.start_time}` : 'Details edited'
+    );
     toast.success('Booking updated');
     setEditBooking(null);
   };
@@ -217,6 +248,7 @@ export default function AdminBookings() {
 
   const handleConfirmDelete = async () => {
     if (bookingToDelete) {
+      await writeAuditLog(bookingToDelete, 'deleted');
       await deleteMutation.mutateAsync(bookingToDelete.id);
       setDeleteDialogOpen(false);
       setBookingToDelete(null);
@@ -257,12 +289,24 @@ export default function AdminBookings() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Booking Management
-          </h1>
-          <p className="text-gray-600">
-            {club?.name} • Manage booking requests and approvals
-          </p>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+                Booking Management
+              </h1>
+              <p className="text-gray-600">
+                {club?.name} • Manage booking requests and approvals
+              </p>
+            </div>
+            {isClubAdmin && (
+              <Link to={createPageUrl('BookingsAudit') + `?clubId=${clubId}`}>
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                  <ShieldAlert className="w-4 h-4 mr-2" />
+                  Audit Log
+                </Button>
+              </Link>
+            )}
+          </div>
         </motion.div>
 
         {/* Stats Cards */}
