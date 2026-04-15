@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane, Printer } from 'lucide-react';
+import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Home, Plane, Printer, Loader2 } from 'lucide-react';
 import PlayerAccoladeHover from '@/components/accolades/PlayerAccoladeHover';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -43,6 +43,7 @@ export default function SelectionView() {
   const navigate = useNavigate();
   const printRef = React.useRef();
   const [user, setUser] = React.useState(null);
+  const [printing, setPrinting] = React.useState(false);
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -132,12 +133,81 @@ export default function SelectionView() {
     enabled: !!clubId && !!club?.module_accolades,
   });
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!selection) return;
 
-    // If the club has a custom team sheet, open it directly for printing
+    // If the club has a custom team sheet, fill placeholders and download
     if (club?.custom_team_sheet_url) {
-      window.open(club.custom_team_sheet_url, '_blank');
+      setPrinting(true);
+      try {
+        const sel = selection.selections || {};
+        const isTC = selection.competition === 'Top Club';
+        const activeComp = allCompetitions.find(c => c.name === selection?.competition);
+        const homeRinks = activeComp ? activeComp.home_rinks : (selection?.home_rinks || 2);
+        const awayRinks = isTC ? 0 : (activeComp ? (activeComp.away_rinks || 0) : 0);
+        const ppr = activeComp?.players_per_rink || 4;
+        const positions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, ppr);
+        const totalRinks = homeRinks + awayRinks;
+
+        // Build placeholder data object
+        const data = {
+          match_date: format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy'),
+          match_name: selection.match_name || '',
+          competition: selection.competition || '',
+          club_name: club?.name || '',
+        };
+
+        // Rink players: rink1_Lead, rink1_2, rink2_Skip, etc.
+        for (let r = 1; r <= totalRinks; r++) {
+          for (const pos of positions) {
+            const key = `rink${r}_${pos}`;
+            data[key] = getMemberName(sel[key]);
+          }
+          data[`rink${r}_tag`] = r <= homeRinks ? 'Home' : 'Away';
+        }
+
+        // Top Club events
+        if (isTC) {
+          const TC_EVENTS = [
+            { id: 'mens_two_wood', positions: ['Player'] },
+            { id: 'ladies_two_wood', positions: ['Player'] },
+            { id: 'pairs', positions: ['Lead', 'Skip'] },
+            { id: 'triple', positions: ['Lead', '2', 'Skip'] },
+            { id: 'fours', positions: ['Lead', '2', '3', 'Skip'] },
+          ];
+          for (const event of TC_EVENTS) {
+            for (const pos of event.positions) {
+              const key = `${event.id}_${pos}`;
+              data[key] = getMemberName(sel[key]);
+            }
+          }
+        }
+
+        // Call the backend function using fetch() for binary response
+        const response = await base44.functions.fetch('fillTeamSheet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templateUrl: club.custom_team_sheet_url, data }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Failed to generate team sheet');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `team-sheet-${selection.match_date}.docx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to generate team sheet: ' + err.message);
+      } finally {
+        setPrinting(false);
+      }
       return;
     }
 
@@ -370,9 +440,13 @@ export default function SelectionView() {
                   </div>
                 );
               })()}
-              <Button variant="outline" onClick={handlePrint}>
-                <Printer className="w-4 h-4 mr-2" />
-                Print
+              <Button variant="outline" onClick={handlePrint} disabled={printing}>
+                {printing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Printer className="w-4 h-4 mr-2" />
+                )}
+                {printing ? 'Generating...' : club?.custom_team_sheet_url ? 'Download Team Sheet' : 'Print'}
               </Button>
             </div>
           </div>

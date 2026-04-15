@@ -33,6 +33,7 @@ import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import SelectionCard from '@/components/selection/SelectionCard';
+import InfoTooltip from '@/components/InfoTooltip';
 import SelectionTableView from '@/components/selection/SelectionTableView';
 import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
@@ -295,21 +296,24 @@ export default function Selection() {
                     className="hidden"
                     onChange={handleTeamSheetUpload}
                   />
-                  <Button
-                    variant="outline"
-                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                    onClick={() => teamSheetInputRef.current?.click()}
-                    disabled={uploadingSheet}
-                  >
-                    {uploadingSheet ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : club?.custom_team_sheet_url ? (
-                      <FileText className="w-4 h-4 mr-2" />
-                    ) : (
-                      <Upload className="w-4 h-4 mr-2" />
-                    )}
-                    {uploadingSheet ? 'Uploading...' : club?.custom_team_sheet_url ? 'Replace Team Sheet' : 'Upload Custom Team Sheet'}
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                      onClick={() => teamSheetInputRef.current?.click()}
+                      disabled={uploadingSheet}
+                    >
+                      {uploadingSheet ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : club?.custom_team_sheet_url ? (
+                        <FileText className="w-4 h-4 mr-2" />
+                      ) : (
+                        <Upload className="w-4 h-4 mr-2" />
+                      )}
+                      {uploadingSheet ? 'Uploading...' : club?.custom_team_sheet_url ? 'Replace Team Sheet' : 'Upload Custom Team Sheet'}
+                    </Button>
+                    <InfoTooltip content={`Upload a .docx template with placeholders. Available placeholders:\n\n{{match_date}}, {{match_name}}, {{competition}}, {{club_name}}\n\nFor players: {{rink1_Lead}}, {{rink1_2}}, {{rink1_3}}, {{rink1_Skip}}, {{rink2_Lead}} etc.\n\nFor rink tags: {{rink1_tag}} (Home/Away)\n\nFor Top Club: {{mens_two_wood_Player}}, {{pairs_Lead}}, {{pairs_Skip}}, {{triple_Lead}}, {{fours_Lead}} etc.`} />
+                  </div>
                 </>
               )}
               <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}`}>
