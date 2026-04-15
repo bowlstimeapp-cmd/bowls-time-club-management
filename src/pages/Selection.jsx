@@ -27,7 +27,8 @@ import {
   Clock,
   Upload,
   FileText,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -312,6 +313,20 @@ export default function Selection() {
                       )}
                       {uploadingSheet ? 'Uploading...' : club?.custom_team_sheet_url ? 'Replace Team Sheet' : 'Upload Custom Team Sheet'}
                     </Button>
+                    {club?.custom_team_sheet_url && (
+                      <Button
+                        variant="outline"
+                        className="border-red-400 text-red-600 hover:bg-red-50"
+                        onClick={async () => {
+                          if (!confirm('Remove the custom team sheet? The default print layout will be used instead.')) return;
+                          await base44.entities.Club.update(clubId, { custom_team_sheet_url: '' });
+                          queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+                          toast.success('Custom team sheet removed');
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                     <InfoTooltip content={`Upload a .docx template with placeholders. Available placeholders:\n\n{{match_date}}, {{match_name}}, {{competition}}, {{club_name}}\n\nFor players: {{rink1_Lead}}, {{rink1_2}}, {{rink1_3}}, {{rink1_Skip}}, {{rink2_Lead}} etc.\n\nFor rink tags: {{rink1_tag}} (Home/Away)\n\nFor Top Club: {{mens_two_wood_Player}}, {{pairs_Lead}}, {{pairs_Skip}}, {{triple_Lead}}, {{fours_Lead}} etc.`} />
                   </div>
                 </>
