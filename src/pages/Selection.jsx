@@ -25,16 +25,11 @@ import {
   User,
   Filter,
   Clock,
-  Upload,
-  FileText,
-  Loader2,
-  X
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import SelectionCard from '@/components/selection/SelectionCard';
-import InfoTooltip from '@/components/InfoTooltip';
 import SelectionTableView from '@/components/selection/SelectionTableView';
 import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
@@ -52,8 +47,6 @@ export default function Selection() {
   const tourDemoCardRef = useRef(null);
   const tourDemoViewBtnRef = useRef(null);
   const tourLiveScoreBtnRef = useRef(null);
-  const [uploadingSheet, setUploadingSheet] = useState(false);
-  const teamSheetInputRef = useRef(null);
 
   // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
   useEffect(() => {
@@ -194,18 +187,6 @@ export default function Selection() {
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
   const isAdmin = membership?.role === 'admin';
 
-  const handleTeamSheetUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingSheet(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    await base44.entities.Club.update(clubId, { custom_team_sheet_url: file_url });
-    queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-    toast.success('Custom team sheet uploaded!');
-    setUploadingSheet(false);
-    e.target.value = '';
-  };
-
   // Check if user is selected for a match
   const isUserSelectedForMatch = (selection) => {
     if (!selection.selections || !user?.email) return false;
@@ -288,49 +269,6 @@ export default function Selection() {
           </div>
           {isSelector && (
             <div className="flex items-center gap-2 flex-wrap">
-              {isAdmin && (
-                <>
-                  <input
-                    ref={teamSheetInputRef}
-                    type="file"
-                    accept=".doc,.docx,.pdf"
-                    className="hidden"
-                    onChange={handleTeamSheetUpload}
-                  />
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                      onClick={() => teamSheetInputRef.current?.click()}
-                      disabled={uploadingSheet}
-                    >
-                      {uploadingSheet ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : club?.custom_team_sheet_url ? (
-                        <FileText className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Upload className="w-4 h-4 mr-2" />
-                      )}
-                      {uploadingSheet ? 'Uploading...' : club?.custom_team_sheet_url ? 'Replace Team Sheet' : 'Upload Custom Team Sheet'}
-                    </Button>
-                    {club?.custom_team_sheet_url && (
-                      <Button
-                        variant="outline"
-                        className="border-red-400 text-red-600 hover:bg-red-50"
-                        onClick={async () => {
-                          if (!confirm('Remove the custom team sheet? The default print layout will be used instead.')) return;
-                          await base44.entities.Club.update(clubId, { custom_team_sheet_url: '' });
-                          queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-                          toast.success('Custom team sheet removed');
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                    <InfoTooltip content={`Upload a .docx template with placeholders. Available placeholders:\n\n{{match_date}}, {{match_name}}, {{competition}}, {{club_name}}\n\nFor players: {{rink1_Lead}}, {{rink1_2}}, {{rink1_3}}, {{rink1_Skip}}, {{rink2_Lead}} etc.\n\nFor rink tags: {{rink1_tag}} (Home/Away)\n\nFor Top Club: {{mens_two_wood_Player}}, {{pairs_Lead}}, {{pairs_Skip}}, {{triple_Lead}}, {{fours_Lead}} etc.`} />
-                  </div>
-                </>
-              )}
               <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}`}>
                 <Button className="bg-emerald-600 hover:bg-emerald-700">
                   <Plus className="w-4 h-4 mr-2" />
