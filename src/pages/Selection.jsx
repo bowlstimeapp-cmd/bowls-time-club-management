@@ -24,7 +24,10 @@ import {
   XCircle,
   User,
   Filter,
-  Clock
+  Clock,
+  Upload,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -47,6 +50,8 @@ export default function Selection() {
   const tourDemoCardRef = useRef(null);
   const tourDemoViewBtnRef = useRef(null);
   const tourLiveScoreBtnRef = useRef(null);
+  const [uploadingSheet, setUploadingSheet] = useState(false);
+  const teamSheetInputRef = useRef(null);
 
   // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
   useEffect(() => {
@@ -185,6 +190,19 @@ export default function Selection() {
   });
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
+  const isAdmin = membership?.role === 'admin';
+
+  const handleTeamSheetUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingSheet(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    await base44.entities.Club.update(clubId, { custom_team_sheet_url: file_url });
+    queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+    toast.success('Custom team sheet uploaded!');
+    setUploadingSheet(false);
+    e.target.value = '';
+  };
 
   // Check if user is selected for a match
   const isUserSelectedForMatch = (selection) => {
@@ -267,12 +285,40 @@ export default function Selection() {
             </p>
           </div>
           {isSelector && (
-            <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}`}>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 mr-2" />
-                New Selection
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2 flex-wrap">
+              {isAdmin && (
+                <>
+                  <input
+                    ref={teamSheetInputRef}
+                    type="file"
+                    accept=".doc,.docx,.pdf"
+                    className="hidden"
+                    onChange={handleTeamSheetUpload}
+                  />
+                  <Button
+                    variant="outline"
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                    onClick={() => teamSheetInputRef.current?.click()}
+                    disabled={uploadingSheet}
+                  >
+                    {uploadingSheet ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : club?.custom_team_sheet_url ? (
+                      <FileText className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Upload className="w-4 h-4 mr-2" />
+                    )}
+                    {uploadingSheet ? 'Uploading...' : club?.custom_team_sheet_url ? 'Replace Team Sheet' : 'Upload Custom Team Sheet'}
+                  </Button>
+                </>
+              )}
+              <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}`}>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Selection
+                </Button>
+              </Link>
+            </div>
           )}
         </motion.div>
 

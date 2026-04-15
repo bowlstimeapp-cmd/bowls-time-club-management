@@ -218,6 +218,10 @@
     "function_room_api_key": {
       "type": "string",
       "description": "API key for the public function room booking REST endpoint"
+    },
+    "custom_team_sheet_url": {
+      "type": "string",
+      "description": "URL of the custom team sheet file (doc/docx/pdf) used as the print template for selections"
     }
   },
   "required": [

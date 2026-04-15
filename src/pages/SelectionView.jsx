@@ -135,6 +135,12 @@ export default function SelectionView() {
   const handlePrint = () => {
     if (!selection) return;
 
+    // If the club has a custom team sheet, open it directly for printing
+    if (club?.custom_team_sheet_url) {
+      window.open(club.custom_team_sheet_url, '_blank');
+      return;
+    }
+
     const sel = selection.selections || {};
     const isTC = selection.competition === 'Top Club';
     const activeComp = allCompetitions.find(c => c.name === selection?.competition);
