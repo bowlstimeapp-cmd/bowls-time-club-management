@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp } from 'lucide-react';
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
+import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
 import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -54,6 +55,7 @@ export default function ClubSettings() {
   const [scorecardFormat, setScorecardFormat] = useState('pdf');
   const [useCustomScorecardLayout, setUseCustomScorecardLayout] = useState(false);
   const [importBookingsOpen, setImportBookingsOpen] = useState(false);
+  const [teamSheetSettings, setTeamSheetSettings] = useState({});
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -295,6 +297,7 @@ export default function ClubSettings() {
       alt_view_leagues: altViewLeagues,
       scorecard_format: scorecardFormat,
       use_custom_scorecard_layout: useCustomScorecardLayout,
+      ...teamSheetSettings,
     });
   };
 
@@ -885,6 +888,11 @@ export default function ClubSettings() {
                 toast.success(v ? 'Accolades enabled' : 'Accolades disabled');
               }}
             />
+
+            {/* Team Sheet Print Template */}
+            {club?.module_selection !== false && (
+              <TeamSheetTemplateSettings club={club} onChange={setTeamSheetSettings} />
+            )}
 
             {/* Import Bookings */}
             <Card>

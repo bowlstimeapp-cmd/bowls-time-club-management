@@ -219,9 +219,55 @@
       "type": "string",
       "description": "API key for the public function room booking REST endpoint"
     },
-    "custom_team_sheet_url": {
+    "team_sheet_template": {
       "type": "string",
-      "description": "URL of the custom team sheet file (doc/docx/pdf) used as the print template for selections"
+      "enum": [
+        "classic",
+        "compact",
+        "modern",
+        "bowls"
+      ],
+      "default": "classic",
+      "description": "Print template style for team sheets"
+    },
+    "team_sheet_primary_colour": {
+      "type": "string",
+      "default": "#10b981",
+      "description": "Primary colour for team sheet print templates (hex)"
+    },
+    "team_sheet_font_size": {
+      "type": "string",
+      "enum": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "default": "medium",
+      "description": "Font size for team sheet print templates"
+    },
+    "team_sheet_show_dress_code": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show dress code field on team sheet"
+    },
+    "team_sheet_show_venue": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show venue field on team sheet"
+    },
+    "team_sheet_show_start_time": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show start time field on team sheet"
+    },
+    "team_sheet_advanced_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable advanced HTML template editing for team sheets"
+    },
+    "team_sheet_custom_html": {
+      "type": "string",
+      "description": "Custom HTML template for team sheet (advanced mode)"
     }
   },
   "required": [
