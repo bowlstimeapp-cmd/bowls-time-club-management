@@ -133,35 +133,116 @@ export default function SelectionView() {
   });
 
   const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-    
+    if (!selection) return;
+
+    const sel = selection.selections || {};
+    const isTC = selection.competition === 'Top Club';
+    const activeComp = allCompetitions.find(c => c.name === selection?.competition);
+    const homeRinks = activeComp ? activeComp.home_rinks : (selection?.home_rinks || 2);
+    const awayRinks = isTC ? 0 : (activeComp ? (activeComp.away_rinks || 0) : 0);
+    const ppr = activeComp?.players_per_rink || 4;
+    const positions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, ppr);
+    const rinks = [
+      ...Array.from({ length: homeRinks }, (_, i) => ({ number: i + 1, tag: 'Home' })),
+      ...Array.from({ length: awayRinks }, (_, i) => ({ number: homeRinks + i + 1, tag: 'Away' })),
+    ];
+
+    const avail = (email) => {
+      if (!email) return '';
+      const a = availabilities.find(x => x.user_email === email);
+      if (a?.is_available === true) return ' <span style="color:#16a34a;font-size:11px;">✓ Available</span>';
+      if (a?.is_available === false) return ' <span style="color:#dc2626;font-size:11px;">✗ Unavailable</span>';
+      return '';
+    };
+
+    const captainBadge = (email) =>
+      isCaptain(email) ? ' <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#fef3c7;color:#b45309;font-size:10px;font-weight:bold;margin-left:4px;">C</span>' : '';
+
+    let bodyHtml = '';
+
+    if (isTC) {
+      bodyHtml = TOP_CLUB_EVENTS.map(event => `
+        <div class="card">
+          <div class="card-header indigo-header">
+            <span class="card-title">&#127942; ${event.name}</span>
+          </div>
+          <div class="card-body">
+            <div class="player-chips">
+              ${event.positions.map(pos => {
+                const email = sel[`${event.id}_${pos}`];
+                return `<div class="chip"><span class="pos-label">${pos}:</span> <span class="player-name">${getMemberName(email)}${avail(email)}${captainBadge(email)}</span></div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      const cards = rinks.map(rink => {
+        const isHome = rink.tag === 'Home';
+        const tagStyle = isHome
+          ? 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;'
+          : 'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;';
+        const rows = positions.map(pos => {
+          const email = sel[`rink${rink.number}_${pos}`];
+          return `
+            <div class="position-row">
+              <span class="pos-label">${pos}</span>
+              <span class="player-name">${getMemberName(email)}${avail(email)}${captainBadge(email)}</span>
+            </div>`;
+        }).join('');
+        return `
+          <div class="card">
+            <div class="card-header green-header">
+              <span class="card-title">&#128101; Rink ${rink.number}</span>
+              <span class="rink-tag" style="${tagStyle}">${rink.tag}</span>
+            </div>
+            <div class="card-body">${rows}</div>
+          </div>`;
+      });
+
+      // two-column grid
+      bodyHtml = `<div class="rink-grid">${cards.join('')}</div>`;
+    }
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
         <head>
-          <title>${selection?.competition} - ${selection?.match_name || 'Team Selection'}</title>
+          <title>${selection.competition} - ${selection.match_name || 'Team Selection'}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .logo { max-height: 80px; margin-bottom: 10px; }
-            h1 { font-size: 20px; margin-bottom: 5px; }
-            h2 { font-size: 16px; color: #666; margin-bottom: 20px; }
-            .rink-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .rink { border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
-            .rink-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
-            .position { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
-            .position:last-child { border-bottom: none; }
-            .position-label { color: #666; font-size: 12px; }
-            .position-name { font-weight: 500; }
-            .event { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-            .event-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; }
-            .players { display: flex; flex-wrap: wrap; gap: 10px; }
-            .player { background: #f5f5f5; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111; font-size: 13px; }
+            .header { text-align: center; margin-bottom: 24px; }
+            .logo { max-height: 72px; margin-bottom: 10px; }
+            .club-name { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+            .match-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+            .match-date { font-size: 13px; color: #555; }
+            .comp-badge { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 4px; padding: 2px 10px; margin-bottom: 8px; border: 1px solid #ccc; }
+            .rink-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+            .card { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; break-inside: avoid; }
+            .card-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+            .green-header { background: #ecfdf5; border-bottom: 1px solid #d1fae5; }
+            .indigo-header { background: #eef2ff; border-bottom: 1px solid #c7d2fe; }
+            .card-title { font-weight: 700; font-size: 14px; }
+            .rink-tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+            .card-body { padding: 10px 14px; }
+            .position-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #f3f4f6; }
+            .position-row:last-child { border-bottom: none; }
+            .pos-label { color: #6b7280; font-size: 12px; font-weight: 500; min-width: 36px; }
+            .player-name { font-weight: 500; }
+            .player-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+            .chip { background: #f9fafb; border-radius: 6px; padding: 5px 10px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          <div class="header">
+            ${club?.logo_url ? `<img src="${club.logo_url}" class="logo" alt="${club?.name}" />` : ''}
+            <div class="club-name">${club?.name || ''}</div>
+            <div class="comp-badge">${selection.competition}</div>
+            <div class="match-title">${selection.match_name || 'Team Selection'}</div>
+            <div class="match-date">${format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}</div>
+          </div>
+          ${bodyHtml}
         </body>
       </html>
     `);
