@@ -183,19 +183,22 @@ export default function SelectionView() {
           }
         }
 
-        // Call the backend function using fetch() for binary response
-        const response = await base44.functions.fetch('fillTeamSheet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ templateUrl: club.custom_team_sheet_url, data }),
+        // Call the backend function — returns base64-encoded docx
+        const response = await base44.functions.invoke('fillTeamSheet', {
+          templateUrl: club.custom_team_sheet_url,
+          data,
         });
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || 'Failed to generate team sheet');
-        }
+        const base64 = response.data?.base64;
+        if (!base64) throw new Error(response.data?.error || 'No file returned');
 
-        const blob = await response.blob();
+        // Decode base64 to binary and trigger download
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
