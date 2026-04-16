@@ -83,6 +83,8 @@ export default function SelectionEditor() {
   // Friendly-specific state
   const [friendlyLocation, setFriendlyLocation] = useState('');
   const [friendlyNumRinks, setFriendlyNumRinks] = useState(2);
+  // Fantastic 5s venue
+  const [fantastic5sVenue, setFantastic5sVenue] = useState('');
   const [friendlyPlayersPerRink, setFriendlyPlayersPerRink] = useState(4);
   const [matchStartTime, setMatchStartTime] = useState('10:00');
   const [matchEndTime, setMatchEndTime] = useState('14:00');
@@ -143,6 +145,9 @@ export default function SelectionEditor() {
         setFriendlyLocation(existingSelection.friendly_location || '');
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
         setFriendlyPlayersPerRink(existingSelection.friendly_players_per_rink || 4);
+      }
+      if (existingSelection.competition === 'Fantastic 5s') {
+        setFantastic5sVenue(existingSelection.friendly_location || '');
       }
     }
   }, [existingSelection]);
@@ -443,6 +448,9 @@ if (club?.email_member_notifications) {
         friendly_location: friendlyLocation,
         friendly_num_rinks: friendlyNumRinks,
         friendly_players_per_rink: friendlyPlayersPerRink,
+      } : {}),
+      ...(competition === 'Fantastic 5s' ? {
+        friendly_location: fantastic5sVenue,
       } : {}),
     };
 
@@ -941,6 +949,22 @@ ${club?.name || 'Your Bowls Club'}
                     placeholder="e.g., vs Springfield BC"
                   />
                 </div>
+
+                {/* Fantastic 5s venue */}
+                {isFantastic5s && (
+                  <div>
+                    <Label>Venue</Label>
+                    <Select value={fantastic5sVenue} onValueChange={setFantastic5sVenue}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select venue" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Home">Home</SelectItem>
+                        <SelectItem value="Away">Away</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Captain fields */}
                 {competition && selectedEmails.length > 0 && (

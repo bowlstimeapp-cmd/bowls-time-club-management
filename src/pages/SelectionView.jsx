@@ -224,8 +224,13 @@ export default function SelectionView() {
                   <Badge variant="secondary">Draft</Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                 {selection.match_name || 'Team Selection'}
+                {isFantastic5s && selection.friendly_location && (
+                  <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-orange-50 text-orange-700 border-orange-200'}>
+                    {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}
+                  </Badge>
+                )}
               </h1>
               <p className="text-gray-600 flex items-center gap-2 mt-1">
                 <Calendar className="w-4 h-4" />
