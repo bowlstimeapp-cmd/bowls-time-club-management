@@ -92,10 +92,19 @@ function MemberCard({ member, onSelect, onRemove, isSelf, payment }) {
         </p>
 
         {/* Email */}
-        <p className="text-xs text-slate-400 truncate mb-3 flex items-center gap-1">
+        <p className="text-xs text-slate-400 truncate flex items-center gap-1">
           <Mail className="w-3 h-3 flex-shrink-0" />
           {member.user_email}
         </p>
+
+        {/* Member ID */}
+        {member.member_id && (
+          <p className="text-xs text-slate-400 mb-3 flex items-center gap-1">
+            <Hash className="w-3 h-3 flex-shrink-0" />
+            Member ID: {member.member_id}
+          </p>
+        )}
+        {!member.member_id && <div className="mb-3" />}
 
         {/* Membership type dots */}
         {member.membership_groups?.length > 0 && (
