@@ -232,6 +232,7 @@ function renderCustomHtml(template, data) {
     venue: data.venue || '',
     dress_code: data.dressCode || '',
     logo_url: data.logoUrl || '',
+    club_header_img: data.headerImgUrl || '',
   };
   data.rinks.forEach(rink => {
     flatData[`rink${rink.number}_tag`] = rink.tag;
@@ -304,6 +305,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
   return {
     clubName: club?.name || '',
     logoUrl: club?.logo_url || '',
+    headerImgUrl: club?.team_sheet_header_img_url || '',
     competition: selection.competition || '',
     matchName: selection.match_name || '',
     matchDate,

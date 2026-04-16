@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Printer, AlertTriangle, Code } from 'lucide-react';
+import { Printer, AlertTriangle, Code, Upload, X, Loader2 } from 'lucide-react';
 import { TEMPLATE_OPTIONS } from '@/lib/teamSheetTemplates';
+import { base44 } from '@/api/base44Client';
 
 const COLOURS = [
   { label: 'Emerald', value: '#10b981' },
@@ -30,6 +31,8 @@ export default function TeamSheetTemplateSettings({ club, onChange }) {
   const [advancedMode, setAdvancedMode] = useState(club?.team_sheet_advanced_mode || false);
   const [customHtml, setCustomHtml] = useState(club?.team_sheet_custom_html || '');
   const [htmlError, setHtmlError] = useState('');
+  const [headerImgUrl, setHeaderImgUrl] = useState(club?.team_sheet_header_img_url || '');
+  const [uploadingHeader, setUploadingHeader] = useState(false);
 
   useEffect(() => {
     onChange({
@@ -41,8 +44,18 @@ export default function TeamSheetTemplateSettings({ club, onChange }) {
       team_sheet_show_start_time: showStartTime,
       team_sheet_advanced_mode: advancedMode,
       team_sheet_custom_html: customHtml,
+      team_sheet_header_img_url: headerImgUrl,
     });
-  }, [template, primaryColour, customColour, fontSize, showDressCode, showVenue, showStartTime, advancedMode, customHtml]);
+  }, [template, primaryColour, customColour, fontSize, showDressCode, showVenue, showStartTime, advancedMode, customHtml, headerImgUrl]);
+
+  const handleHeaderImgUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHeader(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setHeaderImgUrl(file_url);
+    setUploadingHeader(false);
+  };
 
   const validateHtml = (html) => {
     if (!html.trim()) { setHtmlError(''); return; }
@@ -167,9 +180,39 @@ export default function TeamSheetTemplateSettings({ club, onChange }) {
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 space-y-1">
                 <p className="font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Advanced Mode</p>
                 <p>If your template fails, the Classic template will be used as a fallback.</p>
-                <p className="font-mono mt-1">Available placeholders: {'{{club_name}}'} {'{{competition}}'} {'{{match_name}}'} {'{{match_date}}'} {'{{start_time}}'} {'{{venue}}'} {'{{dress_code}}'} {'{{logo_url}}'}</p>
+                <p className="font-mono mt-1">Available placeholders: {'{{club_name}}'} {'{{competition}}'} {'{{match_name}}'} {'{{match_date}}'} {'{{start_time}}'} {'{{venue}}'} {'{{dress_code}}'} {'{{logo_url}}'} {'{{club_header_img}}'}</p>
                 <p className="font-mono">Player positions: {'{{rink1_Lead}}'} {'{{rink1_2}}'} {'{{rink2_Skip}}'} {'{{rink1_tag}}'} etc.</p>
               </div>
+              {/* Club Header Image Upload */}
+              <div>
+                <Label className="mb-1.5 block text-sm">Club Header Image</Label>
+                <p className="text-xs text-gray-500 mb-2">Upload an image to use as <code className="bg-gray-100 px-1 rounded">{'{{club_header_img}}'}</code> in your template.</p>
+                {headerImgUrl ? (
+                  <div className="flex items-center gap-3 p-2 border rounded-lg bg-gray-50">
+                    <img src={headerImgUrl} alt="Club header" className="h-12 max-w-[200px] object-contain rounded" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-gray-400 hover:text-red-500"
+                      onClick={() => setHeaderImgUrl('')}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-fit">
+                    {uploadingHeader ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-gray-500" />
+                    )}
+                    <span className="text-sm text-gray-600">{uploadingHeader ? 'Uploading...' : 'Upload header image'}</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleHeaderImgUpload} disabled={uploadingHeader} />
+                  </label>
+                )}
+              </div>
+
               <Textarea
                 value={customHtml}
                 onChange={(e) => { setCustomHtml(e.target.value); validateHtml(e.target.value); }}
