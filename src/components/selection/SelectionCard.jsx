@@ -85,6 +85,11 @@ export default function SelectionCard({
                   {selection.match_name && (
                     <span className="font-medium">{selection.match_name}</span>
                   )}
+                  {selection.competition === 'Fantastic 5s' && selection.friendly_location && (
+                    <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200 text-xs' : 'bg-orange-50 text-orange-700 border-orange-200 text-xs'}>
+                      {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-gray-500">
                   {countSelected()} players selected
