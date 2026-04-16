@@ -23,8 +23,18 @@ export default function Fantastic5sSelectionGrid({ members, selections, selected
   };
 
   const isAvailable = (memberEmail, currentPosition) => {
+    // In Fantastic 5s, members can play in multiple rinks — only block if already in THIS position
     if (selections[currentPosition] === memberEmail) return true;
-    return !selectedEmails.includes(memberEmail);
+    // Still block if selected in the same rink at a different position
+    const rinkMatch = currentPosition.match(/^(rink\d+)_/);
+    if (rinkMatch) {
+      const rinkPrefix = rinkMatch[1];
+      const takenInThisRink = Object.entries(selections).some(
+        ([key, val]) => key !== currentPosition && key.startsWith(rinkPrefix) && val === memberEmail
+      );
+      if (takenInThisRink) return false;
+    }
+    return true;
   };
 
   const isUnavailableOnDate = (memberEmail) => {
