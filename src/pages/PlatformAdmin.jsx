@@ -86,6 +86,8 @@ export default function PlatformAdmin() {
     gender: 'mixed',
     age_group: 'n/a'
   });
+  const [populateWithTestData, setPopulateWithTestData] = useState(false);
+  const [populatingTestData, setPopulatingTestData] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -172,9 +174,21 @@ export default function PlatformAdmin() {
       });
       return club;
     },
-    onSuccess: () => {
+    onSuccess: async (club) => {
       queryClient.invalidateQueries({ queryKey: ['allClubs'] });
-      toast.success('Club created successfully');
+      if (populateWithTestData) {
+        setPopulatingTestData(true);
+        try {
+          const res = await base44.functions.invoke('populateTestData', { clubId: club.id });
+          const s = res.data?.summary;
+          toast.success(`Club created & test data populated! ${s?.members || 0} members, ${s?.bookings || 0} bookings, ${s?.selections || 0} selections, ${s?.leagueTeams || 0} league teams, ${s?.leagueFixtures || 0} fixtures.`);
+        } catch (err) {
+          toast.error('Club created but test data population failed: ' + err.message);
+        }
+        setPopulatingTestData(false);
+      } else {
+        toast.success('Club created successfully');
+      }
       handleCloseDialog();
     },
   });
@@ -273,6 +287,7 @@ export default function PlatformAdmin() {
 
   const handleOpenCreate = () => {
     setEditingClub(null);
+    setPopulateWithTestData(false);
     setFormData({
       name: '', slug: '', description: '', season: 'indoor', rink_count: 6,
       opening_time: '10:00', closing_time: '21:00', session_duration: 2,
@@ -946,6 +961,20 @@ export default function PlatformAdmin() {
                   </div>
                 </div>
               </div>
+              {!editingClub && (
+                <div className="col-span-2 pt-4 border-t">
+                  <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div>
+                      <Label className="font-medium text-amber-800">Populate with Test Data</Label>
+                      <p className="text-xs text-amber-600 mt-0.5">Creates 40 members, rink bookings, selections, a league with teams & fixtures, and a knockout tournament.</p>
+                    </div>
+                    <Switch
+                      checked={populateWithTestData}
+                      onCheckedChange={setPopulateWithTestData}
+                    />
+                  </div>
+                </div>
+              )}
               <DialogFooter className="flex-col sm:flex-row gap-2">
                 {editingClub && (
                   <Button
@@ -958,9 +987,9 @@ export default function PlatformAdmin() {
                   </Button>
                 )}
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button>
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={createClubMutation.isPending || updateClubMutation.isPending}>
-                  {(createClubMutation.isPending || updateClubMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingClub ? 'Save Changes' : 'Create Club'}
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={createClubMutation.isPending || updateClubMutation.isPending || populatingTestData}>
+                  {(createClubMutation.isPending || updateClubMutation.isPending || populatingTestData) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {populatingTestData ? 'Populating...' : editingClub ? 'Save Changes' : 'Create Club'}
                 </Button>
               </DialogFooter>
             </form>
