@@ -173,6 +173,7 @@ export default function SelectionView() {
   }
 
   const isTopClub = selection.competition === 'Top Club';
+  const isFantastic5s = selection.competition === 'Fantastic 5s';
   const selections = selection.selections || {};
 
   const activeComp = allCompetitions.find(c => c.name === selection?.competition);
@@ -185,6 +186,13 @@ export default function SelectionView() {
     ...Array.from({ length: awayRinksCount }, (_, i) => ({ number: homeRinksCount + i + 1, tag: 'Away' })),
   ];
   const rinkPositions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
+
+  const FANTASTIC5S_RINKS = [
+    { number: 1, label: 'Singles',  positions: ['Player'] },
+    { number: 2, label: 'Fours',    positions: ['Lead', '2', '3', 'Skip'] },
+    { number: 3, label: 'Pairs',    positions: ['Lead', 'Skip'] },
+    { number: 4, label: 'Triples',  positions: ['Lead', '2', 'Skip'] },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -269,7 +277,49 @@ export default function SelectionView() {
           transition={{ delay: 0.1 }}
         >
           <div className="print-content">
-          {isTopClub ? (
+          {isFantastic5s ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {FANTASTIC5S_RINKS.map(rink => (
+                <Card key={rink.number}>
+                  <CardHeader className="bg-emerald-50 py-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-600" />
+                      Rink {rink.number}
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{rink.label}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      {rink.positions.map(position => {
+                        const positionKey = `rink${rink.number}_${position}`;
+                        const memberEmail = selections[positionKey];
+                        return (
+                          <div key={position} className="flex items-center justify-between py-2 border-b last:border-0">
+                            <span className="text-sm font-medium text-gray-500 w-12">{position}</span>
+                            <span className="font-medium flex items-center gap-2">
+                              {getAvailability(memberEmail) === true ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              ) : getAvailability(memberEmail) === false ? (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <User className="w-4 h-4 text-gray-400" />
+                              )}
+                              <PlayerAccoladeHover email={memberEmail} accolades={accoladeList} assignments={accoladeAssignments}>
+                                {getMemberName(memberEmail)}
+                              </PlayerAccoladeHover>
+                              {isCaptain(memberEmail) && (
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold" title="Captain">C</span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : isTopClub ? (
             <div className="space-y-4">
               {TOP_CLUB_EVENTS.map(event => (
                 <Card key={event.id}>

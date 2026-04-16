@@ -30,6 +30,7 @@ import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
+import Fantastic5sSelectionGrid from '@/components/selection/Fantastic5sSelectionGrid';
 import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
@@ -730,7 +731,7 @@ ${club?.name || 'Your Bowls Club'}
   // Filter members based on competition gender and age_group restrictions
   const activeCompetition = competitions.find(c => c.name === competition);
   const filteredMembers = React.useMemo(() => {
-    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club') return members;
+    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Fantastic 5s') return members;
     let filtered = [...members];
 
     // Gender filter
@@ -814,6 +815,7 @@ ${club?.name || 'Your Bowls Club'}
 
   const isTopClub = competition === 'Top Club';
   const isFriendly = competition === 'Friendly';
+  const isFantastic5s = competition === 'Fantastic 5s';
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   // Effective rink/player settings for Friendly
@@ -865,6 +867,7 @@ ${club?.name || 'Your Bowls Club'}
                       {competitions.map(comp => (
                         <SelectItem key={comp.id} value={comp.name}>{comp.name}</SelectItem>
                       ))}
+                      <SelectItem value="Fantastic 5s">Fantastic 5s</SelectItem>
                       <SelectItem value="Friendly">Friendly</SelectItem>
                     </SelectContent>
                   </Select>
@@ -964,7 +967,7 @@ ${club?.name || 'Your Bowls Club'}
                   </div>
                 )}
 
-                {competition && competition !== 'Top Club' && competition !== 'Friendly' && (
+                {competition && competition !== 'Top Club' && competition !== 'Friendly' && competition !== 'Fantastic 5s' && (
                   <>
                     <div>
                       <Label>Number of Home Rinks</Label>
@@ -1126,7 +1129,16 @@ ${club?.name || 'Your Bowls Club'}
             className="lg:col-span-2"
           >
             {competition ? (
-              isTopClub ? (
+              isFantastic5s ? (
+                <Fantastic5sSelectionGrid
+                  members={filteredMembers}
+                  selections={selections}
+                  selectedEmails={selectedEmails}
+                  onSelectionChange={handleSelectionChange}
+                  matchDate={matchDate}
+                  unavailabilities={unavailabilities}
+                />
+              ) : isTopClub ? (
                 <TopClubSelectionGrid
                   members={filteredMembers}
                   selections={selections}

@@ -312,6 +312,42 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     positions: ev.positions.map(pos => ({ label: pos, name: getMemberName(sel[`${ev.id}_${pos}`]) })),
   }));
 
+  const isFantastic5s = selection.competition === 'Fantastic 5s';
+  if (isFantastic5s) {
+    const f5Rinks = [
+      { number: 1, tag: 'Singles',  positions: ['Player'] },
+      { number: 2, tag: 'Fours',    positions: ['Lead', '2', '3', 'Skip'] },
+      { number: 3, tag: 'Pairs',    positions: ['Lead', 'Skip'] },
+      { number: 4, tag: 'Triples',  positions: ['Lead', '2', 'Skip'] },
+    ];
+    const f5RinkData = f5Rinks.map(r => ({
+      number: r.number,
+      tag: r.tag,
+      positions: r.positions.map(pos => ({ label: pos, name: getMemberName(sel[`rink${r.number}_${pos}`]) })),
+    }));
+    let matchDate = selection.match_date;
+    try { matchDate = format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy'); } catch {}
+    return {
+      clubName: club?.name || '',
+      logoUrl: club?.logo_url || '',
+      headerImgUrl: club?.team_sheet_header_img_url || '',
+      competition: selection.competition || '',
+      matchName: selection.match_name || '',
+      matchDate,
+      startTime: selection.match_start_time || '',
+      venue: '',
+      dressCode: '',
+      primaryColour: club?.team_sheet_primary_colour || '#10b981',
+      fontSize: club?.team_sheet_font_size || 'medium',
+      showStartTime: club?.team_sheet_show_start_time !== false,
+      showVenue: club?.team_sheet_show_venue || false,
+      showDressCode: club?.team_sheet_show_dress_code || false,
+      isTopClub: false,
+      rinks: f5RinkData,
+      topClubEvents: [],
+    };
+  }
+
   let matchDate = selection.match_date;
   try { matchDate = format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy'); } catch {}
 
