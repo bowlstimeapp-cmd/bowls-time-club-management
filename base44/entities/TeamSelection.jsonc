@@ -1,0 +1,93 @@
+{
+  "name": "TeamSelection",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "competition": {
+      "type": "string",
+      "enum": [
+        "Bramley",
+        "Wessex League",
+        "Denny",
+        "Top Club"
+      ],
+      "description": "Competition type"
+    },
+    "match_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the match"
+    },
+    "match_name": {
+      "type": "string",
+      "description": "Optional name/description for this match"
+    },
+    "selections": {
+      "type": "object",
+      "description": "JSON object mapping positions to member emails"
+    },
+    "selected_rinks": {
+      "type": "array",
+      "description": "Array of rink numbers selected for this match"
+    },
+    "home_rinks": {
+      "type": "number",
+      "default": 2,
+      "description": "Number of home rinks for this match"
+    },
+    "match_start_time": {
+      "type": "string",
+      "description": "Match start time (HH:MM)"
+    },
+    "match_end_time": {
+      "type": "string",
+      "description": "Match end time (HH:MM)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published"
+      ],
+      "default": "draft",
+      "description": "Whether the selection is visible to members"
+    },
+    "selector_email": {
+      "type": "string",
+      "description": "Email of the selector who created this"
+    },
+    "home_captain_email": {
+      "type": "string",
+      "description": "Email of the home team captain (optional)"
+    },
+    "away_captain_email": {
+      "type": "string",
+      "description": "Email of the away team captain (optional)"
+    },
+    "friendly_location": {
+      "type": "string",
+      "description": "Home/Away venue for Friendly and Fantastic 5s matches"
+    },
+    "friendly_num_rinks": {
+      "type": "number",
+      "description": "Number of rinks for Friendly matches"
+    },
+    "friendly_players_per_rink": {
+      "type": "number",
+      "description": "Players per rink for Friendly matches"
+    }
+  },
+  "required": [
+    "club_id",
+    "competition",
+    "match_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
