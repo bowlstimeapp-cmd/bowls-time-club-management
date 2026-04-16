@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/dialog";
 import NewUserTour, { isTourEnabled, hasTourBeenDismissed, TOUR_DATE, TOUR_DATE_STRING, pauseTour, getTourPausedStep, clearTourPause, dismissTour, ResumeTourModal } from '@/components/tour/NewUserTour';
 import TourBookingModal from '@/components/tour/TourBookingModal';
+import KioskLogin from '@/components/kiosk/KioskLogin';
+import KioskSessionWrapper from '@/components/kiosk/KioskSessionWrapper';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -45,6 +47,7 @@ export default function BookRink() {
   const [bulkDeleteSelected, setBulkDeleteSelected] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
+  const [kioskMember, setKioskMember] = useState(null);
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started
@@ -387,9 +390,13 @@ useEffect(() => {
     if (!user || selectedSlots.length === 0 || !clubId) return;
 
     const status = club?.auto_approve_bookings ? 'approved' : 'pending';
-    const bookerName = user.first_name && user.surname 
-      ? `${user.first_name} ${user.surname}` 
-      : (user.full_name || user.email);
+    // For kiosk sessions, use the kiosk member's identity for booking
+    const bookerEmail = effectiveEmail;
+    const bookerName = kioskMember
+      ? kioskMember.name
+      : (user.first_name && user.surname
+        ? `${user.first_name} ${user.surname}`
+        : (user.full_name || user.email));
 
     // Sort slots by index
     const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
@@ -407,7 +414,7 @@ useEffect(() => {
         competition_other: competitionType === 'Other' ? competitionOther : '',
         booking_format: bookingFormat || null,
         booker_name: bookerName,
-        booker_email: user.email,
+        booker_email: bookerEmail,
         notes: notes || '',
         rollup_members: competitionType === 'Roll-up' ? rollupMembers : [],
       })
@@ -664,6 +671,19 @@ useEffect(() => {
     );
   };
 
+  // Fetch all members for kiosk lookup (only needed when kiosk mode active)
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ['allMembersKiosk', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId, status: 'approved' }),
+    enabled: !!clubId && !!club?.kiosk_mode_enabled,
+  });
+
+  // Determine if the logged-in user is the kiosk account
+  const isKioskAccount = !!club?.kiosk_mode_enabled && !!club?.kiosk_account_email && user?.email === club.kiosk_account_email;
+
+  // Effective user email (kiosk member or real user)
+  const effectiveEmail = isKioskAccount && kioskMember ? kioskMember.user_email : user?.email;
+
   if (!clubId || membershipLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6">
@@ -675,7 +695,18 @@ useEffect(() => {
     );
   }
 
-  return (
+  // Kiosk login screen
+  if (isKioskAccount && !kioskMember) {
+    return (
+      <KioskLogin
+        club={club}
+        members={allMembers}
+        onLogin={(member) => setKioskMember(member)}
+      />
+    );
+  }
+
+  const bookRinkContent = (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
         <motion.div
@@ -807,7 +838,7 @@ useEffect(() => {
                 <TimeSlotGrid
                   bookings={bookings}
                   selectedDate={selectedDate}
-                  currentUserEmail={user?.email}
+                  currentUserEmail={effectiveEmail}
                   club={club}
                   selectedSlots={selectedSlots}
                   onMultiSlotSelect={(slots) => {
@@ -920,7 +951,7 @@ useEffect(() => {
           isLoading={createBookingMutation.isPending}
           club={club}
           members={members}
-          currentUserEmail={user?.email}
+          currentUserEmail={effectiveEmail}
         />
 
         <BulkBookingModal
@@ -956,7 +987,7 @@ useEffect(() => {
             setBookingDetailOpen(false);
             setSelectedBooking(null);
           }}
-          currentUserEmail={user?.email}
+          currentUserEmail={effectiveEmail}
           onJoinRollup={handleJoinRollup}
           joinLoading={joiningRollup}
           club={club}
@@ -1046,4 +1077,17 @@ useEffect(() => {
       </div>
     </div>
   );
+
+  if (isKioskAccount && kioskMember) {
+    return (
+      <KioskSessionWrapper
+        kioskMember={kioskMember}
+        onLogout={() => setKioskMember(null)}
+      >
+        {bookRinkContent}
+      </KioskSessionWrapper>
+    );
+  }
+
+  return bookRinkContent;
 }

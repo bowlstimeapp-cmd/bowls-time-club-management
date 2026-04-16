@@ -395,6 +395,15 @@ export default function Profile() {
                           <Input value={membership.locker_number_2 || ''} disabled className="bg-gray-50" />
                         </div>
                       </div>
+                      {club?.kiosk_mode_enabled && membership?.member_id && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Your Kiosk Member ID</p>
+                            <p className="text-3xl font-mono font-bold text-emerald-800 tracking-widest mt-0.5">{membership.member_id}</p>
+                          </div>
+                          <span className="text-xs text-emerald-600 text-right max-w-[120px]">Use this ID to log into the kiosk terminal</span>
+                        </div>
+                      )}
                       <p className="text-xs text-gray-400">Locker numbers and membership start date can only be changed by a club admin.</p>
                       <div className="pt-2 border-t">
                         <p className="text-sm font-medium text-gray-700 mb-3">Emergency Contact</p>

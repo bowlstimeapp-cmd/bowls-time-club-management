@@ -272,6 +272,15 @@
     "team_sheet_header_img_url": {
       "type": "string",
       "description": "Uploaded club header image URL for use in advanced team sheet templates"
+    },
+    "kiosk_mode_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable kiosk mode for touchscreen member login"
+    },
+    "kiosk_account_email": {
+      "type": "string",
+      "description": "Email of the dedicated kiosk account user"
     }
   },
   "required": [

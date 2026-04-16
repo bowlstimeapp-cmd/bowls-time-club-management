@@ -110,6 +110,10 @@
       "type": "boolean",
       "default": false,
       "description": "Whether member wants to receive SMS notifications"
+    },
+    "member_id": {
+      "type": "string",
+      "description": "Unique 5-digit numeric kiosk member ID"
     }
   },
   "required": [

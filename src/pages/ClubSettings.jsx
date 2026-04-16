@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp, Monitor } from 'lucide-react';
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
 import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
@@ -70,6 +70,10 @@ export default function ClubSettings() {
     gender: 'mixed',
     age_group: 'n/a'
   });
+  const [kioskModeEnabled, setKioskModeEnabled] = useState(false);
+  const [kioskAccountEmail, setKioskAccountEmail] = useState('');
+  const [assigningMemberIds, setAssigningMemberIds] = useState(false);
+  const [memberIdAssignResult, setMemberIdAssignResult] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -144,6 +148,8 @@ export default function ClubSettings() {
       setAltViewLeagues(club.alt_view_leagues || false);
       setScorecardFormat(club.scorecard_format || 'pdf');
       setUseCustomScorecardLayout(club.use_custom_scorecard_layout || false);
+      setKioskModeEnabled(club.kiosk_mode_enabled || false);
+      setKioskAccountEmail(club.kiosk_account_email || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id]);
@@ -297,6 +303,8 @@ export default function ClubSettings() {
       alt_view_leagues: altViewLeagues,
       scorecard_format: scorecardFormat,
       use_custom_scorecard_layout: useCustomScorecardLayout,
+      kiosk_mode_enabled: kioskModeEnabled,
+      kiosk_account_email: kioskAccountEmail || null,
       ...teamSheetSettings,
     });
   };
@@ -893,6 +901,90 @@ export default function ClubSettings() {
             {club?.module_selection !== false && (
               <TeamSheetTemplateSettings club={club} onChange={setTeamSheetSettings} />
             )}
+
+            {/* Kiosk Mode */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="w-5 h-5" />
+                  Kiosk Mode
+                </CardTitle>
+                <CardDescription>
+                  Enable a touchscreen kiosk at the clubhouse where members log in with a unique numeric ID to book rinks
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Enable Kiosk Mode</Label>
+                    <p className="text-sm text-gray-500">Show a member login screen when the kiosk account is used</p>
+                  </div>
+                  <Switch checked={kioskModeEnabled} onCheckedChange={setKioskModeEnabled} />
+                </div>
+
+                {kioskModeEnabled && (
+                  <>
+                    <div>
+                      <Label>Kiosk Account</Label>
+                      <p className="text-sm text-gray-500 mb-2">Select the club member whose login will be the dedicated kiosk terminal</p>
+                      <select
+                        className="w-full border border-input bg-transparent rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        value={kioskAccountEmail}
+                        onChange={(e) => setKioskAccountEmail(e.target.value)}
+                      >
+                        <option value="">— Select kiosk account —</option>
+                        {members.map(m => (
+                          <option key={m.id} value={m.user_email}>
+                            {m.first_name && m.surname ? `${m.first_name} ${m.surname}` : m.user_name || m.user_email} ({m.user_email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {kioskAccountEmail && (
+                      <div className="border-t pt-4">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Assign Member IDs</p>
+                        <p className="text-sm text-gray-500 mb-3">
+                          Generate unique 5-digit IDs for any approved members who don't have one yet. Members use this ID to log into the kiosk.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={assigningMemberIds}
+                          onClick={async () => {
+                            setAssigningMemberIds(true);
+                            setMemberIdAssignResult(null);
+                            const needsId = members.filter(m => !m.member_id);
+                            if (needsId.length === 0) {
+                              setMemberIdAssignResult('All members already have a Member ID assigned.');
+                              setAssigningMemberIds(false);
+                              return;
+                            }
+                            // Collect existing IDs
+                            const usedIds = new Set(members.map(m => m.member_id).filter(Boolean));
+                            const generateId = () => {
+                              let id;
+                              do { id = String(Math.floor(10000 + Math.random() * 90000)); } while (usedIds.has(id));
+                              usedIds.add(id);
+                              return id;
+                            };
+                            await Promise.all(needsId.map(m => base44.entities.ClubMembership.update(m.id, { member_id: generateId() })));
+                            queryClient.invalidateQueries({ queryKey: ['clubMembers', clubId] });
+                            setMemberIdAssignResult(`✓ ${needsId.length} member(s) assigned new IDs.`);
+                            setAssigningMemberIds(false);
+                          }}
+                        >
+                          {assigningMemberIds ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Assigning...</> : 'Assign Member IDs'}
+                        </Button>
+                        {memberIdAssignResult && (
+                          <p className="text-sm text-emerald-700 mt-2 font-medium">{memberIdAssignResult}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Import Bookings */}
             <Card>
