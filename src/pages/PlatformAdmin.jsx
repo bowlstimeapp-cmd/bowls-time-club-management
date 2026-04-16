@@ -975,6 +975,36 @@ export default function PlatformAdmin() {
                   </div>
                 </div>
               )}
+              {editingClub && (
+                <div className="col-span-2 pt-4 border-t">
+                  <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div>
+                      <Label className="font-medium text-blue-800">Generate Test Data</Label>
+                      <p className="text-xs text-blue-600 mt-0.5">Uses existing members to create competitions, selections with rinks booked, a league with fixtures and bookings, and a knockout tournament.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 ml-3 shrink-0"
+                      disabled={populatingTestData}
+                      onClick={async () => {
+                        setPopulatingTestData(true);
+                        try {
+                          const res = await base44.functions.invoke('populateTestData', { clubId: editingClub.id });
+                          const s = res.data?.summary;
+                          if (res.data?.error) throw new Error(res.data.error);
+                          toast.success(`Test data generated! ${s?.selections || 0} selections, ${s?.leagueTeams || 0} league teams, ${s?.leagueFixtures || 0} fixtures, ${s?.leagueFixtureBookings || 0} fixture bookings.`);
+                        } catch (err) {
+                          toast.error('Failed: ' + (err.response?.data?.error || err.message));
+                        }
+                        setPopulatingTestData(false);
+                      }}
+                    >
+                      {populatingTestData ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Generating...</> : 'Generate'}
+                    </Button>
+                  </div>
+                </div>
+              )}
               <DialogFooter className="flex-col sm:flex-row gap-2">
                 {editingClub && (
                   <Button
