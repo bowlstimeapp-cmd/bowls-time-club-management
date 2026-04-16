@@ -968,7 +968,9 @@ export default function ClubSettings() {
                               usedIds.add(id);
                               return id;
                             };
-                            await Promise.all(needsId.map(m => base44.entities.ClubMembership.update(m.id, { member_id: generateId() })));
+                            for (const m of needsId) {
+                              await base44.entities.ClubMembership.update(m.id, { member_id: generateId() });
+                            }
                             queryClient.invalidateQueries({ queryKey: ['clubMembers', clubId] });
                             setMemberIdAssignResult(`✓ ${needsId.length} member(s) assigned new IDs.`);
                             setAssigningMemberIds(false);
