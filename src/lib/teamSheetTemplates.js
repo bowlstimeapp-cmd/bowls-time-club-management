@@ -243,7 +243,20 @@ function renderCustomHtml(template, data) {
       flatData[`${ev.name.toLowerCase().replace(/\s+/g,'_')}_${p.label}`] = p.name;
     });
   });
-  return template.replace(/\{\{(\w+)\}\}/g, (_, k) => flatData[k] ?? '');
+
+  // Step 1: Remove entire rink blocks if their data is empty
+  const processedHtml = template.replace(
+    /\{\{#block (rink\d+)\}\}([\s\S]*?)\{\{\/block \1\}\}/g,
+    (match, blockName, blockContent) => {
+      const hasData = Object.keys(flatData).some(
+        key => key.startsWith(blockName) && flatData[key] && flatData[key].trim() !== ''
+      );
+      return hasData ? blockContent : '';
+    }
+  );
+
+  // Step 2: Replace all remaining {{placeholders}} with data values
+  return processedHtml.replace(/\{\{(\w+)\}\}/g, (_, k) => flatData[k] ?? '');
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
