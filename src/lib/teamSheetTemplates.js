@@ -323,21 +323,39 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
   };
 }
 
+async function toBase64(url) {
+  if (!url) return '';
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
 /**
  * Render and open-print a team sheet. Falls back to classic on error.
  */
-export function printTeamSheet(data, club) {
+export async function printTeamSheet(data, club) {
+  // Convert image URLs to base64 so they render in print
+  const [logoBase64, headerBase64] = await Promise.all([
+    toBase64(data.logoUrl),
+    toBase64(data.headerImgUrl),
+  ]);
+  const printData = { ...data, logoUrl: logoBase64 || data.logoUrl, headerImgUrl: headerBase64 || data.headerImgUrl };
+
   let html = '';
   try {
     const advancedMode = club?.team_sheet_advanced_mode && club?.team_sheet_custom_html;
     if (advancedMode) {
-      html = renderCustomHtml(club.team_sheet_custom_html, data);
+      html = renderCustomHtml(club.team_sheet_custom_html, printData);
     } else {
       const fn = TEMPLATES[club?.team_sheet_template] || classicTemplate;
-      html = fn(data);
+      html = fn(printData);
     }
   } catch {
-    try { html = classicTemplate(data); } catch {
+    try { html = classicTemplate(printData); } catch {
       html = '<html><body><p>Error rendering team sheet.</p></body></html>';
     }
   }
@@ -345,5 +363,5 @@ export function printTeamSheet(data, club) {
   if (!win) return;
   win.document.write(html);
   win.document.close();
-  win.print();
+  win.onload = () => win.print();
 }

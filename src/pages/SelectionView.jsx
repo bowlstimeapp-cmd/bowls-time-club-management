@@ -132,10 +132,10 @@ export default function SelectionView() {
     enabled: !!clubId && !!club?.module_accolades,
   });
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!selection) return;
     const data = buildTeamSheetData({ club, selection, members, allCompetitions });
-    printTeamSheet(data, club);
+    await printTeamSheet(data, club);
   };
 
   const getMemberName = (email) => {
