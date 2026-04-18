@@ -27,7 +27,8 @@ import {
   ClipboardList,
   ChevronDown,
   MessageSquare,
-  ListChecks
+  ListChecks,
+  MessagesSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -124,6 +125,9 @@ export default function Layout({ children, currentPageName }) {
     ...(club?.module_leagues !== false ? [
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
       { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
+    ] : []),
+    ...(club?.module_messaging ? [
+      { name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare },
     ] : []),
   ];
 
@@ -288,6 +292,22 @@ export default function Layout({ children, currentPageName }) {
                   >
                     <Users className="w-4 h-4" />
                     My Teams
+                  </Link>
+                )}
+
+                {/* Club Messaging — hidden in kiosk mode */}
+                {!isKioskSession && club?.module_messaging && (
+                  <Link
+                    to={createPageUrl('ClubMessaging') + `?clubId=${clubId}`}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('ClubMessaging'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
+                  >
+                    <MessagesSquare className="w-4 h-4" />
+                    Club Chat
                   </Link>
                 )}
 

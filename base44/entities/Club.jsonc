@@ -156,6 +156,11 @@
       "default": false,
       "description": "Enable Accolades / badge system for members"
     },
+    "module_messaging": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Club Instant Messaging module"
+    },
     "default_landing_page": {
       "type": "string",
       "enum": [

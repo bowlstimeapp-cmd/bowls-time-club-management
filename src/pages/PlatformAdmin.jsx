@@ -42,7 +42,8 @@ import {
   UsersRound,
   Mail,
   MoreVertical,
-  ChevronDown
+  ChevronDown,
+  FileText
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -57,6 +58,7 @@ import { createPageUrl } from '@/utils';
 import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
 import MarketingPDFGenerator from '@/components/admin/MarketingPDFGenerator';
 import PlatformSettings from '@/components/admin/PlatformSettings';
+import PlatformDocuments from '@/components/admin/PlatformDocuments';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -294,7 +296,7 @@ export default function PlatformAdmin() {
       primary_admin_email: '', admin_first_name: '', admin_surname: '',
       is_active: true, module_rink_booking: true, module_selection: true,
       module_competitions: true, module_leagues: true, module_sms_notifications: false,
-      module_homepage: false, module_function_rooms: false, module_custom_branding: false
+      module_homepage: false, module_function_rooms: false, module_custom_branding: false, module_messaging: false
     });
     setDialogOpen(true);
   };
@@ -314,7 +316,8 @@ export default function PlatformAdmin() {
       module_sms_notifications: club.module_sms_notifications || false,
       module_homepage: club.module_homepage || false,
       module_function_rooms: club.module_function_rooms || false,
-      module_custom_branding: club.module_custom_branding || false
+      module_custom_branding: club.module_custom_branding || false,
+      module_messaging: club.module_messaging || false,
     });
     setDialogOpen(true);
   };
@@ -510,7 +513,7 @@ export default function PlatformAdmin() {
         >
           <Tabs defaultValue="clubs" className="w-full">
             <div className="overflow-x-auto mb-6">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-7">
                 <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
                 <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
                 <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
@@ -525,6 +528,7 @@ export default function PlatformAdmin() {
                 </TabsTrigger>
                 <TabsTrigger value="emails" className="whitespace-nowrap">Sent Emails</TabsTrigger>
                 <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
+                <TabsTrigger value="documents" className="whitespace-nowrap">Documents</TabsTrigger>
               </TabsList>
             </div>
 
@@ -866,6 +870,11 @@ export default function PlatformAdmin() {
             <TabsContent value="settings">
               <PlatformSettings />
             </TabsContent>
+
+            {/* ── DOCUMENTS ── */}
+            <TabsContent value="documents">
+              <PlatformDocuments />
+            </TabsContent>
           </Tabs>
         </motion.div>
 
@@ -952,6 +961,7 @@ export default function PlatformAdmin() {
                       { key: 'module_homepage', label: 'Club Homepage' },
                       { key: 'module_function_rooms', label: 'Function Room Bookings' },
                       { key: 'module_custom_branding', label: 'Custom Branding (Scorecard Layout)' },
+                      { key: 'module_messaging', label: 'Club Instant Messaging' },
                     ].map(({ key, label }) => (
                       <div key={key} className="flex items-center justify-between">
                         <Label className="font-normal">{label}</Label>

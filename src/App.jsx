@@ -11,6 +11,7 @@ import { LayoutThemeProvider } from '@/lib/layoutTheme.jsx';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BookingsAudit from './pages/BookingsAudit';
 import CompetitionRegistration from './pages/CompetitionRegistration';
+import ClubMessaging from './pages/ClubMessaging';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -64,6 +65,7 @@ const AuthenticatedApp = () => {
       ))}
       <Route path="/BookingsAudit" element={<LayoutWrapper currentPageName="BookingsAudit"><BookingsAudit /></LayoutWrapper>} />
       <Route path="/CompetitionRegistration" element={<LayoutWrapper currentPageName="CompetitionRegistration"><CompetitionRegistration /></LayoutWrapper>} />
+      <Route path="/ClubMessaging" element={<LayoutWrapper currentPageName="ClubMessaging"><ClubMessaging /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
