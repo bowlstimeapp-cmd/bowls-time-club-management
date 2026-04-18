@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Trophy, Plus, Calendar, Users, Loader2, CheckCircle, AlertCircle,
-  MoreVertical, Pencil, Trash2, ChevronDown, ChevronUp
+  MoreVertical, Pencil, Trash2
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -27,6 +27,9 @@ const TYPE_COLORS = {
   fours: 'bg-emerald-100 text-emerald-800',
 };
 
+// How many EXTRA players needed (besides the registrant)
+const TEAM_EXTRAS = { singles: 0, pairs: 1, triples: 2, fours: 3 };
+
 function isEntriesOpen(deadline) {
   if (!deadline) return true;
   const today = startOfDay(new Date());
@@ -39,6 +42,12 @@ function formatPrice(price) {
   return `£${Number(price).toFixed(2)} per entry`;
 }
 
+function entryDisplayName(entry) {
+  const names = [entry.member_name || entry.user_email];
+  (entry.team_members || []).forEach(m => names.push(m.name || m.email));
+  return names.join(' & ');
+}
+
 export default function CompetitionRegistration() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
@@ -47,6 +56,8 @@ export default function CompetitionRegistration() {
   const [user, setUser] = useState(null);
   const [selectedComp, setSelectedComp] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [teamSelections, setTeamSelections] = useState([]); // [{email, name}] for partners
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingComp, setEditingComp] = useState(null);
   const [withdrawConfirm, setWithdrawConfirm] = useState(null);
@@ -78,6 +89,12 @@ export default function CompetitionRegistration() {
     enabled: !!clubId && !!user?.email,
   });
 
+  const { data: allMembers = [] } = useQuery({
+    queryKey: ['clubMembers', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId, status: 'approved' }),
+    enabled: !!clubId,
+  });
+
   const { data: competitions = [], isLoading } = useQuery({
     queryKey: ['compRegs', clubId],
     queryFn: () => base44.entities.CompetitionRegistration.filter({ club_id: clubId }),
@@ -92,19 +109,19 @@ export default function CompetitionRegistration() {
 
   const isAdmin = myMembership?.role === 'admin' || myMembership?.role === 'steward';
 
-  // My entries
-  const myEntries = allEntries.filter(e => e.user_email === user?.email);
+  // My entries: entries where I'm the lead OR in team_members
+  const myEntries = allEntries.filter(e =>
+    e.user_email === user?.email ||
+    (e.team_members || []).some(m => m.email === user?.email)
+  );
 
-  // Entries for selected competition
-  const selectedEntries = selectedComp
-    ? allEntries.filter(e => e.competition_id === selectedComp.id)
-    : [];
-
-  // Total cost
-  const totalCost = myEntries.reduce((sum, entry) => {
-    const comp = competitions.find(c => c.id === entry.competition_id);
-    return sum + (comp?.price_per_entry || 0);
-  }, 0);
+  // Total cost — only count entries where I'm the lead (avoid double-counting)
+  const totalCost = allEntries
+    .filter(e => e.user_email === user?.email)
+    .reduce((sum, entry) => {
+      const comp = competitions.find(c => c.id === entry.competition_id);
+      return sum + (comp?.price_per_entry || 0);
+    }, 0);
 
   const createCompMutation = useMutation({
     mutationFn: (data) => base44.entities.CompetitionRegistration.create({ ...data, club_id: clubId, created_by: user?.email, status: 'open' }),
@@ -151,11 +168,14 @@ export default function CompetitionRegistration() {
       club_id: clubId,
       user_email: user.email,
       member_name: myMembership?.user_name || user?.full_name || user?.email,
+      team_members: teamSelections,
       entry_date: new Date().toISOString(),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compEntries'] });
       toast.success(`You have been registered for ${selectedComp.name}`);
+      setRegisterOpen(false);
+      setTeamSelections([]);
     },
   });
 
@@ -216,18 +236,66 @@ export default function CompetitionRegistration() {
     }
   };
 
+  const handleOpenRegister = (comp) => {
+    setSelectedComp(comp);
+    const extras = TEAM_EXTRAS[comp.type] || 0;
+    setTeamSelections(Array(extras).fill(null).map(() => ({ email: '', name: '' })));
+    setRegisterOpen(true);
+  };
+
+  const handleTeamMemberChange = (index, email) => {
+    const member = allMembers.find(m => m.user_email === email);
+    setTeamSelections(prev => {
+      const next = [...prev];
+      next[index] = { email, name: member?.user_name || email };
+      return next;
+    });
+  };
+
+  const handleRegisterSubmit = () => {
+    const extras = TEAM_EXTRAS[selectedComp?.type] || 0;
+    for (let i = 0; i < extras; i++) {
+      if (!teamSelections[i]?.email) {
+        toast.error(`Please select all team members`);
+        return;
+      }
+    }
+    // Check for duplicates
+    const allSelected = [user?.email, ...teamSelections.map(m => m.email)];
+    if (new Set(allSelected).size !== allSelected.length) {
+      toast.error('You cannot select the same person twice');
+      return;
+    }
+    registerMutation.mutate();
+  };
+
   const sortedComps = [...competitions].sort((a, b) => {
     if (!a.registration_deadline) return 1;
     if (!b.registration_deadline) return -1;
     return a.registration_deadline.localeCompare(b.registration_deadline);
   });
 
+  const selectedEntries = selectedComp
+    ? allEntries.filter(e => e.competition_id === selectedComp.id)
+    : [];
+
+  // Find MY entry for the selected comp — I'm the lead entrant
   const mySelectedEntry = selectedComp
     ? allEntries.find(e => e.competition_id === selectedComp.id && e.user_email === user?.email)
     : null;
 
+  // Or I'm a team member in someone else's entry
+  const myTeamEntry = selectedComp && !mySelectedEntry
+    ? allEntries.find(e => e.competition_id === selectedComp.id && (e.team_members || []).some(m => m.email === user?.email))
+    : null;
+
   const isOpen = selectedComp ? isEntriesOpen(selectedComp.registration_deadline) : false;
   const isFull = selectedComp ? (selectedEntries.length >= (selectedComp.max_entries || Infinity)) : false;
+
+  const isEnteredInComp = !!(mySelectedEntry || myTeamEntry);
+
+  // Available members for team selection (exclude self and already selected)
+  const availableMembers = allMembers.filter(m => m.user_email !== user?.email);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -260,14 +328,27 @@ export default function CompetitionRegistration() {
               {myEntries.length === 0 ? (
                 <p className="text-sm text-gray-500">You have no current entries.</p>
               ) : (
-                <ul className="space-y-1 mb-3">
+                <ul className="space-y-2 mb-3">
                   {myEntries.map(entry => {
                     const comp = competitions.find(c => c.id === entry.competition_id);
                     if (!comp) return null;
+                    const isLead = entry.user_email === user?.email;
                     return (
-                      <li key={entry.id} className="text-sm text-gray-700 flex items-center gap-2">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                        {comp.name} <span className="text-gray-400">·</span> <span className="capitalize text-gray-500">{TYPE_LABELS[comp.type]}</span>
+                      <li key={entry.id} className="text-sm text-gray-700">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-medium">{comp.name}</span>
+                            <span className="text-gray-400 mx-1">·</span>
+                            <span className="capitalize text-gray-500">{TYPE_LABELS[comp.type]}</span>
+                            {(entry.team_members || []).length > 0 && (
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                Team: {entryDisplayName(entry)}
+                                {!isLead && <span className="text-amber-600 ml-1">(entered by {entry.member_name || entry.user_email})</span>}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </li>
                     );
                   })}
@@ -315,6 +396,10 @@ export default function CompetitionRegistration() {
                 const open = isEntriesOpen(comp.registration_deadline);
                 const entryCount = allEntries.filter(e => e.competition_id === comp.id).length;
                 const full = entryCount >= (comp.max_entries || Infinity);
+                const myEntry = allEntries.find(e =>
+                  e.competition_id === comp.id &&
+                  (e.user_email === user?.email || (e.team_members || []).some(m => m.email === user?.email))
+                );
                 return (
                   <Card key={comp.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-5">
@@ -327,6 +412,9 @@ export default function CompetitionRegistration() {
                               <Badge className="bg-emerald-100 text-emerald-800">Entries Open</Badge>
                             ) : (
                               <Badge className="bg-red-100 text-red-800">Entries Closed</Badge>
+                            )}
+                            {myEntry && (
+                              <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">You are entered</Badge>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-4 text-sm text-gray-500">
@@ -441,33 +529,37 @@ export default function CompetitionRegistration() {
                     <p className="text-sm text-gray-400 italic">No entries yet — be the first to enter.</p>
                   ) : (
                     <ol className="space-y-1">
-                      {selectedEntries.map((entry, i) => (
-                        <li key={entry.id} className="text-sm text-gray-700 flex items-center gap-2">
-                          <span className="text-gray-400 w-5 text-right">{i + 1}.</span>
-                          {entry.member_name || entry.user_email}
-                          {entry.user_email === user?.email && (
-                            <span className="text-xs text-emerald-600 font-medium">(you)</span>
-                          )}
-                        </li>
-                      ))}
+                      {selectedEntries.map((entry, i) => {
+                        const isMe = entry.user_email === user?.email || (entry.team_members || []).some(m => m.email === user?.email);
+                        return (
+                          <li key={entry.id} className="text-sm text-gray-700 flex items-center gap-2">
+                            <span className="text-gray-400 w-5 text-right flex-shrink-0">{i + 1}.</span>
+                            <span>{entryDisplayName(entry)}</span>
+                            {isMe && <span className="text-xs text-emerald-600 font-medium">(you)</span>}
+                          </li>
+                        );
+                      })}
                     </ol>
                   )}
                 </div>
 
                 {/* Register / Withdraw */}
                 <div className="pt-2 border-t">
-                  {!isOpen ? null : mySelectedEntry ? (
+                  {!isOpen ? null : isEnteredInComp ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-emerald-700 font-medium text-sm">
                         <CheckCircle className="w-4 h-4" />
                         You are entered
+                        {myTeamEntry && <span className="font-normal text-gray-500 ml-1">(as part of a team)</span>}
                       </div>
-                      <button
-                        className="text-sm text-red-600 hover:underline"
-                        onClick={() => setWithdrawConfirm(mySelectedEntry)}
-                      >
-                        Withdraw Entry
-                      </button>
+                      {mySelectedEntry && (
+                        <button
+                          className="text-sm text-red-600 hover:underline"
+                          onClick={() => setWithdrawConfirm(mySelectedEntry)}
+                        >
+                          Withdraw Entry
+                        </button>
+                      )}
                     </div>
                   ) : isFull ? (
                     <div className="flex items-center gap-2 text-red-600 text-sm font-medium">
@@ -477,10 +569,8 @@ export default function CompetitionRegistration() {
                   ) : (
                     <Button
                       className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => registerMutation.mutate()}
-                      disabled={registerMutation.isPending}
+                      onClick={() => { setDetailOpen(false); handleOpenRegister(selectedComp); }}
                     >
-                      {registerMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       Register for this Competition
                     </Button>
                   )}
@@ -488,6 +578,73 @@ export default function CompetitionRegistration() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Register Modal (with team member selection) */}
+      <Dialog open={registerOpen} onOpenChange={(open) => { if (!open) { setRegisterOpen(false); setTeamSelections([]); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register: {selectedComp?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Lead member (self) */}
+            <div>
+              <Label className="text-sm text-gray-600">Your name</Label>
+              <div className="mt-1 px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-800 border">
+                {myMembership?.user_name || user?.full_name || user?.email}
+              </div>
+            </div>
+
+            {/* Partner selectors */}
+            {teamSelections.map((selection, i) => {
+              const selectedEmailsExcludingThisSlot = [
+                user?.email,
+                ...teamSelections.filter((_, j) => j !== i).map(m => m?.email).filter(Boolean)
+              ];
+              const options = availableMembers.filter(m => !selectedEmailsExcludingThisSlot.includes(m.user_email));
+              const label = selectedComp?.type === 'pairs' ? 'Partner' :
+                selectedComp?.type === 'triples' ? `Player ${i + 2}` :
+                `Player ${i + 2}`;
+              return (
+                <div key={i}>
+                  <Label className="text-sm text-gray-600">{label} *</Label>
+                  <Select
+                    value={selection?.email || ''}
+                    onValueChange={(v) => handleTeamMemberChange(i, v)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={`Select ${label.toLowerCase()}...`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.map(m => (
+                        <SelectItem key={m.user_email} value={m.user_email}>
+                          {m.user_name || m.user_email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+
+            {selectedComp?.price_per_entry > 0 && (
+              <p className="text-sm text-gray-500">
+                Entry fee: <span className="font-medium text-gray-800">{formatPrice(selectedComp.price_per_entry)}</span>
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRegisterOpen(false); setTeamSelections([]); }}>Cancel</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={handleRegisterSubmit}
+              disabled={registerMutation.isPending}
+            >
+              {registerMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirm Registration
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

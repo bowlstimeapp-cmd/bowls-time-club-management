@@ -12,11 +12,27 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Email of the entrant"
+      "description": "Email of the lead entrant (person who registered)"
     },
     "member_name": {
       "type": "string",
-      "description": "Full name of the entrant at time of registration"
+      "description": "Full name of the lead entrant at time of registration"
+    },
+    "team_members": {
+      "type": "array",
+      "description": "Other members in the team (for pairs/triples/fours)",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
     },
     "entry_date": {
       "type": "string",
