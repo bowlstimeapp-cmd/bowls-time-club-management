@@ -28,7 +28,8 @@ import {
   ChevronDown,
   MessageSquare,
   ListChecks,
-  MessagesSquare
+  MessagesSquare,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -126,6 +127,7 @@ export default function Layout({ children, currentPageName }) {
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
       { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
     ] : []),
+    { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
     ...(club?.module_messaging ? [
       { name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare },
     ] : []),
@@ -295,20 +297,33 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 )}
 
-                {/* Club Messaging — hidden in kiosk mode */}
-                {!isKioskSession && club?.module_messaging && (
-                  <Link
-                    to={createPageUrl('ClubMessaging') + `?clubId=${clubId}`}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      isActive(createPageUrl('ClubMessaging'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    )}
-                  >
-                    <MessagesSquare className="w-4 h-4" />
-                    Club Chat
-                  </Link>
+                {/* My Club Dropdown — hidden in kiosk mode */}
+                {!isKioskSession && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                        <Users className="w-4 h-4" />
+                        My Club
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('MemberDirectory') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <BookOpen className="w-4 h-4 mr-2" />
+                          Member Directory
+                        </Link>
+                      </DropdownMenuItem>
+                      {club?.module_messaging && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('ClubMessaging') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <MessagesSquare className="w-4 h-4 mr-2" />
+                            Club Chat
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
                 {/* Bookings Admin link for stewards — hidden in kiosk mode */}
