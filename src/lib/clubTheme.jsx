@@ -1,7 +1,7 @@
 // Club-level colour theme context
 // Applied when a user is viewing a specific club.
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 
 export const CLUB_THEMES = {
   emerald: {
