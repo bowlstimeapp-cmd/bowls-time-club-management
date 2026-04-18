@@ -113,10 +113,10 @@ export default function Layout({ children, currentPageName }) {
       { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
     ] : []),
     ...(club?.module_competitions !== false ? [
-      { name: 'Competitions', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+      { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
     ] : []),
     ...(club?.competition_registration_enabled ? [
-      { name: 'Competition Registration', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks },
+      { name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks },
     ] : []),
     ...(club?.module_leagues !== false ? [
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
@@ -213,36 +213,33 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 )}
 
-                {/* Competitions */}
+                {/* Competitions Dropdown */}
                 {club?.module_competitions !== false && (
-                  <Link
-                    to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      isActive(createPageUrl('ClubTournaments'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    )}
-                  >
-                    <Trophy className="w-4 h-4" />
-                    Competitions
-                  </Link>
-                )}
-
-                {/* Competition Registration */}
-                {club?.competition_registration_enabled && (
-                  <Link
-                    to={createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      isActive(createPageUrl('CompetitionRegistration'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    )}
-                  >
-                    <ListChecks className="w-4 h-4" />
-                    Comp. Registration
-                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                        <Trophy className="w-4 h-4" />
+                        Competitions
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Trophy className="w-4 h-4 mr-2" />
+                          Competition Draw
+                        </Link>
+                      </DropdownMenuItem>
+                      {club?.competition_registration_enabled && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <ListChecks className="w-4 h-4 mr-2" />
+                            Competition Entries
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
                 {/* My Teams (for all members if leagues enabled) */}
