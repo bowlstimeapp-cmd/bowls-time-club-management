@@ -334,6 +334,19 @@
     "league_table_header_img_url": {
       "type": "string",
       "description": "Uploaded header image URL for use in league table print templates"
+    },
+    "club_theme": {
+      "type": "string",
+      "enum": [
+        "emerald",
+        "blue",
+        "purple",
+        "slate",
+        "rose",
+        "amber"
+      ],
+      "default": "emerald",
+      "description": "UI colour theme for the club (affects accent colours throughout the app)"
     }
   },
   "required": [

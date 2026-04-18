@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { KioskProvider } from '@/lib/KioskContext';
+import { LayoutThemeProvider } from '@/lib/layoutTheme';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BookingsAudit from './pages/BookingsAudit';
 import CompetitionRegistration from './pages/CompetitionRegistration';
@@ -74,6 +75,7 @@ function App() {
   return (
     <AuthProvider>
       <KioskProvider>
+        <LayoutThemeProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <NavigationTracker />
@@ -81,6 +83,7 @@ function App() {
           </Router>
           <Toaster />
         </QueryClientProvider>
+        </LayoutThemeProvider>
       </KioskProvider>
     </AuthProvider>
   )

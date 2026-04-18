@@ -86,4 +86,16 @@ module.exports = {
   	}
   },
   plugins: [require("tailwindcss-animate")],
+  safelist: [
+    // Club theme colours
+    'bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-slate-600', 'bg-rose-500', 'bg-amber-500',
+    'bg-emerald-50', 'bg-blue-50', 'bg-purple-50', 'bg-slate-50', 'bg-rose-50', 'bg-amber-50',
+    'bg-emerald-100', 'bg-blue-100', 'bg-purple-100', 'bg-slate-100', 'bg-rose-100', 'bg-amber-100',
+    'bg-emerald-600', 'bg-blue-600', 'bg-purple-600', 'bg-slate-700', 'bg-rose-600', 'bg-amber-600',
+    'hover:bg-emerald-700', 'hover:bg-blue-700', 'hover:bg-purple-700', 'hover:bg-slate-800', 'hover:bg-rose-700', 'hover:bg-amber-700',
+    'text-emerald-700', 'text-blue-700', 'text-purple-700', 'text-slate-700', 'text-rose-700', 'text-amber-700',
+    'text-emerald-800', 'text-blue-800', 'text-purple-800', 'text-slate-800', 'text-rose-800', 'text-amber-800',
+    'text-emerald-600', 'text-blue-600', 'text-purple-600', 'text-slate-600', 'text-rose-600', 'text-amber-600',
+    'border-emerald-200', 'border-blue-200', 'border-purple-200', 'border-slate-200', 'border-rose-200', 'border-amber-200',
+  ],
 }

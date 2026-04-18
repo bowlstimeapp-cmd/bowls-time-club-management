@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp, Monitor, ClipboardList } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush } from 'lucide-react';
+import { CLUB_THEMES } from '@/lib/clubTheme';
 import { Textarea } from "@/components/ui/textarea";
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
@@ -77,6 +78,7 @@ export default function ClubSettings() {
   const [memberIdAssignResult, setMemberIdAssignResult] = useState(null);
   const [competitionRegistrationEnabled, setCompetitionRegistrationEnabled] = useState(false);
   const [competitionPageHeader, setCompetitionPageHeader] = useState('');
+  const [clubTheme, setClubTheme] = useState('emerald');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -155,6 +157,7 @@ export default function ClubSettings() {
       setKioskAccountEmail(club.kiosk_account_email || '');
       setCompetitionRegistrationEnabled(club.competition_registration_enabled || false);
       setCompetitionPageHeader(club.competition_page_header || '');
+      setClubTheme(club.club_theme || 'emerald');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id]);
@@ -312,6 +315,7 @@ export default function ClubSettings() {
       kiosk_account_email: kioskAccountEmail || null,
       competition_registration_enabled: competitionRegistrationEnabled,
       competition_page_header: competitionPageHeader || null,
+      club_theme: clubTheme,
       ...teamSheetSettings,
     });
   };
@@ -1026,6 +1030,38 @@ export default function ClubSettings() {
                     />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Club Theme */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Paintbrush className="w-5 h-5" />
+                  Club Theme
+                </CardTitle>
+                <CardDescription>
+                  Choose a colour theme for your club's app interface
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {Object.entries(CLUB_THEMES).map(([key, { label, preview, classes }]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setClubTheme(key)}
+                      className={`text-left p-3 rounded-lg border-2 transition-all ${clubTheme === key ? 'border-gray-800 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className={`w-full h-6 rounded-md mb-2 ${preview}`} />
+                      <p className="text-sm font-medium">{label}</p>
+                      {clubTheme === key && (
+                        <p className="text-xs text-emerald-600 mt-0.5">✓ Active</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-3">Theme colours apply to accents, buttons and badges throughout the club view. Changes take effect after saving and refreshing.</p>
               </CardContent>
             </Card>
 

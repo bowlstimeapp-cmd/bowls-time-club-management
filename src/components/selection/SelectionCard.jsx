@@ -15,6 +15,7 @@ import { format, parseISO } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
+import { useLayoutTheme } from '@/lib/layoutTheme';
 
 const competitionColors = {
   'Bramley': 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -40,10 +41,9 @@ export default function SelectionCard({
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
   const navigate = useNavigate();
+  const { layout } = useLayoutTheme();
 
-  const countSelected = () => {
-    return Object.values(selection.selections || {}).filter(Boolean).length;
-  };
+  const countSelected = () => Object.values(selection.selections || {}).filter(Boolean).length;
 
   const getMemberName = (email) => {
     const member = members.find(m => m.user_email === email);
@@ -58,11 +58,214 @@ export default function SelectionCard({
   const availableCount = availabilities.filter(a => a.is_available === true).length;
   const unavailableCount = availabilities.filter(a => a.is_available === false).length;
 
+  const viewUrl = createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`;
+  const editUrl = createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`;
+  const liveUrl = createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`;
+
+  const ActionButtons = ({ size = 'sm' }) => (
+    <>
+      {onViewClick ? (
+        <Button ref={viewBtnRef} variant="outline" size={size} onClick={onViewClick}>
+          <Eye className="w-4 h-4 mr-1" />View
+        </Button>
+      ) : (
+        <Link to={viewUrl}>
+          <Button ref={viewBtnRef} variant="outline" size={size}>
+            <Eye className="w-4 h-4 mr-1" />View
+          </Button>
+        </Link>
+      )}
+      {selection.status === 'published' && (
+        onLiveScoreClick ? (
+          <Button ref={liveScoreBtnRef} variant="outline" size={size} onClick={onLiveScoreClick}>
+            <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
+          </Button>
+        ) : (
+          <Link to={liveUrl}>
+            <Button ref={liveScoreBtnRef} variant="outline" size={size}>
+              <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
+            </Button>
+          </Link>
+        )
+      )}
+      {isSelector && (
+        <>
+          <Link to={editUrl}>
+            <Button variant="outline" size={size}><Pencil className="w-4 h-4 mr-1" />Edit</Button>
+          </Link>
+          <Button variant="outline" size={size} onClick={() => onDelete?.(selection.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+            <Trash2 className="w-4 h-4 mr-1" />Delete
+          </Button>
+        </>
+      )}
+    </>
+  );
+
+  const MobileMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm"><MoreVertical className="w-4 h-4" /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => navigate(viewUrl)}><Eye className="w-4 h-4 mr-2" />View</DropdownMenuItem>
+        {selection.status === 'published' && (
+          <DropdownMenuItem onClick={() => navigate(liveUrl)}><ClipboardList className="w-4 h-4 mr-2" />Live Scoring</DropdownMenuItem>
+        )}
+        {isSelector && (
+          <>
+            <DropdownMenuItem onClick={() => navigate(editUrl)}><Pencil className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onDelete?.(selection.id)} className="text-red-600"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const AvailabilitySection = () => {
+    if (!selection.status === 'published' || !onSetAvailability) return null;
+    return (
+      <div className="border-t pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-gray-700">Your Availability:</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant={myAvailability === true ? "default" : "outline"}
+              className={cn(myAvailability === true && "bg-emerald-600 hover:bg-emerald-700")}
+              onClick={() => onSetAvailability(true)} disabled={isSettingAvailability}>
+              <CheckCircle className="w-4 h-4 mr-1" />Available
+            </Button>
+            <Button size="sm" variant={myAvailability === false ? "default" : "outline"}
+              className={cn(myAvailability === false && "bg-red-600 hover:bg-red-700")}
+              onClick={() => onSetAvailability(false)} disabled={isSettingAvailability}>
+              <XCircle className="w-4 h-4 mr-1" />Unavailable
+            </Button>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setShowAvailability(!showAvailability)} className="w-full justify-between text-gray-600">
+          <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1 text-emerald-600"><CheckCircle className="w-4 h-4" /> {availableCount}</span>
+            <span className="flex items-center gap-1 text-red-600"><XCircle className="w-4 h-4" /> {unavailableCount}</span>
+          </span>
+          {showAvailability ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </Button>
+        {showAvailability && (
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {members.map(member => {
+              const status = getAvailabilityStatus(member.user_email);
+              return (
+                <div key={member.id} className="flex items-center gap-2 text-sm p-2 rounded-lg bg-gray-50">
+                  {status === true ? <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    : status === false ? <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    : <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />}
+                  <span className="truncate">{member.user_name}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── COMPACT layout ──────────────────────────────────────────────
+  if (layout === 'compact') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center gap-3 px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors bg-white">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-gray-900 truncate">
+                {format(parseISO(selection.match_date), 'd MMM yyyy')}
+              </span>
+              {selection.match_name && <span className="text-sm text-gray-500 truncate">{selection.match_name}</span>}
+              <Badge className={`border text-xs ${competitionColors[selection.competition]}`}>
+                {selection.competition}
+              </Badge>
+              <Badge variant={selection.status === 'published' ? 'default' : 'secondary'} className="text-xs">
+                {selection.status === 'published' ? 'Published' : 'Draft'}
+              </Badge>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">{countSelected()} selected</p>
+          </div>
+          <div className="hidden sm:flex gap-1.5 shrink-0">
+            <ActionButtons size="sm" />
+          </div>
+          <div className="sm:hidden shrink-0"><MobileMenu /></div>
+        </div>
+        {selection.status === 'published' && onSetAvailability && (
+          <div className="mt-1 px-3">
+            <AvailabilitySection />
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
+  // ── MINIMAL layout ──────────────────────────────────────────────
+  if (layout === 'minimal') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-start gap-4 py-3 border-b last:border-b-0">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="text-sm font-semibold text-gray-900">
+                {format(parseISO(selection.match_date), 'd MMMM yyyy')}
+              </span>
+              {selection.match_name && <span className="text-sm text-gray-600">· {selection.match_name}</span>}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
+              <span className="flex items-center gap-1"><Trophy className="w-3 h-3" />{selection.competition}</span>
+              <span>· {countSelected()} players</span>
+              {selection.status === 'draft' && <span className="text-amber-600">· Draft</span>}
+            </div>
+          </div>
+          <div className="hidden sm:flex gap-1.5 shrink-0 mt-0.5">
+            <ActionButtons size="sm" />
+          </div>
+          <div className="sm:hidden shrink-0"><MobileMenu /></div>
+        </div>
+        {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
+      </motion.div>
+    );
+  }
+
+  // ── BOLD layout ─────────────────────────────────────────────────
+  if (layout === 'bold') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="h-1.5 bg-emerald-500 w-full" />
+          <div className="bg-white p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-lg font-bold text-gray-900">
+                    {format(parseISO(selection.match_date), 'd MMMM yyyy')}
+                  </span>
+                  <Badge className={`border ${competitionColors[selection.competition]}`}>
+                    <Trophy className="w-3 h-3 mr-1" />{selection.competition}
+                  </Badge>
+                </div>
+                {selection.match_name && (
+                  <p className="text-base text-gray-600 font-medium">{selection.match_name}</p>
+                )}
+                <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected</p>
+              </div>
+              <div className="hidden sm:flex gap-2 shrink-0">
+                <ActionButtons />
+              </div>
+              <div className="sm:hidden shrink-0"><MobileMenu /></div>
+            </div>
+            {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ── DEFAULT layout ──────────────────────────────────────────────
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-4">
           <div className="flex flex-col gap-4">
@@ -70,8 +273,7 @@ export default function SelectionCard({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={`border ${competitionColors[selection.competition]}`}>
-                    <Trophy className="w-3 h-3 mr-1" />
-                    {selection.competition}
+                    <Trophy className="w-3 h-3 mr-1" />{selection.competition}
                   </Badge>
                   <Badge variant={selection.status === 'published' ? 'default' : 'secondary'}>
                     {selection.status === 'published' ? 'Published' : 'Draft'}
@@ -82,172 +284,21 @@ export default function SelectionCard({
                     <Calendar className="w-4 h-4" />
                     {format(parseISO(selection.match_date), 'd MMMM yyyy')}
                   </span>
-                  {selection.match_name && (
-                    <span className="font-medium">{selection.match_name}</span>
-                  )}
+                  {selection.match_name && <span className="font-medium">{selection.match_name}</span>}
                   {selection.competition === 'Fantastic 5s' && selection.friendly_location && (
                     <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200 text-xs' : 'bg-orange-50 text-orange-700 border-orange-200 text-xs'}>
                       {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-gray-500">
-                  {countSelected()} players selected
-                </p>
+                <p className="text-sm text-gray-500">{countSelected()} players selected</p>
               </div>
-
-              {/* Desktop buttons */}
               <div className="hidden sm:flex gap-2 flex-wrap shrink-0">
-                {onViewClick ? (
-                  <Button ref={viewBtnRef} variant="outline" size="sm" onClick={onViewClick}>
-                    <Eye className="w-4 h-4 mr-1" />View
-                  </Button>
-                ) : (
-                  <Link to={createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                    <Button ref={viewBtnRef} variant="outline" size="sm">
-                      <Eye className="w-4 h-4 mr-1" />View
-                    </Button>
-                  </Link>
-                )}
-                {selection.status === 'published' && (
-                  onLiveScoreClick ? (
-                    <Button ref={liveScoreBtnRef} variant="outline" size="sm" onClick={onLiveScoreClick}>
-                      <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
-                    </Button>
-                  ) : (
-                    <Link to={createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                      <Button ref={liveScoreBtnRef} variant="outline" size="sm">
-                        <ClipboardList className="w-4 h-4 mr-1" />Live Scoring
-                      </Button>
-                    </Link>
-                  )
-                )}
-                {isSelector && (
-                  <>
-                    <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Pencil className="w-4 h-4 mr-1" />Edit
-                      </Button>
-                    </Link>
-                    <Button 
-                      variant="outline" size="sm"
-                      onClick={() => onDelete?.(selection.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />Delete
-                    </Button>
-                  </>
-                )}
+                <ActionButtons />
               </div>
-
-              {/* Mobile dropdown */}
-              <div className="sm:hidden shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate(createPageUrl('SelectionView') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
-                      <Eye className="w-4 h-4 mr-2" />View
-                    </DropdownMenuItem>
-                    {selection.status === 'published' && (
-                      <DropdownMenuItem onClick={() => navigate(createPageUrl('LiveScoring') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
-                        <ClipboardList className="w-4 h-4 mr-2" />Live Scoring
-                      </DropdownMenuItem>
-                    )}
-                    {isSelector && (
-                      <>
-                        <DropdownMenuItem onClick={() => navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${selection.id}`)}>
-                          <Pencil className="w-4 h-4 mr-2" />Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onDelete?.(selection.id)} className="text-red-600">
-                          <Trash2 className="w-4 h-4 mr-2" />Delete
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <div className="sm:hidden shrink-0"><MobileMenu /></div>
             </div>
-
-            {/* Availability Section - Only for published selections */}
-            {selection.status === 'published' && onSetAvailability && (
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">Your Availability:</span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={myAvailability === true ? "default" : "outline"}
-                      className={cn(
-                        myAvailability === true && "bg-emerald-600 hover:bg-emerald-700"
-                      )}
-                      onClick={() => onSetAvailability(true)}
-                      disabled={isSettingAvailability}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Available
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={myAvailability === false ? "default" : "outline"}
-                      className={cn(
-                        myAvailability === false && "bg-red-600 hover:bg-red-700"
-                      )}
-                      onClick={() => onSetAvailability(false)}
-                      disabled={isSettingAvailability}
-                    >
-                      <XCircle className="w-4 h-4 mr-1" />
-                      Unavailable
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Show all members' availability */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAvailability(!showAvailability)}
-                  className="w-full justify-between text-gray-600"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-emerald-600">
-                      <CheckCircle className="w-4 h-4" /> {availableCount}
-                    </span>
-                    <span className="flex items-center gap-1 text-red-600">
-                      <XCircle className="w-4 h-4" /> {unavailableCount}
-                    </span>
-                  </span>
-                  {showAvailability ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </Button>
-
-                {showAvailability && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {members.map(member => {
-                      const status = getAvailabilityStatus(member.user_email);
-                      return (
-                        <div 
-                          key={member.id}
-                          className="flex items-center gap-2 text-sm p-2 rounded-lg bg-gray-50"
-                        >
-                          {status === true ? (
-                            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                          ) : status === false ? (
-                            <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                          ) : (
-                            <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                          )}
-                          <span className="truncate">{member.user_name}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+            {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
           </div>
         </CardContent>
       </Card>
