@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp, Monitor } from 'lucide-react';
+import { Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy, Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette, ExternalLink, FileUp, Monitor, ClipboardList } from 'lucide-react';
+import { Textarea } from "@/components/ui/textarea";
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
 import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
@@ -74,6 +75,8 @@ export default function ClubSettings() {
   const [kioskAccountEmail, setKioskAccountEmail] = useState('');
   const [assigningMemberIds, setAssigningMemberIds] = useState(false);
   const [memberIdAssignResult, setMemberIdAssignResult] = useState(null);
+  const [competitionRegistrationEnabled, setCompetitionRegistrationEnabled] = useState(false);
+  const [competitionPageHeader, setCompetitionPageHeader] = useState('');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -150,6 +153,8 @@ export default function ClubSettings() {
       setUseCustomScorecardLayout(club.use_custom_scorecard_layout || false);
       setKioskModeEnabled(club.kiosk_mode_enabled || false);
       setKioskAccountEmail(club.kiosk_account_email || '');
+      setCompetitionRegistrationEnabled(club.competition_registration_enabled || false);
+      setCompetitionPageHeader(club.competition_page_header || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id]);
@@ -305,6 +310,8 @@ export default function ClubSettings() {
       use_custom_scorecard_layout: useCustomScorecardLayout,
       kiosk_mode_enabled: kioskModeEnabled,
       kiosk_account_email: kioskAccountEmail || null,
+      competition_registration_enabled: competitionRegistrationEnabled,
+      competition_page_header: competitionPageHeader || null,
       ...teamSheetSettings,
     });
   };
@@ -984,6 +991,40 @@ export default function ClubSettings() {
                       </div>
                     )}
                   </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Competition Registration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5" />
+                  Competition Registration
+                </CardTitle>
+                <CardDescription>
+                  Allow members to enter club competitions directly from the app
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Enable Competition Registration</Label>
+                    <p className="text-sm text-gray-500">Show the Competition Registration page to all approved members</p>
+                  </div>
+                  <Switch checked={competitionRegistrationEnabled} onCheckedChange={setCompetitionRegistrationEnabled} />
+                </div>
+                {competitionRegistrationEnabled && (
+                  <div>
+                    <Label>Page Header Message</Label>
+                    <p className="text-sm text-gray-500 mb-2">Optional wording shown at the top of the Competition Registration page (e.g. entry conditions, payment instructions). Leave blank to show nothing.</p>
+                    <Textarea
+                      value={competitionPageHeader}
+                      onChange={e => setCompetitionPageHeader(e.target.value)}
+                      placeholder="e.g. Entry fees are payable to the Club Treasurer. Contact secretary@club.com for queries."
+                      rows={4}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>

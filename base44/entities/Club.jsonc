@@ -281,6 +281,15 @@
     "kiosk_account_email": {
       "type": "string",
       "description": "Email of the dedicated kiosk account user"
+    },
+    "competition_registration_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Competition Registration page for members"
+    },
+    "competition_page_header": {
+      "type": "string",
+      "description": "Optional header message shown at the top of the Competition Registration page"
     }
   },
   "required": [

@@ -1,0 +1,37 @@
+{
+  "name": "CompetitionEntry",
+  "type": "object",
+  "properties": {
+    "competition_id": {
+      "type": "string",
+      "description": "Reference to the CompetitionRegistration"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the entrant"
+    },
+    "member_name": {
+      "type": "string",
+      "description": "Full name of the entrant at time of registration"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the entry was submitted"
+    }
+  },
+  "required": [
+    "competition_id",
+    "club_id",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

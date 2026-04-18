@@ -1,0 +1,68 @@
+{
+  "name": "CompetitionRegistration",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "name": {
+      "type": "string",
+      "description": "Competition name"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "singles",
+        "pairs",
+        "triples",
+        "fours"
+      ],
+      "description": "Competition format"
+    },
+    "description": {
+      "type": "string",
+      "description": "Free text description"
+    },
+    "rules": {
+      "type": "string",
+      "description": "Rules, conditions, or eligibility requirements"
+    },
+    "max_entries": {
+      "type": "integer",
+      "description": "Maximum number of entrants allowed"
+    },
+    "price_per_entry": {
+      "type": "number",
+      "description": "Cost per entry in GBP"
+    },
+    "registration_deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Closing date for entries"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "default": "open",
+      "description": "Competition status"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "user_email of the admin who created it"
+    }
+  },
+  "required": [
+    "club_id",
+    "name",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

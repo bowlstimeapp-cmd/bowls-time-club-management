@@ -26,7 +26,8 @@ import {
   Table2,
   ClipboardList,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  ListChecks
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -113,6 +114,9 @@ export default function Layout({ children, currentPageName }) {
     ] : []),
     ...(club?.module_competitions !== false ? [
       { name: 'Competitions', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+    ] : []),
+    ...(club?.competition_registration_enabled ? [
+      { name: 'Competition Registration', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks },
     ] : []),
     ...(club?.module_leagues !== false ? [
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
@@ -222,6 +226,22 @@ export default function Layout({ children, currentPageName }) {
                   >
                     <Trophy className="w-4 h-4" />
                     Competitions
+                  </Link>
+                )}
+
+                {/* Competition Registration */}
+                {club?.competition_registration_enabled && (
+                  <Link
+                    to={createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      isActive(createPageUrl('CompetitionRegistration'))
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
+                  >
+                    <ListChecks className="w-4 h-4" />
+                    Comp. Registration
                   </Link>
                 )}
 
