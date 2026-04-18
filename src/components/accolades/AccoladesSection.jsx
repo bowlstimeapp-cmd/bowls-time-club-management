@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Medal, Plus, Trash2, Pencil, X, Check, UserPlus } from 'lucide-react';
+import { Medal, Plus, Trash2, Pencil, X, Check, UserPlus, Zap, RefreshCw } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -18,8 +19,43 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingAccolade, setEditingAccolade] = useState(null);
-  const [form, setForm] = useState({ name: '', emoji: '🏆', description: '', allow_multiple_winners: true });
+  const [form, setForm] = useState({ name: '', emoji: '🏆', description: '', allow_multiple_winners: true, auto_trigger: 'none', auto_trigger_threshold: '' });
   const [assigningAccolade, setAssigningAccolade] = useState(null);
+  const [sweeping, setSweeping] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  const STANDARD_ACCOLADES = [
+    // Selection milestones
+    { name: 'First Pick', emoji: '🎯', description: 'Selected for their first ever team match', auto_trigger: 'first_selection', allow_multiple_winners: true },
+    { name: '5-Match Player', emoji: '⭐', description: 'Selected for 5 team matches', auto_trigger: 'selection_count', auto_trigger_threshold: 5, allow_multiple_winners: true },
+    { name: '10-Match Player', emoji: '🌟', description: 'Selected for 10 team matches', auto_trigger: 'selection_count', auto_trigger_threshold: 10, allow_multiple_winners: true },
+    { name: '15-Match Player', emoji: '🎖️', description: 'Selected for 15 team matches', auto_trigger: 'selection_count', auto_trigger_threshold: 15, allow_multiple_winners: true },
+    { name: '20-Match Player', emoji: '🏅', description: 'Selected for 20 team matches', auto_trigger: 'selection_count', auto_trigger_threshold: 20, allow_multiple_winners: true },
+    // Booking milestones
+    { name: 'First Booking', emoji: '📅', description: 'Made their first ever rink booking', auto_trigger: 'first_booking', allow_multiple_winners: true },
+    { name: 'Regular Player', emoji: '🏵️', description: '10 approved rink bookings', auto_trigger: 'booking_count', auto_trigger_threshold: 10, allow_multiple_winners: true },
+    { name: 'Keen Bowler', emoji: '🔥', description: '20 approved rink bookings', auto_trigger: 'booking_count', auto_trigger_threshold: 20, allow_multiple_winners: true },
+    { name: 'Dedicated Member', emoji: '💎', description: '30 approved rink bookings', auto_trigger: 'booking_count', auto_trigger_threshold: 30, allow_multiple_winners: true },
+    // League milestones
+    { name: 'League Debutant', emoji: '🥉', description: 'Played their first league game', auto_trigger: 'league_games', auto_trigger_threshold: 1, allow_multiple_winners: true },
+    { name: 'League Regular', emoji: '🥈', description: 'Played 10 league games', auto_trigger: 'league_games', auto_trigger_threshold: 10, allow_multiple_winners: true },
+    { name: 'League Veteran', emoji: '🥇', description: 'Played 25 league games', auto_trigger: 'league_games', auto_trigger_threshold: 25, allow_multiple_winners: true },
+  ];
+
+  const seedStandardAccolades = async () => {
+    setSeeding(true);
+    let created = 0;
+    for (const template of STANDARD_ACCOLADES) {
+      const alreadyExists = accolades.some(a => a.name === template.name);
+      if (!alreadyExists) {
+        await base44.entities.ClubAccolade.create({ ...template, club_id: clubId });
+        created++;
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['clubAccolades', clubId] });
+    setSeeding(false);
+    toast.success(`${created} standard accolade(s) added`);
+  };
   const [assignEmail, setAssignEmail] = useState('');
   const [assignDate, setAssignDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [memberSearch, setMemberSearch] = useState('');
@@ -62,7 +98,7 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
   });
 
   const resetForm = () => {
-    setForm({ name: '', emoji: '🏆', description: '', allow_multiple_winners: true });
+    setForm({ name: '', emoji: '🏆', description: '', allow_multiple_winners: true, auto_trigger: 'none', auto_trigger_threshold: '' });
     setEditingAccolade(null);
     setShowForm(false);
   };
@@ -76,9 +112,24 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
     }
   };
 
+  const runSweep = async () => {
+    setSweeping(true);
+    const res = await base44.functions.invoke('checkAccoladeTriggers', { club_id: clubId });
+    setSweeping(false);
+    queryClient.invalidateQueries({ queryKey: ['clubAccoladeAssignments', clubId] });
+    toast.success(res.data?.message || 'Sweep complete');
+  };
+
   const handleEdit = (accolade) => {
     setEditingAccolade(accolade);
-    setForm({ name: accolade.name, emoji: accolade.emoji || '🏆', description: accolade.description || '', allow_multiple_winners: accolade.allow_multiple_winners !== false });
+    setForm({
+      name: accolade.name,
+      emoji: accolade.emoji || '🏆',
+      description: accolade.description || '',
+      allow_multiple_winners: accolade.allow_multiple_winners !== false,
+      auto_trigger: accolade.auto_trigger || 'none',
+      auto_trigger_threshold: accolade.auto_trigger_threshold || '',
+    });
     setShowForm(true);
     setAssigningAccolade(null);
   };
@@ -134,7 +185,22 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
             </CardTitle>
             <CardDescription>Award badges and honours to club members</CardDescription>
           </div>
-          <Switch checked={moduleEnabled} onCheckedChange={onToggleModule} />
+          <div className="flex items-center gap-2">
+            {moduleEnabled && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={runSweep}
+                disabled={sweeping}
+                title="Check all members against auto-trigger thresholds now"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1 ${sweeping ? 'animate-spin' : ''}`} />
+                Run Sweep
+              </Button>
+            )}
+            <Switch checked={moduleEnabled} onCheckedChange={onToggleModule} />
+          </div>
         </div>
       </CardHeader>
 
@@ -161,9 +227,18 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
                         <div>
                           <p className="font-medium text-gray-900">{accolade.name}</p>
                           {accolade.description && <p className="text-xs text-gray-500">{accolade.description}</p>}
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {accolade.allow_multiple_winners ? 'Multiple winners allowed' : 'Single winner'}
-                          </p>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            <span className="text-xs text-gray-400">
+                              {accolade.allow_multiple_winners ? 'Multiple winners' : 'Single winner'}
+                            </span>
+                            {accolade.auto_trigger && accolade.auto_trigger !== 'none' && (
+                              <Badge className="text-xs py-0 px-1.5 bg-violet-100 text-violet-700 border-0 flex items-center gap-1">
+                                <Zap className="w-2.5 h-2.5" />
+                                Auto
+                                {accolade.auto_trigger_threshold ? ` @ ${accolade.auto_trigger_threshold}` : ''}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
@@ -236,6 +311,25 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
           )}
 
           {/* Add/Edit form */}
+          {/* Seed standard accolades shortcut */}
+          {accolades.length === 0 && !showForm && (
+            <div className="rounded-lg border border-violet-200 bg-violet-50 p-4 text-center space-y-2">
+              <Zap className="w-8 h-8 mx-auto text-violet-400" />
+              <p className="text-sm font-medium text-violet-800">Quick-start with standard accolades</p>
+              <p className="text-xs text-violet-600">Adds 12 pre-configured auto-trigger accolades covering selections, bookings & league games.</p>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-violet-600 hover:bg-violet-700"
+                onClick={seedStandardAccolades}
+                disabled={seeding}
+              >
+                <Zap className="w-3.5 h-3.5 mr-1" />
+                {seeding ? 'Adding…' : 'Add Standard Accolades'}
+              </Button>
+            </div>
+          )}
+
           {showForm ? (
             <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
               <p className="font-medium text-gray-800">{editingAccolade ? 'Edit Accolade' : 'New Accolade'}</p>
@@ -268,6 +362,41 @@ export default function AccoladesSection({ clubId, moduleEnabled, onToggleModule
                   <p className="text-xs text-gray-500">If off, only one player holds this accolade at a time</p>
                 </div>
                 <Switch checked={form.allow_multiple_winners} onCheckedChange={v => setForm({ ...form, allow_multiple_winners: v })} />
+              </div>
+
+              {/* Auto-trigger */}
+              <div className="space-y-2 border rounded-lg p-3 bg-violet-50">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-violet-600" />
+                  <Label className="text-sm font-semibold text-violet-800">Auto-trigger</Label>
+                </div>
+                <Select value={form.auto_trigger} onValueChange={v => setForm({ ...form, auto_trigger: v })}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (manual only)</SelectItem>
+                    <SelectItem value="selection_count">Selected for X matches</SelectItem>
+                    <SelectItem value="booking_count">X approved rink bookings</SelectItem>
+                    <SelectItem value="league_games">X league games played</SelectItem>
+                    <SelectItem value="first_booking">First ever booking</SelectItem>
+                    <SelectItem value="first_selection">First ever team selection</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.auto_trigger !== 'none' && !['first_booking', 'first_selection'].includes(form.auto_trigger) && (
+                  <div>
+                    <Label className="text-xs text-violet-700">Threshold (count)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={form.auto_trigger_threshold}
+                      onChange={e => setForm({ ...form, auto_trigger_threshold: parseInt(e.target.value) || '' })}
+                      placeholder="e.g. 10"
+                      className="bg-white mt-1"
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-violet-600">Auto-triggers run each time a booking or selection is created. You can also run a manual sweep below.</p>
               </div>
               <div className="flex gap-2">
                 <Button type="button" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleSave}>

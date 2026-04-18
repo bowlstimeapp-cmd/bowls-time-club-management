@@ -21,7 +21,12 @@
     },
     "awarded_by": {
       "type": "string",
-      "description": "Email of the admin who awarded this"
+      "description": "Email of the admin who awarded this (null if auto-awarded)"
+    },
+    "auto_awarded": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this was awarded automatically by a trigger"
     }
   },
   "required": [
