@@ -290,6 +290,50 @@
     "competition_page_header": {
       "type": "string",
       "description": "Optional header message shown at the top of the Competition Registration page"
+    },
+    "league_table_template": {
+      "type": "string",
+      "description": "Print template style for league tables (classic/modern/minimal)"
+    },
+    "league_table_primary_colour": {
+      "type": "string",
+      "description": "Primary colour for league table print templates (hex)"
+    },
+    "league_table_font_size": {
+      "type": "string",
+      "description": "Font size for league table print templates (small/medium/large)"
+    },
+    "league_table_show_accurate_as_of": {
+      "type": "boolean",
+      "description": "Show 'Accurate as of [date]' on printed league table"
+    },
+    "league_table_show_session_time": {
+      "type": "boolean",
+      "description": "Show session time on printed league table"
+    },
+    "league_table_show_league_dates": {
+      "type": "boolean",
+      "description": "Show league start/end dates on printed league table"
+    },
+    "league_table_show_footer": {
+      "type": "boolean",
+      "description": "Show footer text on printed league table"
+    },
+    "league_table_footer_text": {
+      "type": "string",
+      "description": "Footer text for printed league table"
+    },
+    "league_table_advanced_mode": {
+      "type": "boolean",
+      "description": "Enable advanced HTML template editing for league tables"
+    },
+    "league_table_custom_html": {
+      "type": "string",
+      "description": "Custom HTML template for league table (advanced mode)"
+    },
+    "league_table_header_img_url": {
+      "type": "string",
+      "description": "Uploaded header image URL for use in league table print templates"
     }
   },
   "required": [

@@ -126,7 +126,7 @@ export default function LeagueView() {
             </CardContent>
           </Card>
         ) : club?.alt_view_leagues ? (
-          <LeagueTableView leagues={leagues} teams={teams} fixtures={fixtures} />
+          <LeagueTableView leagues={leagues} teams={teams} fixtures={fixtures} club={club} clubId={clubId} />
         ) : (
           <div className="space-y-6">
             {leagues.map((league) => {

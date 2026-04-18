@@ -41,6 +41,10 @@
       "type": "string",
       "description": "Weekly match end time (HH:MM)"
     },
+    "session_time": {
+      "type": "string",
+      "description": "Typical session time shown on printed league tables (e.g. 2:00pm)"
+    },
     "multi_session": {
       "type": "boolean",
       "default": false,

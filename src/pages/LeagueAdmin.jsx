@@ -54,11 +54,12 @@ import {
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
-import { calculateLeagueTable, getScoringRules } from '@/lib/leagueScoring';
+
 import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import LeagueScoresModal from '@/components/leagues/LeagueScoresModal';
+import LeagueTableDialog from '@/components/leagues/LeagueTableDialog';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -91,6 +92,7 @@ export default function LeagueAdmin() {
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
   const [leagueForceEven, setLeagueForceEven] = useState(true);
   const [leagueRinks, setLeagueRinks] = useState([]);
+  const [leagueSessionTime, setLeagueSessionTime] = useState('');
   const [leagueMultiSession, setLeagueMultiSession] = useState(false);
   const [leagueSelectedSessions, setLeagueSelectedSessions] = useState([]);
   const [leagueAdjacentRinks, setLeagueAdjacentRinks] = useState(false);
@@ -128,7 +130,6 @@ export default function LeagueAdmin() {
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
   const [scoresModalOpen, setScoresModalOpen] = useState(false);
   const [scoresModalLeague, setScoresModalLeague] = useState(null);
-  const tableRef = useRef();
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [blacklistLeague, setBlacklistLeague] = useState(null);
   const [clashModalOpen, setClashModalOpen] = useState(false);
@@ -296,6 +297,7 @@ export default function LeagueAdmin() {
     setLeagueSetsEnds(8);
     setLeagueForceEven(true);
     setLeagueRinks([]);
+    setLeagueSessionTime('');
     setLeagueMultiSession(false);
     setLeagueSelectedSessions([]);
     setLeagueAdjacentRinks(false);
@@ -329,6 +331,7 @@ export default function LeagueAdmin() {
     setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueForceEven(league.force_even_fixtures !== false);
     setLeagueRinks(league.league_rinks || []);
+    setLeagueSessionTime(league.session_time || '');
     setLeagueMultiSession(league.multi_session || false);
     setLeagueSelectedSessions(league.selected_sessions || []);
     setLeagueAdjacentRinks(league.adjacent_rinks || false);
@@ -369,6 +372,7 @@ export default function LeagueAdmin() {
       end_date: leagueEndDate || null,
       start_time: leagueStartTime || null,
       end_time: leagueEndTime || null,
+      session_time: leagueSessionTime.trim() || null,
       format: leagueFormat,
       is_sets: leagueIsSets,
       sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
@@ -811,46 +815,6 @@ export default function LeagueAdmin() {
   const openScoresModal = (league) => {
     setScoresModalLeague(league);
     setScoresModalOpen(true);
-  };
-
-  const getLeagueTable = (league) => {
-    const leagueTeams = teams.filter(t => t.league_id === league.id);
-    const leagueFixtures = fixtures.filter(f => f.league_id === league.id);
-    return calculateLeagueTable(league, leagueTeams, leagueFixtures);
-  };
-
-  const handlePrintTable = () => {
-    const printContent = tableRef.current;
-    if (!printContent) return;
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${viewingTableLeague?.name} - League Table</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .logo { max-height: 60px; margin-bottom: 10px; }
-            h1 { font-size: 20px; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-            th { background: #f5f5f5; font-weight: bold; }
-            .team-name { text-align: left; font-weight: 500; }
-            .position { font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            ${club?.logo_url ? `<img src="${club.logo_url}" class="logo" alt="${club?.name}" />` : ''}
-            <div>${club?.name || ''}</div>
-          </div>
-          ${printContent.innerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
   };
 
   const handleSaveTeam = () => {
@@ -1404,6 +1368,15 @@ export default function LeagueAdmin() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>Typical Session Time</Label>
+                <Input
+                  value={leagueSessionTime}
+                  onChange={(e) => setLeagueSessionTime(e.target.value)}
+                  placeholder="e.g. 2:00pm"
+                />
+                <p className="text-xs text-gray-500 mt-1">Shown on printed league tables</p>
+              </div>
               {/* Adjacent Rinks (outdoor only) */}
               {club?.season === 'outdoor' && (
                 <div className="border rounded-lg p-4 space-y-3">
@@ -1884,74 +1857,15 @@ export default function LeagueAdmin() {
         />
 
         {/* League Table Dialog */}
-        <Dialog open={tableDialogOpen} onOpenChange={() => setTableDialogOpen(false)}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
-                <span>{viewingTableLeague?.name} - League Table</span>
-                <Button variant="outline" size="sm" onClick={handlePrintTable}>
-                  <Printer className="w-4 h-4 mr-1" />
-                  Print
-                </Button>
-              </DialogTitle>
-            </DialogHeader>
-            <div ref={tableRef}>
-              {viewingTableLeague && (() => {
-                const table = getLeagueTable(viewingTableLeague);
-                const scoringRules = viewingTableLeague.is_sets ? getScoringRules(viewingTableLeague) : [];
-                return (
-                  <>
-                    <h1>{viewingTableLeague.name}</h1>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr>
-                            <th className="border p-2 bg-gray-50">Pos</th>
-                            <th className="border p-2 bg-gray-50 text-left">Team</th>
-                            <th className="border p-2 bg-gray-50">P</th>
-                            <th className="border p-2 bg-gray-50">W</th>
-                            <th className="border p-2 bg-gray-50">D</th>
-                            <th className="border p-2 bg-gray-50">L</th>
-                            <th className="border p-2 bg-gray-50">PF</th>
-                            <th className="border p-2 bg-gray-50">PA</th>
-                            <th className="border p-2 bg-gray-50">+/-</th>
-                            <th className="border p-2 bg-gray-50">Pts</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {table.map((entry, idx) => (
-                            <tr key={entry.team.id}>
-                              <td className="border p-2 text-center font-medium">{idx + 1}</td>
-                              <td className="border p-2 font-medium">{entry.team.name}</td>
-                              <td className="border p-2 text-center">{entry.played}</td>
-                              <td className="border p-2 text-center">{entry.won}</td>
-                              <td className="border p-2 text-center">{entry.drawn}</td>
-                              <td className="border p-2 text-center">{entry.lost}</td>
-                              <td className="border p-2 text-center">{entry.pointsFor}</td>
-                              <td className="border p-2 text-center">{entry.pointsAgainst}</td>
-                              <td className="border p-2 text-center">{entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}</td>
-                              <td className="border p-2 text-center font-bold">{entry.points}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {scoringRules.length > 0 && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg border text-sm text-gray-600">
-                        <p className="font-semibold text-gray-700 mb-1">League Scoring Rules:</p>
-                        <ul className="space-y-0.5">
-                          {scoringRules.map((rule, i) => (
-                            <li key={i}>• {rule}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <LeagueTableDialog
+          open={tableDialogOpen}
+          onOpenChange={(open) => { if (!open) setTableDialogOpen(false); }}
+          league={viewingTableLeague}
+          teams={teams}
+          fixtures={fixtures}
+          club={club}
+          clubId={clubId}
+        />
       </div>
     </div>
   );
