@@ -194,7 +194,7 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 </>
               ) : (
-              <>{/* full nav start */}
+              <>
                 {/* Club Home */}
                 {club?.module_homepage && (
                   <Link
@@ -368,7 +368,7 @@ export default function Layout({ children, currentPageName }) {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-              </>{/* full nav end */}
+              </>
               )}
               </nav>
             )}
