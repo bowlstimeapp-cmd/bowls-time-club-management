@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Settings, RotateCcw, Layout } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { useLayoutTheme, LAYOUTS } from '@/lib/layoutTheme';
+import { useLayoutTheme, LAYOUTS } from '@/lib/layoutTheme.jsx';
 import { cn } from '@/lib/utils';
 
 export default function PlatformSettings() {

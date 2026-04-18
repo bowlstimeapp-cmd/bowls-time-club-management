@@ -2,7 +2,7 @@
 // Reads from localStorage (set by PlatformSettings).
 // Provides a React context so all components can read the current layout.
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const STORAGE_KEY = 'bt_platform_layout';
 

@@ -15,7 +15,7 @@ import { format, parseISO } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
-import { useLayoutTheme } from '@/lib/layoutTheme';
+import { useLayoutTheme } from '@/lib/layoutTheme.jsx';
 
 const competitionColors = {
   'Bramley': 'bg-emerald-100 text-emerald-800 border-emerald-200',

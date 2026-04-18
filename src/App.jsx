@@ -7,7 +7,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { KioskProvider } from '@/lib/KioskContext';
-import { LayoutThemeProvider } from '@/lib/layoutTheme';
+import { LayoutThemeProvider } from '@/lib/layoutTheme.jsx';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BookingsAudit from './pages/BookingsAudit';
 import CompetitionRegistration from './pages/CompetitionRegistration';
