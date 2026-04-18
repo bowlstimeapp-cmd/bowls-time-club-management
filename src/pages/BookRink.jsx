@@ -16,6 +16,7 @@ import BulkBookingModal from '@/components/booking/BulkBookingModal';
 import BookingDetailModal from '@/components/booking/BookingDetailModal';
 import InfoTooltip from '@/components/InfoTooltip';
 import { CalendarRange, Copy, PlayCircle } from 'lucide-react';
+import DailyBookingsSummary from '@/components/booking/DailyBookingsSummary';
 import {
   Dialog,
   DialogContent,
@@ -765,6 +766,12 @@ useEffect(() => {
                 <div className="flex gap-2 flex-wrap">
                   {(membership?.role === 'admin' || membership?.role === 'steward') && (
                     <>
+                      <DailyBookingsSummary
+                        clubId={clubId}
+                        selectedDate={selectedDate}
+                        bookings={bookingsFromDB}
+                        club={club}
+                      />
                       <Button 
                         onClick={() => setBulkModalOpen(true)}
                         variant="outline"
