@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Lightbulb, ShieldCheck, BookOpen } from 'lucide-react';
-import RoadmapDoc from './docs/RoadmapDoc.jsx';
-import FeatureGuideDoc from './docs/FeatureGuideDoc.jsx';
-import PrivacyNoticeDoc from './docs/PrivacyNoticeDoc.jsx';
+import RoadmapDoc from './docs/RoadmapDoc';
+import FeatureGuideDoc from './docs/FeatureGuideDoc';
+import PrivacyNoticeDoc from './docs/PrivacyNoticeDoc';
 
 const TABS = [
   { id: 'roadmap', label: 'Feature Roadmap', icon: <Lightbulb className="w-4 h-4" /> },
