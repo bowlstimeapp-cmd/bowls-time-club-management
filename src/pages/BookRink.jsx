@@ -27,6 +27,7 @@ import NewUserTour, { isTourEnabled, hasTourBeenDismissed, TOUR_DATE, TOUR_DATE_
 import TourBookingModal from '@/components/tour/TourBookingModal';
 import KioskLogin from '@/components/kiosk/KioskLogin';
 import KioskSessionWrapper from '@/components/kiosk/KioskSessionWrapper';
+import { useKiosk } from '@/lib/KioskContext';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -47,7 +48,7 @@ export default function BookRink() {
   const [bulkDeleteSelected, setBulkDeleteSelected] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
-  const [kioskMember, setKioskMember] = useState(null);
+  const { kioskMember, setKioskMember } = useKiosk();
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started

@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import LiveMatchBanner from '@/components/LiveMatchBanner';
 import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
+import { useKiosk } from '@/lib/KioskContext';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
@@ -40,6 +41,8 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
+  const { kioskMember } = useKiosk();
+  const isKioskSession = !!kioskMember;
 
   useEffect(() => {
     const loadUser = async () => {
@@ -155,8 +158,8 @@ export default function Layout({ children, currentPageName }) {
             {/* Desktop Navigation */}
             {needsClub && clubId && (
               <nav className="hidden md:flex items-center gap-2">
-                {/* Club Home */}
-                {club?.module_homepage && (
+                {/* Club Home — hidden in kiosk mode */}
+                {!isKioskSession && club?.module_homepage && (
                   <Link
                     to={createPageUrl('ClubHome') + `?clubId=${clubId}`}
                     className={cn(
@@ -172,33 +175,63 @@ export default function Layout({ children, currentPageName }) {
                 )}
                 {/* Rink Booking Dropdown */}
                 {club?.module_rink_booking !== false && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                  isKioskSession ? (
+                    // Kiosk: show only Book a Rink and My Bookings as plain links (no dropdown)
+                    <>
+                      <Link
+                        to={createPageUrl('BookRink') + `?clubId=${clubId}`}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                          isActive(createPageUrl('BookRink'))
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        )}
+                      >
                         <Calendar className="w-4 h-4" />
-                        Rink Booking
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem asChild>
-                        <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`} className="cursor-pointer">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Book a Rink
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to={createPageUrl('MyBookings') + `?clubId=${clubId}`} className="cursor-pointer">
-                          <CalendarCheck className="w-4 h-4 mr-2" />
-                          My Bookings
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        Book a Rink
+                      </Link>
+                      <Link
+                        to={createPageUrl('MyBookings') + `?clubId=${clubId}`}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                          isActive(createPageUrl('MyBookings'))
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        )}
+                      >
+                        <CalendarCheck className="w-4 h-4" />
+                        My Bookings
+                      </Link>
+                    </>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                          <Calendar className="w-4 h-4" />
+                          Rink Booking
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Book a Rink
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('MyBookings') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <CalendarCheck className="w-4 h-4 mr-2" />
+                            My Bookings
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )
                 )}
 
-                {/* Selection */}
-                {club?.module_selection !== false && (
+                {/* Selection — hidden in kiosk mode */}
+                {!isKioskSession && club?.module_selection !== false && (
                   <Link
                     to={createPageUrl('Selection') + `?clubId=${clubId}`}
                     className={cn(
@@ -213,8 +246,8 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 )}
 
-                {/* Competitions Dropdown */}
-                {club?.module_competitions !== false && (
+                {/* Competitions Dropdown — hidden in kiosk mode */}
+                {!isKioskSession && club?.module_competitions !== false && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
@@ -242,8 +275,8 @@ export default function Layout({ children, currentPageName }) {
                   </DropdownMenu>
                 )}
 
-                {/* My Teams (for all members if leagues enabled) */}
-                {club?.module_leagues !== false && (
+                {/* My Teams — hidden in kiosk mode */}
+                {!isKioskSession && club?.module_leagues !== false && (
                   <Link
                     to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}
                     className={cn(
@@ -258,8 +291,8 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 )}
 
-                {/* Bookings Admin link for stewards */}
-                {isClubSteward && (
+                {/* Bookings Admin link for stewards — hidden in kiosk mode */}
+                {!isKioskSession && isClubSteward && (
                   <Link
                     to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
                     className={cn(
@@ -274,8 +307,8 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 )}
 
-                {/* Admin Dropdown (only for admins) */}
-                {isClubAdmin && (
+                {/* Admin Dropdown — hidden in kiosk mode */}
+                {!isKioskSession && isClubAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
@@ -333,7 +366,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* User Menu */}
             <div className="flex items-center gap-3">
-            {needsClub && clubId && (
+            {needsClub && clubId && !isKioskSession && (
               <Link 
                 to={createPageUrl('ClubSelector') + '?switchClubs=true'}
                 className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
@@ -429,7 +462,13 @@ export default function Layout({ children, currentPageName }) {
         {mobileMenuOpen && needsClub && clubId && (
           <div className="md:hidden border-t border-gray-200 bg-white">
             <div className="px-4 py-3 space-y-1">
-              {clubNavigation.map((item) => (
+              {clubNavigation
+                .filter(item => {
+                  if (!isKioskSession) return true;
+                  // In kiosk mode only allow Book a Rink and My Bookings
+                  return item.name === 'Book a Rink' || item.name === 'My Bookings';
+                })
+                .map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
@@ -445,7 +484,7 @@ export default function Layout({ children, currentPageName }) {
                   {item.name}
                 </Link>
               ))}
-              {isClubSteward && (
+              {!isKioskSession && isClubSteward && (
                 <Link
                   to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -460,7 +499,7 @@ export default function Layout({ children, currentPageName }) {
                   Bookings
                 </Link>
               )}
-              {isClubAdmin && (
+              {!isKioskSession && isClubAdmin && (
                 <>
                   <Link
                     to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
@@ -518,14 +557,16 @@ export default function Layout({ children, currentPageName }) {
                   )}
                 </>
               )}
-              <Link
-                to={createPageUrl('ClubSelector') + '?switchClubs=true'}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
-              >
-                <Building2 className="w-5 h-5" />
-                Switch Club
-              </Link>
+              {!isKioskSession && (
+                <Link
+                  to={createPageUrl('ClubSelector') + '?switchClubs=true'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  <Building2 className="w-5 h-5" />
+                  Switch Club
+                </Link>
+              )}
             </div>
           </div>
         )}

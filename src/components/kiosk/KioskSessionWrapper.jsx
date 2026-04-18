@@ -54,21 +54,22 @@ export default function KioskSessionWrapper({ kioskMember, onLogout, children })
   return (
     <div className="relative min-h-screen">
       {/* Logout bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white flex items-center justify-between px-6 py-3">
-        <span className="text-lg font-semibold">
-          Logged in as: <span className="font-bold">{kioskMember.name}</span>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3">
+        <span className="text-sm sm:text-lg font-semibold truncate mr-2">
+          <span className="hidden sm:inline">Logged in as: </span>
+          <span className="font-bold">{kioskMember.name}</span>
         </span>
         <Button
           onClick={onLogout}
-          className="bg-white text-red-600 hover:bg-red-50 font-bold text-base px-6 py-2 h-auto"
+          className="bg-white text-red-600 hover:bg-red-50 font-bold text-sm sm:text-base px-3 sm:px-6 py-1.5 sm:py-2 h-auto shrink-0"
         >
-          <LogOut className="w-5 h-5 mr-2" />
+          <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
           End Session
         </Button>
       </div>
 
       {/* Content offset for the top bar */}
-      <div className="pt-14">
+      <div className="pt-12 sm:pt-14">
         {children}
       </div>
 
@@ -86,17 +87,17 @@ export default function KioskSessionWrapper({ kioskMember, onLogout, children })
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl p-10 max-w-sm w-full text-center"
+              className="bg-white rounded-3xl shadow-2xl p-8 sm:p-10 max-w-xs sm:max-w-sm w-full text-center mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-6xl font-bold text-red-600 mb-4">{countdown}</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Still there?</h2>
-              <p className="text-gray-600 text-lg mb-6">
+              <div className="text-5xl sm:text-6xl font-bold text-red-600 mb-3 sm:mb-4">{countdown}</div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">Still there?</h2>
+              <p className="text-gray-600 text-base sm:text-lg mb-5 sm:mb-6">
                 Your session will end in {countdown} seconds due to inactivity.
               </p>
               <Button
                 onClick={resetTimer}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-lg px-8 py-4 h-auto w-full rounded-2xl"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 h-auto w-full rounded-2xl"
               >
                 Tap anywhere to continue
               </Button>
