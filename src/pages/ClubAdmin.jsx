@@ -627,7 +627,7 @@ export default function ClubAdmin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Types</SelectItem>
-                      {membershipTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {membershipTypeNames.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-slate-400 flex-shrink-0">
