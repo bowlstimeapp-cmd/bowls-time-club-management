@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Building2, 
   Users, 
@@ -14,7 +15,8 @@ import {
   CheckCircle,
   Loader2,
   ArrowRight,
-  Search
+  Search,
+  Mail
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -54,6 +56,8 @@ export default function ClubSelector() {
     enabled: !!user?.email,
   });
 
+  const [requestSentModal, setRequestSentModal] = useState(false);
+
   const requestMutation = useMutation({
     mutationFn: (clubId) => base44.entities.ClubMembership.create({
       club_id: clubId,
@@ -71,7 +75,7 @@ export default function ClubSelector() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myMemberships'] });
-      toast.success('Membership request sent! Awaiting approval.');
+      setRequestSentModal(true);
     },
   });
 
@@ -273,6 +277,29 @@ export default function ClubSelector() {
           </div>
         )}
       </div>
+
+      {/* Request Sent Confirmation Modal */}
+      <Dialog open={requestSentModal} onOpenChange={setRequestSentModal}>
+        <DialogContent className="max-w-sm text-center">
+          <div className="flex justify-center mb-3 mt-2">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
+              <Mail className="w-7 h-7 text-emerald-600" />
+            </div>
+          </div>
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg">Request Received</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-500 text-sm mt-2 mb-4">
+            Your request has been received and a Club Admin will review it. You will be emailed when your request has been reviewed.
+          </p>
+          <button
+            onClick={() => setRequestSentModal(false)}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+          >
+            Got it
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

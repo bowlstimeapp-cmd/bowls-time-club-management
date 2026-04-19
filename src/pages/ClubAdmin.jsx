@@ -341,6 +341,8 @@ export default function ClubAdmin() {
 
   const handleApprove = async (membership) => {
     await updateMembershipMutation.mutateAsync({ id: membership.id, data: { status: 'approved' } });
+    // Email the member to inform them they've been approved
+    base44.functions.invoke('membershipEmails', { type: 'approved', membershipId: membership.id }).catch(() => {});
     toast.success(`${membership.user_name || membership.user_email} approved`);
   };
 
