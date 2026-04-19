@@ -415,7 +415,9 @@ export default function ClubAdmin() {
   const filteredApprovedMembers = applyFilters(approvedMembers);
   const filteredPreviousMembers = applyFilters(previousMembers);
 
-  const membershipTypes = club?.membership_types || ['Winter Indoor Member', 'Summer Indoor Member', 'Outdoor Member', 'Social Member'];
+  // Normalise membership types — support both legacy string[] and new object[] formats
+  const rawMembershipTypes = club?.membership_types || [];
+  const membershipTypeNames = rawMembershipTypes.map(t => typeof t === 'object' ? t.name : t);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -574,7 +576,7 @@ export default function ClubAdmin() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
-                        {membershipTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        {membershipTypeNames.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <p className="text-sm text-slate-400 flex-shrink-0">
@@ -729,7 +731,7 @@ export default function ClubAdmin() {
           onClose={() => setAddMemberOpen(false)}
           onSubmit={(data) => addMemberMutation.mutate(data)}
           isLoading={addMemberMutation.isPending}
-          membershipTypes={membershipTypes}
+          membershipTypes={membershipTypeNames}
         />
         <MemberDetailModal
           open={!!selectedMember}
@@ -738,7 +740,7 @@ export default function ClubAdmin() {
           onUpdateMember={handleUpdateMember}
           isUpdating={updateMembershipMutation.isPending}
           isAdmin={true}
-          membershipTypes={membershipTypes}
+          membershipTypes={membershipTypeNames}
           clubId={clubId}
           onSetMemberStatus={(id, status) => {
             setMemberStatusMutation.mutate({ id, member_status: status });

@@ -21,12 +21,7 @@ import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
-const ALL_MEMBERSHIP_TYPES = [
-  'Winter Indoor Member',
-  'Summer Indoor Member',
-  'Outdoor Member',
-  'Social Member'
-];
+import { PARENT_TYPES, normaliseMembershipTypes } from '@/lib/membershipUtils';
 
 export default function ClubSettings() {
   const [searchParams] = useSearchParams();
@@ -47,7 +42,10 @@ export default function ClubSettings() {
   const [emailMemberNotifications, setEmailMemberNotifications] = useState(true);
   const [smsMemberNotifications, setSmsMemberNotifications] = useState(false);
   const [defaultLandingPage, setDefaultLandingPage] = useState('rink_booking');
-  const [membershipTypes, setMembershipTypes] = useState(ALL_MEMBERSHIP_TYPES);
+  const [membershipTypes, setMembershipTypes] = useState([]);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [newTypeParent, setNewTypeParent] = useState('Winter Indoor');
+  const [addTypeOpen, setAddTypeOpen] = useState(false);
   const [membershipFeeEnabled, setMembershipFeeEnabled] = useState(false);
   const [membershipFeeAmount, setMembershipFeeAmount] = useState('');
   const [membershipFeeDescription, setMembershipFeeDescription] = useState('');
@@ -141,7 +139,7 @@ export default function ClubSettings() {
       setEmailMemberNotifications(club.email_member_notifications !== false);
       setSmsMemberNotifications(club.sms_member_notifications || false);
       setDefaultLandingPage(club.default_landing_page || 'rink_booking');
-      setMembershipTypes(club.membership_types || ALL_MEMBERSHIP_TYPES);
+      setMembershipTypes(normaliseMembershipTypes(club.membership_types || []));
       setLogoUrl(club.logo_url || '');
       setMembershipFeeEnabled(club.membership_fee_enabled || false);
       setMembershipFeeAmount(club.membership_fee_amount_pence ? (club.membership_fee_amount_pence / 100).toString() : '');
@@ -237,12 +235,20 @@ export default function ClubSettings() {
     );
   }
 
-  const toggleMembershipType = (type) => {
-    if (membershipTypes.includes(type)) {
-      setMembershipTypes(membershipTypes.filter(t => t !== type));
-    } else {
-      setMembershipTypes([...membershipTypes, type]);
+  const handleAddMembershipType = () => {
+    if (!newTypeName.trim()) return;
+    if (membershipTypes.some(t => t.name === newTypeName.trim())) {
+      toast.error('A membership type with that name already exists');
+      return;
     }
+    setMembershipTypes([...membershipTypes, { name: newTypeName.trim(), parent: newTypeParent }]);
+    setNewTypeName('');
+    setNewTypeParent('Winter Indoor');
+    setAddTypeOpen(false);
+  };
+
+  const handleRemoveMembershipType = (name) => {
+    setMembershipTypes(membershipTypes.filter(t => t.name !== name));
   };
 
   const resetCompetitionForm = () => {
@@ -566,27 +572,101 @@ export default function ClubSettings() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Membership Types
-                </CardTitle>
-                <CardDescription>
-                  Select which membership types are available for your club
-                </CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Membership Types
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Define your club's membership types. Each type has a parent category — Social Members are excluded from match selection and leagues.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 shrink-0"
+                    onClick={() => setAddTypeOpen(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Type
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {ALL_MEMBERSHIP_TYPES.map(type => (
-                    <div key={type} className="flex items-center gap-3">
-                      <Checkbox 
-                        id={`mtype-${type}`}
-                        checked={membershipTypes.includes(type)}
-                        onCheckedChange={() => toggleMembershipType(type)}
+                {membershipTypes.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic text-center py-4">No membership types defined yet. Click "Add Type" to get started.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Group by parent */}
+                    {PARENT_TYPES.map(parent => {
+                      const ofParent = membershipTypes.filter(t => t.parent === parent);
+                      if (ofParent.length === 0) return null;
+                      const parentColors = {
+                        'Winter Indoor': 'bg-blue-50 text-blue-700 border-blue-200',
+                        'Summer Indoor': 'bg-amber-50 text-amber-700 border-amber-200',
+                        'Outdoor Member': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        'Social Member': 'bg-purple-50 text-purple-700 border-purple-200',
+                      };
+                      return (
+                        <div key={parent} className="space-y-1.5">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3 first:mt-0">{parent}</p>
+                          {ofParent.map(t => (
+                            <div key={t.name} className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${parentColors[parent] || ''}`}>
+                              <span className="font-medium">{t.name}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-current opacity-60 hover:opacity-100 hover:bg-white/50"
+                                onClick={() => handleRemoveMembershipType(t.name)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Add Type Inline Form */}
+                {addTypeOpen && (
+                  <div className="mt-4 border rounded-lg p-4 space-y-3 bg-gray-50">
+                    <p className="text-sm font-medium text-gray-700">New Membership Type</p>
+                    <div>
+                      <Label className="text-xs">Name</Label>
+                      <Input
+                        value={newTypeName}
+                        onChange={e => setNewTypeName(e.target.value)}
+                        placeholder="e.g. Full Playing Member"
+                        className="mt-1"
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMembershipType(); } }}
                       />
-                      <label htmlFor={`mtype-${type}`} className="cursor-pointer select-none">{type}</label>
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <Label className="text-xs">Parent Category</Label>
+                      <Select value={newTypeParent} onValueChange={setNewTypeParent}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PARENT_TYPES.map(p => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {newTypeParent === 'Social Member' && (
+                        <p className="text-xs text-purple-600 mt-1.5">⚠ Social Members will not appear in match selection or league player dropdowns.</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleAddMembershipType}>Add</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => { setAddTypeOpen(false); setNewTypeName(''); setNewTypeParent('Winter Indoor'); }}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

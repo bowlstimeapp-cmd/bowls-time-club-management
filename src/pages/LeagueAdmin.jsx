@@ -64,6 +64,7 @@ import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO, addDays, eachWeekOfInterval, isBefore } from 'date-fns';
+import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
 
 export default function LeagueAdmin() {
   const [searchParams] = useSearchParams();
@@ -1640,7 +1641,7 @@ export default function LeagueAdmin() {
               <div>
                 <Label>Team Captain</Label>
                 <MemberSearchSelect
-                  members={members}
+                  members={filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []))}
                   value={captainEmail}
                   onValueChange={(v) => setCaptainEmail(v || '')}
                   placeholder="Select a captain (optional)"

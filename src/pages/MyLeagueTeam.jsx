@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -116,6 +117,11 @@ export default function MyLeagueTeam() {
     }),
     enabled: !!clubId,
   });
+
+  // Filter social-only members out of selectable member lists
+  const selectableMembers = React.useMemo(() => {
+    return filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
+  }, [members, club?.membership_types]);
 
   // Find teams where user is captain or a player
   const [selectedLeagueFilter, setSelectedLeagueFilter] = useState('all');
@@ -778,7 +784,7 @@ const handleGenerateRota = async (team) => {
               <div>
                 <Label>Select Player</Label>
                 <MemberSearchSelect
-                  members={members.filter(m => !(selectedTeam?.players || []).includes(m.user_email))}
+                  members={selectableMembers.filter(m => !(selectedTeam?.players || []).includes(m.user_email))}
                   value={selectedPlayer || null}
                   onValueChange={(v) => setSelectedPlayer(v || '')}
                   placeholder="Choose a member"

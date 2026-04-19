@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
+import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
 import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
 import Fantastic5sSelectionGrid from '@/components/selection/Fantastic5sSelectionGrid';
@@ -739,8 +740,10 @@ ${club?.name || 'Your Bowls Club'}
   // Filter members based on competition gender and age_group restrictions
   const activeCompetition = competitions.find(c => c.name === competition);
   const filteredMembers = React.useMemo(() => {
-    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Fantastic 5s') return members;
-    let filtered = [...members];
+    // Always exclude social-only members from selection
+    const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
+    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Fantastic 5s') return nonSocialMembers;
+    let filtered = [...nonSocialMembers];
 
     // Gender filter
     if (activeCompetition.gender === 'men') {
