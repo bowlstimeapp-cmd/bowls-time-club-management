@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, ClipboardList, Trash2, MoreVertical } from 'lucide-react';
+import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, ClipboardList, Trash2, MoreVertical, UserCog } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -38,6 +38,7 @@ export default function SelectionCard({
   onViewClick,
   liveScoreBtnRef,
   onLiveScoreClick,
+  onAdminSetAvailability,
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
   const navigate = useNavigate();
@@ -90,6 +91,11 @@ export default function SelectionCard({
       )}
       {isSelector && (
         <>
+          {onAdminSetAvailability && selection.status === 'published' && (
+            <Button variant="outline" size={size} onClick={onAdminSetAvailability}>
+              <UserCog className="w-4 h-4 mr-1" />Set Availability
+            </Button>
+          )}
           <Link to={editUrl}>
             <Button variant="outline" size={size}><Pencil className="w-4 h-4 mr-1" />Edit</Button>
           </Link>
@@ -113,6 +119,9 @@ export default function SelectionCard({
         )}
         {isSelector && (
           <>
+            {onAdminSetAvailability && selection.status === 'published' && (
+              <DropdownMenuItem onClick={onAdminSetAvailability}><UserCog className="w-4 h-4 mr-2" />Set Availability</DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => navigate(editUrl)}><Pencil className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDelete?.(selection.id)} className="text-red-600"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>

@@ -31,6 +31,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import SelectionCard from '@/components/selection/SelectionCard';
 import SelectionTableView from '@/components/selection/SelectionTableView';
+import AdminAvailabilityModal from '@/components/selection/AdminAvailabilityModal';
 import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
 
@@ -47,6 +48,7 @@ export default function Selection() {
   const tourDemoCardRef = useRef(null);
   const tourDemoViewBtnRef = useRef(null);
   const tourLiveScoreBtnRef = useRef(null);
+  const [adminAvailabilitySelection, setAdminAvailabilitySelection] = useState(null);
 
   // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
   useEffect(() => {
@@ -147,6 +149,32 @@ export default function Selection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myAvailabilities'] });
       queryClient.invalidateQueries({ queryKey: ['allAvailabilities'] });
+    },
+  });
+
+  const adminSetAvailabilityMutation = useMutation({
+    mutationFn: async ({ selectionId, availabilityMap }) => {
+      // availabilityMap: { [email]: true | false | undefined }
+      const updates = Object.entries(availabilityMap).filter(([, v]) => v !== undefined);
+      await Promise.all(updates.map(async ([email, isAvailable]) => {
+        const existing = allAvailabilities.find(a => a.selection_id === selectionId && a.user_email === email);
+        if (existing) {
+          return base44.entities.MemberAvailability.update(existing.id, { is_available: isAvailable });
+        } else {
+          return base44.entities.MemberAvailability.create({
+            club_id: clubId,
+            selection_id: selectionId,
+            user_email: email,
+            is_available: isAvailable,
+          });
+        }
+      }));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allAvailabilities'] });
+      queryClient.invalidateQueries({ queryKey: ['myAvailabilities'] });
+      setAdminAvailabilitySelection(null);
+      toast.success('Availability updated');
     },
   });
 
@@ -393,6 +421,7 @@ export default function Selection() {
                             availabilities={getAvailabilityForSelection(selection.id)}
                             members={members}
                             onDelete={handleDeleteSelection}
+                            onAdminSetAvailability={isSelector ? () => setAdminAvailabilitySelection(selection) : undefined}
                           />
                         ))}
                       </>
@@ -445,6 +474,7 @@ export default function Selection() {
                         availabilities={getAvailabilityForSelection(selection.id)}
                         members={members}
                         onDelete={handleDeleteSelection}
+                        onAdminSetAvailability={isSelector ? () => setAdminAvailabilitySelection(selection) : undefined}
                       />
                     ))}
                   </div>
@@ -488,6 +518,20 @@ export default function Selection() {
           </Tabs>
         </motion.div>
       </div>
+
+      {/* Admin Availability Modal */}
+      <AdminAvailabilityModal
+        open={!!adminAvailabilitySelection}
+        onClose={() => setAdminAvailabilitySelection(null)}
+        selection={adminAvailabilitySelection}
+        members={members}
+        availabilities={adminAvailabilitySelection ? getAvailabilityForSelection(adminAvailabilitySelection.id) : []}
+        onSave={(availabilityMap) => adminSetAvailabilityMutation.mutate({
+          selectionId: adminAvailabilitySelection.id,
+          availabilityMap,
+        })}
+        isSaving={adminSetAvailabilityMutation.isPending}
+      />
 
       {/* Selection Tour (steps 16-20) */}
       {tourStep >= 16 && (
