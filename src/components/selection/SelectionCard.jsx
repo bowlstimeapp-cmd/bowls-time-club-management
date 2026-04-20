@@ -3,16 +3,9 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, ClipboardList, Trash2, MoreVertical, UserCog } from 'lucide-react';
+import { Calendar, Trophy, Pencil, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, ClipboardList, Trash2, UserCog } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useLayoutTheme } from '@/lib/layoutTheme.jsx';
@@ -41,7 +34,6 @@ export default function SelectionCard({
   onAdminSetAvailability,
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
-  const navigate = useNavigate();
   const { layout } = useLayoutTheme();
 
   const countSelected = () => Object.values(selection.selections || {}).filter(Boolean).length;
@@ -105,30 +97,6 @@ export default function SelectionCard({
         </>
       )}
     </>
-  );
-
-  const MobileMenu = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm"><MoreVertical className="w-4 h-4" /></Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => navigate(viewUrl)}><Eye className="w-4 h-4 mr-2" />View</DropdownMenuItem>
-        {selection.status === 'published' && (
-          <DropdownMenuItem onClick={() => navigate(liveUrl)}><ClipboardList className="w-4 h-4 mr-2" />Live Scoring</DropdownMenuItem>
-        )}
-        {isSelector && (
-          <>
-            {onAdminSetAvailability && selection.status === 'published' && (
-              <DropdownMenuItem onClick={onAdminSetAvailability}><UserCog className="w-4 h-4 mr-2" />Set Availability</DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => navigate(editUrl)}><Pencil className="w-4 h-4 mr-2" />Edit</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete?.(selection.id)} className="text-red-600"><Trash2 className="w-4 h-4 mr-2" />Delete</DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 
   const AvailabilitySection = () => {
@@ -196,10 +164,9 @@ export default function SelectionCard({
             </div>
             <p className="text-xs text-gray-400 mt-0.5">{countSelected()} selected</p>
           </div>
-          <div className="hidden sm:flex gap-1.5 shrink-0">
+          <div className="flex flex-wrap gap-1.5 shrink-0">
             <ActionButtons size="sm" />
           </div>
-          <div className="sm:hidden shrink-0"><MobileMenu /></div>
         </div>
         {selection.status === 'published' && onSetAvailability && (
           <div className="mt-1 px-3">
@@ -228,10 +195,9 @@ export default function SelectionCard({
               {selection.status === 'draft' && <span className="text-amber-600">· Draft</span>}
             </div>
           </div>
-          <div className="hidden sm:flex gap-1.5 shrink-0 mt-0.5">
+          <div className="flex flex-wrap gap-1.5 shrink-0 mt-0.5">
             <ActionButtons size="sm" />
           </div>
-          <div className="sm:hidden shrink-0"><MobileMenu /></div>
         </div>
         {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
       </motion.div>
@@ -260,10 +226,9 @@ export default function SelectionCard({
                 )}
                 <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected</p>
               </div>
-              <div className="hidden sm:flex gap-2 shrink-0">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <ActionButtons />
               </div>
-              <div className="sm:hidden shrink-0"><MobileMenu /></div>
             </div>
             {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
           </div>
@@ -302,10 +267,9 @@ export default function SelectionCard({
                 </div>
                 <p className="text-sm text-gray-500">{countSelected()} players selected</p>
               </div>
-              <div className="hidden sm:flex gap-2 flex-wrap shrink-0">
+              <div className="flex gap-2 flex-wrap shrink-0">
                 <ActionButtons />
               </div>
-              <div className="sm:hidden shrink-0"><MobileMenu /></div>
             </div>
             {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
           </div>
