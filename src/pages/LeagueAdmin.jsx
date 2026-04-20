@@ -1641,7 +1641,12 @@ export default function LeagueAdmin() {
               <div>
                 <Label>Team Captain</Label>
                 <MemberSearchSelect
-                  members={filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []))}
+                  members={filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || [])).filter(m => {
+                    // Exclude members already in another team in this league
+                    const otherTeams = teams.filter(t => t.league_id === selectedLeague?.id && t.id !== editingTeam?.id);
+                    const takenEmails = new Set(otherTeams.flatMap(t => [t.captain_email, ...(t.players || [])]).filter(Boolean));
+                    return !takenEmails.has(m.user_email);
+                  })}
                   value={captainEmail}
                   onValueChange={(v) => setCaptainEmail(v || '')}
                   placeholder="Select a captain (optional)"

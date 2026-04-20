@@ -784,7 +784,13 @@ const handleGenerateRota = async (team) => {
               <div>
                 <Label>Select Player</Label>
                 <MemberSearchSelect
-                  members={selectableMembers.filter(m => !(selectedTeam?.players || []).includes(m.user_email))}
+                  members={selectableMembers.filter(m => {
+                    // Exclude members already in ANY team in this league
+                    const leagueId = selectedTeam?.league_id;
+                    const otherTeams = teams.filter(t => t.league_id === leagueId && t.id !== selectedTeam?.id);
+                    const takenEmails = new Set(otherTeams.flatMap(t => [t.captain_email, ...(t.players || [])]).filter(Boolean));
+                    return !takenEmails.has(m.user_email) && !(selectedTeam?.players || []).includes(m.user_email);
+                  })}
                   value={selectedPlayer || null}
                   onValueChange={(v) => setSelectedPlayer(v || '')}
                   placeholder="Choose a member"
