@@ -1,59 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Settings, RotateCcw, Layout, Grid } from 'lucide-react';
+import { Settings, RotateCcw, Layout } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { useLayoutTheme, LAYOUTS } from '@/lib/layoutTheme.jsx';
 import { cn } from '@/lib/utils';
-import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-
-const DEFAULT_TIME_COL = 72;
-const DEFAULT_RINK_COL = 60;
 
 export default function PlatformSettings() {
   const [resetting, setResetting] = useState(false);
   const { layout, setLayout } = useLayoutTheme();
-  const [searchParams] = useSearchParams();
-  const clubId = searchParams.get('clubId');
-
-  // Grid column width state
-  const [timeColWidth, setTimeColWidth] = useState(DEFAULT_TIME_COL);
-  const [rinkColWidth, setRinkColWidth] = useState(DEFAULT_RINK_COL);
-  const [savingGrid, setSavingGrid] = useState(false);
-
-  const { data: club } = useQuery({
-    queryKey: ['club', clubId],
-    queryFn: async () => {
-      const clubs = await base44.entities.Club.filter({ id: clubId });
-      return clubs[0];
-    },
-    enabled: !!clubId,
-  });
-
-  useEffect(() => {
-    if (club) {
-      setTimeColWidth(club.rink_grid_time_col_width || DEFAULT_TIME_COL);
-      setRinkColWidth(club.rink_grid_rink_col_width || DEFAULT_RINK_COL);
-    }
-  }, [club]);
   const [altLayoutEnabled, setAltLayoutEnabled] = useState(layout !== 'default');
-
-  const handleSaveGrid = async () => {
-    if (!club) return;
-    setSavingGrid(true);
-    await base44.entities.Club.update(club.id, {
-      rink_grid_time_col_width: timeColWidth,
-      rink_grid_rink_col_width: rinkColWidth,
-    });
-    setSavingGrid(false);
-    toast.success('Grid layout saved — all members will see the updated layout');
-  };
 
   const handleResetTour = async () => {
     setResetting(true);
@@ -110,93 +70,6 @@ export default function PlatformSettings() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Rink Grid Column Widths */}
-      {clubId && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Grid className="w-5 h-5 text-gray-600" />
-              Rink Grid Column Widths
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <p className="text-sm text-gray-500">
-              Adjust the width of the time and rink columns in the Rink Booking grid. Changes apply club-wide — all members see the updated layout.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Time column slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Time column width</Label>
-                  <span className="text-sm font-mono text-emerald-700">{timeColWidth}px</span>
-                </div>
-                <Slider
-                  min={48} max={140} step={4}
-                  value={[timeColWidth]}
-                  onValueChange={([v]) => setTimeColWidth(v)}
-                />
-                <p className="text-xs text-gray-400">The column showing session times on the left of the grid</p>
-              </div>
-
-              {/* Rink column slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Rink column width</Label>
-                  <span className="text-sm font-mono text-emerald-700">{rinkColWidth}px</span>
-                </div>
-                <Slider
-                  min={50} max={140} step={5}
-                  value={[rinkColWidth]}
-                  onValueChange={([v]) => setRinkColWidth(v)}
-                />
-                <p className="text-xs text-gray-400">Minimum width of each rink column — columns expand to fill available space</p>
-              </div>
-            </div>
-
-            {/* Live preview */}
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Preview</p>
-              <div className="overflow-x-auto border rounded-lg bg-gray-50 p-3">
-                <div style={{ minWidth: `${timeColWidth + 6 * (rinkColWidth + 8)}px` }}>
-                  <div
-                    className="grid gap-1"
-                    style={{ gridTemplateColumns: `${timeColWidth}px repeat(6, minmax(${rinkColWidth}px, 1fr))` }}
-                  >
-                    <div className="bg-gray-200 rounded px-1.5 py-2 text-xs text-gray-600 font-medium text-center">2:00pm</div>
-                    {[1,2,3,4,5,6].map(r => (
-                      <div
-                        key={r}
-                        className={cn(
-                          "rounded px-1 py-2 text-xs font-medium text-center border",
-                          r % 2 === 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-gray-200 text-gray-600"
-                        )}
-                      >
-                        Rink {r}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-1.5">Preview shows relative proportions — actual grid scrolls horizontally on mobile when content exceeds screen width</p>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2 border-t">
-              <Button onClick={handleSaveGrid} disabled={savingGrid} className="bg-emerald-600 hover:bg-emerald-700">
-                {savingGrid ? 'Saving...' : 'Save layout'}
-              </Button>
-              <button
-                type="button"
-                onClick={() => { setTimeColWidth(DEFAULT_TIME_COL); setRinkColWidth(DEFAULT_RINK_COL); }}
-                className="text-sm text-gray-500 hover:text-gray-700 underline"
-              >
-                Reset to defaults
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Alternative Layouts */}
       <Card>
