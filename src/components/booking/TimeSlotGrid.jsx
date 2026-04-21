@@ -221,6 +221,9 @@ export default function TimeSlotGrid({
   const openRollupsEnabled = club?.open_rollups;
   const isDragging = !!draggingBooking;
 
+  const timeColWidth = club?.rink_grid_time_col_width || 72;
+  const rinkColWidth = club?.rink_grid_rink_col_width || 60;
+
   return (
     <TooltipProvider>
       {/* Mobile copy mode banner */}
@@ -242,9 +245,9 @@ export default function TimeSlotGrid({
         </div>
       )}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div style={{ minWidth: `${120 + RINKS.length * 80}px` }}>
+        <div style={{ minWidth: `${timeColWidth + RINKS.length * (rinkColWidth + 8)}px` }}>
           {/* Header */}
-          <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, minmax(70px, 1fr))` }}>
+          <div className="grid gap-1 sm:gap-2 mb-3" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${RINKS.length}, minmax(${rinkColWidth}px, 1fr))` }}>
             <div className="p-3 text-sm font-medium text-gray-500 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               Time
@@ -261,8 +264,8 @@ export default function TimeSlotGrid({
             {TIME_SLOTS.map((slot, slotIndex) => (
               <div
                 key={slot.start}
-                className="grid gap-2"
-                style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, minmax(70px, 1fr))` }}
+                className="grid gap-1 sm:gap-2"
+                style={{ gridTemplateColumns: `${timeColWidth}px repeat(${RINKS.length}, minmax(${rinkColWidth}px, 1fr))` }}
               >
                 <div className="p-3 text-sm text-gray-600 font-medium flex items-center">
                   {slot.label}

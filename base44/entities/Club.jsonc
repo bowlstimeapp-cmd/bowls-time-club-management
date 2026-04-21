@@ -352,6 +352,14 @@
       ],
       "default": "emerald",
       "description": "UI colour theme for the club (affects accent colours throughout the app)"
+    },
+    "rink_grid_time_col_width": {
+      "type": "number",
+      "description": "Time column width in pixels for the rink booking grid"
+    },
+    "rink_grid_rink_col_width": {
+      "type": "number",
+      "description": "Rink column minimum width in pixels for the rink booking grid"
     }
   },
   "required": [
