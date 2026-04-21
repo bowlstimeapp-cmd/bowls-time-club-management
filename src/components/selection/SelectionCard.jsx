@@ -240,7 +240,7 @@ export default function SelectionCard({
   // ── DEFAULT layout ──────────────────────────────────────────────
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow border-b-4 border-b-emerald-500">
         <CardContent className="p-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
