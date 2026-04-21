@@ -62,6 +62,16 @@ const statusIcons = {
   cancelled: XCircle,
 };
 
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+};
+
 export default function TimeSlotGrid({
   bookings,
   selectedDate,
@@ -89,6 +99,10 @@ export default function TimeSlotGrid({
   tourSlot1_10Ref,
   tourBookingCellRef,
 }) {
+  const isMobile = useIsMobile();
+  const timeColWidth = isMobile ? 72 : 120;
+  const gridGap = isMobile ? 4 : 8;
+
   const [draggingBooking, setDraggingBooking] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [mobileCopySource, setMobileCopySource] = useState(null); // for touch-based copy
@@ -242,12 +256,12 @@ export default function TimeSlotGrid({
         </div>
       )}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div style={{ minWidth: `${120 + RINKS.length * 80}px` }}>
+        <div style={{ minWidth: `${timeColWidth + RINKS.length * 80}px` }}>
           {/* Header */}
-          <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, minmax(70px, 1fr))` }}>
-            <div className="p-3 text-sm font-medium text-gray-500 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Time
+          <div className="grid mb-3" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${RINKS.length}, minmax(70px, 1fr))`, gap: `${gridGap}px` }}>
+            <div className={`${isMobile ? 'p-1 text-xs' : 'p-3 text-sm'} font-medium text-gray-500 flex items-center gap-1`}>
+              <Clock className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} shrink-0`} />
+              <span>Time</span>
             </div>
             {RINKS.map(rink => (
               <div key={rink} className="p-3 text-center">
@@ -261,10 +275,10 @@ export default function TimeSlotGrid({
             {TIME_SLOTS.map((slot, slotIndex) => (
               <div
                 key={slot.start}
-                className="grid gap-2"
-                style={{ gridTemplateColumns: `120px repeat(${RINKS.length}, minmax(70px, 1fr))` }}
+                className="grid"
+                style={{ gridTemplateColumns: `${timeColWidth}px repeat(${RINKS.length}, minmax(70px, 1fr))`, gap: `${gridGap}px` }}
               >
-                <div className="p-3 text-sm text-gray-600 font-medium flex items-center">
+                <div className={`${isMobile ? 'p-1 text-[10px]' : 'p-3 text-sm'} text-gray-600 font-medium flex items-center leading-tight`}>
                   {slot.label}
                 </div>
                 {RINKS.map(rink => {
