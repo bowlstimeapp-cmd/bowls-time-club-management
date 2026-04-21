@@ -168,7 +168,7 @@ export default function ClubSelector() {
             <p className="text-gray-500">Try a different search term</p>
           </motion.div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:gap-4 sm:grid-cols-2 divide-y sm:divide-y-0 divide-gray-200">
             <AnimatePresence>
               {filteredClubs.map((club, index) => {
                 const membership = getMembershipStatus(club.id);
