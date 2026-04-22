@@ -295,8 +295,7 @@ export default function ClubSettings() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSave = () => {
     const payload = {
       rink_count: parseInt(rinkCount) || club?.rink_count || 6,
       opening_time: openingTime,
@@ -331,6 +330,11 @@ export default function ClubSettings() {
     };
     console.log('[ClubSettings] Saving payload:', payload);
     updateMutation.mutate(payload);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleSave();
   };
 
   if (clubLoading) {
@@ -1177,7 +1181,8 @@ export default function ClubSettings() {
             </Card>
 
             <Button 
-              type="submit" 
+              type="button"
+              onClick={handleSave}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
               disabled={updateMutation.isPending}
             >
