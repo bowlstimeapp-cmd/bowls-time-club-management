@@ -102,7 +102,7 @@ export default function ClubSettings() {
     enabled: !!clubId,
   });
 
-  const { data: membership } = useQuery({
+  const { data: membership, isLoading: membershipLoading } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
     queryFn: async () => {
       const memberships = await base44.entities.ClubMembership.filter({ 
@@ -217,7 +217,16 @@ export default function ClubSettings() {
 
   if (!clubId) return null;
 
-  if (user && !isClubAdmin) {
+  // Wait until both user and membership have loaded before checking access
+  if (!user || membershipLoading || clubLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!isClubAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
         <motion.div
@@ -336,17 +345,6 @@ export default function ClubSettings() {
     e.preventDefault();
     handleSave();
   };
-
-  if (clubLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-8">
-        <div className="max-w-2xl mx-auto">
-          <Skeleton className="h-12 w-64 mb-4" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
