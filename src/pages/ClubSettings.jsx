@@ -174,9 +174,8 @@ export default function ClubSettings() {
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Club.update(clubId, data),
-    onSuccess: (_, variables) => {
-      // Update the cache directly instead of invalidating, so local state isn't reset
-      queryClient.setQueryData(['club', clubId], (old) => old ? { ...old, ...variables } : old);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['club', clubId] });
       toast.success('Settings saved successfully');
     },
     onError: (err) => {
@@ -298,11 +297,11 @@ export default function ClubSettings() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    updateMutation.mutate({
-      rink_count: parseInt(rinkCount),
+    const payload = {
+      rink_count: parseInt(rinkCount) || club?.rink_count || 6,
       opening_time: openingTime,
       closing_time: closingTime,
-      session_duration: parseInt(sessionDuration),
+      session_duration: parseFloat(sessionDuration) || club?.session_duration || 2,
       use_custom_sessions: useCustomSessions,
       custom_sessions: useCustomSessions ? customSessions : [],
       auto_approve_bookings: autoApprove,
@@ -329,7 +328,9 @@ export default function ClubSettings() {
       competition_page_header: competitionPageHeader || null,
       club_theme: clubTheme,
       ...teamSheetSettings,
-    });
+    };
+    console.log('[ClubSettings] Saving payload:', payload);
+    updateMutation.mutate(payload);
   };
 
   if (clubLoading) {
