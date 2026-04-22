@@ -989,8 +989,8 @@ export default function ClubSettings() {
             />
 
             {/* Team Sheet Print Template */}
-            {club?.module_selection !== false && (
-              <TeamSheetTemplateSettings club={club} onChange={setTeamSheetSettings} />
+            {club?.module_selection !== false && club?.id && (
+              <TeamSheetTemplateSettings key={club.id} club={club} onChange={setTeamSheetSettings} />
             )}
 
             {/* Kiosk Mode */}
