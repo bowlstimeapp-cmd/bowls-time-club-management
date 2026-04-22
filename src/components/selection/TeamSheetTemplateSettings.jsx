@@ -34,6 +34,20 @@ export default function TeamSheetTemplateSettings({ club, onChange }) {
   const [headerImgUrl, setHeaderImgUrl] = useState(club?.team_sheet_header_img_url || '');
   const [uploadingHeader, setUploadingHeader] = useState(false);
 
+  // Re-sync internal state when club data loads (it may be undefined on first render)
+  useEffect(() => {
+    if (!club) return;
+    setTemplate(club.team_sheet_template || 'classic');
+    setPrimaryColour(club.team_sheet_primary_colour || '#10b981');
+    setFontSize(club.team_sheet_font_size || 'medium');
+    setShowDressCode(club.team_sheet_show_dress_code || false);
+    setShowVenue(club.team_sheet_show_venue || false);
+    setShowStartTime(club.team_sheet_show_start_time !== false);
+    setAdvancedMode(club.team_sheet_advanced_mode || false);
+    setCustomHtml(club.team_sheet_custom_html || '');
+    setHeaderImgUrl(club.team_sheet_header_img_url || '');
+  }, [club?.id]);
+
   useEffect(() => {
     onChange({
       team_sheet_template: template,
