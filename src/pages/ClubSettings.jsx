@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -56,6 +56,7 @@ export default function ClubSettings() {
   const [useCustomScorecardLayout, setUseCustomScorecardLayout] = useState(false);
   const [importBookingsOpen, setImportBookingsOpen] = useState(false);
   const [teamSheetSettings, setTeamSheetSettings] = useState({});
+  const handleTeamSheetChange = useCallback((vals) => setTeamSheetSettings(vals), []);
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -173,9 +174,14 @@ export default function ClubSettings() {
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Club.update(clubId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+    onSuccess: (_, variables) => {
+      // Update the cache directly instead of invalidating, so local state isn't reset
+      queryClient.setQueryData(['club', clubId], (old) => old ? { ...old, ...variables } : old);
       toast.success('Settings saved successfully');
+    },
+    onError: (err) => {
+      console.error('Save error:', err);
+      toast.error('Failed to save settings: ' + (err?.message || 'Unknown error'));
     },
   });
 
@@ -990,7 +996,7 @@ export default function ClubSettings() {
 
             {/* Team Sheet Print Template */}
             {club?.module_selection !== false && club?.id && (
-              <TeamSheetTemplateSettings key={club.id} club={club} onChange={setTeamSheetSettings} />
+              <TeamSheetTemplateSettings key={club.id} club={club} onChange={handleTeamSheetChange} />
             )}
 
             {/* Kiosk Mode */}

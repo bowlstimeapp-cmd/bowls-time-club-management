@@ -46,7 +46,7 @@ export default function TeamSheetTemplateSettings({ club, onChange }) {
       team_sheet_custom_html: customHtml,
       team_sheet_header_img_url: headerImgUrl,
     });
-  }, [template, primaryColour, customColour, fontSize, showDressCode, showVenue, showStartTime, advancedMode, customHtml, headerImgUrl]);
+  }, [template, primaryColour, customColour, fontSize, showDressCode, showVenue, showStartTime, advancedMode, customHtml, headerImgUrl, onChange]);
 
   const handleHeaderImgUpload = async (e) => {
     const file = e.target.files?.[0];
