@@ -970,27 +970,31 @@ ${club?.name || 'Your Bowls Club'}
                 )}
 
                 {/* Captain fields */}
-                {competition && selectedEmails.length > 0 && (
+                {competition && (captainHomeOptions.length > 0 || captainAwayOptions.length > 0) && (
                   <div className="space-y-3 pt-2 border-t">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Captains (optional)</p>
-                    <div>
-                      <Label>Home Captain</Label>
-                      <MemberSearchSelect
-                        members={members.filter(m => captainHomeOptions.includes(m.user_email))}
-                        value={homeCaptainEmail || null}
-                        onValueChange={(v) => setHomeCaptainEmail(v || '')}
-                        placeholder="Select home captain"
-                      />
-                    </div>
-                    <div>
-                      <Label>Away Captain</Label>
-                      <MemberSearchSelect
-                        members={members.filter(m => captainAwayOptions.includes(m.user_email))}
-                        value={awayCaptainEmail || null}
-                        onValueChange={(v) => setAwayCaptainEmail(v || '')}
-                        placeholder="Select away captain"
-                      />
-                    </div>
+                    {captainHomeOptions.length > 0 && (
+                      <div>
+                        <Label>Home Captain</Label>
+                        <MemberSearchSelect
+                          members={members.filter(m => captainHomeOptions.includes(m.user_email))}
+                          value={homeCaptainEmail || null}
+                          onValueChange={(v) => setHomeCaptainEmail(v || '')}
+                          placeholder="Select home captain"
+                        />
+                      </div>
+                    )}
+                    {captainAwayOptions.length > 0 && (
+                      <div>
+                        <Label>Away Captain</Label>
+                        <MemberSearchSelect
+                          members={members.filter(m => captainAwayOptions.includes(m.user_email))}
+                          value={awayCaptainEmail || null}
+                          onValueChange={(v) => setAwayCaptainEmail(v || '')}
+                          placeholder="Select away captain"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1054,20 +1058,19 @@ ${club?.name || 'Your Bowls Club'}
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {generateTimeSlots().filter(t => t > matchStartTime).map(time => {
+                            {(() => {
                               const duration = club?.session_duration || 2;
-                              const [hour] = time.split(':').map(Number);
-                              const endTime = `${String(hour + duration).padStart(2, '0')}:00`;
-                              return (
+                              const slots = generateTimeSlots().filter(t => t > matchStartTime);
+                              const endTimes = slots.map(time => {
+                                const [hour] = time.split(':').map(Number);
+                                return `${String(hour + duration).padStart(2, '0')}:00`;
+                              });
+                              const closingTime = club?.closing_time || '21:00';
+                              if (!endTimes.includes(closingTime)) endTimes.push(closingTime);
+                              return [...new Set(endTimes)].map(endTime => (
                                 <SelectItem key={endTime} value={endTime}>{endTime}</SelectItem>
-                              );
-                            })}
-                            {/* Add final end time option */}
-                            {club && (
-                              <SelectItem value={club.closing_time || '21:00'}>
-                                {club.closing_time || '21:00'}
-                              </SelectItem>
-                            )}
+                              ));
+                            })()}
                           </SelectContent>
                         </Select>
                       </div>
