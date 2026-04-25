@@ -323,8 +323,8 @@ export default function LiveScoring() {
                     <tr className="border-b">
                       <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-24">Rink</th>
                       <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'} Team</th>
-                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-500 w-16">Ends</th>
                       <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
+                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-500 w-16">Ends</th>
                       <th className="text-center py-2 px-2 text-sm font-medium text-gray-700 w-20">Score</th>
                       <th className="text-left py-2 px-2 text-sm font-medium text-gray-700">Opposition Team</th>
                     </tr>
