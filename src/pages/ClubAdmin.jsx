@@ -170,6 +170,8 @@ export default function ClubAdmin() {
   const [membershipTypeFilter, setMembershipTypeFilter] = useState('all');
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [competitionForm, setCompetitionForm] = useState({
     name: '',
     players_per_rink: 4,
@@ -293,7 +295,23 @@ export default function ClubAdmin() {
     },
   });
 
+  const isPlatformAdmin = user?.role === 'admin';
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
+
+  const handleDeleteAllMembers = async () => {
+    setDeletingAll(true);
+    try {
+      for (const m of memberships) {
+        await base44.entities.ClubMembership.delete(m.id);
+      }
+      queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
+      toast.success(`Deleted ${memberships.length} members`);
+    } catch (err) {
+      toast.error('Failed to delete all members');
+    }
+    setDeletingAll(false);
+    setDeleteAllConfirm(false);
+  };
 
   const { data: latestPayments = [] } = useQuery({
     queryKey: ['latestPayments', clubId],
@@ -448,6 +466,16 @@ export default function ClubAdmin() {
               <UserPlus className="w-4 h-4 mr-2" />
               Add Member
             </Button>
+            {isPlatformAdmin && (
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() => setDeleteAllConfirm(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete All Members
+              </Button>
+            )}
           </div>
         </motion.div>
 
@@ -752,8 +780,37 @@ export default function ClubAdmin() {
           open={bulkUploadOpen}
           onClose={() => setBulkUploadOpen(false)}
           clubId={clubId}
+          membershipTypes={membershipTypeNames}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] })}
         />
+
+        {/* Delete All Members Confirmation */}
+        {deleteAllConfirm && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <Card className="max-w-sm w-full rounded-2xl shadow-xl border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg text-red-600 flex items-center gap-2">
+                  <Trash2 className="w-5 h-5" />
+                  Delete All Members
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  This will permanently delete <strong>all {memberships.length} member records</strong> for this club. This cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteAllConfirm(false)} disabled={deletingAll}>
+                    Cancel
+                  </Button>
+                  <Button className="flex-1 rounded-xl bg-red-600 hover:bg-red-700" onClick={handleDeleteAllMembers} disabled={deletingAll}>
+                    {deletingAll ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                    {deletingAll ? 'Deleting...' : 'Delete All'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Competition Modal */}
         {competitionModalOpen && (
