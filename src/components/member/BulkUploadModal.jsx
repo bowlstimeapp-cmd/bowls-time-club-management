@@ -26,6 +26,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
       const lines = text.split('\n').filter(line => line.trim());
       const parsed = lines.slice(1).map(line => {
         const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const membershipRaw = values[7] || '';
         return {
           member_number: values[0] || '',
           title: values[1] || '',
@@ -34,7 +35,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           email: values[4] || '',
           phone: values[5] || '',
           gender: values[6] || '',
-          membership_type: values[7] || '',
+          membership_types: membershipRaw ? membershipRaw.split('|').map(t => t.trim()).filter(Boolean) : [],
           join_date: values[8] || '',
           locker1: values[9] || '',
           locker2: values[10] || '',
@@ -60,6 +61,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
       const lines = text.split('\n').filter(line => line.trim());
       const members = lines.slice(1).map(line => {
         const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const membershipRaw = values[7] || '';
         return {
           member_number: values[0] || '',
           title: values[1] || '',
@@ -68,7 +70,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           email: values[4] || '',
           phone: values[5] || '',
           gender: values[6] || '',
-          membership_type: values[7] || '',
+          membership_types: membershipRaw ? membershipRaw.split('|').map(t => t.trim()).filter(Boolean) : [],
           join_date: values[8] || '',
           locker1: values[9] || '',
           locker2: values[10] || '',
@@ -122,7 +124,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
           if (member.join_date) memberData.membership_start_date = member.join_date;
           if (member.locker1) memberData.locker_number = member.locker1;
           if (member.locker2) memberData.locker_number_2 = member.locker2;
-          if (member.membership_type) memberData.membership_groups = [member.membership_type];
+          if (member.membership_types?.length > 0) memberData.membership_groups = member.membership_types;
           if (member.emergency_contact_name) memberData.emergency_contact_name = member.emergency_contact_name;
           if (member.emergency_contact_phone) memberData.emergency_contact_phone = member.emergency_contact_phone;
           if (member.date_of_birth) memberData.date_of_birth = member.date_of_birth;
@@ -146,7 +148,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
   };
 
   const downloadTemplate = () => {
-    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2,EmergencyContactName,EmergencyContactPhone,DateOfBirth\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member,2024-01-15,42,,Jane Smith,07111222333,1960-05-15\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12,,,1975-08-22';
+    const template = 'ID,Title,Name,Surname,Email,Telephone,Gender,MembershipType,JoinDate,Locker1,Locker2,EmergencyContactName,EmergencyContactPhone,DateOfBirth\n001,Mr,John,Smith,john.smith@email.com,07123456789,Male,Winter Indoor Member|Summer Indoor Member,2024-01-15,42,,Jane Smith,07111222333,1960-05-15\n002,Mrs,Jane,Doe,jane.doe@email.com,07987654321,Female,Outdoor Member,2024-03-01,,12,,,1975-08-22';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -196,7 +198,7 @@ export default function BulkUploadModal({ open, onClose, clubId, onSuccess }) {
                 >
                   <Upload className="w-10 h-10 mx-auto mb-3 text-gray-400" />
                   <p className="text-sm text-gray-600 mb-1">Click to upload CSV file</p>
-                  <p className="text-xs text-gray-400">ID, Title, Name, Surname, Email, Telephone, Gender, MembershipType, JoinDate, Locker1, Locker2, EmergencyContactName, EmergencyContactPhone</p>
+                  <p className="text-xs text-gray-400">ID, Title, Name, Surname, Email, Telephone, Gender, MembershipType (use | to separate multiple), JoinDate, Locker1, Locker2, EmergencyContactName, EmergencyContactPhone</p>
                 </div>
               ) : (
                 <div className="text-center">
