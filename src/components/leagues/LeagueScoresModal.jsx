@@ -49,11 +49,13 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       conflict_first_home_sets: null,
       conflict_first_away_sets: null,
       conflict_first_team_id: null,
+      conflict_first_submitted_by_email: null,
       conflict_second_home_score: null,
       conflict_second_away_score: null,
       conflict_second_home_sets: null,
       conflict_second_away_sets: null,
       conflict_second_team_id: null,
+      conflict_second_submitted_by_email: null,
     });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['allLeagueFixtures', clubId] });
@@ -78,11 +80,13 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       conflict_first_home_sets: null,
       conflict_first_away_sets: null,
       conflict_first_team_id: null,
+      conflict_first_submitted_by_email: null,
       conflict_second_home_score: null,
       conflict_second_away_score: null,
       conflict_second_home_sets: null,
       conflict_second_away_sets: null,
       conflict_second_team_id: null,
+      conflict_second_submitted_by_email: null,
     });
     setScores(prev => ({
       ...prev,
@@ -285,13 +289,19 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                             <div className="space-y-1">
                               <p className="font-semibold">Score conflict — both teams submitted different results:</p>
                               <div className="flex flex-wrap gap-3">
-                                <span className="bg-red-100 border border-red-300 rounded px-2 py-0.5 font-mono font-bold">
-                                  {firstTeam?.name || 'Team 1'}: {homeTeam?.name} {fixture.conflict_first_home_score} – {fixture.conflict_first_away_score} {awayTeam?.name}
-                                  {fixture.conflict_first_home_sets != null ? ` (Sets: ${fixture.conflict_first_home_sets}–${fixture.conflict_first_away_sets})` : ''}
+                                <span className="bg-red-100 border border-red-300 rounded px-2 py-0.5 font-bold">
+                                  <span className="text-red-600">{firstTeam?.name || 'Team 1'}</span>
+                                  <span className="font-normal text-red-500"> ({fixture.conflict_first_submitted_by_email || 'unknown'})</span>
+                                  {': '}
+                                  <span className="font-mono">{homeTeam?.name} {fixture.conflict_first_home_score} – {fixture.conflict_first_away_score} {awayTeam?.name}</span>
+                                  {fixture.conflict_first_home_sets != null ? <span className="font-mono"> (Sets: {fixture.conflict_first_home_sets}–{fixture.conflict_first_away_sets})</span> : ''}
                                 </span>
-                                <span className="bg-red-100 border border-red-300 rounded px-2 py-0.5 font-mono font-bold">
-                                  {secondTeam?.name || 'Team 2'}: {homeTeam?.name} {fixture.conflict_second_home_score} – {fixture.conflict_second_away_score} {awayTeam?.name}
-                                  {fixture.conflict_second_home_sets != null ? ` (Sets: ${fixture.conflict_second_home_sets}–${fixture.conflict_second_away_sets})` : ''}
+                                <span className="bg-red-100 border border-red-300 rounded px-2 py-0.5 font-bold">
+                                  <span className="text-red-600">{secondTeam?.name || 'Team 2'}</span>
+                                  <span className="font-normal text-red-500"> ({fixture.conflict_second_submitted_by_email || 'unknown'})</span>
+                                  {': '}
+                                  <span className="font-mono">{homeTeam?.name} {fixture.conflict_second_home_score} – {fixture.conflict_second_away_score} {awayTeam?.name}</span>
+                                  {fixture.conflict_second_home_sets != null ? <span className="font-mono"> (Sets: {fixture.conflict_second_home_sets}–{fixture.conflict_second_away_sets})</span> : ''}
                                 </span>
                               </div>
                               <p className="text-red-600">Enter the correct score above and click ✓ to resolve, or use the ✕ button to clear.</p>

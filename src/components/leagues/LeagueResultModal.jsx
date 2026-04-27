@@ -145,12 +145,14 @@ export default function LeagueResultModal({
         conflict_first_home_sets: fixture.pending_home_sets ?? null,
         conflict_first_away_sets: fixture.pending_away_sets ?? null,
         conflict_first_team_id: fixture.pending_submitted_by_team_id,
+        conflict_first_submitted_by_email: fixture.pending_submitted_by_email,
         // Store second team's submission
         conflict_second_home_score: hs,
         conflict_second_away_score: as_,
         conflict_second_home_sets: isSetsLeague ? hsS : null,
         conflict_second_away_sets: isSetsLeague ? asS : null,
         conflict_second_team_id: userTeamId,
+        conflict_second_submitted_by_email: effectiveEmail,
         });
 
         // Notify admins of the conflict

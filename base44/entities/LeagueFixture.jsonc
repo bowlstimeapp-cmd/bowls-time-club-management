@@ -101,6 +101,10 @@
       "type": "string",
       "description": "Team ID of the first submitter in a conflict"
     },
+    "conflict_first_submitted_by_email": {
+      "type": "string",
+      "description": "Email of the member who made the first conflicting submission"
+    },
     "conflict_second_home_score": {
       "type": "number",
       "description": "Second team's home score in a conflict"
@@ -120,6 +124,10 @@
     "conflict_second_team_id": {
       "type": "string",
       "description": "Team ID of the second submitter in a conflict"
+    },
+    "conflict_second_submitted_by_email": {
+      "type": "string",
+      "description": "Email of the member who made the second conflicting submission"
     }
   },
   "required": [
