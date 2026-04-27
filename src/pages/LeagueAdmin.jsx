@@ -53,6 +53,7 @@ import {
   CalendarX
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
+import ManualFixturesModal from '@/components/leagues/ManualFixturesModal';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 
 import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
@@ -135,6 +136,9 @@ export default function LeagueAdmin() {
   const [blacklistLeague, setBlacklistLeague] = useState(null);
   const [clashModalOpen, setClashModalOpen] = useState(false);
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [], league: null, leagueFixturesForBooking: [], allExistingBookings: [] });
+  const [manualFixturesModalOpen, setManualFixturesModalOpen] = useState(false);
+  const [manualFixturesLeague, setManualFixturesLeague] = useState(null);
+  const [leagueCreationMode, setLeagueCreationMode] = useState('auto');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -289,6 +293,7 @@ export default function LeagueAdmin() {
     setLeagueName('');
     setLeagueDescription('');
     setLeagueStatus('draft');
+    setLeagueCreationMode('auto');
     setLeagueStartDate('');
     setLeagueEndDate('');
     setLeagueStartTime('18:00');
@@ -328,6 +333,7 @@ export default function LeagueAdmin() {
     setLeagueStartTime(league.start_time || '18:00');
     setLeagueEndTime(league.end_time || '21:00');
     setLeagueFormat(league.format || 'fours');
+    setLeagueCreationMode(league.creation_mode || 'auto');
     setLeagueIsSets(league.is_sets || false);
     setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueForceEven(league.force_even_fixtures !== false);
@@ -359,7 +365,7 @@ export default function LeagueAdmin() {
       toast.error('Please enter a league name');
       return;
     }
-    if (!leagueStartTime || !leagueEndTime) {
+    if (leagueCreationMode === 'auto' && (!leagueStartTime || !leagueEndTime)) {
       toast.error('Please select a match session');
       return;
     }
@@ -367,6 +373,7 @@ export default function LeagueAdmin() {
     const data = {
       club_id: clubId,
       name: leagueName.trim(),
+      creation_mode: leagueCreationMode,
       description: leagueDescription.trim(),
       status: leagueStatus,
       start_date: leagueStartDate || null,
@@ -998,7 +1005,7 @@ export default function LeagueAdmin() {
                             <Trophy className="w-5 h-5 text-emerald-600" />
                           </div>
                           <div>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 flex-wrap">
                               {league.name}
                               <Badge className={statusColors[league.status || 'draft']}>
                                 {league.status || 'draft'}
@@ -1007,6 +1014,9 @@ export default function LeagueAdmin() {
                                 <Badge variant="outline">
                                   {league.format === 'triples' ? 'Triples' : 'Fours'}
                                 </Badge>
+                              )}
+                              {league.creation_mode === 'manual' && (
+                                <Badge className="bg-purple-100 text-purple-700 border-purple-200">Manual</Badge>
                               )}
                             </CardTitle>
                             {league.description && (
@@ -1029,7 +1039,20 @@ export default function LeagueAdmin() {
                           </div>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          {!league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
+                          {/* Manual mode: always show Edit Fixtures button */}
+                          {league.creation_mode === 'manual' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setManualFixturesLeague(league); setManualFixturesModalOpen(true); }}
+                              className="text-purple-600 hover:bg-purple-50 border-purple-200"
+                            >
+                              <List className="w-4 h-4 mr-1" />
+                              {league.fixtures_generated ? 'Edit Fixtures' : 'Add Fixtures'}
+                            </Button>
+                          )}
+                          {/* Auto mode: show Generate Fixtures when conditions met */}
+                          {league.creation_mode !== 'manual' && !league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -1235,6 +1258,36 @@ export default function LeagueAdmin() {
               <DialogTitle>{editingLeague ? 'Edit League' : 'Create League'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Creation Mode selector — only shown when creating a new league */}
+              {!editingLeague && (
+                <div className="border rounded-lg p-4 space-y-3 bg-slate-50">
+                  <Label className="font-semibold">Fixture Creation Mode</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setLeagueCreationMode('auto')}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${leagueCreationMode === 'auto' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Zap className="w-4 h-4 text-emerald-600" />
+                        <span className="font-medium text-sm">Automatic</span>
+                      </div>
+                      <p className="text-xs text-slate-500">Generate fixtures from dates & teams using round-robin scheduling</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLeagueCreationMode('manual')}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${leagueCreationMode === 'manual' ? 'border-purple-500 bg-purple-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <List className="w-4 h-4 text-purple-600" />
+                        <span className="font-medium text-sm">Manual</span>
+                      </div>
+                      <p className="text-xs text-slate-500">Enter fixtures yourself — ideal for migrating existing leagues</p>
+                    </button>
+                  </div>
+                </div>
+              )}
               <div>
                 <Label>League Name *</Label>
                 <Input
@@ -1269,7 +1322,7 @@ export default function LeagueAdmin() {
                   />
                 </div>
               </div>
-              {club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
+              {leagueCreationMode === 'auto' && club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Match Session *</Label>
@@ -1335,7 +1388,7 @@ export default function LeagueAdmin() {
                     </Select>
                   )}
                 </div>
-              ) : (
+              ) : leagueCreationMode === 'auto' ? (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1356,7 +1409,7 @@ export default function LeagueAdmin() {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
               <div>
                 <Label>Format</Label>
                 <Select value={leagueFormat} onValueChange={setLeagueFormat}>
@@ -1378,8 +1431,8 @@ export default function LeagueAdmin() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Shown on printed league tables</p>
               </div>
-              {/* Adjacent Rinks (outdoor only) */}
-              {club?.season === 'outdoor' && (
+              {/* Adjacent Rinks (outdoor only) — auto mode only */}
+              {leagueCreationMode === 'auto' && club?.season === 'outdoor' && (
                 <div className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center gap-3">
                     <Switch
@@ -1463,8 +1516,8 @@ export default function LeagueAdmin() {
                 </div>
               )}
 
-              {/* Rink selection — hidden when Adjacent Rinks is on */}
-              {club && !leagueAdjacentRinks && (
+              {/* Rink selection — auto mode only, hidden when Adjacent Rinks is on */}
+              {leagueCreationMode === 'auto' && club && !leagueAdjacentRinks && (
                 <div className="border rounded-lg p-4 space-y-3">
                   <div>
                     <Label className="font-medium">Rinks for this league</Label>
@@ -1488,7 +1541,7 @@ export default function LeagueAdmin() {
                 </div>
               )}
 
-              <div className="border rounded-lg p-4 space-y-3">
+              {leagueCreationMode === 'auto' && <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id="force-even"
@@ -1500,7 +1553,7 @@ export default function LeagueAdmin() {
                     <p className="text-xs text-gray-500">When enabled, each team plays every other team the same number of times. When disabled, fixtures fill the full league duration.</p>
                   </div>
                 </div>
-              </div>
+              </div>}
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <Checkbox
@@ -1871,6 +1924,23 @@ export default function LeagueAdmin() {
           fixtures={fixtures}
           club={club}
           clubId={clubId}
+        />
+
+        {/* Manual Fixtures Modal */}
+        <ManualFixturesModal
+          open={manualFixturesModalOpen}
+          onClose={(didSave) => {
+            setManualFixturesModalOpen(false);
+            if (didSave) {
+              queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+              queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+            }
+          }}
+          league={manualFixturesLeague}
+          teams={manualFixturesLeague ? teams.filter(t => t.league_id === manualFixturesLeague.id) : []}
+          clubId={clubId}
+          existingFixtures={fixtures}
+          rinkCount={club?.rink_count || 6}
         />
       </div>
     </div>
