@@ -53,6 +53,7 @@ import {
   CalendarX
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
+import TeamDialog from '@/components/leagues/TeamDialog';
 import ManualFixturesModal from '@/components/leagues/ManualFixturesModal';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 
@@ -825,7 +826,7 @@ export default function LeagueAdmin() {
     setScoresModalOpen(true);
   };
 
-  const handleSaveTeam = () => {
+  const handleSaveTeam = (players) => {
     if (!teamName.trim()) {
       toast.error('Please enter a team name');
       return;
@@ -853,7 +854,7 @@ export default function LeagueAdmin() {
     };
 
     if (editingTeam) {
-      updateTeamMutation.mutate({ id: editingTeam.id, data });
+      updateTeamMutation.mutate({ id: editingTeam.id, data: { ...data, players: players ?? [] } });
     } else {
       createTeamMutation.mutate(data);
     }
@@ -1675,53 +1676,21 @@ export default function LeagueAdmin() {
         </Dialog>
 
         {/* Team Dialog */}
-        <Dialog open={teamDialogOpen} onOpenChange={resetTeamForm}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTeam ? 'Edit Team' : `Add Team to ${selectedLeague?.name}`}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Team Name *</Label>
-                <Input
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="e.g., Team A"
-                />
-              </div>
-              <div>
-                <Label>Team Captain</Label>
-                <MemberSearchSelect
-                  members={filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || [])).filter(m => {
-                    // Exclude members already in another team in this league
-                    const otherTeams = teams.filter(t => t.league_id === selectedLeague?.id && t.id !== editingTeam?.id);
-                    const takenEmails = new Set(otherTeams.flatMap(t => [t.captain_email, ...(t.players || [])]).filter(Boolean));
-                    return !takenEmails.has(m.user_email);
-                  })}
-                  value={captainEmail}
-                  onValueChange={(v) => setCaptainEmail(v || '')}
-                  placeholder="Select a captain (optional)"
-                  clearLabel="— No Captain —"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={resetTeamForm}>Cancel</Button>
-              <Button 
-                onClick={handleSaveTeam}
-                disabled={createTeamMutation.isPending || updateTeamMutation.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                {(createTeamMutation.isPending || updateTeamMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                {editingTeam ? 'Update' : 'Add Team'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <TeamDialog
+          open={teamDialogOpen}
+          onClose={resetTeamForm}
+          editingTeam={editingTeam}
+          selectedLeague={selectedLeague}
+          teams={teams}
+          members={members}
+          club={club}
+          teamName={teamName}
+          setTeamName={setTeamName}
+          captainEmail={captainEmail}
+          setCaptainEmail={setCaptainEmail}
+          onSave={handleSaveTeam}
+          isSaving={createTeamMutation.isPending || updateTeamMutation.isPending}
+        />
 
         {/* Delete League Confirmation */}
         <AlertDialog open={!!deleteLeagueId} onOpenChange={() => setDeleteLeagueId(null)}>
