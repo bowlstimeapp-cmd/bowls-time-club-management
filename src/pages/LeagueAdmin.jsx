@@ -1322,7 +1322,7 @@ export default function LeagueAdmin() {
                   />
                 </div>
               </div>
-              {leagueCreationMode === 'auto' && club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
+              {club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Match Session *</Label>
@@ -1388,7 +1388,7 @@ export default function LeagueAdmin() {
                     </Select>
                   )}
                 </div>
-              ) : leagueCreationMode === 'auto' ? (
+              ) : (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1409,7 +1409,7 @@ export default function LeagueAdmin() {
                     </div>
                   </div>
                 </div>
-              ) : null}
+              )}
               <div>
                 <Label>Format</Label>
                 <Select value={leagueFormat} onValueChange={setLeagueFormat}>
@@ -1941,6 +1941,7 @@ export default function LeagueAdmin() {
           clubId={clubId}
           existingFixtures={fixtures}
           rinkCount={club?.rink_count || 6}
+          club={club}
         />
       </div>
     </div>
