@@ -162,8 +162,14 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
         const awayTeam = teams.find(t => t.name.toLowerCase() === away?.trim().toLowerCase());
         if (!homeTeam) { errors.push(`Row ${idx + 2}: Unknown home team "${home}"`); return; }
         if (!awayTeam) { errors.push(`Row ${idx + 2}: Unknown away team "${away}"`); return; }
-        if (!date?.trim().match(/^\d{4}-\d{2}-\d{2}$/)) { errors.push(`Row ${idx + 2}: Invalid date "${date}" (use YYYY-MM-DD)`); return; }
-        imported.push({ home_team_id: homeTeam.id, away_team_id: awayTeam.id, match_date: date.trim(), rink_number: rink?.trim() || '', _id: null });
+        let parsedDate = date?.trim();
+        // Support DD/MM/YYYY in addition to YYYY-MM-DD
+        if (parsedDate?.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+          const [d, m, y] = parsedDate.split('/');
+          parsedDate = `${y}-${m}-${d}`;
+        }
+        if (!parsedDate?.match(/^\d{4}-\d{2}-\d{2}$/)) { errors.push(`Row ${idx + 2}: Invalid date "${date}" (use YYYY-MM-DD or DD/MM/YYYY)`); return; }
+        imported.push({ home_team_id: homeTeam.id, away_team_id: awayTeam.id, match_date: parsedDate, rink_number: rink?.trim() || '', _id: null });
       });
       if (errors.length > 0) {
         toast.error(`Import issues:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n...and ${errors.length - 3} more` : ''}`);
