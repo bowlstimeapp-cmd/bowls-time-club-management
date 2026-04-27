@@ -1,0 +1,97 @@
+{
+  "name": "LeagueFixture",
+  "type": "object",
+  "properties": {
+    "league_id": {
+      "type": "string",
+      "description": "Reference to the league"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "home_team_id": {
+      "type": "string",
+      "description": "Reference to the home team"
+    },
+    "away_team_id": {
+      "type": "string",
+      "description": "Reference to the away team"
+    },
+    "match_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the fixture"
+    },
+    "rink_number": {
+      "type": "number",
+      "description": "Rink number assigned"
+    },
+    "home_score": {
+      "type": "number",
+      "description": "Home team total shots"
+    },
+    "away_score": {
+      "type": "number",
+      "description": "Away team total shots"
+    },
+    "home_sets": {
+      "type": "number",
+      "description": "Number of sets won by home team (sets leagues only)"
+    },
+    "away_sets": {
+      "type": "number",
+      "description": "Number of sets won by away team (sets leagues only)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled",
+      "description": "Fixture status"
+    },
+    "booking_id": {
+      "type": "string",
+      "description": "Reference to the rink booking"
+    },
+    "pending_home_score": {
+      "type": "number",
+      "description": "Score submitted by the first team \u2014 awaiting confirmation from the opposing team"
+    },
+    "pending_away_score": {
+      "type": "number",
+      "description": "Away score submitted by the first team \u2014 awaiting confirmation"
+    },
+    "pending_home_sets": {
+      "type": "number",
+      "description": "Sets (home) submitted by the first team \u2014 awaiting confirmation"
+    },
+    "pending_away_sets": {
+      "type": "number",
+      "description": "Sets (away) submitted by the first team \u2014 awaiting confirmation"
+    },
+    "pending_submitted_by_email": {
+      "type": "string",
+      "description": "Email of the member who submitted the pending result"
+    },
+    "pending_submitted_by_team_id": {
+      "type": "string",
+      "description": "Team ID of the member who submitted the pending result"
+    }
+  },
+  "required": [
+    "league_id",
+    "club_id",
+    "home_team_id",
+    "away_team_id",
+    "match_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

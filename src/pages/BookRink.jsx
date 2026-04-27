@@ -29,6 +29,7 @@ import TourBookingModal from '@/components/tour/TourBookingModal';
 import KioskLogin from '@/components/kiosk/KioskLogin';
 import KioskSessionWrapper from '@/components/kiosk/KioskSessionWrapper';
 import { useKiosk } from '@/lib/KioskContext';
+import LeagueResultModal from '@/components/leagues/LeagueResultModal';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -50,6 +51,7 @@ export default function BookRink() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
   const { kioskMember, setKioskMember } = useKiosk();
+  const [resultPrompt, setResultPrompt] = useState(null); // { fixture, league, homeTeam, awayTeam, userTeamId }
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started
@@ -170,6 +172,62 @@ useEffect(() => {
     queryFn: () => base44.entities.League.filter({ club_id: clubId }),
     enabled: !!clubId,
   });
+
+  // All fixtures for the club (used for result prompt)
+  const { data: allLeagueFixtures = [] } = useQuery({
+    queryKey: ['allLeagueFixtures', clubId],
+    queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId }),
+    enabled: !!clubId && !!user?.email,
+  });
+
+  // After fixtures + teams load, find the first past unscored fixture for this member
+  // and show the result prompt (only once per session — cleared on close)
+  const [resultPromptChecked, setResultPromptChecked] = useState(false);
+  React.useEffect(() => {
+    if (resultPromptChecked) return;
+    if (!user?.email || !allLeagueFixtures.length || !leagueTeams.length || kioskMember) return;
+
+    const today = format(new Date(), 'yyyy-MM-dd');
+
+    // Teams this user belongs to (captain or player)
+    const myTeams = leagueTeams.filter(t =>
+      t.captain_email === user.email ||
+      (t.players || []).includes(user.email)
+    );
+
+    if (!myTeams.length) {
+      setResultPromptChecked(true);
+      return;
+    }
+
+    const myTeamIds = new Set(myTeams.map(t => t.id));
+
+    // Past fixtures involving my teams with no confirmed result
+    const candidates = allLeagueFixtures.filter(f =>
+      f.match_date < today &&
+      f.status !== 'completed' &&
+      f.status !== 'cancelled' &&
+      (myTeamIds.has(f.home_team_id) || myTeamIds.has(f.away_team_id))
+    );
+
+    if (!candidates.length) {
+      setResultPromptChecked(true);
+      return;
+    }
+
+    // Don't prompt if THIS user already submitted the pending result
+    const toPrompt = candidates.find(f =>
+      f.pending_submitted_by_email !== user.email
+    ) || candidates[0];
+
+    const userTeam = myTeams.find(t => t.id === toPrompt.home_team_id || t.id === toPrompt.away_team_id);
+    const homeTeam = leagueTeams.find(t => t.id === toPrompt.home_team_id);
+    const awayTeam = leagueTeams.find(t => t.id === toPrompt.away_team_id);
+    const league = leagues.find(l => l.id === toPrompt.league_id);
+
+    setResultPrompt({ fixture: toPrompt, league, homeTeam, awayTeam, userTeamId: userTeam?.id });
+    setResultPromptChecked(true);
+  }, [user, allLeagueFixtures, leagueTeams, leagues, resultPromptChecked, kioskMember]);
 
   const { data: bookingsFromDB = [], isLoading } = useQuery({
     queryKey: ['bookings', clubId, dateString],
@@ -1044,6 +1102,20 @@ useEffect(() => {
               clearTourPause();
               setShowResumeTour(false);
             }}
+          />
+        )}
+
+        {/* League Result Prompt */}
+        {resultPrompt && !kioskMember && (
+          <LeagueResultModal
+            fixture={resultPrompt.fixture}
+            league={resultPrompt.league}
+            homeTeam={resultPrompt.homeTeam}
+            awayTeam={resultPrompt.awayTeam}
+            userTeamId={resultPrompt.userTeamId}
+            userEmail={user?.email}
+            clubId={clubId}
+            onClose={() => setResultPrompt(null)}
           />
         )}
 
