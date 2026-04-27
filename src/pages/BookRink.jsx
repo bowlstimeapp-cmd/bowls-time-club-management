@@ -185,14 +185,17 @@ useEffect(() => {
   const [resultPromptChecked, setResultPromptChecked] = useState(false);
   React.useEffect(() => {
     if (resultPromptChecked) return;
-    if (!user?.email || !allLeagueFixtures.length || !leagueTeams.length || kioskMember) return;
+    if (!user?.email || !allLeagueFixtures.length || !leagueTeams.length) return;
 
     const today = format(new Date(), 'yyyy-MM-dd');
 
-    // Teams this user belongs to (captain or player)
+    // For kiosk sessions, check by the kiosk member's email
+    const checkEmail = kioskMember ? kioskMember.user_email : user.email;
+
+    // Teams this user (or kiosk member) belongs to (captain or player)
     const myTeams = leagueTeams.filter(t =>
-      t.captain_email === user.email ||
-      (t.players || []).includes(user.email)
+      t.captain_email === checkEmail ||
+      (t.players || []).includes(checkEmail)
     );
 
     if (!myTeams.length) {
@@ -215,9 +218,9 @@ useEffect(() => {
       return;
     }
 
-    // Don't prompt if THIS user already submitted the pending result
+    // Don't prompt if THIS user/kiosk member already submitted the pending result
     const toPrompt = candidates.find(f =>
-      f.pending_submitted_by_email !== user.email
+      f.pending_submitted_by_email !== checkEmail
     ) || candidates[0];
 
     const userTeam = myTeams.find(t => t.id === toPrompt.home_team_id || t.id === toPrompt.away_team_id);
@@ -228,6 +231,12 @@ useEffect(() => {
     setResultPrompt({ fixture: toPrompt, league, homeTeam, awayTeam, userTeamId: userTeam?.id });
     setResultPromptChecked(true);
   }, [user, allLeagueFixtures, leagueTeams, leagues, resultPromptChecked, kioskMember]);
+
+  // Reset result prompt check when kiosk member changes so the new member gets prompted
+  React.useEffect(() => {
+    setResultPromptChecked(false);
+    setResultPrompt(null);
+  }, [kioskMember?.user_email]);
 
   const { data: bookingsFromDB = [], isLoading } = useQuery({
     queryKey: ['bookings', clubId, dateString],
@@ -1106,7 +1115,7 @@ useEffect(() => {
         )}
 
         {/* League Result Prompt */}
-        {resultPrompt && !kioskMember && (
+        {resultPrompt && (
           <LeagueResultModal
             fixture={resultPrompt.fixture}
             league={resultPrompt.league}
@@ -1116,6 +1125,8 @@ useEffect(() => {
             userEmail={user?.email}
             clubId={clubId}
             onClose={() => setResultPrompt(null)}
+            submitterEmail={kioskMember ? kioskMember.user_email : undefined}
+            submitterName={kioskMember ? kioskMember.name : undefined}
           />
         )}
 

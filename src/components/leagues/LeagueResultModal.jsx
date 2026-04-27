@@ -21,15 +21,34 @@ import { Trophy, Calendar, MapPin, Loader2, CheckCircle2, AlertCircle } from 'lu
  *
  * Shown when a member logs in and has a past fixture without a confirmed result.
  * First team to submit stores a "pending" result.
- * When the opposing team submits the same result → it's confirmed.
- * If scores differ → both entries are cleared so either team can re-enter.
+ * When the opposing team submits:
+ *   - Same scores → confirmed and saved
+ *   - Different scores → admin notified of conflict, entries cleared
+ *
+ * Props:
+ *   submitterEmail  – email to record as submitter (defaults to userEmail; use kiosk member's email)
+ *   submitterName   – display name of submitter (for notifications)
  */
-export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam, userTeamId, userEmail, clubId, onClose }) {
+export default function LeagueResultModal({
+  fixture,
+  league,
+  homeTeam,
+  awayTeam,
+  userTeamId,
+  userEmail,
+  clubId,
+  onClose,
+  submitterEmail,   // optional override (kiosk)
+  submitterName,    // optional override (kiosk)
+}) {
   const queryClient = useQueryClient();
+
+  const effectiveEmail = submitterEmail || userEmail;
 
   const hasPending = fixture.pending_submitted_by_email != null;
   const pendingFromOtherTeam = hasPending && fixture.pending_submitted_by_team_id !== userTeamId;
 
+  // Pre-fill with the other team's submitted scores so the second team can accept easily
   const [homeScore, setHomeScore] = useState(hasPending ? String(fixture.pending_home_score ?? '') : '');
   const [awayScore, setAwayScore] = useState(hasPending ? String(fixture.pending_away_score ?? '') : '');
   const [homeSets, setHomeSets] = useState(hasPending ? String(fixture.pending_home_sets ?? '') : '');
@@ -37,6 +56,36 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
   const [saving, setSaving] = useState(false);
 
   const isSetsLeague = league?.is_sets;
+
+  const notifyAdminConflict = async (theirHome, theirAway, ourHome, ourAway) => {
+    // Find all admin memberships for this club
+    try {
+      const admins = await base44.entities.ClubMembership.filter({
+        club_id: clubId,
+        role: 'admin',
+        status: 'approved',
+      });
+
+      const fixtureDesc = `${homeTeam?.name} vs ${awayTeam?.name} on ${format(parseISO(fixture.match_date), 'd MMM yyyy')}${fixture.rink_number ? ` (Rink ${fixture.rink_number})` : ''}`;
+      const leagueName = league?.name || 'Unknown league';
+      const conflictDetail = `First submission: ${homeTeam?.name} ${theirHome} – ${theirAway} ${awayTeam?.name}. Second submission: ${homeTeam?.name} ${ourHome} – ${ourAway} ${awayTeam?.name}.`;
+
+      const message = `Score conflict in ${leagueName} — ${fixtureDesc}. ${conflictDetail} Both entries have been cleared. Please contact the teams to resolve.`;
+
+      await Promise.all(admins.map(admin =>
+        base44.entities.Notification.create({
+          user_email: admin.user_email,
+          type: 'team_request',
+          title: '⚠ League score conflict',
+          message,
+          link_page: 'LeagueAdmin',
+          link_params: `clubId=${clubId}`,
+        })
+      ));
+    } catch (e) {
+      // Non-critical — don't block the flow
+    }
+  };
 
   const handleSubmit = async () => {
     if (homeScore === '' || awayScore === '') {
@@ -61,7 +110,7 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
         pending_home_score: hs,
         pending_away_score: as_,
         ...(isSetsLeague ? { pending_home_sets: hsS, pending_away_sets: asS } : {}),
-        pending_submitted_by_email: userEmail,
+        pending_submitted_by_email: effectiveEmail,
         pending_submitted_by_team_id: userTeamId,
       });
       toast.success('Result submitted — waiting for the opposing team to confirm.');
@@ -88,7 +137,7 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
         });
         toast.success('Result confirmed! The match result has been recorded.');
       } else {
-        // Mismatch — clear pending so teams re-enter
+        // Mismatch — clear pending and notify admins
         await base44.entities.LeagueFixture.update(fixture.id, {
           pending_home_score: null,
           pending_away_score: null,
@@ -97,11 +146,21 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
           pending_submitted_by_email: null,
           pending_submitted_by_team_id: null,
         });
-        toast.error("The scores don't match the other team's entry. Both entries have been cleared — please re-enter the result.");
+
+        // Notify admins of the conflict
+        await notifyAdminConflict(
+          fixture.pending_home_score,
+          fixture.pending_away_score,
+          hs,
+          as_
+        );
+
+        toast.error("The scores don't match the other team's entry. Both entries have been cleared — the club admin has been notified.");
       }
     }
 
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+    queryClient.invalidateQueries({ queryKey: ['allLeagueFixtures', clubId] });
     setSaving(false);
     onClose();
   };
@@ -145,13 +204,22 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
             </div>
           </div>
 
-          {/* Pending notice */}
+          {/* Pending notice — other team already submitted */}
           {hasPending && pendingFromOtherTeam && (
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>The other team has already submitted a result. Enter the same scores to confirm, or different scores to clear both entries.</span>
+              <div>
+                <p className="font-semibold mb-1">The other team has already submitted a score:</p>
+                <p className="font-mono text-base font-bold">
+                  {homeTeam?.name} {fixture.pending_home_score} – {fixture.pending_away_score} {awayTeam?.name}
+                  {fixture.pending_home_sets != null && ` (Sets: ${fixture.pending_home_sets}–${fixture.pending_away_sets})`}
+                </p>
+                <p className="text-xs mt-1 text-amber-700">The scores above are pre-filled for you. Accept them or enter the correct scores to flag a conflict to the admin.</p>
+              </div>
             </div>
           )}
+
+          {/* Already submitted by this user */}
           {hasPending && !pendingFromOtherTeam && (
             <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
               <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
@@ -169,8 +237,7 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
                     <div>
                       <Label className="text-xs block mb-1">{homeTeam?.name || 'Home'}</Label>
                       <Input
-                        type="number"
-                        min="0"
+                        type="number" min="0"
                         value={homeSets}
                         onChange={(e) => setHomeSets(e.target.value)}
                         className="text-center"
@@ -181,8 +248,7 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
                     <div>
                       <Label className="text-xs block mb-1">{awayTeam?.name || 'Away'}</Label>
                       <Input
-                        type="number"
-                        min="0"
+                        type="number" min="0"
                         value={awaySets}
                         onChange={(e) => setAwaySets(e.target.value)}
                         className="text-center"
@@ -201,8 +267,7 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
                   <div>
                     {!isSetsLeague && <Label className="text-xs block mb-1">{homeTeam?.name || 'Home'}</Label>}
                     <Input
-                      type="number"
-                      min="0"
+                      type="number" min="0"
                       value={homeScore}
                       onChange={(e) => setHomeScore(e.target.value)}
                       className="text-center text-lg font-bold"
@@ -213,8 +278,7 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
                   <div>
                     {!isSetsLeague && <Label className="text-xs block mb-1">{awayTeam?.name || 'Away'}</Label>}
                     <Input
-                      type="number"
-                      min="0"
+                      type="number" min="0"
                       value={awayScore}
                       onChange={(e) => setAwayScore(e.target.value)}
                       className="text-center text-lg font-bold"
@@ -239,11 +303,6 @@ export default function LeagueResultModal({ fixture, league, homeTeam, awayTeam,
             >
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {hasPending ? 'Confirm Result' : 'Submit Result'}
-            </Button>
-          )}
-          {hasPending && !pendingFromOtherTeam && (
-            <Button variant="outline" onClick={onClose}>
-              Close
             </Button>
           )}
         </DialogFooter>
