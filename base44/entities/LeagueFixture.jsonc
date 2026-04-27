@@ -80,6 +80,46 @@
     "pending_submitted_by_team_id": {
       "type": "string",
       "description": "Team ID of the member who submitted the pending result"
+    },
+    "conflict_first_home_score": {
+      "type": "number",
+      "description": "First team's home score in a conflict"
+    },
+    "conflict_first_away_score": {
+      "type": "number",
+      "description": "First team's away score in a conflict"
+    },
+    "conflict_first_home_sets": {
+      "type": "number",
+      "description": "First team's home sets in a conflict"
+    },
+    "conflict_first_away_sets": {
+      "type": "number",
+      "description": "First team's away sets in a conflict"
+    },
+    "conflict_first_team_id": {
+      "type": "string",
+      "description": "Team ID of the first submitter in a conflict"
+    },
+    "conflict_second_home_score": {
+      "type": "number",
+      "description": "Second team's home score in a conflict"
+    },
+    "conflict_second_away_score": {
+      "type": "number",
+      "description": "Second team's away score in a conflict"
+    },
+    "conflict_second_home_sets": {
+      "type": "number",
+      "description": "Second team's home sets in a conflict"
+    },
+    "conflict_second_away_sets": {
+      "type": "number",
+      "description": "Second team's away sets in a conflict"
+    },
+    "conflict_second_team_id": {
+      "type": "string",
+      "description": "Team ID of the second submitter in a conflict"
     }
   },
   "required": [

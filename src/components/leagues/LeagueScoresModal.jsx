@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, AlertCircle } from 'lucide-react';
 
 export default function LeagueScoresModal({ open, onClose, league, fixtures, teams, clubId }) {
   const queryClient = useQueryClient();
@@ -37,13 +37,23 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       away_score: parseInt(s.away),
       ...(isSetsLeague ? { home_sets: s.home_sets !== '' ? parseInt(s.home_sets) : null, away_sets: s.away_sets !== '' ? parseInt(s.away_sets) : null } : {}),
       status: 'completed',
-      // Clear any pending data when admin saves directly
+      // Clear any pending/conflict data when admin saves directly
       pending_home_score: null,
       pending_away_score: null,
       pending_home_sets: null,
       pending_away_sets: null,
       pending_submitted_by_email: null,
       pending_submitted_by_team_id: null,
+      conflict_first_home_score: null,
+      conflict_first_away_score: null,
+      conflict_first_home_sets: null,
+      conflict_first_away_sets: null,
+      conflict_first_team_id: null,
+      conflict_second_home_score: null,
+      conflict_second_away_score: null,
+      conflict_second_home_sets: null,
+      conflict_second_away_sets: null,
+      conflict_second_team_id: null,
     });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['allLeagueFixtures', clubId] });
@@ -63,6 +73,16 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       pending_away_sets: null,
       pending_submitted_by_email: null,
       pending_submitted_by_team_id: null,
+      conflict_first_home_score: null,
+      conflict_first_away_score: null,
+      conflict_first_home_sets: null,
+      conflict_first_away_sets: null,
+      conflict_first_team_id: null,
+      conflict_second_home_score: null,
+      conflict_second_away_score: null,
+      conflict_second_home_sets: null,
+      conflict_second_away_sets: null,
+      conflict_second_team_id: null,
     });
     setScores(prev => ({
       ...prev,
@@ -77,8 +97,10 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
     .filter(f => f.league_id === league?.id)
     .sort((a, b) => a.match_date.localeCompare(b.match_date));
 
-  // Fixtures with a score conflict (pending but not yet confirmed)
-  const conflictFixtures = leagueFixtures.filter(f => f.pending_submitted_by_email != null && f.status !== 'completed');
+  // Fixtures with a pending (one team submitted, awaiting other)
+  const pendingFixtures = leagueFixtures.filter(f => f.pending_submitted_by_email != null && f.status !== 'completed');
+  // Fixtures with a confirmed conflict (both teams submitted, scores differ)
+  const conflictFixtures = leagueFixtures.filter(f => f.conflict_first_home_score != null && f.status !== 'completed');
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -87,14 +109,27 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
           <DialogTitle>{league?.name} — Scores</DialogTitle>
         </DialogHeader>
 
-        {/* Conflict banner */}
+        {/* Conflict banner — mismatched scores from both teams */}
         {conflictFixtures.length > 0 && (
+          <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2 text-sm text-red-800">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+            <div>
+              <p className="font-semibold">Score conflict{conflictFixtures.length > 1 ? 's' : ''} — admin action required</p>
+              <p className="text-xs mt-0.5">
+                {conflictFixtures.length} fixture{conflictFixtures.length > 1 ? 's have' : ' has'} mismatched scores submitted by both teams. Review the conflicting entries below and enter the correct score manually.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Pending banner — one team submitted, waiting for other */}
+        {pendingFixtures.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2 text-sm text-amber-800">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
             <div>
-              <p className="font-semibold">Pending result{conflictFixtures.length > 1 ? 's' : ''} awaiting confirmation</p>
+              <p className="font-semibold">Pending result{pendingFixtures.length > 1 ? 's' : ''} awaiting confirmation</p>
               <p className="text-xs mt-0.5">
-                {conflictFixtures.length} fixture{conflictFixtures.length > 1 ? 's have' : ' has'} a score submitted by one team but not yet confirmed by the other. These are highlighted below.
+                {pendingFixtures.length} fixture{pendingFixtures.length > 1 ? 's have' : ' has'} a score submitted by one team but not yet confirmed by the other.
               </p>
             </div>
           </div>
@@ -131,10 +166,14 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                   : '—';
 
                 const hasPending = fixture.pending_submitted_by_email != null && fixture.status !== 'completed';
+                const hasConflict = fixture.conflict_first_home_score != null && fixture.status !== 'completed';
+
+                const firstTeam = hasConflict ? teams.find(t => t.id === fixture.conflict_first_team_id) : null;
+                const secondTeam = hasConflict ? teams.find(t => t.id === fixture.conflict_second_team_id) : null;
 
                 return (
                   <React.Fragment key={fixture.id}>
-                    <tr className={`border-b hover:bg-gray-50 ${fixture.status === 'completed' ? 'bg-emerald-50/30' : ''} ${hasPending ? 'bg-amber-50/40' : ''}`}>
+                    <tr className={`border-b hover:bg-gray-50 ${fixture.status === 'completed' ? 'bg-emerald-50/30' : ''} ${hasPending ? 'bg-amber-50/40' : ''} ${hasConflict ? 'bg-red-50/40' : ''}`}>
                       <td className="p-3 text-gray-500 text-xs whitespace-nowrap">
                         {format(parseISO(fixture.match_date), 'd MMM yyyy')}
                       </td>
@@ -205,7 +244,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                           >
                             ✓
                           </Button>
-                          {(fixture.status === 'completed' || hasPending) && (
+                          {(fixture.status === 'completed' || hasPending || hasConflict) && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -233,6 +272,30 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                               </strong>
                               {' '}— awaiting confirmation from the opposing team.
                             </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {/* Conflict row — both teams submitted but scores differ */}
+                    {hasConflict && (
+                      <tr className="border-b bg-red-50">
+                        <td colSpan={isSetsLeague ? 11 : 9} className="px-3 py-2">
+                          <div className="flex items-start gap-2 text-xs text-red-800">
+                            <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-500" />
+                            <div className="space-y-1">
+                              <p className="font-semibold">Score conflict — both teams submitted different results:</p>
+                              <div className="flex flex-wrap gap-3">
+                                <span className="bg-red-100 border border-red-300 rounded px-2 py-0.5 font-mono font-bold">
+                                  {firstTeam?.name || 'Team 1'}: {homeTeam?.name} {fixture.conflict_first_home_score} – {fixture.conflict_first_away_score} {awayTeam?.name}
+                                  {fixture.conflict_first_home_sets != null ? ` (Sets: ${fixture.conflict_first_home_sets}–${fixture.conflict_first_away_sets})` : ''}
+                                </span>
+                                <span className="bg-red-100 border border-red-300 rounded px-2 py-0.5 font-mono font-bold">
+                                  {secondTeam?.name || 'Team 2'}: {homeTeam?.name} {fixture.conflict_second_home_score} – {fixture.conflict_second_away_score} {awayTeam?.name}
+                                  {fixture.conflict_second_home_sets != null ? ` (Sets: ${fixture.conflict_second_home_sets}–${fixture.conflict_second_away_sets})` : ''}
+                                </span>
+                              </div>
+                              <p className="text-red-600">Enter the correct score above and click ✓ to resolve, or use the ✕ button to clear.</p>
+                            </div>
                           </div>
                         </td>
                       </tr>
