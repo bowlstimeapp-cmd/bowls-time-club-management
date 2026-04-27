@@ -218,10 +218,19 @@ useEffect(() => {
       return;
     }
 
-    // Don't prompt if THIS user/kiosk member already submitted the pending result
-    const toPrompt = candidates.find(f =>
-      f.pending_submitted_by_email !== checkEmail
-    ) || candidates[0];
+    // Don't prompt if THIS user/kiosk member already submitted (pending or either conflict slot)
+    const toPrompt = candidates.find(f => {
+      const alreadySubmitted =
+        f.pending_submitted_by_email === checkEmail ||
+        f.conflict_first_submitted_by_email === checkEmail ||
+        f.conflict_second_submitted_by_email === checkEmail;
+      return !alreadySubmitted;
+    });
+
+    if (!toPrompt) {
+      setResultPromptChecked(true);
+      return;
+    }
 
     const userTeam = myTeams.find(t => t.id === toPrompt.home_team_id || t.id === toPrompt.away_team_id);
     const homeTeam = leagueTeams.find(t => t.id === toPrompt.home_team_id);
