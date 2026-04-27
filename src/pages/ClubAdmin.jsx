@@ -30,7 +30,8 @@ import {
   Mail,
   Hash,
   CreditCard,
-  UserX
+  UserX,
+  Download
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -298,6 +299,43 @@ export default function ClubAdmin() {
   const isPlatformAdmin = user?.role === 'admin';
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
 
+  const handleExportMembers = () => {
+    const FIXED_HEADERS = ['ID', 'Title', 'Name', 'Surname', 'Email', 'Telephone', 'Gender', 'JoinDate', 'Locker1', 'Locker2', 'EmergencyContactName', 'EmergencyContactPhone', 'DateOfBirth'];
+    const headers = [...FIXED_HEADERS, ...membershipTypeNames];
+    const rows = [headers.join(',')];
+    const activeMembers = memberships.filter(m => m.status === 'approved' && m.member_status !== 'left');
+    for (const m of activeMembers) {
+      const membershipCols = membershipTypeNames.map(t => (m.membership_groups || []).includes(t) ? 'Yes' : '');
+      const escapeCsv = (val) => {
+        const str = (val ?? '').toString();
+        return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+      };
+      const fixed = [
+        escapeCsv(m.member_id || ''),
+        escapeCsv(m.title || ''),
+        escapeCsv(m.first_name || ''),
+        escapeCsv(m.surname || ''),
+        escapeCsv(m.user_email || ''),
+        escapeCsv(m.phone || ''),
+        escapeCsv(m.gender || ''),
+        escapeCsv(m.membership_start_date || ''),
+        escapeCsv(m.locker_number || ''),
+        escapeCsv(m.locker_number_2 || ''),
+        escapeCsv(m.emergency_contact_name || ''),
+        escapeCsv(m.emergency_contact_phone || ''),
+        escapeCsv(m.date_of_birth || ''),
+      ];
+      rows.push([...fixed, ...membershipCols].join(','));
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `members_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDeleteAllMembers = async () => {
     setDeletingAll(true);
     try {
@@ -465,6 +503,10 @@ export default function ClubAdmin() {
             <Button onClick={() => setAddMemberOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
               <UserPlus className="w-4 h-4 mr-2" />
               Add Member
+            </Button>
+            <Button variant="outline" onClick={handleExportMembers} className="border-slate-200 text-slate-600">
+              <Download className="w-4 h-4 mr-2" />
+              Export Members
             </Button>
             {isPlatformAdmin && (
               <Button
