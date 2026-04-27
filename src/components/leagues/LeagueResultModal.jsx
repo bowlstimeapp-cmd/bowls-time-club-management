@@ -70,7 +70,7 @@ export default function LeagueResultModal({
       const leagueName = league?.name || 'Unknown league';
       const conflictDetail = `First submission: ${homeTeam?.name} ${theirHome} – ${theirAway} ${awayTeam?.name}. Second submission: ${homeTeam?.name} ${ourHome} – ${ourAway} ${awayTeam?.name}.`;
 
-      const message = `Score conflict in ${leagueName} — ${fixtureDesc}. ${conflictDetail} Both entries have been cleared. Please contact the teams to resolve.`;
+      const message = `Score conflict in ${leagueName} — ${fixtureDesc}. ${conflictDetail} Please review in the Scores admin and enter the correct result.`;
 
       await Promise.all(admins.map(admin =>
         base44.entities.Notification.create({
@@ -137,27 +137,20 @@ export default function LeagueResultModal({
         });
         toast.success('Result confirmed! The match result has been recorded.');
       } else {
-        // Mismatch — store both scores as conflict data, clear pending, notify admins
+        // Mismatch — store both scores as conflict data, keep pending data intact, notify admins
         await base44.entities.LeagueFixture.update(fixture.id, {
-          // Store first team's submission
-          conflict_first_home_score: fixture.pending_home_score,
-          conflict_first_away_score: fixture.pending_away_score,
-          conflict_first_home_sets: fixture.pending_home_sets ?? null,
-          conflict_first_away_sets: fixture.pending_away_sets ?? null,
-          conflict_first_team_id: fixture.pending_submitted_by_team_id,
-          // Store second team's submission
-          conflict_second_home_score: hs,
-          conflict_second_away_score: as_,
-          conflict_second_home_sets: isSetsLeague ? hsS : null,
-          conflict_second_away_sets: isSetsLeague ? asS : null,
-          conflict_second_team_id: userTeamId,
-          // Clear pending
-          pending_home_score: null,
-          pending_away_score: null,
-          pending_home_sets: null,
-          pending_away_sets: null,
-          pending_submitted_by_email: null,
-          pending_submitted_by_team_id: null,
+        // Store first team's submission
+        conflict_first_home_score: fixture.pending_home_score,
+        conflict_first_away_score: fixture.pending_away_score,
+        conflict_first_home_sets: fixture.pending_home_sets ?? null,
+        conflict_first_away_sets: fixture.pending_away_sets ?? null,
+        conflict_first_team_id: fixture.pending_submitted_by_team_id,
+        // Store second team's submission
+        conflict_second_home_score: hs,
+        conflict_second_away_score: as_,
+        conflict_second_home_sets: isSetsLeague ? hsS : null,
+        conflict_second_away_sets: isSetsLeague ? asS : null,
+        conflict_second_team_id: userTeamId,
         });
 
         // Notify admins of the conflict
@@ -168,7 +161,7 @@ export default function LeagueResultModal({
           as_
         );
 
-        toast.error("The scores don't match the other team's entry. Both entries have been cleared — the club admin has been notified.");
+        toast.error("The scores don't match the other team's entry. The club admin has been notified to resolve the conflict.");
       }
     }
 
