@@ -45,34 +45,39 @@ function getRinks(selection) {
   return rinks;
 }
 
-// Calculate points for a prediction vs actual MatchScore
-function calcPoints(prediction, matchScore, rinks) {
-  if (!matchScore || !prediction) return 0;
+// Calculate points for a single rink prediction vs actual
+function calcRinkPoints(predClub, predOpp, actualClub, actualOpp) {
+  if (predClub === undefined || predOpp === undefined) return 0;
+  if (isNaN(actualClub) || isNaN(actualOpp)) return 0;
   let pts = 0;
+  // 2 pts for correct result direction (cumulative)
+  const predDir = Math.sign(predClub - predOpp);
+  const actualDir = Math.sign(actualClub - actualOpp);
+  if (predDir === actualDir) pts += 2;
+  // 4 pts for exact score (cumulative on top)
+  if (predClub === actualClub && predOpp === actualOpp) pts += 4;
+  return pts;
+}
+
+// Calculate total points for a prediction vs actual MatchScore
+// Returns { total, rinkBreakdown: { rinkN: pts }, overallPts }
+function calcPointsDetail(prediction, matchScore, rinks) {
+  if (!matchScore || !prediction) return { total: 0, rinkBreakdown: {}, overallPts: 0 };
 
   const clubScores = matchScore.club_scores || {};
   const oppScores = matchScore.opposition_scores || {};
+  const rinkBreakdown = {};
+  let total = 0;
 
-  // Rink-level
   for (const rink of rinks) {
     const key = `rink${rink.number}`;
     const predClub = prediction.rink_predictions?.[key]?.club;
     const predOpp = prediction.rink_predictions?.[key]?.opposition;
     const actualClub = parseInt(clubScores[key]);
     const actualOpp = parseInt(oppScores[key]);
-
-    if (predClub === undefined || predOpp === undefined) continue;
-    if (isNaN(actualClub) || isNaN(actualOpp)) continue;
-
-    // 4 pts: exact rink score
-    if (predClub === actualClub && predOpp === actualOpp) {
-      pts += 4;
-    } else {
-      // 2 pts: correct rink result direction
-      const predDir = Math.sign(predClub - predOpp);
-      const actualDir = Math.sign(actualClub - actualOpp);
-      if (predDir === actualDir) pts += 2;
-    }
+    const pts = calcRinkPoints(predClub, predOpp, actualClub, actualOpp);
+    rinkBreakdown[key] = pts;
+    total += pts;
   }
 
   // Overall score
@@ -81,15 +86,20 @@ function calcPoints(prediction, matchScore, rinks) {
   const predClubTotal = prediction.predicted_club_total ?? 0;
   const predOppTotal = prediction.predicted_opposition_total ?? 0;
 
-  if (predClubTotal === actualClubTotal && predOppTotal === actualOppTotal) {
-    pts += 10;
-  } else {
-    const predDir = Math.sign(predClubTotal - predOppTotal);
-    const actualDir = Math.sign(actualClubTotal - actualOppTotal);
-    if (predDir === actualDir) pts += 6;
-  }
+  let overallPts = 0;
+  // 6 pts for correct overall result (cumulative)
+  const predDir = Math.sign(predClubTotal - predOppTotal);
+  const actualDir = Math.sign(actualClubTotal - actualOppTotal);
+  if (predDir === actualDir) overallPts += 6;
+  // 10 pts for exact overall score (cumulative on top)
+  if (predClubTotal === actualClubTotal && predOppTotal === actualOppTotal) overallPts += 10;
 
-  return pts;
+  total += overallPts;
+  return { total, rinkBreakdown, overallPts };
+}
+
+function calcPoints(prediction, matchScore, rinks) {
+  return calcPointsDetail(prediction, matchScore, rinks).total;
 }
 
 export default function ScorePrediction() {
@@ -295,11 +305,11 @@ export default function ScorePrediction() {
           <TabsContent value="predict">
             {/* Scoring logic info */}
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-1">
-              <p className="font-semibold text-sm text-amber-900">How points are scored</p>
-              <p>🎯 <strong>4 pts</strong> — Exact rink score correct</p>
-              <p>↔️ <strong>2 pts</strong> — Correct rink result (win/loss/draw)</p>
-              <p>🏆 <strong>10 pts</strong> — Exact overall match score correct</p>
-              <p>✅ <strong>6 pts</strong> — Correct overall match result (win/loss/draw)</p>
+              <p className="font-semibold text-sm text-amber-900">How points are scored (cumulative)</p>
+              <p>↔️ <strong>+2 pts</strong> — Correct rink result (win/loss/draw)</p>
+              <p>🎯 <strong>+4 pts</strong> — Exact rink score (awarded on top, total 6 pts)</p>
+              <p>✅ <strong>+6 pts</strong> — Correct overall match result</p>
+              <p>🏆 <strong>+10 pts</strong> — Exact overall score (awarded on top, total 16 pts)</p>
             </div>
             {selectionsLoading ? (
               <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
@@ -367,15 +377,23 @@ export default function ScorePrediction() {
                   <CardContent>
                     <div className="space-y-3">
                       {/* Header */}
-                      <div className="grid grid-cols-3 text-xs font-semibold text-gray-500 px-1">
+                      <div className={`grid text-xs font-semibold text-gray-500 px-1 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
                         <span>Rink</span>
                         <span className="text-center">{club?.name || 'Club'}</span>
                         <span className="text-center">Opposition</span>
+                        {currentMatchScore && <span className="text-center text-emerald-700">Pts</span>}
                       </div>
                       {rinks.map(rink => {
                         const key = `rink${rink.number}`;
                         const clubVal = rinkInputs[key]?.club ?? '';
                         const oppVal = rinkInputs[key]?.opposition ?? '';
+                        // Per-rink points earned (only shown when match score exists)
+                        let rinkPts = null;
+                        if (currentMatchScore && myPrediction) {
+                          const actualClub = parseInt(currentMatchScore.club_scores?.[key]);
+                          const actualOpp = parseInt(currentMatchScore.opposition_scores?.[key]);
+                          rinkPts = calcRinkPoints(myPrediction.rink_predictions?.[key]?.club, myPrediction.rink_predictions?.[key]?.opposition, actualClub, actualOpp);
+                        }
                         // Collect players for this rink
                         const rinkPlayers = POSITIONS
                           .map(pos => {
@@ -385,7 +403,7 @@ export default function ScorePrediction() {
                           })
                           .filter(Boolean);
                         return (
-                          <div key={rink.number} className="grid grid-cols-3 items-start gap-2 py-1">
+                          <div key={rink.number} className={`grid items-start gap-2 py-1 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-gray-700">Rink {rink.number}</span>
@@ -421,6 +439,13 @@ export default function ScorePrediction() {
                                 [key]: { ...prev[key], opposition: e.target.value === '' ? '' : parseInt(e.target.value) }
                               }))}
                             />
+                            {currentMatchScore && (
+                              <div className="flex items-center justify-center mt-0.5">
+                                <span className={`text-sm font-bold ${rinkPts > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                                  {rinkPts !== null ? rinkPts : '—'}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
