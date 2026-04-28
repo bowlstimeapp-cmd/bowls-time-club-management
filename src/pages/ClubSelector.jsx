@@ -167,115 +167,135 @@ export default function ClubSelector() {
             <h3 className="text-lg font-medium text-gray-900 mb-2">No clubs found</h3>
             <p className="text-gray-500">Try a different search term</p>
           </motion.div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <AnimatePresence>
-              {filteredClubs.map((club, index) => {
-                const membership = getMembershipStatus(club.id);
-                const isPending = membership?.status === 'pending';
-                const isApproved = membership?.status === 'approved';
-                const isRejected = membership?.status === 'rejected';
-                const isAdmin = membership?.role === 'admin';
+        ) : (() => {
+          const myClubs = filteredClubs.filter(c => getMembershipStatus(c.id)?.status === 'approved');
+          const otherClubs = filteredClubs.filter(c => getMembershipStatus(c.id)?.status !== 'approved');
 
-                return (
-                  <motion.div
-                    key={club.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card className="h-full hover:shadow-lg transition-all duration-300 overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="h-3 bg-gradient-to-r from-emerald-500 to-emerald-600" />
-                        <div className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              {club.logo_url ? (
-                                <img 
-                                  src={club.logo_url} 
-                                  alt={club.name}
-                                  className="w-12 h-12 rounded-lg object-contain bg-white border"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                  <Building2 className="w-6 h-6 text-emerald-600" />
-                                </div>
-                              )}
-                              <div>
-                                <h3 className="font-semibold text-gray-900">{club.name}</h3>
-                                <p className="text-sm text-gray-500">{club.rink_count} rinks</p>
-                              </div>
-                            </div>
-                            {isAdmin && (
-                              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                                Admin
-                              </Badge>
-                            )}
-                          </div>
+          const renderClubCard = (club, index) => {
+            const membership = getMembershipStatus(club.id);
+            const isPending = membership?.status === 'pending';
+            const isApproved = membership?.status === 'approved';
+            const isAdmin = membership?.role === 'admin';
 
-                          {club.description && (
-                            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                              {club.description}
-                            </p>
-                          )}
-
-                          <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {club.opening_time?.slice(0,5)} - {club.closing_time?.slice(0,5)}
-                            </span>
-                          </div>
-
-                          <div className="space-y-2">
-                           {user?.role === 'admin' && (
-                             <Button
-                               onClick={() => navigate(createPageUrl('PlatformAdmin') + `?manageAdmins=${club.id}`)}
-                               variant="outline"
-                               size="sm"
-                               className="w-full"
-                             >
-                               <Users className="w-4 h-4 mr-2" />
-                               Manage Admins
-                             </Button>
-                           )}
-                           {isApproved ? (
-                             <Button 
-                               onClick={() => handleEnterClub(club.id)}
-                               className="w-full bg-emerald-600 hover:bg-emerald-700"
-                             >
-                               Enter Club
-                               <ArrowRight className="w-4 h-4 ml-2" />
-                             </Button>
-                          ) : isPending ? (
-                            <Button disabled className="w-full" variant="outline">
-                              <Clock className="w-4 h-4 mr-2" />
-                              Awaiting Approval
-                            </Button>
+            return (
+              <motion.div
+                key={club.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="h-full hover:shadow-lg transition-all duration-300 overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="h-3 bg-gradient-to-r from-emerald-500 to-emerald-600" />
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          {club.logo_url ? (
+                            <img src={club.logo_url} alt={club.name} className="w-12 h-12 rounded-lg object-contain bg-white border" />
                           ) : (
-                            <Button 
-                              onClick={() => handleJoinRequest(club.id)}
-                              disabled={requestMutation.isPending}
-                              className="w-full"
-                              variant="outline"
-                            >
-                              {requestMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <Users className="w-4 h-4 mr-2" />
-                              )}
-                              Request to Join
-                            </Button>
+                            <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                              <Building2 className="w-6 h-6 text-emerald-600" />
+                            </div>
                           )}
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{club.name}</h3>
+                            <p className="text-sm text-gray-500">{club.rink_count} rinks</p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-        )}
+                        {isAdmin && (
+                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Admin</Badge>
+                        )}
+                      </div>
+
+                      {club.description && (
+                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{club.description}</p>
+                      )}
+
+                      <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {club.opening_time?.slice(0,5)} - {club.closing_time?.slice(0,5)}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {user?.role === 'admin' && (
+                          <Button
+                            onClick={() => navigate(createPageUrl('PlatformAdmin') + `?manageAdmins=${club.id}`)}
+                            variant="outline" size="sm" className="w-full"
+                          >
+                            <Users className="w-4 h-4 mr-2" />
+                            Manage Admins
+                          </Button>
+                        )}
+                        {isApproved ? (
+                          <Button onClick={() => handleEnterClub(club.id)} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                            Enter Club
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        ) : isPending ? (
+                          <Button disabled className="w-full" variant="outline">
+                            <Clock className="w-4 h-4 mr-2" />
+                            Awaiting Approval
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleJoinRequest(club.id)}
+                            disabled={requestMutation.isPending}
+                            className="w-full" variant="outline"
+                          >
+                            {requestMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Users className="w-4 h-4 mr-2" />
+                            )}
+                            Request to Join
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          };
+
+          return (
+            <div className="space-y-8">
+              {myClubs.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                    <h2 className="text-base font-semibold text-gray-800">Your Clubs</h2>
+                    <span className="text-sm text-gray-400">— clubs you're a member of</span>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <AnimatePresence>
+                      {myClubs.map((club, i) => renderClubCard(club, i))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+
+              {otherClubs.length > 0 && (
+                <div>
+                  {myClubs.length > 0 && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="w-5 h-5 text-gray-400" />
+                      <h2 className="text-base font-semibold text-gray-800">Other Clubs</h2>
+                      <span className="text-sm text-gray-400">— request to join</span>
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <AnimatePresence>
+                      {otherClubs.map((club, i) => renderClubCard(club, i))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Request Sent Confirmation Modal */}
