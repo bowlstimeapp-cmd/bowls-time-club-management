@@ -75,6 +75,24 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!clubId && !!user?.email,
   });
 
+  // All approved memberships for this user (for club switcher)
+  const { data: allMemberships = [] } = useQuery({
+    queryKey: ['allMyMemberships', user?.email],
+    queryFn: () => base44.entities.ClubMembership.filter({ user_email: user.email, status: 'approved' }),
+    enabled: !!user?.email,
+  });
+
+  // Fetch all clubs the user is a member of
+  const otherClubIds = allMemberships.filter(m => m.club_id !== clubId).map(m => m.club_id);
+  const { data: allMyClubs = [] } = useQuery({
+    queryKey: ['allMyClubs', otherClubIds.join(',')],
+    queryFn: async () => {
+      const results = await Promise.all(otherClubIds.map(id => base44.entities.Club.filter({ id })));
+      return results.flat().filter(Boolean);
+    },
+    enabled: otherClubIds.length > 0,
+  });
+
   // Pages that don't need club context
   const noClubPages = ['ClubSelector', 'PlatformAdmin'];
   const needsClub = !noClubPages.includes(currentPageName);
@@ -402,13 +420,43 @@ export default function Layout({ children, currentPageName }) {
             {/* User Menu */}
             <div className="flex items-center gap-3">
             {needsClub && clubId && !isKioskSession && (
-              <Link 
-                to={createPageUrl('ClubSelector') + '?switchClubs=true'}
-                className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
-              >
-                <Building2 className="w-4 h-4" />
-                Switch Club
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="hidden sm:flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-normal">
+                    <Building2 className="w-4 h-4" />
+                    {club?.name || 'Switch Club'}
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Current Club</div>
+                  <DropdownMenuItem disabled className="text-gray-700 font-medium opacity-100 cursor-default">
+                    <Building2 className="w-4 h-4 mr-2 text-emerald-600" />
+                    {club?.name || '—'}
+                  </DropdownMenuItem>
+                  {allMyClubs.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Switch To</div>
+                      {allMyClubs.map(c => (
+                        <DropdownMenuItem key={c.id} asChild>
+                          <Link to={createPageUrl('BookRink') + `?clubId=${c.id}`} className="cursor-pointer">
+                            <Building2 className="w-4 h-4 mr-2" />
+                            {c.name}
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={createPageUrl('ClubSelector')} className="cursor-pointer text-gray-500">
+                      <Building2 className="w-4 h-4 mr-2" />
+                      All Clubs
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
 
             {user?.email && <NotificationDropdown userEmail={user.email} clubId={clubId} />}
@@ -593,14 +641,28 @@ export default function Layout({ children, currentPageName }) {
                 </>
               )}
               {!isKioskSession && (
-                <Link
-                  to={createPageUrl('ClubSelector') + '?switchClubs=true'}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
-                >
-                  <Building2 className="w-5 h-5" />
-                  Switch Club
-                </Link>
+                <>
+                  <div className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Switch Club</div>
+                  {allMyClubs.map(c => (
+                    <Link
+                      key={c.id}
+                      to={createPageUrl('BookRink') + `?clubId=${c.id}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
+                    >
+                      <Building2 className="w-5 h-5" />
+                      {c.name}
+                    </Link>
+                  ))}
+                  <Link
+                    to={createPageUrl('ClubSelector')}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100"
+                  >
+                    <Building2 className="w-5 h-5" />
+                    All Clubs
+                  </Link>
+                </>
               )}
             </div>
           </div>
