@@ -425,7 +425,7 @@ export default function Layout({ children, currentPageName }) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="hidden sm:flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-normal">
                     <Building2 className="w-4 h-4" />
-                    {club?.name || 'Switch Club'}
+                    {"Switch Club" || 'Switch Club'}
                     <ChevronDown className="w-3.5 h-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
