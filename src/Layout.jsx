@@ -451,7 +451,7 @@ export default function Layout({ children, currentPageName }) {
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to={createPageUrl('ClubSelector')} className="cursor-pointer text-gray-500">
+                    <Link to={createPageUrl('ClubSelector') + '?switchClubs=true'} className="cursor-pointer text-gray-500">
                       <Building2 className="w-4 h-4 mr-2" />
                       All Clubs
                     </Link>
@@ -656,7 +656,7 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   ))}
                   <Link
-                    to={createPageUrl('ClubSelector')}
+                    to={createPageUrl('ClubSelector') + '?switchClubs=true'}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100"
                   >
