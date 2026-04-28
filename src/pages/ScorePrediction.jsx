@@ -375,9 +375,9 @@ export default function ScorePrediction() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-0">
                       {/* Header */}
-                      <div className={`grid text-xs font-semibold text-gray-500 px-1 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                      <div className={`grid text-xs font-semibold text-gray-500 px-1 pb-2 border-b mb-1 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
                         <span>Rink</span>
                         <span className="text-center">{club?.name || 'Club'}</span>
                         <span className="text-center">Opposition</span>
@@ -403,48 +403,64 @@ export default function ScorePrediction() {
                           })
                           .filter(Boolean);
                         return (
-                          <div key={rink.number} className={`grid items-start gap-2 py-1 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                            <div>
+                          <div key={rink.number} className="py-1 border-b last:border-0">
+                            {/* Grid row: rink label + inputs (same on mobile & desktop) */}
+                            <div className={`grid items-center gap-2 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-gray-700">Rink {rink.number}</span>
                                 <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                                   {rink.isHome ? 'H' : 'A'}
                                 </Badge>
                               </div>
-                              {rinkPlayers.length > 0 && (
-                                <ul className="mt-1 space-y-0.5">
-                                  {rinkPlayers.map((name, i) => (
-                                    <li key={i} className="text-xs text-gray-400 leading-tight">{name}</li>
-                                  ))}
-                                </ul>
+                              <Input
+                                type="number" min="0"
+                                className="text-center h-8"
+                                value={clubVal}
+                                disabled={!canPredict}
+                                onChange={e => setRinkInputs(prev => ({
+                                  ...prev,
+                                  [key]: { ...prev[key], club: e.target.value === '' ? '' : parseInt(e.target.value) }
+                                }))}
+                              />
+                              <Input
+                                type="number" min="0"
+                                className="text-center h-8"
+                                value={oppVal}
+                                disabled={!canPredict}
+                                onChange={e => setRinkInputs(prev => ({
+                                  ...prev,
+                                  [key]: { ...prev[key], opposition: e.target.value === '' ? '' : parseInt(e.target.value) }
+                                }))}
+                              />
+                              {currentMatchScore && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`text-sm font-bold ${rinkPts > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                                    {rinkPts !== null ? rinkPts : '—'}
+                                  </span>
+                                </div>
                               )}
                             </div>
-                            <Input
-                              type="number" min="0"
-                              className="text-center h-8 mt-0.5"
-                              value={clubVal}
-                              disabled={!canPredict}
-                              onChange={e => setRinkInputs(prev => ({
-                                ...prev,
-                                [key]: { ...prev[key], club: e.target.value === '' ? '' : parseInt(e.target.value) }
-                              }))}
-                            />
-                            <Input
-                              type="number" min="0"
-                              className="text-center h-8 mt-0.5"
-                              value={oppVal}
-                              disabled={!canPredict}
-                              onChange={e => setRinkInputs(prev => ({
-                                ...prev,
-                                [key]: { ...prev[key], opposition: e.target.value === '' ? '' : parseInt(e.target.value) }
-                              }))}
-                            />
-                            {currentMatchScore && (
-                              <div className="flex items-center justify-center mt-0.5">
-                                <span className={`text-sm font-bold ${rinkPts > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
-                                  {rinkPts !== null ? rinkPts : '—'}
-                                </span>
-                              </div>
+                            {/* Players: horizontal on mobile, vertical under rink label on desktop */}
+                            {rinkPlayers.length > 0 && (
+                              <>
+                                {/* Mobile: horizontal pill list below inputs */}
+                                <div className="sm:hidden flex flex-wrap gap-1 mt-1.5">
+                                  {rinkPlayers.map((name, i) => (
+                                    <span key={i} className="text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">{name}</span>
+                                  ))}
+                                </div>
+                                {/* Desktop: vertical list — shown via the grid's first column using negative margin trick */}
+                                <div className="hidden sm:block">
+                                  {/* Re-render desktop players inline under rink label by overlaying below the grid row */}
+                                  <div className={`grid ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                                    <ul className="mt-0.5 space-y-0.5">
+                                      {rinkPlayers.map((name, i) => (
+                                        <li key={i} className="text-xs text-gray-400 leading-tight">{name}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </>
                             )}
                           </div>
                         );
