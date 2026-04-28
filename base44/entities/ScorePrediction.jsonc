@@ -1,0 +1,55 @@
+{
+  "name": "ScorePrediction",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "selection_id": {
+      "type": "string",
+      "description": "Reference to the TeamSelection"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user making the prediction"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of the user"
+    },
+    "rink_predictions": {
+      "type": "object",
+      "description": "Map of rinkN -> { club: number, opposition: number }",
+      "default": {}
+    },
+    "predicted_club_total": {
+      "type": "number",
+      "description": "Sum of predicted club scores across all rinks"
+    },
+    "predicted_opposition_total": {
+      "type": "number",
+      "description": "Sum of predicted opposition scores across all rinks"
+    },
+    "points": {
+      "type": "number",
+      "default": 0,
+      "description": "Calculated points scored"
+    },
+    "points_calculated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether points have been calculated for this prediction"
+    }
+  },
+  "required": [
+    "club_id",
+    "selection_id",
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

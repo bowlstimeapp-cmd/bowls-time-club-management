@@ -13,6 +13,7 @@ import BookingsAudit from './pages/BookingsAudit';
 import CompetitionRegistration from './pages/CompetitionRegistration';
 import ClubMessaging from './pages/ClubMessaging';
 import MemberDirectory from './pages/MemberDirectory';
+import ScorePrediction from './pages/ScorePrediction';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
       <Route path="/CompetitionRegistration" element={<LayoutWrapper currentPageName="CompetitionRegistration"><CompetitionRegistration /></LayoutWrapper>} />
       <Route path="/ClubMessaging" element={<LayoutWrapper currentPageName="ClubMessaging"><ClubMessaging /></LayoutWrapper>} />
       <Route path="/MemberDirectory" element={<LayoutWrapper currentPageName="MemberDirectory"><MemberDirectory /></LayoutWrapper>} />
+      <Route path="/ScorePrediction" element={<LayoutWrapper currentPageName="ScorePrediction"><ScorePrediction /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

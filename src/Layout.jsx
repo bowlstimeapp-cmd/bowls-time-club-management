@@ -29,7 +29,8 @@ import {
   MessageSquare,
   ListChecks,
   MessagesSquare,
-  BookOpen
+  BookOpen,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -147,6 +148,7 @@ export default function Layout({ children, currentPageName }) {
       { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
     ] : []),
     { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
+    { name: 'Score Prediction', href: createPageUrl('ScorePrediction') + `?clubId=${clubId}`, icon: Target },
     ...(club?.module_messaging ? [
       { name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare },
     ] : []),
@@ -331,6 +333,12 @@ export default function Layout({ children, currentPageName }) {
                         <Link to={createPageUrl('MemberDirectory') + `?clubId=${clubId}`} className="cursor-pointer">
                           <BookOpen className="w-4 h-4 mr-2" />
                           Member Directory
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('ScorePrediction') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Target className="w-4 h-4 mr-2" />
+                          Score Prediction
                         </Link>
                       </DropdownMenuItem>
                       {club?.module_messaging && (

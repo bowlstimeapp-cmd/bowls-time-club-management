@@ -78,6 +78,11 @@
     "friendly_players_per_rink": {
       "type": "number",
       "description": "Players per rink for Friendly matches"
+    },
+    "prediction_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this match is included in Score Prediction"
     }
   },
   "required": [
