@@ -320,14 +320,14 @@ export default function LiveScoring() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-24">Rink</th>
-                      <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'} Team</th>
-                      <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
-                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-500 w-16">Ends</th>
-                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-700 w-20">Score</th>
-                      <th className="text-left py-2 px-2 text-sm font-medium text-gray-700">Opposition Team</th>
-                    </tr>
+                   <tr className="border-b">
+                     <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-24">Rink</th>
+                     <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'} Team</th>
+                     <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
+                     <th className="text-center py-2 px-2 text-sm font-medium text-gray-700 w-20">Score</th>
+                     <th className="text-center py-2 px-2 text-sm font-medium text-gray-500 w-16">Ends</th>
+                     <th className="text-left py-2 px-2 text-sm font-medium text-gray-700">Opposition Team</th>
+                   </tr>
                   </thead>
                   <tbody>
                     {rinks.map((rink) => {
@@ -389,43 +389,43 @@ export default function LiveScoring() {
                             {getTeamDisplay(rink.positions, false)}
                           </td>
                           <td className="py-3 px-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              className="w-14 text-center h-8"
-                              value={ends[`rink${rink.number}`] || ''}
-                              onChange={(e) => setEnds(prev => ({
-                                ...prev,
-                                [`rink${rink.number}`]: e.target.value
-                              }))}
-                              disabled={!canEdit}
-                            />
+                           <Input
+                             type="number"
+                             min="0"
+                             className="w-16 text-center h-8"
+                             value={clubScores[`rink${rink.number}`] || ''}
+                             onChange={(e) => setClubScores(prev => ({
+                               ...prev,
+                               [`rink${rink.number}`]: e.target.value
+                             }))}
+                             disabled={!canEdit}
+                           />
                           </td>
                           <td className="py-3 px-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              className="w-16 text-center h-8"
-                              value={clubScores[`rink${rink.number}`] || ''}
-                              onChange={(e) => setClubScores(prev => ({
-                                ...prev,
-                                [`rink${rink.number}`]: e.target.value
-                              }))}
-                              disabled={!canEdit}
-                            />
+                           <Input
+                             type="number"
+                             min="0"
+                             className="w-16 text-center h-8"
+                             value={oppositionScores[`rink${rink.number}`] || ''}
+                             onChange={(e) => setOppositionScores(prev => ({
+                               ...prev,
+                               [`rink${rink.number}`]: e.target.value
+                             }))}
+                             disabled={!canEdit}
+                           />
                           </td>
                           <td className="py-3 px-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              className="w-16 text-center h-8"
-                              value={oppositionScores[`rink${rink.number}`] || ''}
-                              onChange={(e) => setOppositionScores(prev => ({
-                                ...prev,
-                                [`rink${rink.number}`]: e.target.value
-                              }))}
-                              disabled={!canEdit}
-                            />
+                           <Input
+                             type="number"
+                             min="0"
+                             className="w-14 text-center h-8"
+                             value={ends[`rink${rink.number}`] || ''}
+                             onChange={(e) => setEnds(prev => ({
+                               ...prev,
+                               [`rink${rink.number}`]: e.target.value
+                             }))}
+                             disabled={!canEdit}
+                           />
                           </td>
                           <td className="py-3 px-2">
                             {getTeamDisplay(rink.positions, true)}

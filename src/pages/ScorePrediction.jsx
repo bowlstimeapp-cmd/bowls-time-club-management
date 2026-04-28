@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -136,8 +136,10 @@ export default function ScorePrediction() {
     enabled: !!clubId,
   });
 
-  // Only published + prediction_enabled
-  const fixtures = allSelections.filter(s => s.status === 'published' && s.prediction_enabled);
+  // Only published + prediction_enabled, sorted by date ascending
+  const fixtures = allSelections
+    .filter(s => s.status === 'published' && s.prediction_enabled)
+    .sort((a, b) => a.match_date.localeCompare(b.match_date));
 
   const { data: allMatchScores = [] } = useQuery({
     queryKey: ['allMatchScores', clubId],
@@ -165,6 +167,20 @@ export default function ScorePrediction() {
   });
 
   const isAdmin = membership?.role === 'admin';
+  const today = startOfDay(new Date());
+  const todayStr = format(today, 'yyyy-MM-dd');
+
+  // Default to the next upcoming fixture (first future date, or last if all past)
+  const defaultFixtureIndex = useMemo(() => {
+    if (!fixtures.length) return 0;
+    const nextIdx = fixtures.findIndex(f => f.match_date >= todayStr);
+    return nextIdx === -1 ? fixtures.length - 1 : nextIdx;
+  }, [fixtures.map(f => f.id).join(',')]);
+
+  useEffect(() => {
+    setFixtureIndex(defaultFixtureIndex);
+  }, [defaultFixtureIndex]);
+
   const currentFixture = fixtures[fixtureIndex];
   const rinks = currentFixture ? getRinks(currentFixture) : [];
 
@@ -186,7 +202,6 @@ export default function ScorePrediction() {
     ? allMatchScores.find(ms => ms.selection_id === currentFixture.id)
     : null;
 
-  const today = startOfDay(new Date());
   const canPredict = currentFixture
     ? isBefore(today, parseISO(currentFixture.match_date))
     : false;
@@ -278,6 +293,14 @@ export default function ScorePrediction() {
 
           {/* ── PREDICTIONS TAB ── */}
           <TabsContent value="predict">
+            {/* Scoring logic info */}
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-1">
+              <p className="font-semibold text-sm text-amber-900">How points are scored</p>
+              <p>🎯 <strong>4 pts</strong> — Exact rink score correct</p>
+              <p>↔️ <strong>2 pts</strong> — Correct rink result (win/loss/draw)</p>
+              <p>🏆 <strong>10 pts</strong> — Exact overall match score correct</p>
+              <p>✅ <strong>6 pts</strong> — Correct overall match result (win/loss/draw)</p>
+            </div>
             {selectionsLoading ? (
               <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
             ) : fixtures.length === 0 ? (
