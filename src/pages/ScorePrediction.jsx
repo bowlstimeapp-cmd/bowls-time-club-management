@@ -259,10 +259,14 @@ export default function ScorePrediction() {
         </motion.div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full mb-6 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <TabsList className={`grid w-full mb-6 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="predict" className="flex items-center gap-2">
               <Trophy className="w-4 h-4" />
               Predictions
+            </TabsTrigger>
+            <TabsTrigger value="league" className="flex items-center gap-2">
+              <Medal className="w-4 h-4" />
+              League Table
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="admin" className="flex items-center gap-2">
@@ -349,17 +353,34 @@ export default function ScorePrediction() {
                         const key = `rink${rink.number}`;
                         const clubVal = rinkInputs[key]?.club ?? '';
                         const oppVal = rinkInputs[key]?.opposition ?? '';
+                        // Collect players for this rink
+                        const rinkPlayers = POSITIONS
+                          .map(pos => {
+                            const email = currentFixture.selections?.[`rink${rink.number}_${pos}`];
+                            if (!email) return null;
+                            return getMemberName(email);
+                          })
+                          .filter(Boolean);
                         return (
-                          <div key={rink.number} className="grid grid-cols-3 items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-700">Rink {rink.number}</span>
-                              <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {rink.isHome ? 'H' : 'A'}
-                              </Badge>
+                          <div key={rink.number} className="grid grid-cols-3 items-start gap-2 py-1">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">Rink {rink.number}</span>
+                                <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {rink.isHome ? 'H' : 'A'}
+                                </Badge>
+                              </div>
+                              {rinkPlayers.length > 0 && (
+                                <ul className="mt-1 space-y-0.5">
+                                  {rinkPlayers.map((name, i) => (
+                                    <li key={i} className="text-xs text-gray-400 leading-tight">{name}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                             <Input
                               type="number" min="0"
-                              className="text-center h-8"
+                              className="text-center h-8 mt-0.5"
                               value={clubVal}
                               disabled={!canPredict}
                               onChange={e => setRinkInputs(prev => ({
@@ -369,7 +390,7 @@ export default function ScorePrediction() {
                             />
                             <Input
                               type="number" min="0"
-                              className="text-center h-8"
+                              className="text-center h-8 mt-0.5"
                               value={oppVal}
                               disabled={!canPredict}
                               onChange={e => setRinkInputs(prev => ({
@@ -464,6 +485,90 @@ export default function ScorePrediction() {
                 </Card>
               </>
             )}
+          </TabsContent>
+
+          {/* ── LEAGUE TABLE TAB ── */}
+          <TabsContent value="league">
+            {(() => {
+              // Aggregate points per user across all fixtures
+              const userPointsMap = {};
+              for (const fixture of fixtures) {
+                const rks = getRinks(fixture);
+                const ms = allMatchScores.find(s => s.selection_id === fixture.id);
+                const preds = allPredictions.filter(p => p.selection_id === fixture.id);
+                for (const pred of preds) {
+                  const pts = ms ? calcPoints(pred, ms, rks) : null;
+                  if (!userPointsMap[pred.user_email]) {
+                    userPointsMap[pred.user_email] = { totalPoints: 0, played: 0, scored: 0 };
+                  }
+                  userPointsMap[pred.user_email].played += 1;
+                  if (pts !== null) {
+                    userPointsMap[pred.user_email].totalPoints += pts;
+                    userPointsMap[pred.user_email].scored += 1;
+                  }
+                }
+              }
+
+              const leagueRows = Object.entries(userPointsMap)
+                .map(([email, data]) => ({ email, ...data }))
+                .sort((a, b) => b.totalPoints - a.totalPoints);
+
+              if (leagueRows.length === 0) {
+                return (
+                  <div className="text-center py-16 text-gray-500">
+                    <Medal className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="font-medium text-gray-700">No predictions submitted yet</p>
+                  </div>
+                );
+              }
+
+              return (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Medal className="w-4 h-4 text-amber-500" />
+                      Overall League Table
+                    </CardTitle>
+                    <p className="text-sm text-gray-500">Total points across all prediction fixtures</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-4 text-xs font-semibold text-gray-500 px-2 mb-2">
+                        <span className="col-span-2">Member</span>
+                        <span className="text-center">Predictions</span>
+                        <span className="text-center">Total Pts</span>
+                      </div>
+                      {leagueRows.map((row, idx) => {
+                        const isMe = row.email === user?.email;
+                        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                        return (
+                          <div
+                            key={row.email}
+                            className={`grid grid-cols-4 items-center px-2 py-2.5 rounded-lg ${isMe ? 'bg-emerald-50 border border-emerald-200' : idx % 2 === 0 ? 'bg-gray-50' : ''}`}
+                          >
+                            <div className="col-span-2 flex items-center gap-2">
+                              <span className={`text-xs font-bold w-6 text-center ${idx < 3 ? 'text-lg' : 'text-gray-400'}`}>
+                                {medal || idx + 1}
+                              </span>
+                              <span className="text-sm font-medium text-gray-800 truncate">
+                                {getMemberName(row.email)}
+                                {isMe && <span className="text-xs text-emerald-600 ml-1">(you)</span>}
+                              </span>
+                            </div>
+                            <div className="text-center text-sm text-gray-500">
+                              {row.scored}/{row.played}
+                            </div>
+                            <div className="text-center font-bold text-emerald-700 text-lg">
+                              {row.totalPoints}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </TabsContent>
 
           {/* ── ADMIN TAB ── */}
