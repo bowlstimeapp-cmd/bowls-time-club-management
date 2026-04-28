@@ -82,16 +82,16 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!user?.email,
   });
 
-  // Fetch all clubs the user is a member of
-  const otherClubIds = allMemberships.filter(m => m.club_id !== clubId).map(m => m.club_id);
-  const { data: allMyClubs = [] } = useQuery({
-    queryKey: ['allMyClubs', otherClubIds.join(',')],
-    queryFn: async () => {
-      const results = await Promise.all(otherClubIds.map(id => base44.entities.Club.filter({ id })));
-      return results.flat().filter(Boolean);
-    },
-    enabled: otherClubIds.length > 0,
+  // Fetch all active clubs in a single query, then filter to only ones the user is a member of
+  const { data: allClubs = [] } = useQuery({
+    queryKey: ['allActiveClubs'],
+    queryFn: () => base44.entities.Club.filter({ is_active: true }),
+    enabled: allMemberships.length > 0,
+    staleTime: 5 * 60 * 1000, // cache for 5 minutes
   });
+
+  const memberClubIds = new Set(allMemberships.map(m => m.club_id));
+  const allMyClubs = allClubs.filter(c => c.id !== clubId && memberClubIds.has(c.id));
 
   // Pages that don't need club context
   const noClubPages = ['ClubSelector', 'PlatformAdmin'];
@@ -102,7 +102,8 @@ export default function Layout({ children, currentPageName }) {
   const requiresMembership = clubId && needsClub && !publicClubPages.includes(currentPageName);
 
   // Block access if clubId is present but user is not an approved member
-  if (requiresMembership && user && !membershipLoading && (!membership || membership.status !== 'approved')) {
+  // Also wait for user to load to avoid a flash before auth resolves
+  if (requiresMembership && user && !membershipLoading && membership !== undefined && (!membership || membership.status !== 'approved')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-8 max-w-md">
