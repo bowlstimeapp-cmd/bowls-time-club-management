@@ -31,6 +31,7 @@ import { format } from 'date-fns';
 import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
 import RinkSelectionGrid from '@/components/selection/RinkSelectionGrid';
 import TopClubSelectionGrid from '@/components/selection/TopClubSelectionGrid';
+import TopClubOutdoorSelectionGrid from '@/components/selection/TopClubOutdoorSelectionGrid';
 import Fantastic5sSelectionGrid from '@/components/selection/Fantastic5sSelectionGrid';
 import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
@@ -742,7 +743,7 @@ ${club?.name || 'Your Bowls Club'}
   const filteredMembers = React.useMemo(() => {
     // Always exclude social-only members from selection
     const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
-    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Fantastic 5s') return nonSocialMembers;
+    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Top Club (Outdoor)' || competition === 'Fantastic 5s') return nonSocialMembers;
     let filtered = [...nonSocialMembers];
 
     // Gender filter
@@ -825,6 +826,7 @@ ${club?.name || 'Your Bowls Club'}
   }
 
   const isTopClub = competition === 'Top Club';
+  const isTopClubOutdoor = competition === 'Top Club (Outdoor)';
   const isFriendly = competition === 'Friendly';
   const isFantastic5s = competition === 'Fantastic 5s';
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -998,7 +1000,7 @@ ${club?.name || 'Your Bowls Club'}
                   </div>
                 )}
 
-                {competition && competition !== 'Top Club' && competition !== 'Friendly' && competition !== 'Fantastic 5s' && (
+                {competition && competition !== 'Top Club' && competition !== 'Top Club (Outdoor)' && competition !== 'Friendly' && competition !== 'Fantastic 5s' && (
                   <>
                     <div>
                       <Label>Number of Home Rinks</Label>
@@ -1170,6 +1172,15 @@ ${club?.name || 'Your Bowls Club'}
                 />
               ) : isTopClub ? (
                 <TopClubSelectionGrid
+                  members={filteredMembers}
+                  selections={selections}
+                  selectedEmails={selectedEmails}
+                  onSelectionChange={handleSelectionChange}
+                  matchDate={matchDate}
+                  unavailabilities={unavailabilities}
+                />
+              ) : isTopClubOutdoor ? (
+                <TopClubOutdoorSelectionGrid
                   members={filteredMembers}
                   selections={selections}
                   selectedEmails={selectedEmails}
