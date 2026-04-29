@@ -240,43 +240,44 @@ export default function SelectionCard({
   }
 
   // ── DEFAULT layout ──────────────────────────────────────────────
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="hover:shadow-md transition-shadow border-b-4 border-b-emerald-500">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={`border ${competitionColors[selection.competition]}`}>
-                    <Trophy className="w-3 h-3 mr-1" />{selection.competition}
-                  </Badge>
-                  <Badge variant={selection.status === 'published' ? 'default' : 'secondary'}>
-                    {selection.status === 'published' ? 'Published' : 'Draft'}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {format(parseISO(selection.match_date), 'd MMMM yyyy')}
-                  </span>
-                  {selection.match_name && <span className="font-medium">{selection.match_name}</span>}
-                  {selection.competition === 'Fantastic 5s' && selection.friendly_location && (
-                    <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200 text-xs' : 'bg-orange-50 text-orange-700 border-orange-200 text-xs'}>
-                      {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">{countSelected()} players selected</p>
+return (
+  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <Card className="hover:shadow-md transition-shadow overflow-hidden">
+      <div className="bg-emerald-500 px-4 py-2 flex items-center gap-1.5">
+        <Trophy className="w-3.5 h-3.5 text-white shrink-0" />
+        <span className="text-white text-sm font-semibold">{selection.competition}</span>
+      </div>
+      <CardContent className="p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={selection.status === 'published' ? 'default' : 'secondary'}>
+                  {selection.status === 'published' ? 'Published' : 'Draft'}
+                </Badge>
               </div>
-              <div className="flex gap-2 flex-wrap shrink-0">
-                <ActionButtons />
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {format(parseISO(selection.match_date), 'd MMMM yyyy')}
+                </span>
+                {selection.match_name && <span className="font-medium">{selection.match_name}</span>}
+                {selection.competition === 'Fantastic 5s' && selection.friendly_location && (
+                  <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200 text-xs' : 'bg-orange-50 text-orange-700 border-orange-200 text-xs'}>
+                    {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}
+                  </Badge>
+                )}
               </div>
+              <p className="text-sm text-gray-500">{countSelected()} players selected</p>
             </div>
-            {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
+            <div className="flex gap-2 flex-wrap shrink-0">
+              <ActionButtons />
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+          {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
+        </div>
+      </CardContent>
+    </Card>
+  </motion.div>
   );
 }
