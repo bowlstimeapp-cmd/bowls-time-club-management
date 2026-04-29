@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,18 @@ export default function Feedback() {
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // If no clubId in URL, redirect with the last visited club so the nav bar shows
+  useEffect(() => {
+    if (!searchParams.get('clubId')) {
+      const lastClubId = localStorage.getItem('lastClubId');
+      if (lastClubId) {
+        navigate(`/Feedback?clubId=${lastClubId}`, { replace: true });
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {

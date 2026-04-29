@@ -7,6 +7,15 @@ import { pagesConfig } from '@/pages.config';
 export default function NavigationTracker() {
     const location = useLocation();
     const { isAuthenticated } = useAuth();
+
+    // Store the last visited clubId so pages like Feedback can show the correct nav
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const clubId = params.get('clubId');
+        if (clubId) {
+            localStorage.setItem('lastClubId', clubId);
+        }
+    }, [location]);
     const { Pages, mainPage } = pagesConfig;
     const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 
