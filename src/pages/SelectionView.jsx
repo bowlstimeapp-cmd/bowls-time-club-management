@@ -181,7 +181,9 @@ export default function SelectionView() {
   }
 
   const isTopClub = selection.competition === 'Top Club';
-  const isTopClubOutdoor = selection.competition === 'Top Club (Outdoor)';
+  // Detect if outdoor selection was saved with named event keys or old rink-based keys
+  const isTopClubOutdoor = selection.competition === 'Top Club (Outdoor)' &&
+    Object.keys(selection.selections || {}).some(k => !k.startsWith('rink'));
   const isFantastic5s = selection.competition === 'Fantastic 5s';
   const selections = selection.selections || {};
 
