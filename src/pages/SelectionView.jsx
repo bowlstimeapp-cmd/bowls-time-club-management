@@ -237,7 +237,7 @@ export default function SelectionView() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                 {selection.match_name || 'Team Selection'}
-                {isFantastic5s && selection.friendly_location && (
+                {(isFantastic5s || selection.competition === 'Top Club (Outdoor)') && selection.friendly_location && (
                   <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-orange-50 text-orange-700 border-orange-200'}>
                     {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}
                   </Badge>

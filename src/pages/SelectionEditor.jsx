@@ -148,7 +148,7 @@ export default function SelectionEditor() {
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
         setFriendlyPlayersPerRink(existingSelection.friendly_players_per_rink || 4);
       }
-      if (existingSelection.competition === 'Fantastic 5s') {
+      if (existingSelection.competition === 'Fantastic 5s' || existingSelection.competition === 'Top Club (Outdoor)') {
         setFantastic5sVenue(existingSelection.friendly_location || '');
       }
     }
@@ -451,7 +451,7 @@ if (club?.email_member_notifications) {
         friendly_num_rinks: friendlyNumRinks,
         friendly_players_per_rink: friendlyPlayersPerRink,
       } : {}),
-      ...(competition === 'Fantastic 5s' ? {
+      ...(competition === 'Fantastic 5s' || competition === 'Top Club (Outdoor)' ? {
         friendly_location: fantastic5sVenue,
       } : {}),
     };
@@ -997,6 +997,21 @@ ${club?.name || 'Your Bowls Club'}
                         />
                       </div>
                     )}
+                  </div>
+                )}
+
+                {competition === 'Top Club (Outdoor)' && (
+                  <div>
+                    <Label>Location</Label>
+                    <Select value={fantastic5sVenue} onValueChange={setFantastic5sVenue}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Home">Home</SelectItem>
+                        <SelectItem value="Away">Away</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
