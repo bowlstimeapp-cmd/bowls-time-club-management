@@ -83,6 +83,11 @@
       "type": "boolean",
       "default": false,
       "description": "Whether this match is included in Score Prediction"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this selection has been archived (match date has passed)"
     }
   },
   "required": [

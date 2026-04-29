@@ -25,6 +25,7 @@ import {
   User,
   Filter,
   Clock,
+  Archive,
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -98,6 +99,8 @@ export default function Selection() {
     queryFn: () => base44.entities.TeamSelection.filter({ club_id: clubId }, '-created_date'),
     enabled: !!clubId,
   });
+
+  const [archiveRun, setArchiveRun] = useState(false);
 
   const { data: myAvailabilities = [] } = useQuery({
     queryKey: ['myAvailabilities', clubId, user?.email],
@@ -215,6 +218,18 @@ export default function Selection() {
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
   const isAdmin = membership?.role === 'admin';
 
+  // Auto-archive selections where match_date has passed (run once after data loads, selectors only)
+  useEffect(() => {
+    if (archiveRun || !selections.length || !isSelector) return;
+    const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd');
+    const toArchive = selections.filter(s => !s.is_archived && s.match_date <= yesterday);
+    if (toArchive.length > 0) {
+      Promise.all(toArchive.map(s => base44.entities.TeamSelection.update(s.id, { is_archived: true })))
+        .then(() => queryClient.invalidateQueries({ queryKey: ['selections'] }));
+    }
+    setArchiveRun(true);
+  }, [selections, isSelector, archiveRun]);
+
   // Check if user is selected for a match
   const isUserSelectedForMatch = (selection) => {
     if (!selection.selections || !user?.email) return false;
@@ -228,17 +243,22 @@ export default function Selection() {
   };
 
   const publishedSelections = useMemo(() => 
-    filterByCompetition(selections.filter(s => s.status === 'published')),
+    filterByCompetition(selections.filter(s => s.status === 'published' && !s.is_archived)),
     [selections, competitionFilter]
   );
   
   const draftSelections = useMemo(() => 
-    filterByCompetition(selections.filter(s => s.status === 'draft')),
+    filterByCompetition(selections.filter(s => s.status === 'draft' && !s.is_archived)),
     [selections, competitionFilter]
   );
   
+  const archivedSelections = useMemo(() =>
+    filterByCompetition(selections.filter(s => s.is_archived)),
+    [selections, competitionFilter]
+  );
+
   const mySelections = useMemo(() => {
-    let list = filterByCompetition(selections.filter(s => s.status === 'published' && isUserSelectedForMatch(s)));
+    let list = filterByCompetition(selections.filter(s => s.status === 'published' && !s.is_archived && isUserSelectedForMatch(s)));
     if (upcomingOnly) {
       const today = startOfDay(new Date());
       list = list.filter(s => {
@@ -336,7 +356,7 @@ export default function Selection() {
           transition={{ delay: 0.1 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`grid w-full mb-6 h-auto ${isSelector ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <TabsList className={`grid w-full mb-6 h-auto ${isSelector ? 'grid-cols-4' : 'grid-cols-2'}`}>
               <TabsTrigger value="published" className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
                 Published ({publishedSelections.length})
@@ -349,6 +369,12 @@ export default function Selection() {
                 <TabsTrigger value="drafts" className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Drafts ({draftSelections.length})
+                </TabsTrigger>
+              )}
+              {isSelector && (
+                <TabsTrigger value="archive" className="flex items-center gap-2">
+                  <Archive className="w-4 h-4" />
+                  Archive ({archivedSelections.length})
                 </TabsTrigger>
               )}
             </TabsList>
@@ -512,6 +538,38 @@ export default function Selection() {
                   )
                 ) : (
                   <EmptyState title="No draft selections" description="Create a new selection to get started" />
+                )}
+              </TabsContent>
+            )}
+
+            {isSelector && (
+              <TabsContent value="archive">
+                {isLoading ? (
+                  <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
+                ) : archivedSelections.length > 0 ? (
+                  club?.alt_view_selection ? (
+                    <SelectionTableView
+                      selections={archivedSelections}
+                      isSelector={isSelector}
+                      clubId={clubId}
+                      getMyAvailability={() => undefined}
+                      onDelete={handleDeleteSelection}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      {archivedSelections.map(selection => (
+                        <SelectionCard
+                          key={selection.id}
+                          selection={selection}
+                          isSelector={isSelector}
+                          clubId={clubId}
+                          onDelete={handleDeleteSelection}
+                        />
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <EmptyState title="No archived selections" description="Past match selections will appear here automatically" />
                 )}
               </TabsContent>
             )}
