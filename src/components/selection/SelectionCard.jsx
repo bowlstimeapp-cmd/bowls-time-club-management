@@ -208,31 +208,33 @@ export default function SelectionCard({
   if (layout === 'bold') {
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="h-1.5 bg-emerald-500 w-full" />
-          <div className="bg-white p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-lg font-bold text-gray-900">
-                    {format(parseISO(selection.match_date), 'd MMMM yyyy')}
-                  </span>
-                  <Badge className={`border ${competitionColors[selection.competition]}`}>
-                    <Trophy className="w-3 h-3 mr-1" />{selection.competition}
-                  </Badge>
-                </div>
-                {selection.match_name && (
-                  <p className="text-base text-gray-600 font-medium">{selection.match_name}</p>
-                )}
-                <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected</p>
-              </div>
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <ActionButtons />
-              </div>
-            </div>
-            {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
-          </div>
+<div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+  {/* Green header strip with competition/match type */}
+  <div className="bg-emerald-500 px-4 py-2 flex items-center gap-1.5">
+    <Trophy className="w-3.5 h-3.5 text-white shrink-0" />
+    <span className="text-white text-sm font-semibold">{selection.competition}</span>
+  </div>
+
+  <div className="bg-white p-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className="text-lg font-bold text-gray-900">
+            {format(parseISO(selection.match_date), 'd MMMM yyyy')}
+          </span>
         </div>
+        {selection.match_name && (
+          <p className="text-base text-gray-600 font-medium">{selection.match_name}</p>
+        )}
+        <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected</p>
+      </div>
+      <div className="flex flex-wrap gap-2 shrink-0">
+        <ActionButtons />
+      </div>
+    </div>
+    {selection.status === 'published' && onSetAvailability && <AvailabilitySection />}
+  </div>
+</div>
       </motion.div>
     );
   }
