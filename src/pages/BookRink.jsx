@@ -607,9 +607,7 @@ useEffect(() => {
 
     // Generate time slots between start and end time
     const slots = [];
-
     if (club.use_custom_sessions && club.custom_sessions?.length > 0) {
-      // Use custom sessions that fall within the selected range
       const timeToMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
       const startMins = timeToMins(bulkData.startTime);
       const endMins = timeToMins(bulkData.endTime);
@@ -638,41 +636,46 @@ useEffect(() => {
       }
     }
 
-    // Create bookings for all rinks and all time slots
+    // Use provided dates array (supports recurrence) or fall back to single date
+    const dates = bulkData.dates || [selectedDate];
+
+    // Create bookings for all dates, rinks and time slots
     const bookingPromises = [];
-    for (const rinkNumber of bulkData.rinks) {
-      for (const slot of slots) {
-        bookingPromises.push(
-          createBookingMutation.mutateAsync({
-            club_id: clubId,
-            rink_number: rinkNumber,
-            date: dateString,
-            start_time: slot.start_time,
-            end_time: slot.end_time,
-            status,
-            competition_type: bulkData.competitionType,
-            competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
-            booker_name: bookerName,
-            booker_email: user.email,
-            notes: bulkData.notes || '',
-          })
-        );
+    for (const bookingDate of dates) {
+      const bookingDateStr = format(bookingDate, 'yyyy-MM-dd');
+      for (const rinkNumber of bulkData.rinks) {
+        for (const slot of slots) {
+          bookingPromises.push(
+            createBookingMutation.mutateAsync({
+              club_id: clubId,
+              rink_number: rinkNumber,
+              date: bookingDateStr,
+              start_time: slot.start_time,
+              end_time: slot.end_time,
+              status,
+              competition_type: bulkData.competitionType,
+              competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
+              booker_name: bookerName,
+              booker_email: user.email,
+              notes: bulkData.notes || '',
+            })
+          );
+        }
       }
     }
 
     const createdBookings = await Promise.all(bookingPromises);
 
-    // Audit log: one entry per created booking
     if (isPrivileged) {
       await Promise.all(createdBookings.map(created =>
-        writeAuditLog(created, 'bulk_booked', `Bulk booking: ${bulkData.rinks.length} rink(s), ${slots.length} session(s), type: ${bulkData.competitionType || 'N/A'}`)
+        writeAuditLog(created, 'bulk_booked', `Bulk booking: ${bulkData.rinks.length} rink(s), ${slots.length} session(s), ${dates.length} date(s), type: ${bulkData.competitionType || 'N/A'}`)
       ));
     }
     
     setBulkModalOpen(false);
     
     const message = status === 'approved' 
-      ? `${createdBookings.length} booking(s) created for ${bulkData.rinks.length} rink(s)!` 
+      ? `${createdBookings.length} booking(s) created across ${dates.length} date(s)!` 
       : `${createdBookings.length} booking request(s) submitted! Awaiting approval.`;
     toast.success(message);
   };
@@ -837,7 +840,8 @@ useEffect(() => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <DateSelector 
                   selectedDate={selectedDate} 
-                  onDateChange={setSelectedDate} 
+                  onDateChange={setSelectedDate}
+                  allowPast={isAdmin || isSteward}
                 />
                 <div className="flex gap-2 flex-wrap">
                   {(membership?.role === 'admin' || membership?.role === 'steward') && (

@@ -179,6 +179,7 @@ export default function ClubAdmin() {
     home_rinks: 2,
     away_rinks: 0
   });
+  const [memberSort, setMemberSort] = useState('first_name');
 
   const queryClient = useQueryClient();
 
@@ -466,7 +467,16 @@ export default function ClubAdmin() {
       const matchesType = membershipTypeFilter === 'all' || (member.membership_groups || []).includes(membershipTypeFilter);
       return matchesSearch && matchesType;
     })
-    .sort((a, b) => (a.user_name || a.user_email).localeCompare(b.user_name || b.user_email));
+    .sort((a, b) => {
+      if (memberSort === 'surname') {
+        const surnameA = a.surname || a.user_name?.split(' ').slice(-1)[0] || a.user_email;
+        const surnameB = b.surname || b.user_name?.split(' ').slice(-1)[0] || b.user_email;
+        return surnameA.localeCompare(surnameB);
+      }
+      const firstA = a.first_name || a.user_name?.split(' ')[0] || a.user_email;
+      const firstB = b.first_name || b.user_name?.split(' ')[0] || b.user_email;
+      return firstA.localeCompare(firstB);
+    });
 
   const filteredApprovedMembers = applyFilters(approvedMembers);
   const filteredPreviousMembers = applyFilters(previousMembers);
@@ -647,6 +657,15 @@ export default function ClubAdmin() {
                       <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
                         {membershipTypeNames.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={memberSort} onValueChange={setMemberSort}>
+                      <SelectTrigger className="w-40 h-9 bg-white border-slate-200 rounded-xl text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="first_name">Sort: First Name</SelectItem>
+                        <SelectItem value="surname">Sort: Last Name</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-sm text-slate-400 flex-shrink-0">

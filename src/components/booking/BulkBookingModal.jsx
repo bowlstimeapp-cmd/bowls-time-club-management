@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays, addWeeks } from 'date-fns';
 import { toast } from 'sonner';
 
 const COMPETITION_TYPES = ['Club', 'County', 'National', 'Other'];
@@ -39,6 +39,8 @@ export default function BulkBookingModal({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [selectedRinks, setSelectedRinks] = useState([]);
+  const [recurrence, setRecurrence] = useState('none'); // 'none' | 'weekly' | 'fortnightly'
+  const [recurrenceWeeks, setRecurrenceWeeks] = useState(4);
 
   const handleConfirm = () => {
     if (selectedRinks.length === 0) {
@@ -65,13 +67,23 @@ export default function BulkBookingModal({
       return;
     }
 
+    // Build list of dates to book
+    const dates = [selectedDate];
+    if (recurrence !== 'none') {
+      const intervalWeeks = recurrence === 'weekly' ? 1 : 2;
+      for (let i = 1; i < recurrenceWeeks; i++) {
+        dates.push(addWeeks(selectedDate, i * intervalWeeks));
+      }
+    }
+
     onConfirm({
       notes,
       competitionType,
       competitionOther,
       startTime,
       endTime,
-      rinks: selectedRinks
+      rinks: selectedRinks,
+      dates,
     });
     
     // Reset form
@@ -81,6 +93,8 @@ export default function BulkBookingModal({
     setStartTime('');
     setEndTime('');
     setSelectedRinks([]);
+    setRecurrence('none');
+    setRecurrenceWeeks(4);
   };
 
   const handleClose = () => {
@@ -90,6 +104,8 @@ export default function BulkBookingModal({
     setStartTime('');
     setEndTime('');
     setSelectedRinks([]);
+    setRecurrence('none');
+    setRecurrenceWeeks(4);
     onClose();
   };
 
@@ -230,6 +246,37 @@ export default function BulkBookingModal({
               />
             </div>
           )}
+
+          {/* Recurrence */}
+          <div className="space-y-2">
+            <Label>Recurrence</Label>
+            <Select value={recurrence} onValueChange={setRecurrence}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No recurrence (single date)</SelectItem>
+                <SelectItem value="weekly">Weekly (same day each week)</SelectItem>
+                <SelectItem value="fortnightly">Fortnightly (every 2 weeks)</SelectItem>
+              </SelectContent>
+            </Select>
+            {recurrence !== 'none' && (
+              <div className="flex items-center gap-3 mt-2">
+                <Label className="whitespace-nowrap text-sm text-gray-600">Number of occurrences</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={26}
+                  value={recurrenceWeeks}
+                  onChange={e => setRecurrenceWeeks(Math.max(2, parseInt(e.target.value) || 2))}
+                  className="w-20"
+                />
+              </div>
+            )}
+            {recurrence !== 'none' && (
+              <p className="text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-1">
+                Will book {recurrenceWeeks} occurrence{recurrenceWeeks !== 1 ? 's' : ''} — {recurrence === 'weekly' ? 'every week' : 'every 2 weeks'} starting {format(selectedDate, 'd MMM yyyy')}
+              </p>
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes" className="text-gray-700">

@@ -10,9 +10,9 @@ import { ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
 import { format, addDays, subDays, isBefore, startOfToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-export default function DateSelector({ selectedDate, onDateChange }) {
+export default function DateSelector({ selectedDate, onDateChange, allowPast = false }) {
   const today = startOfToday();
-  const canGoPrevious = !isBefore(subDays(selectedDate, 1), today);
+  const canGoPrevious = allowPast || !isBefore(subDays(selectedDate, 1), today);
 
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -45,7 +45,7 @@ export default function DateSelector({ selectedDate, onDateChange }) {
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && onDateChange(date)}
-              disabled={(date) => isBefore(date, today)}
+              disabled={allowPast ? undefined : (date) => isBefore(date, today)}
               initialFocus
             />
           </PopoverContent>
