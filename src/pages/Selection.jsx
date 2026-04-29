@@ -26,6 +26,7 @@ import {
   Filter,
   Clock,
   Archive,
+  Settings,
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -35,6 +36,7 @@ import SelectionTableView from '@/components/selection/SelectionTableView';
 import AdminAvailabilityModal from '@/components/selection/AdminAvailabilityModal';
 import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
+import SelectionColourSettings from '@/components/selection/SelectionColourSettings';
 
 export default function Selection() {
   const [searchParams] = useSearchParams();
@@ -101,6 +103,7 @@ export default function Selection() {
   });
 
   const [archiveRun, setArchiveRun] = useState(false);
+  const [colourSettingsOpen, setColourSettingsOpen] = useState(false);
 
   const { data: myAvailabilities = [] } = useQuery({
     queryKey: ['myAvailabilities', clubId, user?.email],
@@ -217,6 +220,7 @@ export default function Selection() {
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
   const isAdmin = membership?.role === 'admin';
+  const competitionColours = club?.selection_competition_colours || {};
 
   // Auto-archive selections where match_date has passed (run once after data loads, selectors only)
   useEffect(() => {
@@ -317,6 +321,10 @@ export default function Selection() {
           </div>
           {isSelector && (
             <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setColourSettingsOpen(true)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
               <Link to={createPageUrl('SelectionEditor') + `?clubId=${clubId}`}>
                 <Button className="bg-emerald-600 hover:bg-emerald-700">
                   <Plus className="w-4 h-4 mr-2" />
@@ -415,6 +423,7 @@ export default function Selection() {
                         onViewClick={() => setTourStep(18)}
                         liveScoreBtnRef={tourLiveScoreBtnRef}
                         onLiveScoreClick={() => setTourStep(20)}
+                        competitionColours={competitionColours}
                       />
                     </div>
                   )}
@@ -448,6 +457,7 @@ export default function Selection() {
                             members={members}
                             onDelete={handleDeleteSelection}
                             onAdminSetAvailability={isSelector ? () => setAdminAvailabilitySelection(selection) : undefined}
+                            competitionColours={competitionColours}
                           />
                         ))}
                       </>
@@ -501,6 +511,7 @@ export default function Selection() {
                         members={members}
                         onDelete={handleDeleteSelection}
                         onAdminSetAvailability={isSelector ? () => setAdminAvailabilitySelection(selection) : undefined}
+                        competitionColours={competitionColours}
                       />
                     ))}
                   </div>
@@ -532,6 +543,7 @@ export default function Selection() {
                           isSelector={isSelector}
                           clubId={clubId}
                           onDelete={handleDeleteSelection}
+                          competitionColours={competitionColours}
                         />
                       ))}
                     </div>
@@ -564,6 +576,7 @@ export default function Selection() {
                           isSelector={isSelector}
                           clubId={clubId}
                           onDelete={handleDeleteSelection}
+                          competitionColours={competitionColours}
                         />
                       ))}
                     </div>
@@ -576,6 +589,13 @@ export default function Selection() {
           </Tabs>
         </motion.div>
       </div>
+
+      {/* Colour Settings Modal */}
+      <SelectionColourSettings
+        open={colourSettingsOpen}
+        onClose={() => setColourSettingsOpen(false)}
+        clubId={clubId}
+      />
 
       {/* Admin Availability Modal */}
       <AdminAvailabilityModal

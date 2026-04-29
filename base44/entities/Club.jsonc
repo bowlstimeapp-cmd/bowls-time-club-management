@@ -352,6 +352,11 @@
       ],
       "default": "emerald",
       "description": "UI colour theme for the club (affects accent colours throughout the app)"
+    },
+    "selection_competition_colours": {
+      "type": "object",
+      "description": "Map of competition name to hex colour for selection card headers",
+      "default": {}
     }
   },
   "required": [

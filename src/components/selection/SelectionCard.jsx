@@ -32,9 +32,12 @@ export default function SelectionCard({
   liveScoreBtnRef,
   onLiveScoreClick,
   onAdminSetAvailability,
+  competitionColours = {},
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
   const { layout } = useLayoutTheme();
+
+  const headerColour = competitionColours[selection.competition] || '#10b981';
 
   const countSelected = () => Object.values(selection.selections || {}).filter(Boolean).length;
 
@@ -209,8 +212,8 @@ export default function SelectionCard({
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
 <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-  {/* Green header strip with competition/match type */}
-  <div className="bg-emerald-500 px-4 py-2 flex items-center gap-1.5">
+  {/* Header strip with competition/match type */}
+  <div className="px-4 py-2 flex items-center gap-1.5" style={{ backgroundColor: headerColour }}>
     <Trophy className="w-3.5 h-3.5 text-white shrink-0" />
     <span className="text-white text-sm font-semibold">{selection.competition}</span>
   </div>
@@ -243,7 +246,7 @@ export default function SelectionCard({
 return (
   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
     <Card className="hover:shadow-md transition-shadow overflow-hidden">
-      <div className="bg-emerald-500 px-4 py-2 flex items-center gap-1.5">
+      <div className="px-4 py-2 flex items-center gap-1.5" style={{ backgroundColor: headerColour }}>
         <Trophy className="w-3.5 h-3.5 text-white shrink-0" />
         <span className="text-white text-sm font-semibold">{selection.competition}</span>
       </div>
