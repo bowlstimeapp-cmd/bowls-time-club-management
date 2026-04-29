@@ -676,9 +676,12 @@ useEffect(() => {
     }
 
     if (isPrivileged) {
-      await Promise.all(createdBookings.map(created =>
-        writeAuditLog(created, 'bulk_booked', `Bulk booking: ${bulkData.rinks.length} rink(s), ${slots.length} session(s), ${dates.length} date(s), type: ${bulkData.competitionType || 'N/A'}`)
-      ));
+      const auditMsg = `Bulk booking: ${bulkData.rinks.length} rink(s), ${slots.length} session(s), ${dates.length} date(s), type: ${bulkData.competitionType || 'N/A'}`;
+      for (let i = 0; i < createdBookings.length; i += BATCH_SIZE) {
+        if (i > 0) await new Promise(resolve => setTimeout(resolve, 60000));
+        const batch = createdBookings.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(created => writeAuditLog(created, 'bulk_booked', auditMsg)));
+      }
     }
     
     setBulkModalOpen(false);
