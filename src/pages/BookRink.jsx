@@ -639,32 +639,41 @@ useEffect(() => {
     // Use provided dates array (supports recurrence) or fall back to single date
     const dates = bulkData.dates || [selectedDate];
 
-    // Create bookings for all dates, rinks and time slots
-    const bookingPromises = [];
+    // Build flat list of all bookings to create
+    const bookingPayloads = [];
     for (const bookingDate of dates) {
       const bookingDateStr = format(bookingDate, 'yyyy-MM-dd');
       for (const rinkNumber of bulkData.rinks) {
         for (const slot of slots) {
-          bookingPromises.push(
-            createBookingMutation.mutateAsync({
-              club_id: clubId,
-              rink_number: rinkNumber,
-              date: bookingDateStr,
-              start_time: slot.start_time,
-              end_time: slot.end_time,
-              status,
-              competition_type: bulkData.competitionType,
-              competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
-              booker_name: bookerName,
-              booker_email: user.email,
-              notes: bulkData.notes || '',
-            })
-          );
+          bookingPayloads.push({
+            club_id: clubId,
+            rink_number: rinkNumber,
+            date: bookingDateStr,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            status,
+            competition_type: bulkData.competitionType,
+            competition_other: bulkData.competitionType === 'Other' ? bulkData.competitionOther : '',
+            booker_name: bookerName,
+            booker_email: user.email,
+            notes: bulkData.notes || '',
+          });
         }
       }
     }
 
-    const createdBookings = await Promise.all(bookingPromises);
+    // Process in batches of 100 with a 60s pause between batches to avoid rate limits
+    const BATCH_SIZE = 100;
+    const createdBookings = [];
+    for (let i = 0; i < bookingPayloads.length; i += BATCH_SIZE) {
+      if (i > 0) {
+        toast.info(`Pausing 60s to avoid rate limits… (${createdBookings.length}/${bookingPayloads.length} created)`);
+        await new Promise(resolve => setTimeout(resolve, 60000));
+      }
+      const batch = bookingPayloads.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(payload => createBookingMutation.mutateAsync(payload)));
+      createdBookings.push(...batchResults);
+    }
 
     if (isPrivileged) {
       await Promise.all(createdBookings.map(created =>
