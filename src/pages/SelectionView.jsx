@@ -22,6 +22,14 @@ const RINKS = [
   { number: 4, tag: 'Away' },
 ];
 
+const TOP_CLUB_OUTDOOR_EVENTS = [
+  { id: 'two_wood_singles', name: '2 Wood Singles', positions: ['Player'] },
+  { id: 'four_wood_singles', name: '4 Wood Singles', positions: ['Player'] },
+  { id: 'pairs', name: 'Pairs', positions: ['Lead', 'Skip'] },
+  { id: 'triple', name: 'Triple', positions: ['Lead', '2', 'Skip'] },
+  { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
+];
+
 const TOP_CLUB_EVENTS = [
   { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
   { id: 'ladies_two_wood', name: "Ladies Two Wood", positions: ['Player'] },
@@ -173,6 +181,7 @@ export default function SelectionView() {
   }
 
   const isTopClub = selection.competition === 'Top Club';
+  const isTopClubOutdoor = selection.competition === 'Top Club (Outdoor)';
   const isFantastic5s = selection.competition === 'Fantastic 5s';
   const selections = selection.selections || {};
 
@@ -315,6 +324,42 @@ export default function SelectionView() {
                               {isCaptain(memberEmail) && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold" title="Captain">C</span>
                               )}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : isTopClubOutdoor ? (
+            <div className="space-y-4">
+              {TOP_CLUB_OUTDOOR_EVENTS.map(event => (
+                <Card key={event.id}>
+                  <CardHeader className="bg-indigo-50 py-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-indigo-600" />
+                      {event.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap gap-4">
+                      {event.positions.map(position => {
+                        const positionKey = `${event.id}_${position}`;
+                        const memberEmail = selections[positionKey];
+                        return (
+                          <div key={position} className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
+                            <span className="text-sm font-medium text-gray-500">{position}:</span>
+                            <span className="font-medium flex items-center gap-1">
+                              {getAvailability(memberEmail) === true ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              ) : getAvailability(memberEmail) === false ? (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              ) : (
+                                <User className="w-4 h-4 text-gray-400" />
+                              )}
+                              {getMemberName(memberEmail)}
                             </span>
                           </div>
                         );
