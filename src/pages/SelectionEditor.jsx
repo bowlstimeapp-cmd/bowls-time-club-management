@@ -492,59 +492,8 @@ if (club?.email_member_notifications) {
           }));
           await base44.entities.Notification.bulkCreate(notificationsToCreate);
           
-          // Send emails/SMS only to newly added players
-          const selectedPlayerEmails = newlyAddedEmails;
-          const teamList = buildFormattedTeamList(selections, members);
-
-          const matchUrl = `${APP_BASE_URL}${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${selectionId}`;
-          
-          // Email notifications
-          if (club?.email_member_notifications) {
-            const emailMembers = members.filter(m => 
-              selectedPlayerEmails.includes(m.user_email) && 
-              m.email_notifications !== false
-            );
-
-            for (const member of emailMembers) {
-              const emailBody = `
-Dear ${member.first_name || 'Member'},
-
-You have been selected to play in an upcoming match!
-
-Match Details:
-- Competition: ${competition}
-- Date: ${format(new Date(matchDate), 'd MMMM yyyy')}
-${matchName ? `- Match: ${matchName}` : ''}
-${matchStartTime ? `- Time: ${matchStartTime} - ${matchEndTime}` : ''}
-
-Team Selection:
-${teamList}
-
-Please confirm your availability by visiting:
-${matchUrl}
-
-Best regards,
-${club?.name || 'Your Bowls Club'}
-              `.trim();
-
-              try {
-                await base44.integrations.Core.SendEmail({
-                  to: member.user_email,
-                  subject: `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-                  body: emailBody
-                });
-              } catch (emailErr) {
-                console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
-                continue;
-              }
-            }
-            
-            if (emailMembers.length > 0) {
-              toast.success(`Emails sent to ${emailMembers.length} newly added player(s)`);
-            }
-          }
-          
           // SMS notifications
+          const selectedPlayerEmails = newlyAddedEmails;
           if (club?.module_sms_notifications && club?.sms_member_notifications) {
             const smsMembers = members.filter(m => 
               selectedPlayerEmails.includes(m.user_email) && 
