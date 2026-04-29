@@ -1000,6 +1000,27 @@ ${club?.name || 'Your Bowls Club'}
                   </div>
                 )}
 
+                {competition === 'Top Club (Outdoor)' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>Start Time</Label>
+                      <Input
+                        type="time"
+                        value={matchStartTime}
+                        onChange={(e) => setMatchStartTime(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>End Time</Label>
+                      <Input
+                        type="time"
+                        value={matchEndTime}
+                        onChange={(e) => setMatchEndTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {competition && competition !== 'Top Club' && competition !== 'Top Club (Outdoor)' && competition !== 'Friendly' && competition !== 'Fantastic 5s' && (
                   <>
                     <div>
