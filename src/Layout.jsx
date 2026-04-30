@@ -422,7 +422,7 @@ export default function Layout({ children, currentPageName }) {
                       )}
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('Clubsettingss') + `?clubId=${clubId}`} className="cursor-pointer">
-                          <Trophy className="w-4 h-4 mr-2" />
+                          <Settings className="w-4 h-4 mr-2" />
                           Open Competitions
                         </Link>
                       </DropdownMenuItem>
