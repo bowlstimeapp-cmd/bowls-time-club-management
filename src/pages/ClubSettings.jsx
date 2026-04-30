@@ -30,7 +30,7 @@ const TABS = [
   { id: 'rinks',        label: 'Rinks & Bookings',       icon: Layers    },
   { id: 'members',      label: 'Members',                icon: Users     },
   { id: 'competitions', label: 'Competitions',           icon: Trophy    },
-  { id: 'display',      label: 'Display & Integrations', icon: Tv        },
+  { id: 'display',      label: 'Customisations', icon: Tv        },
 ];
 
 // ─── Reusable SaveButton ──────────────────────────────────────────────────────
@@ -430,34 +430,8 @@ export default function ClubSettings() {
           <Input type="number" min="5" max="300" value={tvCycleSeconds} onChange={(e) => setTvCycleSeconds(e.target.value)} className="w-32" />
         </CardContent>
       </Card>
-
-      {/* Custom Scorecard Layout */}
-      {club?.module_custom_branding && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5" />Custom Scorecard Layout</CardTitle>
-            <CardDescription>Design a custom scorecard layout for this club.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base">Use Custom Scorecard Layout</Label>
-                <p className="text-sm text-gray-500">Override the default scorecard design with your custom layout</p>
-              </div>
-              <Switch checked={useCustomScorecardLayout} onCheckedChange={setUseCustomScorecardLayout} />
-            </div>
-            {useCustomScorecardLayout && (
-              <div className="pt-2">
-                <Link to={createPageUrl('ScorecardLayoutEditor') + `?clubId=${clubId}`}>
-                  <Button type="button" variant="outline" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
-                    <ExternalLink className="w-4 h-4 mr-2" />Edit Layout
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+  )
+ 
 
       <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
     </div>
