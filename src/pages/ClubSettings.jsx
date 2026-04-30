@@ -338,503 +338,145 @@ export default function ClubSettings() {
   // ── Tab content renderers ──────────────────────────────────────────────────
 
   // GENERAL: Club Logo, Alternative Page Views, TV Display, Custom Scorecard Layout
-  const renderGeneral = () => (
-    <div className="space-y-6">
-      {/* Club Logo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Image className="w-5 h-5" />Club Logo</CardTitle>
-          <CardDescription>Upload a logo for your club (appears on printable documents)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            {logoUrl ? (
-              <img src={logoUrl} alt="Club logo" className="w-20 h-20 object-contain rounded-lg border" />
-            ) : (
-              <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Image className="w-8 h-8 text-gray-400" />
-              </div>
-            )}
-            <div>
-              <Label htmlFor="logo-upload" className="cursor-pointer">
-                <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
-                  {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {logoUrl ? 'Change Logo' : 'Upload Logo'}
-                </div>
-              </Label>
-              <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
-              {logoUrl && (
-                <Button type="button" variant="ghost" size="sm" className="mt-2 text-red-600" onClick={() => setLogoUrl('')}>
-                  Remove Logo
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+const renderGeneral = () => (
+  <div className="space-y-6">
 
-      {/* Default Landing Page */}
-      {club?.module_homepage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Homepage Settings</CardTitle>
-            <CardDescription>Configure the club homepage landing behaviour</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Label>Default Landing Page</Label>
-            <p className="text-sm text-gray-500 mb-2">Choose what members see first when entering your club.</p>
-            <Select value={defaultLandingPage} onValueChange={setDefaultLandingPage}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rink_booking">Rink Booking</SelectItem>
-                <SelectItem value="homepage">Club Homepage</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Alternative Page Views */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Alternative Page Views</CardTitle>
-          <CardDescription>Switch specific pages to a cleaner, table-based layout</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Selection — Table View</Label>
-              <p className="text-sm text-gray-500">Show team selections as a compact table instead of cards</p>
-            </div>
-            <Switch checked={altViewSelection} onCheckedChange={setAltViewSelection} />
-          </div>
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div>
-              <Label className="text-base">League Admin — Table View</Label>
-              <p className="text-sm text-gray-500">Show the League Admin page as a compact table/accordion instead of cards</p>
-            </div>
-            <Switch checked={altViewLeagues} onCheckedChange={setAltViewLeagues} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* TV Display */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Tv className="w-5 h-5" />TV / Display Board</CardTitle>
-          <CardDescription>Configure the fullscreen rink display for TVs and monitors in the clubhouse</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Label>Day cycle duration (seconds)</Label>
-          <p className="text-sm text-gray-500 mb-2">How long to show each day before switching between Today and Tomorrow.</p>
-          <Input type="number" min="5" max="300" value={tvCycleSeconds} onChange={(e) => setTvCycleSeconds(e.target.value)} className="w-32" />
-        </CardContent>
-      </Card>
-  )
- 
-
-      <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
-    </div>
-  );
-
-  // RINKS & BOOKINGS: Rink Configuration, Booking Settings, Import Bookings
-  const renderRinks = () => (
-    <div className="space-y-6">
-      {/* Rink Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Rink Configuration</CardTitle>
-          <CardDescription>Configure the number of rinks and operating hours</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Number of Rinks</Label>
-            <Input type="number" min="1" max="20" value={rinkCount} onChange={(e) => setRinkCount(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Opening Time</Label>
-              <Input type="time" value={openingTime} onChange={(e) => setOpeningTime(e.target.value)} />
-            </div>
-            <div>
-              <Label>Closing Time</Label>
-              <Input type="time" value={closingTime} onChange={(e) => setClosingTime(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div>
-              <Label className="text-base">Custom Session Times</Label>
-              <p className="text-sm text-gray-500">Define specific session time ranges instead of a fixed duration</p>
-            </div>
-            <Switch checked={useCustomSessions} onCheckedChange={setUseCustomSessions} />
-          </div>
-          {!useCustomSessions ? (
-            <div>
-              <Label>Session Duration (hours)</Label>
-              <Input type="number" min="1" max="4" value={sessionDuration} onChange={(e) => setSessionDuration(e.target.value)} />
-            </div>
+    {/* Club Logo */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Image className="w-5 h-5" />Club Logo
+        </CardTitle>
+        <CardDescription>Upload a logo for your club</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-4">
+          {logoUrl ? (
+            <img src={logoUrl} className="w-20 h-20 object-contain rounded-lg border" />
           ) : (
-            <div>
-              <Label className="mb-2 block">Session Time Ranges</Label>
-              <p className="text-xs text-gray-500 mb-3">Define sessions within {openingTime}–{closingTime}. Minimum 15-minute intervals.</p>
-              <CustomSessionEditor sessions={customSessions} onChange={setCustomSessions} openingTime={openingTime} closingTime={closingTime} />
+            <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+              <Image className="w-8 h-8 text-gray-400" />
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Booking Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking Settings</CardTitle>
-          <CardDescription>Configure how bookings are handled</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Auto-approve Bookings</Label>
-              <p className="text-sm text-gray-500">Automatically approve all new bookings without requiring admin approval</p>
-            </div>
-            <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
-          </div>
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div>
-              <Label className="text-base">Open Roll-ups</Label>
-              <p className="text-sm text-gray-500">Allow members to join roll-up sessions booked by others (max 8 per session)</p>
-            </div>
-            <Switch checked={openRollups} onCheckedChange={(v) => { setOpenRollups(v); if (!v) setPrivateRollups(false); }} />
-          </div>
-          {openRollups && (
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div>
-                <Label className="text-base">Private Roll-ups</Label>
-                <p className="text-sm text-gray-500">Add a "Private Roll-up" competition type (not joinable)</p>
+          <div>
+            <Label htmlFor="logo-upload" className="cursor-pointer">
+              <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {logoUrl ? 'Change Logo' : 'Upload Logo'}
               </div>
-              <Switch checked={privateRollups} onCheckedChange={setPrivateRollups} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </Label>
 
-      {/* Import Bookings */}
+            <input
+              id="logo-upload"
+              type="file"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+
+            {logoUrl && (
+              <Button variant="ghost" size="sm" className="mt-2 text-red-600" onClick={() => setLogoUrl('')}>
+                Remove Logo
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* TV Display */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Tv className="w-5 h-5" />TV / Display Board
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Label>Cycle duration (seconds)</Label>
+        <Input
+          type="number"
+          value={tvCycleSeconds}
+          onChange={(e) => setTvCycleSeconds(e.target.value)}
+          className="w-32"
+        />
+      </CardContent>
+    </Card>
+
+    {/* Scorecard Format */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Scorecard Format</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Select value={scorecardFormat} onValueChange={setScorecardFormat}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pdf">PDF</SelectItem>
+            <SelectItem value="xlsx">Excel</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardContent>
+    </Card>
+
+    {/* Custom Scorecard Layout */}
+    {club?.module_custom_branding && (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FileUp className="w-5 h-5" />Import Bookings</CardTitle>
-          <CardDescription>Bulk-import bookings from a CSV file</CardDescription>
+          <CardTitle>Custom Scorecard Layout</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button type="button" variant="outline" onClick={() => setImportBookingsOpen(true)} className="w-full">
-            <FileUp className="w-4 h-4 mr-2" />Import Bookings from CSV
+          <div className="flex items-center justify-between">
+            <Label>Use Custom Layout</Label>
+            <Switch checked={useCustomScorecardLayout} onCheckedChange={setUseCustomScorecardLayout} />
+          </div>
+
+          {useCustomScorecardLayout && (
+            <Link to={createPageUrl('ScorecardLayoutEditor') + `?clubId=${clubId}`}>
+              <Button variant="outline" className="w-full mt-4">
+                Edit Layout
+              </Button>
+            </Link>
+          )}
+        </CardContent>
+      </Card>
+    )}
+
+    {/* Function Room API */}
+    {club?.module_function_rooms && (
+      <Card>
+        <CardHeader>
+          <CardTitle>Function Room API Key</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Input readOnly value={club?.function_room_api_key || ''} />
+
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const newKey = 'frk_' + crypto.randomUUID().replace(/-/g, '');
+              await base44.entities.Club.update(clubId, { function_room_api_key: newKey });
+              queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+              toast.success('New API key generated');
+            }}
+          >
+            Generate / Regenerate
           </Button>
         </CardContent>
       </Card>
+    )}
 
-      <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
-    </div>
-  );
-
-  // MEMBERS: Membership Types, Notification Settings, Kiosk Mode, Membership Payments
-  const renderMembers = () => (
-    <div className="space-y-6">
-      {/* Membership Types */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" />Membership Types</CardTitle>
-              <CardDescription className="mt-1">Define the membership types available at your club.</CardDescription>
-            </div>
-            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 shrink-0" onClick={() => setAddTypeOpen(true)}>
-              <Plus className="w-4 h-4 mr-1" />Add Type
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {membershipTypes.length === 0 ? (
-            <p className="text-sm text-gray-400 italic text-center py-4">No membership types defined yet. Click "Add Type" to get started.</p>
-          ) : (
-            <div className="space-y-2">
-              {membershipTypes.map(t => (
-                <div key={t} className="flex items-center justify-between px-3 py-2 rounded-lg border text-sm bg-gray-50">
-                  <span className="font-medium">{t}</span>
-                  <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-red-500" onClick={() => handleRemoveMembershipType(t)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-          {addTypeOpen && (
-            <div className="mt-4 border rounded-lg p-4 space-y-3 bg-gray-50">
-              <p className="text-sm font-medium text-gray-700">New Membership Type</p>
-              <Input value={newTypeName} onChange={e => setNewTypeName(e.target.value)} placeholder="e.g. Full Playing Member"
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMembershipType(); } }} />
-              <div className="flex gap-2">
-                <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleAddMembershipType}>Add</Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => { setAddTypeOpen(false); setNewTypeName(''); }}>Cancel</Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5" />Notification Settings</CardTitle>
-          <CardDescription>Configure how members receive notifications</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Email Member Notifications</Label>
-              <p className="text-sm text-gray-500">Send email notifications to members when they are selected for matches</p>
-            </div>
-            <Switch checked={emailMemberNotifications} onCheckedChange={setEmailMemberNotifications} />
-          </div>
-          {club?.module_sms_notifications && (
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div>
-                <Label className="text-base">SMS Member Notifications</Label>
-                <p className="text-sm text-gray-500">Send SMS notifications to members when they are selected for matches</p>
-              </div>
-              <Switch checked={smsMemberNotifications} onCheckedChange={setSmsMemberNotifications} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Membership Payments */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5" />Membership Payments (Stripe)</CardTitle>
-          <CardDescription>Enable online membership fee collection via Stripe. Optionally provide your own Stripe keys so payments go directly to your club account.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Enable Membership Fee Collection</Label>
-              <p className="text-sm text-gray-500">Show a payment option on member profiles</p>
-            </div>
-            <Switch checked={membershipFeeEnabled} onCheckedChange={setMembershipFeeEnabled} />
-          </div>
-          {membershipFeeEnabled && (
-            <>
-              <div>
-                <Label>Fee Amount (£)</Label>
-                <Input type="number" min="0" step="0.01" value={membershipFeeAmount} onChange={e => setMembershipFeeAmount(e.target.value)} placeholder="e.g. 50.00" />
-              </div>
-              <div>
-                <Label>Payment Description</Label>
-                <Input value={membershipFeeDescription} onChange={e => setMembershipFeeDescription(e.target.value)} placeholder="e.g. Annual Membership 2024/25" />
-              </div>
-              <div className="border-t pt-4 space-y-3">
-                <p className="text-sm font-medium text-gray-700">Your Stripe Keys (optional)</p>
-                <p className="text-xs text-gray-500">Leave blank to use the platform Stripe account. Provide your own keys to receive payments directly into your Stripe account.</p>
-                <div>
-                  <Label>Stripe Publishable Key</Label>
-                  <Input value={stripePublishableKey} onChange={e => setStripePublishableKey(e.target.value)} placeholder="pk_live_..." />
-                </div>
-                <div>
-                  <Label>Stripe Secret Key</Label>
-                  <Input type="password" value={stripeSecretKey} onChange={e => setStripeSecretKey(e.target.value)} placeholder="sk_live_..." />
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
-    </div>
-  );
-
-  // COMPETITIONS: Competitions list, Competition Registration, Accolades
-  const renderCompetitions = () => (
-    <div className="space-y-6">
-      {/* Competitions list */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5" />Competitions</CardTitle>
-              <CardDescription>Define competitions for match selection</CardDescription>
-            </div>
-            <Button type="button" size="sm" onClick={() => { resetCompetitionForm(); setEditingCompetition(null); setCompetitionModalOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="w-4 h-4 mr-2" />Add
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {competitions.length === 0 ? (
-            <div className="py-8 text-center text-gray-500">
-              <Trophy className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No competitions defined yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {competitions.map(comp => (
-                <div key={comp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{comp.name}</p>
-                    <p className="text-sm text-gray-600">{comp.players_per_rink} players • {comp.home_rinks} home • {comp.away_rinks || 0} away</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => handleEditCompetition(comp)}><Pencil className="w-4 h-4" /></Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => deleteCompetitionMutation.mutate(comp.id)} className="text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Competition Registration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ClipboardList className="w-5 h-5" />Competition Registration</CardTitle>
-          <CardDescription>Allow members to enter club competitions directly from the app</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Enable Competition Registration</Label>
-              <p className="text-sm text-gray-500">Show the Competition Registration page to all approved members</p>
-            </div>
-            <Switch checked={competitionRegistrationEnabled} onCheckedChange={setCompetitionRegistrationEnabled} />
-          </div>
-          {competitionRegistrationEnabled && (
-            <div>
-              <Label>Page Header Message</Label>
-              <p className="text-sm text-gray-500 mb-2">Optional wording shown at the top of the Competition Registration page. Leave blank to show nothing.</p>
-              <Textarea value={competitionPageHeader} onChange={e => setCompetitionPageHeader(e.target.value)}
-                placeholder="e.g. Entry fees are payable to the Club Treasurer. Contact secretary@club.com for queries." rows={4} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Accolades */}
-      <AccoladesSection
-        clubId={clubId}
-        moduleEnabled={!!club?.module_accolades}
-        members={members}
-        onToggleModule={async (v) => {
-          await base44.entities.Club.update(clubId, { module_accolades: v });
-          queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-          toast.success(v ? 'Accolades enabled' : 'Accolades disabled');
-        }}
+    {/* Team Sheet Template */}
+    {club?.module_selection !== false && club?.id && (
+      <TeamSheetTemplateSettings
+        key={club.id}
+        club={club}
+        onChange={handleTeamSheetChange}
       />
+    )}
 
-      <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
-    </div>
-  );
-
-  // DISPLAY & INTEGRATIONS: TV Display, Scorecard Format, Custom Scorecard Layout, Function Room API, Team Sheet Template
-  const renderDisplay = () => (
-    <div className="space-y-6">
-      {/* TV Display */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Tv className="w-5 h-5" />TV / Display Board</CardTitle>
-          <CardDescription>Configure the fullscreen rink display for TVs and monitors in the clubhouse</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Label>Day cycle duration (seconds)</Label>
-          <p className="text-sm text-gray-500 mb-2">How long to show each day before switching between Today and Tomorrow.</p>
-          <Input type="number" min="5" max="300" value={tvCycleSeconds} onChange={(e) => setTvCycleSeconds(e.target.value)} className="w-32" />
-        </CardContent>
-      </Card>
-
-      {/* Scorecard Format */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Scorecard Format</CardTitle>
-          <CardDescription>Choose whether scorecards are generated as PDF or Excel (XLSX) files</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={scorecardFormat} onValueChange={setScorecardFormat}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pdf">PDF — Print-ready scorecard sheets (default)</SelectItem>
-              <SelectItem value="xlsx">Excel (XLSX) — One sheet per fixture, editable in Excel or Google Sheets</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* Custom Scorecard Layout */}
-      {club?.module_custom_branding && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5" />Custom Scorecard Layout</CardTitle>
-            <CardDescription>Design a custom scorecard layout for this club.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base">Use Custom Scorecard Layout</Label>
-                <p className="text-sm text-gray-500">Override the default scorecard design with your custom layout</p>
-              </div>
-              <Switch checked={useCustomScorecardLayout} onCheckedChange={setUseCustomScorecardLayout} />
-            </div>
-            {useCustomScorecardLayout && (
-              <div className="pt-2">
-                <Link to={createPageUrl('ScorecardLayoutEditor') + `?clubId=${clubId}`}>
-                  <Button type="button" variant="outline" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
-                    <ExternalLink className="w-4 h-4 mr-2" />Edit Layout
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Function Room API Key */}
-      {club?.module_function_rooms && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><DoorOpen className="w-5 h-5" />Function Room Bookings — API Key</CardTitle>
-            <CardDescription>This key authenticates requests from your external website to the function room availability and booking API.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Input readOnly value={club?.function_room_api_key || '(no key generated yet)'} className="font-mono text-sm" />
-              <Button type="button" variant="outline" onClick={async () => {
-                const newKey = 'frk_' + crypto.randomUUID().replace(/-/g, '');
-                await base44.entities.Club.update(clubId, { function_room_api_key: newKey });
-                queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-                toast.success('New API key generated');
-              }}>
-                <RefreshCw className="w-4 h-4 mr-1" />{club?.function_room_api_key ? 'Regenerate' : 'Generate'}
-              </Button>
-            </div>
-            {club?.function_room_api_key && (
-              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-2">
-                <p className="font-semibold text-gray-800">API Usage</p>
-                <p>POST to your function endpoint with JSON body. Two routes:</p>
-                <p className="font-mono bg-white rounded p-2 border">
-                  {'{'}"route": "check_availability", "club_id": "{clubId}", "api_key": "YOUR_KEY", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2{'}'}
-                </p>
-                <p className="font-mono bg-white rounded p-2 border">
-                  {'{'}"route": "submit_booking", "club_id": "{clubId}", "api_key": "YOUR_KEY", "room_id": "ROOM_ID", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2, "contact_name": "John Smith", "contact_email": "john@example.com"{'}'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Team Sheet Print Template */}
-      {club?.module_selection !== false && club?.id && (
-        <TeamSheetTemplateSettings key={club.id} club={club} onChange={handleTeamSheetChange} />
-      )}
-
-      <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
-    </div>
-  );
+    <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
+  </div>
+);
 
   const tabContent = {
     general: renderGeneral,
