@@ -21,8 +21,11 @@ import {
   Save,
   Loader2,
   Settings,
+  X,
+  Star,
 } from 'lucide-react';
-import { format, parseISO, isBefore, startOfDay } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { format, parseISO, isBefore, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -45,6 +48,42 @@ function getRinks(selection) {
   return rinks;
 }
 
+// Find the "best rink" key: rink with the highest (club - opposition) score
+// Returns e.g. "rink2" or null if no scores
+function getBestRinkKey(matchScore, rinks) {
+  if (!matchScore) return null;
+  const clubScores = matchScore.club_scores || {};
+  const oppScores = matchScore.opposition_scores || {};
+  let bestKey = null;
+  let bestDiff = -Infinity;
+  for (const rink of rinks) {
+    const key = `rink${rink.number}`;
+    const club = parseInt(clubScores[key]);
+    const opp = parseInt(oppScores[key]);
+    if (isNaN(club) || isNaN(opp)) continue;
+    const diff = club - opp;
+    if (diff > bestDiff) { bestDiff = diff; bestKey = key; }
+  }
+  // Only award if the best rink actually won (positive diff)
+  return bestDiff > 0 ? bestKey : null;
+}
+
+// Which rink did the user predict as the best (highest club - opp)?
+function getPredictedBestRinkKey(prediction, rinks) {
+  if (!prediction?.rink_predictions) return null;
+  let bestKey = null;
+  let bestDiff = -Infinity;
+  for (const rink of rinks) {
+    const key = `rink${rink.number}`;
+    const club = prediction.rink_predictions[key]?.club;
+    const opp = prediction.rink_predictions[key]?.opposition;
+    if (club === undefined || opp === undefined || club === '' || opp === '') continue;
+    const diff = parseInt(club) - parseInt(opp);
+    if (diff > bestDiff) { bestDiff = diff; bestKey = key; }
+  }
+  return bestDiff > 0 ? bestKey : null;
+}
+
 // Calculate points for a single rink prediction vs actual
 function calcRinkPoints(predClub, predOpp, actualClub, actualOpp) {
   if (predClub === undefined || predOpp === undefined) return 0;
@@ -60,9 +99,9 @@ function calcRinkPoints(predClub, predOpp, actualClub, actualOpp) {
 }
 
 // Calculate total points for a prediction vs actual MatchScore
-// Returns { total, rinkBreakdown: { rinkN: pts }, overallPts }
+// Returns { total, rinkBreakdown: { rinkN: pts }, overallPts, bestRinkPts }
 function calcPointsDetail(prediction, matchScore, rinks) {
-  if (!matchScore || !prediction) return { total: 0, rinkBreakdown: {}, overallPts: 0 };
+  if (!matchScore || !prediction) return { total: 0, rinkBreakdown: {}, overallPts: 0, bestRinkPts: 0 };
 
   const clubScores = matchScore.club_scores || {};
   const oppScores = matchScore.opposition_scores || {};
@@ -95,7 +134,14 @@ function calcPointsDetail(prediction, matchScore, rinks) {
   if (predClubTotal === actualClubTotal && predOppTotal === actualOppTotal) overallPts += 10;
 
   total += overallPts;
-  return { total, rinkBreakdown, overallPts };
+
+  // Best rink bonus: 3 pts for correctly identifying the best rink
+  const actualBestRink = getBestRinkKey(matchScore, rinks);
+  const predBestRink = getPredictedBestRinkKey(prediction, rinks);
+  const bestRinkPts = actualBestRink && predBestRink && actualBestRink === predBestRink ? 3 : 0;
+  total += bestRinkPts;
+
+  return { total, rinkBreakdown, overallPts, bestRinkPts };
 }
 
 function calcPoints(prediction, matchScore, rinks) {
@@ -112,6 +158,7 @@ export default function ScorePrediction() {
   const [activeTab, setActiveTab] = useState('predict');
   const [fixtureIndex, setFixtureIndex] = useState(0);
   const [rinkInputs, setRinkInputs] = useState({});
+  const [viewingPrediction, setViewingPrediction] = useState(null); // { email, fixture, matchScore, rinks }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -216,6 +263,11 @@ export default function ScorePrediction() {
     ? isBefore(today, parseISO(currentFixture.match_date))
     : false;
 
+  // Match has started = today >= match_date
+  const matchStarted = currentFixture
+    ? !isBefore(today, parseISO(currentFixture.match_date))
+    : false;
+
   // Derived totals from inputs
   const predClubTotal = rinks.reduce((s, r) => s + (parseInt(rinkInputs[`rink${r.number}`]?.club) || 0), 0);
   const predOppTotal = rinks.reduce((s, r) => s + (parseInt(rinkInputs[`rink${r.number}`]?.opposition) || 0), 0);
@@ -308,6 +360,7 @@ export default function ScorePrediction() {
               <p className="font-semibold text-sm text-amber-900">How points are scored (cumulative)</p>
               <p>↔️ <strong>+2 pts</strong> — Correct rink result (win/loss/draw)</p>
               <p>🎯 <strong>+4 pts</strong> — Exact rink score (awarded on top, total 6 pts)</p>
+              <p>⭐ <strong>+3 pts</strong> — Correctly predict which rink wins by the most shots</p>
               <p>✅ <strong>+6 pts</strong> — Correct overall match result</p>
               <p>🏆 <strong>+10 pts</strong> — Exact overall score (awarded on top, total 16 pts)</p>
             </div>
@@ -375,15 +428,32 @@ export default function ScorePrediction() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    {/* Live scores banner */}
+                    {matchStarted && currentMatchScore && (
+                      <div className="mb-3 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                        Live scores are shown below
+                      </div>
+                    )}
+                    {matchStarted && !currentMatchScore && (
+                      <div className="mb-3 p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                        Match in progress — scores not yet entered
+                      </div>
+                    )}
                     <div className="space-y-0">
                       {/* Header */}
-                      <div className={`grid text-xs font-semibold text-gray-500 px-1 pb-2 border-b mb-1 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                      <div className={`grid text-xs font-semibold text-gray-500 px-1 pb-2 border-b mb-1 ${currentMatchScore ? 'grid-cols-5' : 'grid-cols-3'}`}>
                         <span>Rink</span>
                         <span className="text-center">{club?.name || 'Club'}</span>
                         <span className="text-center">Opposition</span>
+                        {currentMatchScore && <span className="text-center text-blue-600">Actual</span>}
                         {currentMatchScore && <span className="text-center text-emerald-700">Pts</span>}
                       </div>
-                      {rinks.map(rink => {
+                      {(() => {
+                        const actualBestRink = currentMatchScore ? getBestRinkKey(currentMatchScore, rinks) : null;
+                        const predBestRink = myPrediction ? getPredictedBestRinkKey(myPrediction, rinks) : null;
+                        return rinks.map(rink => {
                         const key = `rink${rink.number}`;
                         const clubVal = rinkInputs[key]?.club ?? '';
                         const oppVal = rinkInputs[key]?.opposition ?? '';
@@ -394,6 +464,10 @@ export default function ScorePrediction() {
                           const actualOpp = parseInt(currentMatchScore.opposition_scores?.[key]);
                           rinkPts = calcRinkPoints(myPrediction.rink_predictions?.[key]?.club, myPrediction.rink_predictions?.[key]?.opposition, actualClub, actualOpp);
                         }
+                        const actualClubScore = currentMatchScore ? (currentMatchScore.club_scores?.[key] ?? '—') : null;
+                        const actualOppScore = currentMatchScore ? (currentMatchScore.opposition_scores?.[key] ?? '—') : null;
+                        const isBestRink = actualBestRink === key;
+                        const isPredictedBest = predBestRink === key;
                         // Collect players for this rink
                         const rinkPlayers = POSITIONS
                           .map(pos => {
@@ -405,16 +479,17 @@ export default function ScorePrediction() {
                         return (
                           <div key={rink.number} className="py-1 border-b last:border-0">
                             {/* Grid row: rink label + inputs (same on mobile & desktop) */}
-                            <div className={`grid items-center gap-2 ${currentMatchScore ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                              <div className="flex items-center gap-2">
+                            <div className={`grid items-center gap-2 ${currentMatchScore ? 'grid-cols-5' : 'grid-cols-3'}`}>
+                              <div className="flex items-center gap-1.5">
                                 <span className="text-sm font-medium text-gray-700">Rink {rink.number}</span>
                                 <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                                   {rink.isHome ? 'H' : 'A'}
                                 </Badge>
+                                {isBestRink && <span title="Best rink"><Star className="w-3 h-3 text-amber-500 fill-amber-400" /></span>}
                               </div>
                               <Input
                                 type="number" min="0"
-                                className="text-center h-8"
+                                className={`text-center h-8 ${isPredictedBest && !currentMatchScore ? 'border-amber-300 bg-amber-50' : ''}`}
                                 value={clubVal}
                                 disabled={!canPredict}
                                 onChange={e => setRinkInputs(prev => ({
@@ -424,7 +499,7 @@ export default function ScorePrediction() {
                               />
                               <Input
                                 type="number" min="0"
-                                className="text-center h-8"
+                                className={`text-center h-8 ${isPredictedBest && !currentMatchScore ? 'border-amber-300 bg-amber-50' : ''}`}
                                 value={oppVal}
                                 disabled={!canPredict}
                                 onChange={e => setRinkInputs(prev => ({
@@ -432,6 +507,11 @@ export default function ScorePrediction() {
                                   [key]: { ...prev[key], opposition: e.target.value === '' ? '' : parseInt(e.target.value) }
                                 }))}
                               />
+                              {currentMatchScore && (
+                                <div className="text-center text-sm font-semibold text-blue-700">
+                                  {actualClubScore}–{actualOppScore}
+                                </div>
+                              )}
                               {currentMatchScore && (
                                 <div className="flex items-center justify-center">
                                   <span className={`text-sm font-bold ${rinkPts > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
@@ -464,7 +544,8 @@ export default function ScorePrediction() {
                             )}
                           </div>
                         );
-                      })}
+                        }); // end rinks.map
+                      })()}
                     </div>
 
                     {/* Overall predicted score (read-only) */}
@@ -481,6 +562,37 @@ export default function ScorePrediction() {
                           <p className="text-3xl font-bold text-gray-700">{predOppTotal}</p>
                         </div>
                       </div>
+                      {currentMatchScore && (() => {
+                        const clubScores = currentMatchScore.club_scores || {};
+                        const oppScores = currentMatchScore.opposition_scores || {};
+                        const actualClubTotal = Object.values(clubScores).reduce((s, v) => s + (parseInt(v) || 0), 0);
+                        const actualOppTotal = Object.values(oppScores).reduce((s, v) => s + (parseInt(v) || 0), 0);
+                        return (
+                          <div className="mt-2">
+                            <p className="text-xs font-semibold text-blue-600 mb-1 text-center">Actual Score</p>
+                            <div className="flex items-center justify-center gap-6 bg-blue-50 rounded-lg py-2">
+                              <div className="text-center">
+                                <p className="text-xl font-bold text-blue-700">{actualClubTotal}</p>
+                              </div>
+                              <span className="text-gray-400 font-light">–</span>
+                              <div className="text-center">
+                                <p className="text-xl font-bold text-blue-700">{actualOppTotal}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {currentMatchScore && myPrediction && (() => {
+                        const detail = calcPointsDetail(myPrediction, currentMatchScore, rinks);
+                        return (
+                          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+                            <span className="px-2 py-1 bg-gray-100 rounded-full text-gray-600">Rinks: <strong>{Object.values(detail.rinkBreakdown).reduce((s,v)=>s+v,0)} pts</strong></span>
+                            {detail.bestRinkPts > 0 && <span className="px-2 py-1 bg-amber-100 rounded-full text-amber-700">⭐ Best rink: <strong>+{detail.bestRinkPts} pts</strong></span>}
+                            <span className="px-2 py-1 bg-gray-100 rounded-full text-gray-600">Overall: <strong>{detail.overallPts} pts</strong></span>
+                            <span className="px-2 py-1 bg-emerald-100 rounded-full text-emerald-700 font-bold">Total: {detail.total} pts</span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {canPredict && (
@@ -520,10 +632,12 @@ export default function ScorePrediction() {
                         {fixtureLeaderboard.map((pred, idx) => {
                           const pts = pred.computedPoints;
                           const isMe = pred.user_email === user?.email;
+                          const clickable = matchStarted;
                           return (
                             <div
                               key={pred.id}
-                              className={`grid grid-cols-4 items-center px-2 py-2 rounded-lg ${isMe ? 'bg-emerald-50 border border-emerald-200' : idx % 2 === 0 ? 'bg-gray-50' : ''}`}
+                              onClick={clickable ? () => setViewingPrediction({ pred, fixture: currentFixture, matchScore: currentMatchScore, rinks }) : undefined}
+                              className={`grid grid-cols-4 items-center px-2 py-2 rounded-lg transition-colors ${isMe ? 'bg-emerald-50 border border-emerald-200' : idx % 2 === 0 ? 'bg-gray-50' : ''} ${clickable ? 'cursor-pointer hover:bg-emerald-50' : ''}`}
                             >
                               <div className="col-span-2 flex items-center gap-2">
                                 <span className={`text-xs font-bold w-5 text-center ${idx === 0 ? 'text-amber-500' : 'text-gray-400'}`}>
@@ -605,10 +719,28 @@ export default function ScorePrediction() {
                       {leagueRows.map((row, idx) => {
                         const isMe = row.email === user?.email;
                         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                        // Find the most recent scored fixture for this user to show on click
+                        const lastScoredFixture = fixtures
+                          .slice()
+                          .reverse()
+                          .find(f => {
+                            const ms = allMatchScores.find(s => s.selection_id === f.id);
+                            const pred = allPredictions.find(p => p.selection_id === f.id && p.user_email === row.email);
+                            return !!ms && !!pred;
+                          });
+                        const clickable = !!lastScoredFixture;
                         return (
                           <div
                             key={row.email}
-                            className={`grid grid-cols-4 items-center px-2 py-2.5 rounded-lg ${isMe ? 'bg-emerald-50 border border-emerald-200' : idx % 2 === 0 ? 'bg-gray-50' : ''}`}
+                            onClick={clickable ? () => {
+                              const fixture = lastScoredFixture;
+                              const matchScore = allMatchScores.find(s => s.selection_id === fixture.id);
+                              const pred = allPredictions.find(p => p.selection_id === fixture.id && p.user_email === row.email);
+                              const rks = getRinks(fixture);
+                              setViewingPrediction({ pred, fixture, matchScore, rinks: rks });
+                              setActiveTab('predict');
+                            } : undefined}
+                            className={`grid grid-cols-4 items-center px-2 py-2.5 rounded-lg transition-colors ${isMe ? 'bg-emerald-50 border border-emerald-200' : idx % 2 === 0 ? 'bg-gray-50' : ''} ${clickable ? 'cursor-pointer hover:bg-emerald-50' : ''}`}
                           >
                             <div className="col-span-2 flex items-center gap-2">
                               <span className={`text-xs font-bold w-6 text-center ${idx < 3 ? 'text-lg' : 'text-gray-400'}`}>
@@ -683,6 +815,118 @@ export default function ScorePrediction() {
           )}
         </Tabs>
       </div>
+
+      {/* Prediction Detail Modal */}
+      <Dialog open={!!viewingPrediction} onOpenChange={() => setViewingPrediction(null)}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          {viewingPrediction && (() => {
+            const { pred, fixture, matchScore, rinks: modalRinks } = viewingPrediction;
+            const detail = matchScore ? calcPointsDetail(pred, matchScore, modalRinks) : null;
+            const actualBestRink = matchScore ? getBestRinkKey(matchScore, modalRinks) : null;
+            const predBestRink = getPredictedBestRinkKey(pred, modalRinks);
+            const clubScores = matchScore?.club_scores || {};
+            const oppScores = matchScore?.opposition_scores || {};
+            const actualClubTotal = Object.values(clubScores).reduce((s,v) => s+(parseInt(v)||0), 0);
+            const actualOppTotal = Object.values(oppScores).reduce((s,v) => s+(parseInt(v)||0), 0);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-base">
+                    {getMemberName(pred.user_email)}'s Predictions
+                  </DialogTitle>
+                  <p className="text-sm text-gray-500">
+                    {fixture.match_name || fixture.competition} · {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+                  </p>
+                </DialogHeader>
+
+                <div className="space-y-4 mt-2">
+                  {/* Rink breakdown */}
+                  <div>
+                    <div className="grid grid-cols-5 text-xs font-semibold text-gray-500 px-1 pb-2 border-b mb-1">
+                      <span>Rink</span>
+                      <span className="text-center col-span-2">Prediction</span>
+                      {matchScore && <span className="text-center text-blue-600">Actual</span>}
+                      {matchScore && <span className="text-center text-emerald-700">Pts</span>}
+                    </div>
+                    {modalRinks.map(rink => {
+                      const key = `rink${rink.number}`;
+                      const predClub = pred.rink_predictions?.[key]?.club ?? '—';
+                      const predOpp = pred.rink_predictions?.[key]?.opposition ?? '—';
+                      const actualClub = matchScore ? (clubScores[key] ?? '—') : null;
+                      const actualOpp = matchScore ? (oppScores[key] ?? '—') : null;
+                      const rinkPts = detail?.rinkBreakdown?.[key] ?? null;
+                      const isBest = actualBestRink === key;
+                      const isPredBest = predBestRink === key;
+                      return (
+                        <div key={rink.number} className="grid grid-cols-5 items-center px-1 py-2 border-b last:border-0 gap-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-medium">R{rink.number}</span>
+                            {isBest && <Star className="w-3 h-3 text-amber-500 fill-amber-400" />}
+                            {isPredBest && !isBest && <Star className="w-3 h-3 text-gray-300" />}
+                          </div>
+                          <div className="col-span-2 text-center text-sm font-medium">
+                            {predClub}–{predOpp}
+                          </div>
+                          {matchScore && (
+                            <div className="text-center text-sm font-semibold text-blue-700">
+                              {actualClub}–{actualOpp}
+                            </div>
+                          )}
+                          {matchScore && (
+                            <div className="text-center">
+                              <span className={`text-sm font-bold ${rinkPts > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>
+                                {rinkPts !== null ? rinkPts : '—'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Overall */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Overall</p>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-600">Predicted</span>
+                      <span className="font-bold">{pred.predicted_club_total ?? '—'} – {pred.predicted_opposition_total ?? '—'}</span>
+                    </div>
+                    {matchScore && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Actual</span>
+                        <span className="font-bold text-blue-700">{actualClubTotal} – {actualOppTotal}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Points summary */}
+                  {detail && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Points Breakdown</p>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                          Rinks: <strong>{Object.values(detail.rinkBreakdown).reduce((s,v)=>s+v,0)} pts</strong>
+                        </span>
+                        {detail.bestRinkPts > 0 && (
+                          <span className="px-2 py-1 bg-amber-100 rounded-full text-amber-700">
+                            ⭐ Best rink: <strong>+{detail.bestRinkPts} pts</strong>
+                          </span>
+                        )}
+                        <span className="px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                          Overall: <strong>{detail.overallPts} pts</strong>
+                        </span>
+                        <span className="px-2 py-1 bg-emerald-100 rounded-full text-emerald-700 font-bold">
+                          Total: {detail.total} pts
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
