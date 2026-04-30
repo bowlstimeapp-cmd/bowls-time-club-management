@@ -431,22 +431,7 @@ export default function ClubSettings() {
         </CardContent>
       </Card>
 
-      {/* Scorecard Format */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Scorecard Format</CardTitle>
-          <CardDescription>Choose whether scorecards are generated as PDF or Excel (XLSX) files</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={scorecardFormat} onValueChange={setScorecardFormat}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pdf">PDF — Print-ready scorecard sheets (default)</SelectItem>
-              <SelectItem value="xlsx">Excel (XLSX) — One sheet per fixture, editable in Excel or Google Sheets</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+
 
       {/* Custom Scorecard Layout */}
       {club?.module_custom_branding && (
@@ -474,6 +459,11 @@ export default function ClubSettings() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Team Sheet Print Template */}
+      {club?.module_selection !== false && club?.id && (
+        <TeamSheetTemplateSettings key={club.id} club={club} onChange={handleTeamSheetChange} />
       )}
 
       {/* Function Room API Key */}
@@ -511,10 +501,7 @@ export default function ClubSettings() {
         </Card>
       )}
 
-      {/* Team Sheet Print Template */}
-      {club?.module_selection !== false && club?.id && (
-        <TeamSheetTemplateSettings key={club.id} club={club} onChange={handleTeamSheetChange} />
-      )}
+
 
       <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
     </div>
