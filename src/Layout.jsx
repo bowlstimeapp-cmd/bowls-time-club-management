@@ -421,9 +421,9 @@ export default function Layout({ children, currentPageName }) {
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem asChild>
-                        <Link to={createPageUrl('Clubsettingss') + `?clubId=${clubId}`} className="cursor-pointer">
+                        <Link to={createPageUrl('Clubsettings') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Settings className="w-4 h-4 mr-2" />
-                          Open Competitions
+                          Club Admin
                         </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
