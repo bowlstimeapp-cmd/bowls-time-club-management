@@ -337,7 +337,7 @@ export default function ClubSettings() {
 
   // ── Tab content renderers ──────────────────────────────────────────────────
 
-  // GENERAL: Club Logo, Alternative Page Views, TV Display, Custom Scorecard Layout
+  // GENERAL
   const renderGeneral = () => (
     <div className="space-y-6">
       {/* Club Logo */}
@@ -431,6 +431,23 @@ export default function ClubSettings() {
         </CardContent>
       </Card>
 
+      {/* Scorecard Format */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Scorecard Format</CardTitle>
+          <CardDescription>Choose whether scorecards are generated as PDF or Excel (XLSX) files</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={scorecardFormat} onValueChange={setScorecardFormat}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pdf">PDF — Print-ready scorecard sheets (default)</SelectItem>
+              <SelectItem value="xlsx">Excel (XLSX) — One sheet per fixture, editable in Excel or Google Sheets</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       {/* Custom Scorecard Layout */}
       {club?.module_custom_branding && (
         <Card>
@@ -459,11 +476,51 @@ export default function ClubSettings() {
         </Card>
       )}
 
+      {/* Function Room API Key */}
+      {club?.module_function_rooms && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><DoorOpen className="w-5 h-5" />Function Room Bookings — API Key</CardTitle>
+            <CardDescription>This key authenticates requests from your external website to the function room availability and booking API.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input readOnly value={club?.function_room_api_key || '(no key generated yet)'} className="font-mono text-sm" />
+              <Button type="button" variant="outline" onClick={async () => {
+                const newKey = 'frk_' + crypto.randomUUID().replace(/-/g, '');
+                await base44.entities.Club.update(clubId, { function_room_api_key: newKey });
+                queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+                toast.success('New API key generated');
+              }}>
+                <RefreshCw className="w-4 h-4 mr-1" />{club?.function_room_api_key ? 'Regenerate' : 'Generate'}
+              </Button>
+            </div>
+            {club?.function_room_api_key && (
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-2">
+                <p className="font-semibold text-gray-800">API Usage</p>
+                <p>POST to your function endpoint with JSON body. Two routes:</p>
+                <p className="font-mono bg-white rounded p-2 border">
+                  {'{'}"route": "check_availability", "club_id": "{clubId}", "api_key": "YOUR_KEY", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2{'}'}
+                </p>
+                <p className="font-mono bg-white rounded p-2 border">
+                  {'{'}"route": "submit_booking", "club_id": "{clubId}", "api_key": "YOUR_KEY", "room_id": "ROOM_ID", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2, "contact_name": "John Smith", "contact_email": "john@example.com"{'}'}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Team Sheet Print Template */}
+      {club?.module_selection !== false && club?.id && (
+        <TeamSheetTemplateSettings key={club.id} club={club} onChange={handleTeamSheetChange} />
+      )}
+
       <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
     </div>
   );
 
-  // RINKS & BOOKINGS: Rink Configuration, Booking Settings, Import Bookings
+  // RINKS & BOOKINGS
   const renderRinks = () => (
     <div className="space-y-6">
       {/* Rink Configuration */}
@@ -559,7 +616,7 @@ export default function ClubSettings() {
     </div>
   );
 
-  // MEMBERS: Membership Types, Notification Settings, Kiosk Mode, Membership Payments
+  // MEMBERS
   const renderMembers = () => (
     <div className="space-y-6">
       {/* Membership Types */}
@@ -675,7 +732,7 @@ export default function ClubSettings() {
     </div>
   );
 
-  // COMPETITIONS: Competitions list, Competition Registration, Accolades
+  // COMPETITIONS
   const renderCompetitions = () => (
     <div className="space-y-6">
       {/* Competitions list */}
@@ -757,117 +814,11 @@ export default function ClubSettings() {
     </div>
   );
 
-  // DISPLAY & INTEGRATIONS: TV Display, Scorecard Format, Custom Scorecard Layout, Function Room API, Team Sheet Template
-  const renderDisplay = () => (
-    <div className="space-y-6">
-      {/* TV Display */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Tv className="w-5 h-5" />TV / Display Board</CardTitle>
-          <CardDescription>Configure the fullscreen rink display for TVs and monitors in the clubhouse</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Label>Day cycle duration (seconds)</Label>
-          <p className="text-sm text-gray-500 mb-2">How long to show each day before switching between Today and Tomorrow.</p>
-          <Input type="number" min="5" max="300" value={tvCycleSeconds} onChange={(e) => setTvCycleSeconds(e.target.value)} className="w-32" />
-        </CardContent>
-      </Card>
-
-      {/* Scorecard Format */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Scorecard Format</CardTitle>
-          <CardDescription>Choose whether scorecards are generated as PDF or Excel (XLSX) files</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={scorecardFormat} onValueChange={setScorecardFormat}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pdf">PDF — Print-ready scorecard sheets (default)</SelectItem>
-              <SelectItem value="xlsx">Excel (XLSX) — One sheet per fixture, editable in Excel or Google Sheets</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* Custom Scorecard Layout */}
-      {club?.module_custom_branding && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5" />Custom Scorecard Layout</CardTitle>
-            <CardDescription>Design a custom scorecard layout for this club.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base">Use Custom Scorecard Layout</Label>
-                <p className="text-sm text-gray-500">Override the default scorecard design with your custom layout</p>
-              </div>
-              <Switch checked={useCustomScorecardLayout} onCheckedChange={setUseCustomScorecardLayout} />
-            </div>
-            {useCustomScorecardLayout && (
-              <div className="pt-2">
-                <Link to={createPageUrl('ScorecardLayoutEditor') + `?clubId=${clubId}`}>
-                  <Button type="button" variant="outline" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
-                    <ExternalLink className="w-4 h-4 mr-2" />Edit Layout
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Function Room API Key */}
-      {club?.module_function_rooms && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><DoorOpen className="w-5 h-5" />Function Room Bookings — API Key</CardTitle>
-            <CardDescription>This key authenticates requests from your external website to the function room availability and booking API.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Input readOnly value={club?.function_room_api_key || '(no key generated yet)'} className="font-mono text-sm" />
-              <Button type="button" variant="outline" onClick={async () => {
-                const newKey = 'frk_' + crypto.randomUUID().replace(/-/g, '');
-                await base44.entities.Club.update(clubId, { function_room_api_key: newKey });
-                queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-                toast.success('New API key generated');
-              }}>
-                <RefreshCw className="w-4 h-4 mr-1" />{club?.function_room_api_key ? 'Regenerate' : 'Generate'}
-              </Button>
-            </div>
-            {club?.function_room_api_key && (
-              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-2">
-                <p className="font-semibold text-gray-800">API Usage</p>
-                <p>POST to your function endpoint with JSON body. Two routes:</p>
-                <p className="font-mono bg-white rounded p-2 border">
-                  {'{'}"route": "check_availability", "club_id": "{clubId}", "api_key": "YOUR_KEY", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2{'}'}
-                </p>
-                <p className="font-mono bg-white rounded p-2 border">
-                  {'{'}"route": "submit_booking", "club_id": "{clubId}", "api_key": "YOUR_KEY", "room_id": "ROOM_ID", "date": "2024-06-01", "start_time": "14:00", "duration_hours": 2, "contact_name": "John Smith", "contact_email": "john@example.com"{'}'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Team Sheet Print Template */}
-      {club?.module_selection !== false && club?.id && (
-        <TeamSheetTemplateSettings key={club.id} club={club} onChange={handleTeamSheetChange} />
-      )}
-
-      <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
-    </div>
-  );
-
   const tabContent = {
     general: renderGeneral,
     rinks: renderRinks,
     members: renderMembers,
     competitions: renderCompetitions,
-    display: renderDisplay,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
