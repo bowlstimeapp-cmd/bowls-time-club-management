@@ -15,7 +15,6 @@ import {
   Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette,
   ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush, Bell, Layers
 } from 'lucide-react';
-import { CLUB_THEMES } from '@/lib/clubTheme.jsx';
 import { Textarea } from "@/components/ui/textarea";
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
@@ -27,11 +26,11 @@ import { createPageUrl } from '@/utils';
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'general',      label: 'General',              icon: Settings     },
-  { id: 'rinks',        label: 'Rinks & Bookings',     icon: Layers       },
-  { id: 'members',      label: 'Members',              icon: Users        },
-  { id: 'competitions', label: 'Competitions',         icon: Trophy       },
-  { id: 'display',      label: 'Display & Integrations', icon: Tv         },
+  { id: 'general',      label: 'General',                icon: Settings  },
+  { id: 'rinks',        label: 'Rinks & Bookings',       icon: Layers    },
+  { id: 'members',      label: 'Members',                icon: Users     },
+  { id: 'competitions', label: 'Competitions',           icon: Trophy    },
+  { id: 'display',      label: 'Display & Integrations', icon: Tv        },
 ];
 
 // ─── Reusable SaveButton ──────────────────────────────────────────────────────
@@ -299,7 +298,7 @@ export default function ClubSettings() {
     }
   };
 
-  // ── Core save (always saves the full payload) ──────────────────────────────
+  // ── Core save ──────────────────────────────────────────────────────────────
   const handleSave = () => {
     const payload = {
       rink_count: parseInt(rinkCount) || club?.rink_count || 6,
@@ -338,6 +337,7 @@ export default function ClubSettings() {
 
   // ── Tab content renderers ──────────────────────────────────────────────────
 
+  // GENERAL: Club Logo, Alternative Page Views, TV Display, Custom Scorecard Layout
   const renderGeneral = () => (
     <div className="space-y-6">
       {/* Club Logo */}
@@ -373,31 +373,6 @@ export default function ClubSettings() {
         </CardContent>
       </Card>
 
-      {/* Club Theme */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Paintbrush className="w-5 h-5" />Club Theme</CardTitle>
-          <CardDescription>Choose a colour theme for your club's app interface</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {Object.entries(CLUB_THEMES).map(([key, { label, preview }]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setClubTheme(key)}
-                className={`text-left p-3 rounded-lg border-2 transition-all ${clubTheme === key ? 'border-gray-800 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}
-              >
-                <div className={`w-full h-6 rounded-md mb-2 ${preview}`} />
-                <p className="text-sm font-medium">{label}</p>
-                {clubTheme === key && <p className="text-xs text-emerald-600 mt-0.5">✓ Active</p>}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mt-3">Theme colours apply to accents, buttons and badges throughout the club view. Changes take effect after saving and refreshing.</p>
-        </CardContent>
-      </Card>
-
       {/* Default Landing Page */}
       {club?.module_homepage && (
         <Card>
@@ -419,10 +394,76 @@ export default function ClubSettings() {
         </Card>
       )}
 
+      {/* Alternative Page Views */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Alternative Page Views</CardTitle>
+          <CardDescription>Switch specific pages to a cleaner, table-based layout</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Selection — Table View</Label>
+              <p className="text-sm text-gray-500">Show team selections as a compact table instead of cards</p>
+            </div>
+            <Switch checked={altViewSelection} onCheckedChange={setAltViewSelection} />
+          </div>
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div>
+              <Label className="text-base">League Admin — Table View</Label>
+              <p className="text-sm text-gray-500">Show the League Admin page as a compact table/accordion instead of cards</p>
+            </div>
+            <Switch checked={altViewLeagues} onCheckedChange={setAltViewLeagues} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* TV Display */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Tv className="w-5 h-5" />TV / Display Board</CardTitle>
+          <CardDescription>Configure the fullscreen rink display for TVs and monitors in the clubhouse</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label>Day cycle duration (seconds)</Label>
+          <p className="text-sm text-gray-500 mb-2">How long to show each day before switching between Today and Tomorrow.</p>
+          <Input type="number" min="5" max="300" value={tvCycleSeconds} onChange={(e) => setTvCycleSeconds(e.target.value)} className="w-32" />
+        </CardContent>
+      </Card>
+
+      {/* Custom Scorecard Layout */}
+      {club?.module_custom_branding && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Palette className="w-5 h-5" />Custom Scorecard Layout</CardTitle>
+            <CardDescription>Design a custom scorecard layout for this club.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">Use Custom Scorecard Layout</Label>
+                <p className="text-sm text-gray-500">Override the default scorecard design with your custom layout</p>
+              </div>
+              <Switch checked={useCustomScorecardLayout} onCheckedChange={setUseCustomScorecardLayout} />
+            </div>
+            {useCustomScorecardLayout && (
+              <div className="pt-2">
+                <Link to={createPageUrl('ScorecardLayoutEditor') + `?clubId=${clubId}`}>
+                  <Button type="button" variant="outline" className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
+                    <ExternalLink className="w-4 h-4 mr-2" />Edit Layout
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
     </div>
   );
 
+  // RINKS & BOOKINGS: Rink Configuration, Booking Settings, Import Bookings
   const renderRinks = () => (
     <div className="space-y-6">
       {/* Rink Configuration */}
@@ -518,6 +559,7 @@ export default function ClubSettings() {
     </div>
   );
 
+  // MEMBERS: Membership Types, Notification Settings, Kiosk Mode, Membership Payments
   const renderMembers = () => (
     <div className="space-y-6">
       {/* Membership Types */}
@@ -588,73 +630,42 @@ export default function ClubSettings() {
         </CardContent>
       </Card>
 
-      {/* Kiosk Mode */}
+      {/* Membership Payments */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Monitor className="w-5 h-5" />Kiosk Mode</CardTitle>
-          <CardDescription>Enable a touchscreen kiosk at the clubhouse where members log in with a unique numeric ID to book rinks</CardDescription>
+          <CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5" />Membership Payments (Stripe)</CardTitle>
+          <CardDescription>Enable online membership fee collection via Stripe. Optionally provide your own Stripe keys so payments go directly to your club account.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base">Enable Kiosk Mode</Label>
-              <p className="text-sm text-gray-500">Show a member login screen when the kiosk account is used</p>
+              <Label className="text-base">Enable Membership Fee Collection</Label>
+              <p className="text-sm text-gray-500">Show a payment option on member profiles</p>
             </div>
-            <Switch checked={kioskModeEnabled} onCheckedChange={setKioskModeEnabled} />
+            <Switch checked={membershipFeeEnabled} onCheckedChange={setMembershipFeeEnabled} />
           </div>
-          {kioskModeEnabled && (
+          {membershipFeeEnabled && (
             <>
               <div>
-                <Label>Kiosk Account</Label>
-                <p className="text-sm text-gray-500 mb-2">Select the club member whose login will be the dedicated kiosk terminal</p>
-                <select
-                  className="w-full border border-input bg-transparent rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={kioskAccountEmail}
-                  onChange={(e) => setKioskAccountEmail(e.target.value)}
-                >
-                  <option value="">— Select kiosk account —</option>
-                  {members.map(m => (
-                    <option key={m.id} value={m.user_email}>
-                      {m.first_name && m.surname ? `${m.first_name} ${m.surname}` : m.user_name || m.user_email} ({m.user_email})
-                    </option>
-                  ))}
-                </select>
+                <Label>Fee Amount (£)</Label>
+                <Input type="number" min="0" step="0.01" value={membershipFeeAmount} onChange={e => setMembershipFeeAmount(e.target.value)} placeholder="e.g. 50.00" />
               </div>
-              {kioskAccountEmail && (
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Assign Member IDs</p>
-                  <p className="text-sm text-gray-500 mb-3">Generate unique 5-digit IDs for any approved members who don't have one yet.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={assigningMemberIds}
-                    onClick={async () => {
-                      setAssigningMemberIds(true);
-                      setMemberIdAssignResult(null);
-                      const needsId = members.filter(m => !m.member_id);
-                      if (needsId.length === 0) {
-                        setMemberIdAssignResult('All members already have a Member ID assigned.');
-                        setAssigningMemberIds(false);
-                        return;
-                      }
-                      const usedIds = new Set(members.map(m => m.member_id).filter(Boolean));
-                      const generateId = () => {
-                        let id;
-                        do { id = String(Math.floor(10000 + Math.random() * 90000)); } while (usedIds.has(id));
-                        usedIds.add(id);
-                        return id;
-                      };
-                      for (const m of needsId) await base44.entities.ClubMembership.update(m.id, { member_id: generateId() });
-                      queryClient.invalidateQueries({ queryKey: ['clubMembers', clubId] });
-                      setMemberIdAssignResult(`✓ ${needsId.length} member(s) assigned new IDs.`);
-                      setAssigningMemberIds(false);
-                    }}
-                  >
-                    {assigningMemberIds ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Assigning…</> : 'Assign Member IDs'}
-                  </Button>
-                  {memberIdAssignResult && <p className="text-sm text-emerald-700 mt-2 font-medium">{memberIdAssignResult}</p>}
+              <div>
+                <Label>Payment Description</Label>
+                <Input value={membershipFeeDescription} onChange={e => setMembershipFeeDescription(e.target.value)} placeholder="e.g. Annual Membership 2024/25" />
+              </div>
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-sm font-medium text-gray-700">Your Stripe Keys (optional)</p>
+                <p className="text-xs text-gray-500">Leave blank to use the platform Stripe account. Provide your own keys to receive payments directly into your Stripe account.</p>
+                <div>
+                  <Label>Stripe Publishable Key</Label>
+                  <Input value={stripePublishableKey} onChange={e => setStripePublishableKey(e.target.value)} placeholder="pk_live_..." />
                 </div>
-              )}
+                <div>
+                  <Label>Stripe Secret Key</Label>
+                  <Input type="password" value={stripeSecretKey} onChange={e => setStripeSecretKey(e.target.value)} placeholder="sk_live_..." />
+                </div>
+              </div>
             </>
           )}
         </CardContent>
@@ -664,6 +675,7 @@ export default function ClubSettings() {
     </div>
   );
 
+  // COMPETITIONS: Competitions list, Competition Registration, Accolades
   const renderCompetitions = () => (
     <div className="space-y-6">
       {/* Competitions list */}
@@ -745,6 +757,7 @@ export default function ClubSettings() {
     </div>
   );
 
+  // DISPLAY & INTEGRATIONS: TV Display, Scorecard Format, Custom Scorecard Layout, Function Room API, Team Sheet Template
   const renderDisplay = () => (
     <div className="space-y-6">
       {/* TV Display */}
@@ -774,71 +787,6 @@ export default function ClubSettings() {
               <SelectItem value="xlsx">Excel (XLSX) — One sheet per fixture, editable in Excel or Google Sheets</SelectItem>
             </SelectContent>
           </Select>
-        </CardContent>
-      </Card>
-
-      {/* Alternative Views */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Alternative Page Views</CardTitle>
-          <CardDescription>Switch specific pages to a cleaner, table-based layout</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Selection — Table View</Label>
-              <p className="text-sm text-gray-500">Show team selections as a compact table instead of cards</p>
-            </div>
-            <Switch checked={altViewSelection} onCheckedChange={setAltViewSelection} />
-          </div>
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div>
-              <Label className="text-base">League Admin — Table View</Label>
-              <p className="text-sm text-gray-500">Show the League Admin page as a compact table/accordion instead of cards</p>
-            </div>
-            <Switch checked={altViewLeagues} onCheckedChange={setAltViewLeagues} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Membership Payments */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5" />Membership Payments (Stripe)</CardTitle>
-          <CardDescription>Enable online membership fee collection via Stripe. Optionally provide your own Stripe keys so payments go directly to your club account.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base">Enable Membership Fee Collection</Label>
-              <p className="text-sm text-gray-500">Show a payment option on member profiles</p>
-            </div>
-            <Switch checked={membershipFeeEnabled} onCheckedChange={setMembershipFeeEnabled} />
-          </div>
-          {membershipFeeEnabled && (
-            <>
-              <div>
-                <Label>Fee Amount (£)</Label>
-                <Input type="number" min="0" step="0.01" value={membershipFeeAmount} onChange={e => setMembershipFeeAmount(e.target.value)} placeholder="e.g. 50.00" />
-              </div>
-              <div>
-                <Label>Payment Description</Label>
-                <Input value={membershipFeeDescription} onChange={e => setMembershipFeeDescription(e.target.value)} placeholder="e.g. Annual Membership 2024/25" />
-              </div>
-              <div className="border-t pt-4 space-y-3">
-                <p className="text-sm font-medium text-gray-700">Your Stripe Keys (optional)</p>
-                <p className="text-xs text-gray-500">Leave blank to use the platform Stripe account. Provide your own keys to receive payments directly into your Stripe account.</p>
-                <div>
-                  <Label>Stripe Publishable Key</Label>
-                  <Input value={stripePublishableKey} onChange={e => setStripePublishableKey(e.target.value)} placeholder="pk_live_..." />
-                </div>
-                <div>
-                  <Label>Stripe Secret Key</Label>
-                  <Input type="password" value={stripeSecretKey} onChange={e => setStripeSecretKey(e.target.value)} placeholder="sk_live_..." />
-                </div>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 
@@ -925,7 +873,8 @@ export default function ClubSettings() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Wider container: max-w-2xl on mobile, max-w-4xl on desktop */}
+      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Club Settings</h1>
