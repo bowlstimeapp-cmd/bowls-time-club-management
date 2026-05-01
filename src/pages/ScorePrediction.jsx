@@ -648,7 +648,7 @@ export default function ScorePrediction() {
                                 </span>
                               </div>
                               <div className="text-center text-sm text-gray-600">
-                                {pred.predicted_club_total ?? '—'}–{pred.predicted_opposition_total ?? '—'}
+                                {matchStarted ? `${pred.predicted_club_total ?? '—'}–${pred.predicted_opposition_total ?? '—'}` : '–'}
                               </div>
                               <div className="text-center font-bold text-emerald-700">
                                 {pts !== null ? pts : <span className="text-gray-300 font-normal">—</span>}
