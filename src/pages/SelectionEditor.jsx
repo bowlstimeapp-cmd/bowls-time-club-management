@@ -36,6 +36,7 @@ import Fantastic5sSelectionGrid from '@/components/selection/Fantastic5sSelectio
 import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
+import SmsNotificationControl from '@/components/selection/SmsNotificationControl';
 
 const APP_BASE_URL = window.location.origin;
 
@@ -94,6 +95,7 @@ export default function SelectionEditor() {
   const [awayCaptainEmail, setAwayCaptainEmail] = useState('');
   const [clashModalOpen, setClashModalOpen] = useState(false);
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
+  const [sendSmsNotification, setSendSmsNotification] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -400,7 +402,7 @@ if (club?.email_member_notifications) {
 }
     
     // SMS notifications
-    if (club?.module_sms_notifications && club?.sms_member_notifications) {
+    if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
       const smsMembers = members.filter(m => 
         selectedPlayerEmails.includes(m.user_email) && 
         m.sms_notifications === true &&
@@ -409,19 +411,23 @@ if (club?.email_member_notifications) {
 
       const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
 
+      let smsSentCount = 0;
       for (const member of smsMembers) {
         try {
-          await base44.functions.invoke('sendSMS', {
+          const result = await base44.functions.invoke('sendSMS', {
             to: member.phone,
-            message: smsMessage
+            message: smsMessage,
+            clubId
           });
+          if (result?.data?.blocked) break;
+          if (result?.data?.success) smsSentCount++;
         } catch (error) {
           console.error(`Failed to send SMS to ${member.phone}:`, error);
         }
       }
       
-      if (smsMembers.length > 0) {
-        toast.success(`SMS sent to ${smsMembers.length} players`);
+      if (smsSentCount > 0) {
+        toast.success(`SMS sent to ${smsSentCount} players`);
       }
     }
   };
@@ -494,7 +500,7 @@ if (club?.email_member_notifications) {
           
           // SMS notifications
           const selectedPlayerEmails = newlyAddedEmails;
-          if (club?.module_sms_notifications && club?.sms_member_notifications) {
+          if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
             const smsMembers = members.filter(m => 
               selectedPlayerEmails.includes(m.user_email) && 
               m.sms_notifications === true &&
@@ -503,19 +509,23 @@ if (club?.email_member_notifications) {
 
             const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
 
+            let smsSentCount = 0;
             for (const member of smsMembers) {
               try {
-                await base44.functions.invoke('sendSMS', {
+                const result = await base44.functions.invoke('sendSMS', {
                   to: member.phone,
-                  message: smsMessage
+                  message: smsMessage,
+                  clubId
                 });
+                if (result?.data?.blocked) break;
+                if (result?.data?.success) smsSentCount++;
               } catch (error) {
                 console.error(`Failed to send SMS to ${member.phone}:`, error);
               }
             }
             
-            if (smsMembers.length > 0) {
-              toast.success(`SMS sent to ${smsMembers.length} newly added player(s)`);
+            if (smsSentCount > 0) {
+              toast.success(`SMS sent to ${smsSentCount} newly added player(s)`);
             }
           }
         }
@@ -1077,6 +1087,14 @@ if (club?.email_member_notifications) {
                       Book Rinks for Match
                     </Button>
                   </>
+                )}
+
+                {club?.module_sms_notifications && (
+                  <SmsNotificationControl
+                    clubId={clubId}
+                    enabled={sendSmsNotification}
+                    onChange={setSendSmsNotification}
+                  />
                 )}
 
                 <div className="pt-4 space-y-2">

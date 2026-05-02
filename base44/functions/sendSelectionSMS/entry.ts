@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { format } from 'npm:date-fns@3.6.0';
 
 Deno.serve(async (req) => {
@@ -22,6 +22,32 @@ Deno.serve(async (req) => {
       return Response.json({ message: 'SMS notifications not enabled for club' });
     }
 
+    // Check monthly allowance
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    let currentUsageCount = 0;
+    let usageRecord = null;
+
+    if (club?.sms_monthly_allowance != null) {
+      const usageRecords = await base44.asServiceRole.entities.SmsUsage.filter({
+        club_id: clubId,
+        month_key: monthKey
+      });
+      usageRecord = usageRecords[0];
+      currentUsageCount = usageRecord?.sent_count || 0;
+
+      if (currentUsageCount >= club.sms_monthly_allowance) {
+        console.log(`SMS blocked for club ${clubId}: allowance ${club.sms_monthly_allowance} reached`);
+        return Response.json({
+          message: 'Monthly SMS allowance exceeded',
+          blocked: true,
+          sent: 0,
+          failed: 0
+        });
+      }
+    }
+
     // Get approved members
     const members = await base44.asServiceRole.entities.ClubMembership.filter({
       club_id: clubId,
@@ -43,9 +69,9 @@ Deno.serve(async (req) => {
       if (selectedMembers.length === 0) reasons.push('no members found in selections');
       if (membersWithSMS.length === 0) reasons.push('no members have SMS enabled');
       if (membersWithSMS.length > 0 && smsMembers.length === 0) reasons.push(`${membersWithSMS.length} member(s) have SMS enabled but no phone number set`);
-      
-      return Response.json({ 
-        message: 'No SMS sent', 
+
+      return Response.json({
+        message: 'No SMS sent',
         reason: reasons.join(', '),
         debug: {
           selectedCount: selectedMembers.length,
@@ -55,7 +81,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ✅ Twilio credentials (TRIMMED to prevent hidden whitespace bugs)
+    // Respect allowance — cap how many we can send
+    let membersToSend = smsMembers;
+    if (club?.sms_monthly_allowance != null) {
+      const remaining = club.sms_monthly_allowance - currentUsageCount;
+      if (remaining <= 0) {
+        return Response.json({ message: 'Monthly SMS allowance exceeded', blocked: true, sent: 0, failed: 0 });
+      }
+      membersToSend = smsMembers.slice(0, remaining);
+    }
+
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID')?.trim();
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN')?.trim();
     const fromNumber = Deno.env.get('TWILIO_PHONE_NUMBER')?.trim();
@@ -66,8 +101,6 @@ Deno.serve(async (req) => {
     }
 
     const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-
-    // ✅ Safe Basic Auth encoding (matches cURL exactly)
     const credentials = `${accountSid}:${authToken}`;
     const encodedCredentials = btoa(credentials);
     const authHeader = `Basic ${encodedCredentials}`;
@@ -77,8 +110,7 @@ Deno.serve(async (req) => {
     let sentCount = 0;
     let failedCount = 0;
 
-    for (const member of smsMembers) {
-
+    for (const member of membersToSend) {
       console.log("Attempting SMS to:", member.phone);
 
       const message = `Hi ${member.first_name || 'there'}, you've been selected for ${data.competition} on ${matchDate}. Please visit app.bowls-time.com to confirm your availability`;
@@ -99,7 +131,6 @@ Deno.serve(async (req) => {
 
         const text = await response.text();
         let result;
-
         try {
           result = JSON.parse(text);
         } catch {
@@ -108,10 +139,7 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
           failedCount++;
-          console.error("Twilio ERROR:", {
-            status: response.status,
-            response: result
-          });
+          console.error("Twilio ERROR:", { status: response.status, response: result });
         } else {
           sentCount++;
           console.log("SMS sent successfully:", result.sid);
@@ -120,6 +148,24 @@ Deno.serve(async (req) => {
       } catch (error) {
         failedCount++;
         console.error("Fetch error sending SMS:", error);
+      }
+    }
+
+    // Update usage record
+    if (sentCount > 0) {
+      if (usageRecord) {
+        await base44.asServiceRole.entities.SmsUsage.update(usageRecord.id, {
+          sent_count: (usageRecord.sent_count || 0) + sentCount,
+          allowance: club?.sms_monthly_allowance ?? usageRecord.allowance
+        });
+      } else {
+        await base44.asServiceRole.entities.SmsUsage.create({
+          club_id: clubId,
+          club_name: club?.name || '',
+          month_key: monthKey,
+          sent_count: sentCount,
+          allowance: club?.sms_monthly_allowance ?? null
+        });
       }
     }
 

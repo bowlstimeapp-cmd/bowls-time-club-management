@@ -59,6 +59,7 @@ import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
 import MarketingPDFGenerator from '@/components/admin/MarketingPDFGenerator';
 import PlatformSettings from '@/components/admin/PlatformSettings';
 import PlatformDocuments from '@/components/admin/PlatformDocuments';
+import SmsUsageTab from '@/components/admin/SmsUsageTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -107,7 +108,8 @@ export default function PlatformAdmin() {
     module_selection: true,
     module_competitions: true,
     module_leagues: true,
-    module_sms_notifications: false
+    module_sms_notifications: false,
+    sms_monthly_allowance: ''
   });
 
   const queryClient = useQueryClient();
@@ -314,6 +316,7 @@ export default function PlatformAdmin() {
       module_competitions: club.module_competitions !== false,
       module_leagues: club.module_leagues !== false,
       module_sms_notifications: club.module_sms_notifications || false,
+      sms_monthly_allowance: club.sms_monthly_allowance != null ? club.sms_monthly_allowance : '',
       module_homepage: club.module_homepage || false,
       module_function_rooms: club.module_function_rooms || false,
       module_custom_branding: club.module_custom_branding || false,
@@ -330,7 +333,11 @@ export default function PlatformAdmin() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const data = { ...formData, slug };
+    const data = {
+      ...formData,
+      slug,
+      sms_monthly_allowance: formData.sms_monthly_allowance !== '' ? parseInt(formData.sms_monthly_allowance) : null
+    };
     if (editingClub) {
       updateClubMutation.mutate({ id: editingClub.id, data });
     } else {
@@ -513,23 +520,24 @@ export default function PlatformAdmin() {
         >
           <Tabs defaultValue="clubs" className="w-full">
             <div className="overflow-x-auto mb-6">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-7">
-                <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
-                <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
-                <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
-                <TabsTrigger value="deletions" className="relative whitespace-nowrap">
-                  <span className="hidden sm:inline">Account Deletions</span>
-                  <span className="sm:hidden">Deletions</span>
-                  {pendingDeletions.length > 0 && (
-                    <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">
-                      {pendingDeletions.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="emails" className="whitespace-nowrap">Sent Emails</TabsTrigger>
-                <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
-                <TabsTrigger value="documents" className="whitespace-nowrap">Documents</TabsTrigger>
-              </TabsList>
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-8">
+                   <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
+                   <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
+                   <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
+                   <TabsTrigger value="deletions" className="relative whitespace-nowrap">
+                     <span className="hidden sm:inline">Account Deletions</span>
+                     <span className="sm:hidden">Deletions</span>
+                     {pendingDeletions.length > 0 && (
+                       <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">
+                         {pendingDeletions.length}
+                       </span>
+                     )}
+                   </TabsTrigger>
+                   <TabsTrigger value="emails" className="whitespace-nowrap">Sent Emails</TabsTrigger>
+                   <TabsTrigger value="sms" className="whitespace-nowrap">SMS Usage</TabsTrigger>
+                   <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
+                   <TabsTrigger value="documents" className="whitespace-nowrap">Documents</TabsTrigger>
+                 </TabsList>
             </div>
 
             {/* ── CLUBS ── */}
@@ -866,9 +874,14 @@ export default function PlatformAdmin() {
                 </CardContent>
               </Card>
             </TabsContent>
+            {/* ── SMS USAGE ── */}
+            <TabsContent value="sms">
+             <SmsUsageTab clubs={clubs} />
+            </TabsContent>
+
             {/* ── SETTINGS ── */}
             <TabsContent value="settings">
-              <PlatformSettings />
+             <PlatformSettings />
             </TabsContent>
 
             {/* ── DOCUMENTS ── */}
@@ -958,6 +971,27 @@ export default function PlatformAdmin() {
                       { key: 'module_competitions', label: 'Competitions' },
                       { key: 'module_leagues', label: 'Leagues' },
                       { key: 'module_sms_notifications', label: 'SMS Notifications' },
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <Label className="font-normal">{label}</Label>
+                        <Switch checked={formData[key]} onCheckedChange={(checked) => setFormData({ ...formData, [key]: checked })} />
+                      </div>
+                    ))}
+                    {formData.module_sms_notifications && (
+                      <div className="ml-4 pl-3 border-l-2 border-blue-200">
+                        <Label>SMS Monthly Allowance</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 100"
+                          value={formData.sms_monthly_allowance}
+                          onChange={(e) => setFormData({ ...formData, sms_monthly_allowance: e.target.value })}
+                          className="mt-1 w-40"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Max SMS per calendar month for this club</p>
+                      </div>
+                    )}
+                    {[
                       { key: 'module_homepage', label: 'Club Homepage' },
                       { key: 'module_function_rooms', label: 'Function Room Bookings' },
                       { key: 'module_custom_branding', label: 'Custom Branding (Scorecard Layout)' },
@@ -968,6 +1002,7 @@ export default function PlatformAdmin() {
                         <Switch checked={formData[key]} onCheckedChange={(checked) => setFormData({ ...formData, [key]: checked })} />
                       </div>
                     ))}
+
                   </div>
                 </div>
               </div>

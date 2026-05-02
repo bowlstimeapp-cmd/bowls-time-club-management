@@ -353,6 +353,10 @@
       "default": "emerald",
       "description": "UI colour theme for the club (affects accent colours throughout the app)"
     },
+    "sms_monthly_allowance": {
+      "type": "number",
+      "description": "Maximum number of SMS messages the club can send per calendar month"
+    },
     "selection_competition_colours": {
       "type": "object",
       "description": "Map of competition name to hex colour for selection card headers",

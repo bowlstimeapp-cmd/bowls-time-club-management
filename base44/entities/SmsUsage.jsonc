@@ -1,0 +1,36 @@
+{
+  "name": "SmsUsage",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "club_name": {
+      "type": "string",
+      "description": "Club name (denormalised for reporting)"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "YYYY-MM format e.g. 2026-05"
+    },
+    "sent_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of SMS messages successfully sent this month"
+    },
+    "allowance": {
+      "type": "number",
+      "description": "Monthly allowance at time of recording"
+    }
+  },
+  "required": [
+    "club_id",
+    "month_key"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
