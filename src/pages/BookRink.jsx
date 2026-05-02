@@ -192,10 +192,11 @@ useEffect(() => {
     // For kiosk sessions, check by the kiosk member's email
     const checkEmail = kioskMember ? kioskMember.user_email : user.email;
 
-    // Teams this user (or kiosk member) belongs to (captain or player)
+    // Only consider teams belonging to leagues that still exist
+    const leagueIds = new Set(leagues.map(l => l.id));
     const myTeams = leagueTeams.filter(t =>
-      t.captain_email === checkEmail ||
-      (t.players || []).includes(checkEmail)
+      leagueIds.has(t.league_id) &&
+      (t.captain_email === checkEmail || (t.players || []).includes(checkEmail))
     );
 
     if (!myTeams.length) {
