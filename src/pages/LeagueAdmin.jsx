@@ -254,6 +254,7 @@ export default function LeagueAdmin() {
       queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
       queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['allLeagueFixtures', clubId] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast.success('League deleted and associated bookings removed');
       setDeleteLeagueId(null);
