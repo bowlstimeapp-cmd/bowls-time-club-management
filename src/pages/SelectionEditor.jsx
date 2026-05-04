@@ -410,6 +410,26 @@ if (club?.email_member_notifications) {
     return null;
   };
 
+  const buildFullPlayerList = (emailList, smsResults) => {
+    return emailList.map(email => {
+      const member = members.find(m => m.user_email === email);
+      const name = member?.first_name && member?.surname
+        ? `${member.first_name} ${member.surname}`
+        : member?.user_name || email;
+      // If SMS was attempted, find the result
+      const smsResult = smsResults?.find(r => r.email === email);
+      if (smsResult) return smsResult;
+      // SMS not attempted — figure out why
+      let smsSentStatus = null;
+      if (!sendSmsNotification || !club?.module_sms_notifications || !club?.sms_member_notifications) {
+        smsSentStatus = { name, email, sent: false, reason: 'SMS notifications not enabled' };
+      } else {
+        smsSentStatus = { name, email, sent: false, reason: 'Not included in SMS batch' };
+      }
+      return smsSentStatus;
+    });
+  };
+
   const sendSmsToMembers = async (selectedPlayerEmails) => {
     const results = [];
 
@@ -502,7 +522,9 @@ if (club?.email_member_notifications) {
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
         const smsResults = await sendSelectionEmails(selectionId);
-        setSmsResultsModal(smsResults || []);
+        const allSelected = [...new Set(Object.values(selections).filter(Boolean))];
+        const fullList = buildFullPlayerList(allSelected, smsResults);
+        setSmsResultsModal(fullList);
       } else if (isRepublish) {
         // Only notify newly added players
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
@@ -524,12 +546,15 @@ if (club?.email_member_notifications) {
           // SMS notifications for newly added players
           if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
             const smsResults = await sendSmsToMembers(newlyAddedEmails);
-            setSmsResultsModal(smsResults || []);
+            const fullList = buildFullPlayerList(newlyAddedEmails, smsResults);
+            setSmsResultsModal(fullList);
             return;
           }
         }
         
-        setSmsResultsModal([]);
+        // Show modal with all current players, no SMS sent
+        const allSelected = [...new Set(Object.values(selections).filter(Boolean))];
+        setSmsResultsModal(buildFullPlayerList(allSelected, null));
       }
     } else {
       const result = await createMutation.mutateAsync(data);
@@ -548,7 +573,8 @@ if (club?.email_member_notifications) {
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
         const smsResults2 = await sendSelectionEmails(result.id);
-        setSmsResultsModal(smsResults2 || []);
+        const allSelected2 = [...new Set(Object.values(selections).filter(Boolean))];
+        setSmsResultsModal(buildFullPlayerList(allSelected2, smsResults2));
       } else {
         toast.success('Selection saved as draft');
         navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${result.id}`);
@@ -1240,32 +1266,28 @@ if (club?.email_member_notifications) {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Selection Published</h2>
-            {smsResultsModal.length > 0 ? (
-              <>
-                <p className="text-sm text-gray-500 mb-4">
-                  SMS summary: {smsResultsModal.filter(r => r.sent).length} sent · {smsResultsModal.filter(r => !r.sent).length} not sent
-                </p>
-                <div className="overflow-y-auto flex-1 space-y-2 mb-4">
-                  {smsResultsModal.map((r, i) => (
-                    <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                      <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${r.sent ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
-                        {r.sent ? (
-                          <p className="text-xs text-emerald-600">SMS sent successfully</p>
-                        ) : (
-                          <p className="text-xs text-gray-500">{r.reason}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+            <p className="text-sm text-gray-500 mb-4">
+              {smsResultsModal.filter(r => r.sent).length} of {smsResultsModal.length} players notified by SMS
+            </p>
+            <div className="overflow-y-auto flex-1 space-y-1.5 mb-4">
+              {smsResultsModal.map((r, i) => (
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                  <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${r.sent ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                    {r.sent ? (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    ) : (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                    {!r.sent && (
+                      <p className="text-xs text-gray-500">{r.reason}</p>
+                    )}
+                  </div>
                 </div>
-              </>
-            ) : (
-              <p className="text-sm text-gray-500 mb-4 flex-1">
-                The selection has been published and members have been notified.
-              </p>
-            )}
+              ))}
+            </div>
             <Button
               className="w-full bg-emerald-600 hover:bg-emerald-700"
               onClick={() => {
