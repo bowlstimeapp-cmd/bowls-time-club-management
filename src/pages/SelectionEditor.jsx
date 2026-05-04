@@ -96,6 +96,7 @@ export default function SelectionEditor() {
   const [clashModalOpen, setClashModalOpen] = useState(false);
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
   const [sendSmsNotification, setSendSmsNotification] = useState(false);
+  const [smsResultsModal, setSmsResultsModal] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -403,33 +404,55 @@ if (club?.email_member_notifications) {
     
     // SMS notifications
     if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
-      const smsMembers = members.filter(m => 
-        selectedPlayerEmails.includes(m.user_email) && 
-        m.sms_notifications === true &&
-        m.phone
-      );
+      const smsResults = await sendSmsToMembers(selectedPlayerEmails);
+      return smsResults;
+    }
+    return null;
+  };
+
+  const sendSmsToMembers = async (selectedPlayerEmails) => {
+    const results = [];
+
+    // Categorise all selected members
+    for (const email of selectedPlayerEmails) {
+      const member = members.find(m => m.user_email === email);
+      if (!member) continue;
+      const name = member.first_name && member.surname ? `${member.first_name} ${member.surname}` : member.user_name || email;
+
+      if (!member.sms_notifications) {
+        results.push({ name, email, sent: false, reason: 'Not opted into SMS notifications' });
+        continue;
+      }
+      if (!member.phone) {
+        results.push({ name, email, sent: false, reason: 'No phone number registered' });
+        continue;
+      }
+      if (!member.phone.replace(/\s/g, '').startsWith('07')) {
+        results.push({ name, email, sent: false, reason: 'Invalid mobile number (must start with 07)' });
+        continue;
+      }
 
       const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
 
-      let smsSentCount = 0;
-      for (const member of smsMembers) {
-        try {
-          const result = await base44.functions.invoke('sendSMS', {
-            to: member.phone,
-            message: smsMessage,
-            clubId
-          });
-          if (result?.data?.blocked) break;
-          if (result?.data?.success) smsSentCount++;
-        } catch (error) {
-          console.error(`Failed to send SMS to ${member.phone}:`, error);
+      try {
+        const result = await base44.functions.invoke('sendSMS', {
+          to: member.phone,
+          message: smsMessage,
+          clubId
+        });
+        if (result?.data?.blocked) {
+          results.push({ name, email, sent: false, reason: 'Monthly SMS allowance exceeded' });
+        } else if (result?.data?.success) {
+          results.push({ name, email, sent: true });
+        } else {
+          results.push({ name, email, sent: false, reason: 'Send failed' });
         }
-      }
-      
-      if (smsSentCount > 0) {
-        toast.success(`SMS sent to ${smsSentCount} players`);
+      } catch (error) {
+        results.push({ name, email, sent: false, reason: 'Send failed' });
       }
     }
+
+    return results;
   };
 
   const handleSave = async (publish = false, isRepublish = false) => {
@@ -478,8 +501,12 @@ if (club?.email_member_notifications) {
           related_id: selectionId
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
-        await sendSelectionEmails(selectionId);
-        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+        const smsResults = await sendSelectionEmails(selectionId);
+        if (smsResults) {
+          setSmsResultsModal(smsResults);
+        } else {
+          navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+        }
       } else if (isRepublish) {
         // Only notify newly added players
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
@@ -498,34 +525,12 @@ if (club?.email_member_notifications) {
           }));
           await base44.entities.Notification.bulkCreate(notificationsToCreate);
           
-          // SMS notifications
-          const selectedPlayerEmails = newlyAddedEmails;
+          // SMS notifications for newly added players
           if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
-            const smsMembers = members.filter(m => 
-              selectedPlayerEmails.includes(m.user_email) && 
-              m.sms_notifications === true &&
-              m.phone
-            );
-
-            const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
-
-            let smsSentCount = 0;
-            for (const member of smsMembers) {
-              try {
-                const result = await base44.functions.invoke('sendSMS', {
-                  to: member.phone,
-                  message: smsMessage,
-                  clubId
-                });
-                if (result?.data?.blocked) break;
-                if (result?.data?.success) smsSentCount++;
-              } catch (error) {
-                console.error(`Failed to send SMS to ${member.phone}:`, error);
-              }
-            }
-            
-            if (smsSentCount > 0) {
-              toast.success(`SMS sent to ${smsSentCount} newly added player(s)`);
+            const smsResults = await sendSmsToMembers(newlyAddedEmails);
+            if (smsResults) {
+              setSmsResultsModal(smsResults);
+              return;
             }
           }
         }
@@ -548,8 +553,12 @@ if (club?.email_member_notifications) {
           related_id: result.id
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
-        await sendSelectionEmails(result.id);
-        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+        const smsResults2 = await sendSelectionEmails(result.id);
+        if (smsResults2) {
+          setSmsResultsModal(smsResults2);
+        } else {
+          navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+        }
       } else {
         toast.success('Selection saved as draft');
         navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${result.id}`);
@@ -1235,6 +1244,42 @@ if (club?.email_member_notifications) {
           </motion.div>
         </div>
       </div>
+
+      {/* SMS Results Modal */}
+      {smsResultsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">SMS Notification Summary</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {smsResultsModal.filter(r => r.sent).length} sent · {smsResultsModal.filter(r => !r.sent).length} not sent
+            </p>
+            <div className="overflow-y-auto flex-1 space-y-2 mb-4">
+              {smsResultsModal.map((r, i) => (
+                <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                  <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${r.sent ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                    {r.sent ? (
+                      <p className="text-xs text-emerald-600">SMS sent successfully</p>
+                    ) : (
+                      <p className="text-xs text-gray-500">{r.reason}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => {
+                setSmsResultsModal(null);
+                navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
 
       <RinkClashModal
         open={clashModalOpen}

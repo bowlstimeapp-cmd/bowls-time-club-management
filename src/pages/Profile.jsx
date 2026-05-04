@@ -144,7 +144,13 @@ export default function Profile() {
     }
   };
 
+  const [showInvalidPhoneModal, setShowInvalidPhoneModal] = useState(false);
+
   const handleSmsNotificationsChange = (checked) => {
+    if (checked && phone && !phone.replace(/\s/g, '').startsWith('07')) {
+      setShowInvalidPhoneModal(true);
+      return;
+    }
     setSmsNotifications(checked);
     if (membership) {
       updateMembershipMutation.mutate({ id: membership.id, data: { sms_notifications: checked } });
@@ -598,6 +604,38 @@ export default function Profile() {
           </Tabs>
         </div>
       </div>
+
+      {/* Invalid phone modal */}
+      <AnimatePresence>
+        {showInvalidPhoneModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowInvalidPhoneModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
+                <TriangleAlert className="w-7 h-7 text-red-600" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900 text-center mb-2">Invalid Mobile Number</h2>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                SMS notifications are only enabled for UK mobile numbers. Please change your registered phone number to a UK mobile number starting with <span className="font-semibold text-gray-700">07</span>.
+              </p>
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => setShowInvalidPhoneModal(false)}>
+                OK
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete confirmation overlay */}
       <AnimatePresence>

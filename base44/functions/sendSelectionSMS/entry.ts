@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     const selectedMembers = members.filter(m => selectedEmails.includes(m.user_email));
     const membersWithSMS = selectedMembers.filter(m => m.sms_notifications === true);
-    const smsMembers = membersWithSMS.filter(m => m.phone);
+    const smsMembers = membersWithSMS.filter(m => m.phone && m.phone.replace(/\s/g, '').startsWith('07'));
 
     if (smsMembers.length === 0) {
       const reasons = [];
