@@ -502,11 +502,7 @@ if (club?.email_member_notifications) {
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
         const smsResults = await sendSelectionEmails(selectionId);
-        if (smsResults) {
-          setSmsResultsModal(smsResults);
-        } else {
-          navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
-        }
+        setSmsResultsModal(smsResults || []);
       } else if (isRepublish) {
         // Only notify newly added players
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
@@ -528,14 +524,12 @@ if (club?.email_member_notifications) {
           // SMS notifications for newly added players
           if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
             const smsResults = await sendSmsToMembers(newlyAddedEmails);
-            if (smsResults) {
-              setSmsResultsModal(smsResults);
-              return;
-            }
+            setSmsResultsModal(smsResults || []);
+            return;
           }
         }
         
-        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+        setSmsResultsModal([]);
       }
     } else {
       const result = await createMutation.mutateAsync(data);
@@ -554,11 +548,7 @@ if (club?.email_member_notifications) {
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
         const smsResults2 = await sendSelectionEmails(result.id);
-        if (smsResults2) {
-          setSmsResultsModal(smsResults2);
-        } else {
-          navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
-        }
+        setSmsResultsModal(smsResults2 || []);
       } else {
         toast.success('Selection saved as draft');
         navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${result.id}`);
@@ -1245,29 +1235,37 @@ if (club?.email_member_notifications) {
         </div>
       </div>
 
-      {/* SMS Results Modal */}
-      {smsResultsModal && (
+      {/* Publish Results Modal */}
+      {smsResultsModal !== null && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">SMS Notification Summary</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              {smsResultsModal.filter(r => r.sent).length} sent · {smsResultsModal.filter(r => !r.sent).length} not sent
-            </p>
-            <div className="overflow-y-auto flex-1 space-y-2 mb-4">
-              {smsResultsModal.map((r, i) => (
-                <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                  <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${r.sent ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
-                    {r.sent ? (
-                      <p className="text-xs text-emerald-600">SMS sent successfully</p>
-                    ) : (
-                      <p className="text-xs text-gray-500">{r.reason}</p>
-                    )}
-                  </div>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Selection Published</h2>
+            {smsResultsModal.length > 0 ? (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  SMS summary: {smsResultsModal.filter(r => r.sent).length} sent · {smsResultsModal.filter(r => !r.sent).length} not sent
+                </p>
+                <div className="overflow-y-auto flex-1 space-y-2 mb-4">
+                  {smsResultsModal.map((r, i) => (
+                    <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                      <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${r.sent ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                        {r.sent ? (
+                          <p className="text-xs text-emerald-600">SMS sent successfully</p>
+                        ) : (
+                          <p className="text-xs text-gray-500">{r.reason}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 mb-4 flex-1">
+                The selection has been published and members have been notified.
+              </p>
+            )}
             <Button
               className="w-full bg-emerald-600 hover:bg-emerald-700"
               onClick={() => {
@@ -1275,7 +1273,7 @@ if (club?.email_member_notifications) {
                 navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
               }}
             >
-              Done
+              Close
             </Button>
           </div>
         </div>
