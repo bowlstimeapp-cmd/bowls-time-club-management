@@ -451,6 +451,8 @@ export default function Profile() {
                         <Label className="text-base">SMS Notifications</Label>
                         <p className="text-sm text-gray-500">
                           {phone ? 'Receive SMS when you are selected for matches' : 'Add a phone number above to enable SMS notifications'}
+                          <p className="text-sm text-red-500">Registered phone number must be a <b>mobile</b> number for SMS notifications to work</p>
+
                         </p>
                       </div>
                       <Switch checked={smsNotifications} onCheckedChange={handleSmsNotificationsChange} disabled={!phone} />
