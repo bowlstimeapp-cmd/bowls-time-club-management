@@ -1,15 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-/**
- * Secure backend function for club admin write operations on:
- * - Booking (update, delete, bulk_delete)
- * - Competition (create, update, delete)
- * - League (create, update, delete)
- * - LeagueTeam (create, update, delete)
- * - LeagueFixture (update, delete, bulk_create, bulk_delete)
- *
- * All operations require the caller to be an approved admin of the specified club.
- */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -164,6 +154,24 @@ Deno.serve(async (req) => {
       if (action === 'bulk_delete') {
         if (!ids || !Array.isArray(ids)) return Response.json({ error: 'Missing ids array' }, { status: 400 });
         await Promise.all(ids.map(fid => base44.asServiceRole.entities.LeagueFixture.delete(fid)));
+        return Response.json({ success: true });
+      }
+    }
+
+    // ── CLUB TOURNAMENT ──────────────────────────────────────────────────────
+    if (entity === 'ClubTournament') {
+      if (action === 'delete') {
+        if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+        const record = await verifyBelongsToClub('ClubTournament', id);
+        if (!record) return Response.json({ error: 'Tournament not found or does not belong to this club' }, { status: 404 });
+        await base44.asServiceRole.entities.ClubTournament.delete(id);
+        return Response.json({ success: true });
+      }
+      if (action === 'update') {
+        if (!id || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
+        const record = await verifyBelongsToClub('ClubTournament', id);
+        if (!record) return Response.json({ error: 'Tournament not found or does not belong to this club' }, { status: 404 });
+        await base44.asServiceRole.entities.ClubTournament.update(id, data);
         return Response.json({ success: true });
       }
     }
