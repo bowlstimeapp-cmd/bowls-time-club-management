@@ -91,7 +91,7 @@ export default function AdminBookings() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Booking.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -100,7 +100,7 @@ export default function AdminBookings() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Booking.delete(id),
+    mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'delete', clubId, id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });

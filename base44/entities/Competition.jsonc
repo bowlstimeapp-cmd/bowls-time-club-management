@@ -1,0 +1,72 @@
+{
+  "name": "Competition",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club (null for platform-wide competitions)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Competition name"
+    },
+    "players_per_rink": {
+      "type": "number",
+      "default": 4,
+      "description": "Number of players per rink"
+    },
+    "home_rinks": {
+      "type": "number",
+      "default": 2,
+      "description": "Number of home rinks"
+    },
+    "away_rinks": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of away rinks"
+    },
+    "season": {
+      "type": "string",
+      "enum": [
+        "indoor",
+        "outdoor"
+      ],
+      "description": "Indoor or outdoor competition"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "mixed",
+        "men",
+        "women"
+      ],
+      "default": "mixed",
+      "description": "Gender restriction for player selection"
+    },
+    "age_group": {
+      "type": "string",
+      "enum": [
+        "n/a",
+        "u25",
+        "o60"
+      ],
+      "default": "n/a",
+      "description": "Age group restriction for player selection"
+    }
+  },
+  "required": [
+    "name",
+    "players_per_rink",
+    "home_rinks",
+    "season"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {},
+    "delete": {},
+    "write": {}
+  }
+}

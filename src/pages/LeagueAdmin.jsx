@@ -205,9 +205,13 @@ export default function LeagueAdmin() {
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
+  // Helper for club data mutations
+  const clubData = (entity, action, extra = {}) =>
+    base44.functions.invoke('updateClubData', { entity, action, clubId, ...extra });
+
   // League mutations
   const createLeagueMutation = useMutation({
-    mutationFn: (data) => base44.entities.League.create(data),
+    mutationFn: (data) => clubData('League', 'create', { data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
       toast.success('League created');
@@ -216,7 +220,7 @@ export default function LeagueAdmin() {
   });
 
   const updateLeagueMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.League.update(id, data),
+    mutationFn: ({ id, data }) => clubData('League', 'update', { id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
       toast.success('League updated');
@@ -228,27 +232,27 @@ export default function LeagueAdmin() {
     mutationFn: async (id) => {
       // Find the league to get its name for booking lookup
       const leagueToDelete = leagues.find(l => l.id === id);
-      // Delete associated fixtures and their bookings
+      // Delete associated fixtures and cancel their bookings
       const leagueFixturesList = await base44.entities.LeagueFixture.filter({ league_id: id });
-      // Cancel bookings linked via fixture booking_id (primary slot)
       const bookingIds = leagueFixturesList.map(f => f.booking_id).filter(Boolean);
-      await Promise.all(bookingIds.map(bid => base44.entities.Booking.update(bid, { status: 'cancelled' })));
-      // Also cancel ALL bookings for this league by booker_name (covers multi-session extra slots)
+      await Promise.all(bookingIds.map(bid => clubData('Booking', 'update', { id: bid, data: { status: 'cancelled' } })));
+      // Also cancel ALL bookings for this league by booker_name
       if (leagueToDelete) {
         const leagueBookings = await base44.entities.Booking.filter({ 
           club_id: clubId, 
           booker_name: `League - ${leagueToDelete.name}` 
         });
         const extraIds = leagueBookings.map(b => b.id).filter(bid => !bookingIds.includes(bid));
-        await Promise.all(extraIds.map(bid => base44.entities.Booking.update(bid, { status: 'cancelled' })));
+        await Promise.all(extraIds.map(bid => clubData('Booking', 'update', { id: bid, data: { status: 'cancelled' } })));
       }
       // Delete fixtures
-      await Promise.all(leagueFixturesList.map(f => base44.entities.LeagueFixture.delete(f.id)));
+      const fixtureIds = leagueFixturesList.map(f => f.id);
+      if (fixtureIds.length > 0) await clubData('LeagueFixture', 'bulk_delete', { ids: fixtureIds });
       // Delete teams
       const leagueTeamsList = await base44.entities.LeagueTeam.filter({ league_id: id });
-      await Promise.all(leagueTeamsList.map(t => base44.entities.LeagueTeam.delete(t.id)));
+      await Promise.all(leagueTeamsList.map(t => clubData('LeagueTeam', 'delete', { id: t.id })));
       // Delete league
-      await base44.entities.League.delete(id);
+      await clubData('League', 'delete', { id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
@@ -263,7 +267,7 @@ export default function LeagueAdmin() {
 
   // Team mutations
   const createTeamMutation = useMutation({
-    mutationFn: (data) => base44.entities.LeagueTeam.create(data),
+    mutationFn: (data) => clubData('LeagueTeam', 'create', { data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
       toast.success('Team created');
@@ -272,7 +276,7 @@ export default function LeagueAdmin() {
   });
 
   const updateTeamMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
+    mutationFn: ({ id, data }) => clubData('LeagueTeam', 'update', { id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
       toast.success('Team updated');
@@ -281,7 +285,7 @@ export default function LeagueAdmin() {
   });
 
   const deleteTeamMutation = useMutation({
-    mutationFn: (id) => base44.entities.LeagueTeam.delete(id),
+    mutationFn: (id) => clubData('LeagueTeam', 'delete', { id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
       toast.success('Team deleted');
@@ -626,8 +630,8 @@ export default function LeagueAdmin() {
 
   const handleConfirmFixtures = async () => {
     setGeneratingFixtures(true);
-    await base44.entities.LeagueFixture.bulkCreate(pendingFixtures);
-    await base44.entities.League.update(pendingFixtureLeague.id, { fixtures_generated: true });
+    await clubData('LeagueFixture', 'bulk_create', { data: pendingFixtures });
+    await clubData('League', 'update', { id: pendingFixtureLeague.id, data: { fixtures_generated: true } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     setGeneratingFixtures(false);
@@ -756,11 +760,11 @@ export default function LeagueAdmin() {
     for (let i = 0; i < bookingsToCreate.length; i++) {
       const fixtureId = bookingsToCreate[i]._fixtureId;
       if (fixtureId && createdBookings[i]?.id) {
-        await base44.entities.LeagueFixture.update(fixtureId, { booking_id: createdBookings[i].id });
+        await clubData('LeagueFixture', 'update', { id: fixtureId, data: { booking_id: createdBookings[i].id } });
       }
     }
 
-    await base44.entities.League.update(league.id, { bookings_created: true });
+    await clubData('League', 'update', { id: league.id, data: { bookings_created: true } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -809,7 +813,7 @@ export default function LeagueAdmin() {
       updateData.away_sets = parseInt(awaySets);
     }
 
-    await base44.entities.LeagueFixture.update(editingFixture.id, updateData);
+    await clubData('LeagueFixture', 'update', { id: editingFixture.id, data: updateData });
     
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     setScoreDialogOpen(false);

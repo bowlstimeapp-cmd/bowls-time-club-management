@@ -275,7 +275,7 @@ export default function ClubAdmin() {
   });
 
   const createCompetitionMutation = useMutation({
-    mutationFn: (data) => base44.entities.Competition.create({ ...data, club_id: clubId }),
+    mutationFn: (data) => base44.functions.invoke('updateClubData', { entity: 'Competition', action: 'create', clubId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       toast.success('Competition created');
@@ -285,7 +285,7 @@ export default function ClubAdmin() {
   });
 
   const updateCompetitionMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Competition.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateClubData', { entity: 'Competition', action: 'update', clubId, id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       toast.success('Competition updated');
@@ -296,7 +296,7 @@ export default function ClubAdmin() {
   });
 
   const deleteCompetitionMutation = useMutation({
-    mutationFn: (id) => base44.entities.Competition.delete(id),
+    mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'Competition', action: 'delete', clubId, id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       toast.success('Competition deleted');
