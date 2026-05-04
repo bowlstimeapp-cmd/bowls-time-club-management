@@ -1,0 +1,122 @@
+{
+  "name": "Booking",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "rink_number": {
+      "type": "number",
+      "description": "Rink number"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the booking"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Start time of the session"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "End time of the session"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled"
+      ],
+      "default": "pending",
+      "description": "Booking status"
+    },
+    "competition_type": {
+      "type": "string",
+      "enum": [
+        "Club",
+        "County",
+        "National",
+        "Roll-up",
+        "Private Roll-up",
+        "Other"
+      ],
+      "description": "Type of competition"
+    },
+    "competition_other": {
+      "type": "string",
+      "description": "Custom competition type if Other is selected"
+    },
+    "booking_format": {
+      "type": "string",
+      "enum": [
+        "Singles",
+        "Pairs",
+        "Triples",
+        "Fours"
+      ],
+      "description": "Format of the game (Singles, Pairs, Triples, Fours)"
+    },
+    "booker_name": {
+      "type": "string",
+      "description": "Name of the person who made the booking"
+    },
+    "booker_email": {
+      "type": "string",
+      "description": "Email of the person who made the booking"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes for the booking"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Notes from admin when approving/rejecting"
+    },
+    "rollup_members": {
+      "type": "array",
+      "description": "Array of member objects {email, name} participating in a roll-up",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "club_id",
+    "rink_number",
+    "date",
+    "start_time",
+    "end_time",
+    "booker_name",
+    "booker_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
