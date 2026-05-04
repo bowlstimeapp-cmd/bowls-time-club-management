@@ -1,0 +1,39 @@
+{
+  "name": "UserUnavailability",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User's email"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date of unavailability"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date of unavailability"
+    }
+  },
+  "required": [
+    "user_email",
+    "start_date",
+    "end_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
