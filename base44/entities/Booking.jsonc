@@ -107,12 +107,18 @@
       "created_by": "{{user.email}}"
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "delete": {
-      "created_by": "{{user.email}}"
-    },
-    "write": {
       "created_by": "{{user.email}}"
     }
   }
