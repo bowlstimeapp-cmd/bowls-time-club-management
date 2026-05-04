@@ -58,76 +58,58 @@
       "description": "Reference to the rink booking"
     },
     "pending_home_score": {
-      "type": "number",
-      "description": "Score submitted by the first team \u2014 awaiting confirmation from the opposing team"
+      "type": "number"
     },
     "pending_away_score": {
-      "type": "number",
-      "description": "Away score submitted by the first team \u2014 awaiting confirmation"
+      "type": "number"
     },
     "pending_home_sets": {
-      "type": "number",
-      "description": "Sets (home) submitted by the first team \u2014 awaiting confirmation"
+      "type": "number"
     },
     "pending_away_sets": {
-      "type": "number",
-      "description": "Sets (away) submitted by the first team \u2014 awaiting confirmation"
+      "type": "number"
     },
     "pending_submitted_by_email": {
-      "type": "string",
-      "description": "Email of the member who submitted the pending result"
+      "type": "string"
     },
     "pending_submitted_by_team_id": {
-      "type": "string",
-      "description": "Team ID of the member who submitted the pending result"
+      "type": "string"
     },
     "conflict_first_home_score": {
-      "type": "number",
-      "description": "First team's home score in a conflict"
+      "type": "number"
     },
     "conflict_first_away_score": {
-      "type": "number",
-      "description": "First team's away score in a conflict"
+      "type": "number"
     },
     "conflict_first_home_sets": {
-      "type": "number",
-      "description": "First team's home sets in a conflict"
+      "type": "number"
     },
     "conflict_first_away_sets": {
-      "type": "number",
-      "description": "First team's away sets in a conflict"
+      "type": "number"
     },
     "conflict_first_team_id": {
-      "type": "string",
-      "description": "Team ID of the first submitter in a conflict"
+      "type": "string"
     },
     "conflict_first_submitted_by_email": {
-      "type": "string",
-      "description": "Email of the member who made the first conflicting submission"
+      "type": "string"
     },
     "conflict_second_home_score": {
-      "type": "number",
-      "description": "Second team's home score in a conflict"
+      "type": "number"
     },
     "conflict_second_away_score": {
-      "type": "number",
-      "description": "Second team's away score in a conflict"
+      "type": "number"
     },
     "conflict_second_home_sets": {
-      "type": "number",
-      "description": "Second team's home sets in a conflict"
+      "type": "number"
     },
     "conflict_second_away_sets": {
-      "type": "number",
-      "description": "Second team's away sets in a conflict"
+      "type": "number"
     },
     "conflict_second_team_id": {
-      "type": "string",
-      "description": "Team ID of the second submitter in a conflict"
+      "type": "string"
     },
     "conflict_second_submitted_by_email": {
-      "type": "string",
-      "description": "Email of the member who made the second conflicting submission"
+      "type": "string"
     }
   },
   "required": [
@@ -139,6 +121,16 @@
   ],
   "rls": {
     "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
       "created_by": "{{user.email}}"
     }
   }

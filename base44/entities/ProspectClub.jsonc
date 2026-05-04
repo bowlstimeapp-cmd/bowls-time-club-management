@@ -1,0 +1,81 @@
+{
+  "name": "ProspectClub",
+  "type": "object",
+  "properties": {
+    "club_name": {
+      "type": "string",
+      "description": "Name of the prospect club"
+    },
+    "address": {
+      "type": "string",
+      "description": "Club address"
+    },
+    "county": {
+      "type": "string",
+      "description": "County or region"
+    },
+    "email": {
+      "type": "string",
+      "description": "Contact email"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Contact phone number"
+    },
+    "website": {
+      "type": "string",
+      "description": "Club website URL"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Name of the contact person"
+    },
+    "source": {
+      "type": "string",
+      "description": "Where this lead came from",
+      "default": "play-bowls.com"
+    },
+    "contact_status": {
+      "type": "string",
+      "enum": [
+        "not_contacted",
+        "contacted",
+        "follow_up",
+        "not_interested",
+        "interested",
+        "signed_up"
+      ],
+      "default": "not_contacted",
+      "description": "Status of outreach"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about this club"
+    },
+    "last_contacted_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date last contacted"
+    }
+  },
+  "required": [
+    "club_name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

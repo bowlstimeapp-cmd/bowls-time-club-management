@@ -1,0 +1,71 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user receiving the notification"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "booking_accepted",
+        "booking_rejected",
+        "booking_moved",
+        "team_selection",
+        "team_invite",
+        "team_request",
+        "team_invite_accepted",
+        "team_invite_rejected",
+        "team_request_accepted",
+        "team_request_rejected"
+      ],
+      "description": "Type of notification"
+    },
+    "title": {
+      "type": "string",
+      "description": "Notification title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Notification message"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the notification has been read"
+    },
+    "link_page": {
+      "type": "string",
+      "description": "Page to navigate to when clicked"
+    },
+    "link_params": {
+      "type": "string",
+      "description": "URL query parameters for the link"
+    },
+    "related_id": {
+      "type": "string",
+      "description": "ID of related entity (booking, selection, request, etc)"
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "title",
+    "message"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "user_email": "{{user.email}}"
+    },
+    "update": {
+      "user_email": "{{user.email}}"
+    },
+    "delete": {
+      "user_email": "{{user.email}}"
+    }
+  }
+}

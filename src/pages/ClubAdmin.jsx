@@ -230,8 +230,12 @@ export default function ClubAdmin() {
     enabled: !!clubId,
   });
 
+  // All sensitive membership writes go through the secure backend function
+  const secureUpdateMembership = ({ action, membershipId, updates }) =>
+    base44.functions.invoke('updateMembership', { action, membershipId, clubId, updates });
+
   const updateMembershipMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ClubMembership.update(id, data),
+    mutationFn: secureUpdateMembership,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] }),
   });
 
@@ -258,11 +262,13 @@ export default function ClubAdmin() {
   });
 
   const setMemberStatusMutation = useMutation({
-    mutationFn: ({ id, member_status }) => base44.entities.ClubMembership.update(id, {
-      member_status,
-      // left = revoke access; active = restore access
-      status: member_status === 'left' ? 'rejected' : 'approved',
-    }),
+    mutationFn: ({ id, member_status }) =>
+      base44.functions.invoke('updateMembership', {
+        action: 'set_status',
+        membershipId: id,
+        clubId,
+        updates: { member_status },
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
     },
@@ -397,21 +403,25 @@ export default function ClubAdmin() {
   }
 
   const handleApprove = async (membership) => {
-    await updateMembershipMutation.mutateAsync({ id: membership.id, data: { status: 'approved' } });
-    // Email the member to inform them they've been approved
+    await updateMembershipMutation.mutateAsync({ action: 'approve', membershipId: membership.id });
     base44.functions.invoke('membershipEmails', { type: 'approved', membershipId: membership.id }).catch(() => {});
     toast.success(`${membership.user_name || membership.user_email} approved`);
   };
 
   const handleReject = async (membership) => {
-    await updateMembershipMutation.mutateAsync({ id: membership.id, data: { status: 'rejected' } });
+    await updateMembershipMutation.mutateAsync({ action: 'reject', membershipId: membership.id });
     toast.success(`${membership.user_name || membership.user_email} rejected`);
   };
 
   const handleUpdateMember = async (memberId, updates, oldRole) => {
     const member = memberships.find(m => m.id === memberId);
-    await updateMembershipMutation.mutateAsync({ id: memberId, data: updates });
-    if (oldRole && updates.role !== oldRole) {
+    // Route role changes through change_role action; everything else through admin_update
+    if (oldRole !== undefined && updates.role && updates.role !== oldRole) {
+      await updateMembershipMutation.mutateAsync({ action: 'change_role', membershipId: memberId, updates: { role: updates.role } });
+      const { role: _role, ...restUpdates } = updates;
+      if (Object.keys(restUpdates).length > 0) {
+        await updateMembershipMutation.mutateAsync({ action: 'admin_update', membershipId: memberId, updates: restUpdates });
+      }
       await createAuditLogMutation.mutateAsync({
         club_id: clubId,
         action: 'role_change',
@@ -423,6 +433,8 @@ export default function ClubAdmin() {
         new_value: updates.role,
         details: `Role changed from ${oldRole} to ${updates.role}`
       });
+    } else {
+      await updateMembershipMutation.mutateAsync({ action: 'admin_update', membershipId: memberId, updates });
     }
     toast.success('Member updated successfully');
     setSelectedMember(null);
@@ -836,6 +848,7 @@ export default function ClubAdmin() {
             toast.success(status === 'left' ? 'Member moved to Previous Members' : 'Member reinstated');
             setSelectedMember(null);
           }}
+
         />
         <BulkUploadModal
           open={bulkUploadOpen}

@@ -1,0 +1,80 @@
+{
+  "name": "MembershipPayment",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the member who paid"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of the member who paid"
+    },
+    "membership_type": {
+      "type": "string",
+      "description": "Membership type purchased"
+    },
+    "amount_pence": {
+      "type": "number",
+      "description": "Amount paid in pence (e.g. 5000 = \u00a350)"
+    },
+    "currency": {
+      "type": "string",
+      "default": "gbp",
+      "description": "Currency code"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "failed",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Payment status \u2014 only updated by backend (Stripe webhook)"
+    },
+    "stripe_session_id": {
+      "type": "string",
+      "description": "Stripe checkout session ID"
+    },
+    "stripe_payment_intent_id": {
+      "type": "string",
+      "description": "Stripe payment intent ID"
+    },
+    "paid_at": {
+      "type": "string",
+      "description": "ISO timestamp when payment was completed"
+    },
+    "description": {
+      "type": "string",
+      "description": "Payment description / notes"
+    }
+  },
+  "required": [
+    "club_id",
+    "user_email",
+    "amount_pence"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

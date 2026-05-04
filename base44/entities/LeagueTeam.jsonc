@@ -1,0 +1,59 @@
+{
+  "name": "LeagueTeam",
+  "type": "object",
+  "properties": {
+    "league_id": {
+      "type": "string",
+      "description": "Reference to the league"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "name": {
+      "type": "string",
+      "description": "Team name"
+    },
+    "captain_email": {
+      "type": "string",
+      "description": "Email of the team captain"
+    },
+    "captain_name": {
+      "type": "string",
+      "description": "Name of the team captain"
+    },
+    "players": {
+      "type": "array",
+      "description": "Array of player emails in the team"
+    },
+    "fixture_rota": {
+      "type": "object",
+      "description": "JSON object mapping fixture IDs to arrays of selected player emails"
+    },
+    "player_unavailability": {
+      "type": "object",
+      "description": "JSON object mapping player emails to arrays of unavailable date strings",
+      "default": {}
+    }
+  },
+  "required": [
+    "league_id",
+    "club_id",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    },
+    "write": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
