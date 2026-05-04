@@ -186,15 +186,14 @@ export default function Selection() {
 
   const deleteSelectionMutation = useMutation({
     mutationFn: async (selectionId) => {
-      // Find the selection to get match date, rinks and times
+      // Cancel any associated rink bookings first
       const sel = selections.find(s => s.id === selectionId);
       if (sel && sel.match_date && sel.selected_rinks?.length > 0 && sel.match_start_time) {
-        // Cancel all bookings on those rinks for that match date/time range
         const bookingsOnDay = await base44.entities.Booking.filter({
           club_id: clubId,
           date: sel.match_date,
         });
-        const duration = 2; // sessions
+        const duration = 2;
         const [startH] = sel.match_start_time.split(':').map(Number);
         const [endH] = (sel.match_end_time || sel.match_start_time).split(':').map(Number);
         const matchRinks = sel.selected_rinks.map(r => parseInt(r));
@@ -209,7 +208,7 @@ export default function Selection() {
         );
         await Promise.all(toCancel.map(b => base44.entities.Booking.update(b.id, { status: 'cancelled' })));
       }
-      return base44.entities.TeamSelection.delete(selectionId);
+      return base44.functions.invoke('updateTeamSelection', { action: 'delete', clubId, selectionId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selections'] });

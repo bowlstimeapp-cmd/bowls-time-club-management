@@ -228,14 +228,14 @@ export default function SelectionEditor() {
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.TeamSelection.create(data),
+    mutationFn: (data) => base44.functions.invoke('updateTeamSelection', { action: 'create', clubId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selections'] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.TeamSelection.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateTeamSelection', { action: 'update', clubId, selectionId: id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selections'] });
       queryClient.invalidateQueries({ queryKey: ['selection', selectionId] });
@@ -558,6 +558,7 @@ if (club?.email_member_notifications) {
       }
     } else {
       const result = await createMutation.mutateAsync(data);
+      const newId = result?.data?.id || result?.id;
       if (publish) {
         toast.success('Selection published!');
         // Create notifications for selected players
@@ -568,16 +569,16 @@ if (club?.email_member_notifications) {
           title: 'Selected for Match',
           message: `You've been selected for ${competition}${matchName ? ' - ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}. Click to view team`,
           link_page: 'SelectionView',
-          link_params: `clubId=${clubId}&selectionId=${result.id}`,
-          related_id: result.id
+          link_params: `clubId=${clubId}&selectionId=${newId}`,
+          related_id: newId
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
-        const smsResults2 = await sendSelectionEmails(result.id);
+        const smsResults2 = await sendSelectionEmails(newId);
         const allSelected2 = [...new Set(Object.values(selections).filter(Boolean))];
         setSmsResultsModal(buildFullPlayerList(allSelected2, smsResults2));
       } else {
         toast.success('Selection saved as draft');
-        navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${result.id}`);
+        navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${newId}`);
       }
     }
   };

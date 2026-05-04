@@ -188,7 +188,7 @@ export default function ClubSettings() {
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Club.update(clubId, data),
+    mutationFn: (data) => base44.functions.invoke('updateClubSettings', { clubId, updates: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club', clubId] });
       toast.success('Settings saved successfully');
@@ -478,7 +478,7 @@ export default function ClubSettings() {
               <Input readOnly value={club?.function_room_api_key || '(no key generated yet)'} className="font-mono text-sm" />
               <Button type="button" variant="outline" onClick={async () => {
                 const newKey = 'frk_' + crypto.randomUUID().replace(/-/g, '');
-                await base44.entities.Club.update(clubId, { function_room_api_key: newKey });
+                await base44.functions.invoke('updateClubSettings', { clubId, updates: { function_room_api_key: newKey } });
                 queryClient.invalidateQueries({ queryKey: ['club', clubId] });
                 toast.success('New API key generated');
               }}>
@@ -791,7 +791,7 @@ export default function ClubSettings() {
         moduleEnabled={!!club?.module_accolades}
         members={members}
         onToggleModule={async (v) => {
-          await base44.entities.Club.update(clubId, { module_accolades: v });
+          await base44.functions.invoke('updateClubSettings', { clubId, updates: { module_accolades: v } });
           queryClient.invalidateQueries({ queryKey: ['club', clubId] });
           toast.success(v ? 'Accolades enabled' : 'Accolades disabled');
         }}
