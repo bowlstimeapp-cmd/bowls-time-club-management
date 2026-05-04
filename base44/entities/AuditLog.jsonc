@@ -1,0 +1,64 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "action": {
+      "type": "string",
+      "description": "Type of action performed"
+    },
+    "target_email": {
+      "type": "string",
+      "description": "Email of the user affected"
+    },
+    "target_name": {
+      "type": "string",
+      "description": "Name of the user affected"
+    },
+    "performed_by_email": {
+      "type": "string",
+      "description": "Email of the admin who performed the action"
+    },
+    "performed_by_name": {
+      "type": "string",
+      "description": "Name of the admin who performed the action"
+    },
+    "old_value": {
+      "type": "string",
+      "description": "Previous value"
+    },
+    "new_value": {
+      "type": "string",
+      "description": "New value"
+    },
+    "details": {
+      "type": "string",
+      "description": "Additional details about the action"
+    }
+  },
+  "required": [
+    "club_id",
+    "action",
+    "performed_by_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "data.bowlstimeapp@gmail.com": "{{user.email}}"
+    },
+    "delete": {
+      "data.bowlstimeapp@gmail.com": "{{user.email}}"
+    },
+    "write": {
+      "data.bowlstimeapp@gmail.com": "{{user.email}}"
+    }
+  }
+}
