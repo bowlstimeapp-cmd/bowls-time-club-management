@@ -247,22 +247,27 @@ export default function RinkDisplayTV() {
                             <span className="font-bold leading-tight" style={{ fontSize: isFullscreen ? '1.1rem' : '0.875rem' }}>
                               {booking.booker_name}
                             </span>
-                            {booking.competition_type && (
-                              <span className="opacity-80 mt-0.5" style={{ fontSize: isFullscreen ? '0.95rem' : '0.75rem' }}>
-                                {booking.competition_type === 'Other' && booking.competition_other
+                            {isFullscreen ? (
+                              (() => {
+                                const compType = booking.competition_type === 'Other' && booking.competition_other
                                   ? booking.competition_other
-                                  : booking.competition_type}
-                              </span>
-                            )}
-                            {booking.booking_format && isFullscreen && (
-                              <span className="opacity-75 mt-0.5" style={{ fontSize: '0.9rem' }}>
-                                {booking.booking_format}
-                              </span>
-                            )}
-                            {booking.notes && isFullscreen && (
-                              <span className="opacity-70 mt-0.5 line-clamp-2" style={{ fontSize: '0.85rem' }}>
-                                {booking.notes}
-                              </span>
+                                  : booking.competition_type;
+                                const parts = [compType, booking.booking_format].filter(Boolean).join(' ');
+                                const line = booking.notes ? `${parts} - ${booking.notes}` : parts;
+                                return line ? (
+                                  <span className="opacity-80 mt-0.5 line-clamp-2" style={{ fontSize: '0.9rem' }}>
+                                    {line}
+                                  </span>
+                                ) : null;
+                              })()
+                            ) : (
+                              booking.competition_type && (
+                                <span className="opacity-80 mt-0.5" style={{ fontSize: '0.75rem' }}>
+                                  {booking.competition_type === 'Other' && booking.competition_other
+                                    ? booking.competition_other
+                                    : booking.competition_type}
+                                </span>
+                              )
                             )}
                             {isRollup && (
                               <span className="font-semibold flex items-center gap-1 mt-1 opacity-90" style={{ fontSize: isFullscreen ? '0.95rem' : '0.75rem' }}>
