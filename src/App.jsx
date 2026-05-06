@@ -106,19 +106,48 @@ function App() {
             </Router>
 
             {/* ✅ YOUR CUSTOM CHAT BUTTON */}
-            <img
-              src="/your-banner.png" // replace with your actual banner
-              alt="Chat with us"
-              style={{
-                position: "fixed",
-                bottom: "20px",
-                right: "20px",
-                width: "200px",
-                cursor: "pointer",
-                zIndex: 9999
-              }}
-              onClick={() => window.Tawk_API?.maximize()}
-            />
+ <div
+  onClick={() => window.Tawk_API?.maximize()}
+  style={{
+    position: "fixed",
+    bottom: "20px",
+    right: "20px",
+    backgroundColor: "#16a34a",
+    color: "white",
+    padding: "12px 18px",
+    borderRadius: "999px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    cursor: "pointer",
+    zIndex: 9999,
+    boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+    fontWeight: 600,
+    fontSize: "14px",
+    transition: "all 0.2s ease"
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = "scale(1.05)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = "scale(1)";
+  }}
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    fill="none"
+    stroke="white"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+  </svg>
+
+  Live chat
+</div>
 
             <Toaster />
           </QueryClientProvider>
