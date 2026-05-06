@@ -106,26 +106,13 @@ function App() {
             </Router>
 
             {/* ✅ YOUR CUSTOM CHAT BUTTON */}
+ 
+ 
+ 
+ 
  <div
+      className="hidden sm:flex fixed bottom-6 right-6 z-50 items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105"
   onClick={() => window.Tawk_API?.maximize()}
-  style={{
-    position: "fixed",
-    bottom: "20px",
-    right: "20px",
-    backgroundColor: "#16a34a",
-    color: "white",
-    padding: "12px 18px",
-    borderRadius: "999px",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    cursor: "pointer",
-    zIndex: 9999,
-    boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-    fontWeight: 600,
-    fontSize: "14px",
-    transition: "all 0.2s ease"
-  }}
   onMouseEnter={(e) => {
     e.currentTarget.style.transform = "scale(1.05)";
   }}
