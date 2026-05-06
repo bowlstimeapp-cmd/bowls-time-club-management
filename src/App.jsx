@@ -76,11 +76,15 @@ const AuthenticatedApp = () => {
 function App() {
 
   useEffect(() => {
-    // Prevent duplicate script load (important in React Strict Mode)
     if (window.Tawk_API) return;
 
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
+
+    // Hide default widget when loaded
+    window.Tawk_API.onLoad = function () {
+      window.Tawk_API.hideWidget();
+    };
 
     const script = document.createElement("script");
     script.async = true;
@@ -100,6 +104,22 @@ function App() {
               <NavigationTracker />
               <AuthenticatedApp />
             </Router>
+
+            {/* ✅ YOUR CUSTOM CHAT BUTTON */}
+            <img
+              src="/your-banner.png" // replace with your actual banner
+              alt="Chat with us"
+              style={{
+                position: "fixed",
+                bottom: "20px",
+                right: "20px",
+                width: "200px",
+                cursor: "pointer",
+                zIndex: 9999
+              }}
+              onClick={() => window.Tawk_API?.maximize()}
+            />
+
             <Toaster />
           </QueryClientProvider>
         </LayoutThemeProvider>
@@ -107,10 +127,5 @@ function App() {
     </AuthProvider>
   )
 }
-
-window.Tawk_API = window.Tawk_API || {};
-window.Tawk_API.onLoad = function () {
-  window.Tawk_API.hideWidget();
-};
 
 export default App;
