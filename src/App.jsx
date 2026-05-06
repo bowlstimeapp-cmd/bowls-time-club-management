@@ -108,4 +108,9 @@ function App() {
   )
 }
 
+window.Tawk_API = window.Tawk_API || {};
+window.Tawk_API.onLoad = function () {
+  window.Tawk_API.hideWidget();
+};
+
 export default App;
