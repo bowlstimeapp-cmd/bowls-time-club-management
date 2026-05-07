@@ -56,13 +56,16 @@ function getBestRinkKey(matchScore, rinks) {
   const oppScores = matchScore.opposition_scores || {};
   let bestKey = null;
   let bestDiff = -Infinity;
+  let bestClub = -Infinity;
   for (const rink of rinks) {
     const key = `rink${rink.number}`;
     const club = parseInt(clubScores[key]);
     const opp = parseInt(oppScores[key]);
     if (isNaN(club) || isNaN(opp)) continue;
     const diff = club - opp;
-    if (diff > bestDiff) { bestDiff = diff; bestKey = key; }
+    if (diff > bestDiff || (diff === bestDiff && club > bestClub)) {
+      bestDiff = diff; bestClub = club; bestKey = key;
+    }
   }
   // Only award if the best rink actually won (positive diff)
   return bestDiff > 0 ? bestKey : null;
@@ -73,13 +76,17 @@ function getPredictedBestRinkKey(prediction, rinks) {
   if (!prediction?.rink_predictions) return null;
   let bestKey = null;
   let bestDiff = -Infinity;
+  let bestClub = -Infinity;
   for (const rink of rinks) {
     const key = `rink${rink.number}`;
     const club = prediction.rink_predictions[key]?.club;
     const opp = prediction.rink_predictions[key]?.opposition;
     if (club === undefined || opp === undefined || club === '' || opp === '') continue;
-    const diff = parseInt(club) - parseInt(opp);
-    if (diff > bestDiff) { bestDiff = diff; bestKey = key; }
+    const clubInt = parseInt(club);
+    const diff = clubInt - parseInt(opp);
+    if (diff > bestDiff || (diff === bestDiff && clubInt > bestClub)) {
+      bestDiff = diff; bestClub = clubInt; bestKey = key;
+    }
   }
   return bestDiff > 0 ? bestKey : null;
 }
