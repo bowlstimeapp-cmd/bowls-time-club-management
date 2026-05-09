@@ -252,8 +252,8 @@ export default function RinkDisplayTV() {
                                 const compType = booking.competition_type === 'Other' && booking.competition_other
                                   ? booking.competition_other
                                   : booking.competition_type;
-                                const parts = [compType, booking.booking_format].filter(Boolean).join(' ');
-                                const line = booking.notes ? `${parts} - ${booking.notes}` : parts;
+                                const mainParts = [compType, booking.booking_format].filter(Boolean).join(' - ');
+                                const line = booking.notes ? `${mainParts}. ${booking.notes}` : mainParts;
                                 return line ? (
                                   <span className="opacity-80 mt-0.5 line-clamp-2" style={{ fontSize: '0.9rem' }}>
                                     {line}
