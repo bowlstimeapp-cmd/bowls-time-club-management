@@ -176,42 +176,42 @@ export default function AdminDashboard() {
   const { data: club } = useQuery({
     queryKey: ['club', clubId],
     queryFn: () => base44.entities.Club.filter({ id: clubId }).then(r => r[0]),
-    enabled: !!clubId && isClubAdmin,
+    enabled: !!clubId && !!user,
   });
 
   // All bookings
   const { data: allBookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['adminDashBookings', clubId],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId }),
-    enabled: !!clubId && isClubAdmin,
+    queryFn: () => base44.entities.Booking.filter({ club_id: clubId }, '-created_date'),
+    enabled: !!clubId && !!user,
   });
 
   // All memberships
   const { data: allMemberships = [], isLoading: membershipsLoading } = useQuery({
     queryKey: ['adminDashMemberships', clubId],
     queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId }),
-    enabled: !!clubId && isClubAdmin,
+    enabled: !!clubId && !!user,
   });
 
   // Leagues
   const { data: leagues = [] } = useQuery({
     queryKey: ['adminDashLeagues', clubId],
     queryFn: () => base44.entities.League.filter({ club_id: clubId }),
-    enabled: !!clubId && isClubAdmin,
+    enabled: !!clubId && !!user,
   });
 
   // Fixtures
   const { data: allFixtures = [] } = useQuery({
     queryKey: ['adminDashFixtures', clubId],
     queryFn: () => base44.entities.LeagueFixture.filter({ club_id: clubId }),
-    enabled: !!clubId && isClubAdmin,
+    enabled: !!clubId && !!user,
   });
 
   // Teams
   const { data: allTeams = [] } = useQuery({
     queryKey: ['adminDashTeams', clubId],
     queryFn: () => base44.entities.LeagueTeam.filter({ club_id: clubId }),
-    enabled: !!clubId && isClubAdmin,
+    enabled: !!clubId && !!user,
   });
 
   // ── derived data ────────────────────────────────────────────────────────────
@@ -286,6 +286,7 @@ export default function AdminDashboard() {
 
   // Recently active (last 7 days)
   const sevenDaysAgo = subDays(today, 7);
+  const hasAnyLoginDate = approvedMembers.some(m => m.last_login_date);
   const recentlyActive = approvedMembers.filter(m => {
     if (!m.last_login_date) return false;
     return new Date(m.last_login_date) >= sevenDaysAgo;
@@ -296,8 +297,13 @@ export default function AdminDashboard() {
   const teamMap = Object.fromEntries(allTeams.map(t => [t.id, t]));
 
   const missingResults = allFixtures.filter(f => {
-    if (f.status === 'completed' || f.status === 'cancelled') return false;
-    return f.match_date < todayStr;
+    if (f.match_date >= todayStr) return false;
+    if (f.status === 'cancelled') return false;
+    // A result is entered if status is 'completed' OR scores are present
+    if (f.status === 'completed') return false;
+    if (f.home_score !== null && f.home_score !== undefined && f.home_score !== '' &&
+        f.away_score !== null && f.away_score !== undefined && f.away_score !== '') return false;
+    return true;
   });
 
   // Group missing results by league
@@ -561,8 +567,10 @@ export default function AdminDashboard() {
 
               <div className="border-t pt-3">
                 <p className="text-xs font-medium text-gray-500 mb-2">Recently active members (last 7 days)</p>
-                {recentlyActive.length === 0 ? (
-                  <p className="text-xs text-gray-400">Login activity data not available.</p>
+                {!hasAnyLoginDate ? (
+                  <p className="text-xs text-gray-400">Login tracking not enabled — no last_login_date field on members.</p>
+                ) : recentlyActive.length === 0 ? (
+                  <p className="text-xs text-gray-400">No members have logged in within the last 7 days.</p>
                 ) : (
                   <ul className="space-y-1">
                     {recentlyActive.map(m => (
@@ -575,6 +583,7 @@ export default function AdminDashboard() {
                     ))}
                   </ul>
                 )}
+
               </div>
             </CardContent>
           </Card>
