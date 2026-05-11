@@ -138,12 +138,18 @@ export default function ScorecardDetail() {
 
   const handleSave = async () => {
     setSaving(true);
+    const existing = scorecard?.saved_by || [];
+    const user = await base44.auth.me();
+    const updatedSavedBy = user && !existing.includes(user.email)
+      ? [...existing, user.email]
+      : existing;
     await base44.entities.Scorecard.update(scorecardId, {
       home_scores: homeScores,
       away_scores: awayScores,
       home_player: homePlayer,
       away_player: awayPlayer,
       is_complete: true,
+      saved_by: updatedSavedBy,
     });
     setSaving(false);
     toast.success('Scorecard saved');

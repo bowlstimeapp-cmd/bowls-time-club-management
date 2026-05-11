@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ClipboardList, Plus, Search, BookOpen, X, ArrowRight } from 'lucide-react';
+import { ClipboardList, Plus, Search, BookOpen, X, ArrowRight, Trash2 } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -25,7 +25,7 @@ export default function ScorecardHub() {
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
-  const { data: savedScorecards = [], isLoading: savedLoading } = useQuery({
+  const { data: savedScorecards = [], isLoading: savedLoading, refetch: refetchSaved } = useQuery({
     queryKey: ['savedScorecards', user?.email],
     queryFn: () => base44.entities.Scorecard.filter({ saved_by: user.email }),
     enabled: !!user?.email && showSaved,
@@ -46,7 +46,7 @@ export default function ScorecardHub() {
       away_player_email: '',
       home_scores: Array(25).fill(''),
       away_scores: Array(25).fill(''),
-      saved_by: [user.email],
+      saved_by: [],
     });
     setCreating(false);
     navigate(`/ScorecardDetail?id=${sc.id}&role=home`);
@@ -64,11 +64,17 @@ export default function ScorecardHub() {
       await base44.entities.Scorecard.update(sc.id, {
         away_player: displayName,
         away_player_email: user.email,
-        saved_by: [...(sc.saved_by || []), user.email],
       });
     }
     setShowJoin(false);
     navigate(`/ScorecardDetail?id=${sc.id}&role=away`);
+  };
+
+  const handleDeleteSaved = async (e, sc) => {
+    e.stopPropagation();
+    const updated = (sc.saved_by || []).filter(email => email !== user?.email);
+    await base44.entities.Scorecard.update(sc.id, { saved_by: updated });
+    refetchSaved();
   };
 
   const getOpponent = (sc) => {
@@ -215,20 +221,28 @@ export default function ScorecardHub() {
               ) : (
                 <div className="space-y-2">
                   {filteredScorecards.map(sc => (
-                    <button
-                      key={sc.id}
-                      onClick={() => { setShowSaved(false); navigate(`/ScorecardDetail?id=${sc.id}&readonly=1`); }}
-                      className="w-full flex items-center justify-between bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-left transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">vs {getOpponent(sc)}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {sc.created_date ? format(new Date(sc.created_date), 'd MMM yyyy') : '—'}
-                          {' · '}Code: {sc.match_code}
-                        </p>
-                      </div>
-                      <span className="text-sm font-bold text-gray-700 font-mono">{getScore(sc)}</span>
-                    </button>
+                    <div key={sc.id} className="flex items-center gap-2">
+                      <button
+                        onClick={() => { setShowSaved(false); navigate(`/ScorecardDetail?id=${sc.id}&readonly=1`); }}
+                        className="flex-1 flex items-center justify-between bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-left transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">vs {getOpponent(sc)}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {sc.created_date ? format(new Date(sc.created_date), 'd MMM yyyy') : '—'}
+                            {' · '}Code: {sc.match_code}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-gray-700 font-mono">{getScore(sc)}</span>
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteSaved(e, sc)}
+                        className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                        title="Remove from saved"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
