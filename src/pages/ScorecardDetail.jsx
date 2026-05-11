@@ -42,25 +42,58 @@ export default function ScorecardDetail() {
     });
   }, [scorecardId]);
 
-  // Real-time subscription
+  // Real-time subscription — only update the opponent's column to avoid overwriting local edits
+  const editingCellRef = useRef(null);
+  useEffect(() => { editingCellRef.current = editingCell; }, [editingCell]);
+
   useEffect(() => {
-    if (!scorecardId || isReadOnly) return;
+    if (!scorecardId) return;
     const unsub = base44.entities.Scorecard.subscribe(event => {
       if (event.id !== scorecardId) return;
       if (event.type === 'update') {
         const sc = event.data;
-        setHomePlayer(sc.home_player || '');
-        setAwayPlayer(sc.away_player || '');
-        const hs = Array(NUM_ENDS).fill('');
-        const as_ = Array(NUM_ENDS).fill('');
-        (sc.home_scores || []).forEach((v, i) => { if (i < NUM_ENDS) hs[i] = v; });
-        (sc.away_scores || []).forEach((v, i) => { if (i < NUM_ENDS) as_[i] = v; });
-        setHomeScores(hs);
-        setAwayScores(as_);
+        // Always sync opponent's name
+        if (role === 'home') setAwayPlayer(sc.away_player || '');
+        else if (role === 'away') setHomePlayer(sc.home_player || '');
+        else {
+          setHomePlayer(sc.home_player || '');
+          setAwayPlayer(sc.away_player || '');
+        }
+        // Sync scores: only update the column the current user is NOT editing
+        const currentEditing = editingCellRef.current;
+        if (role === 'home') {
+          // I'm home — update away scores from remote; only update home if not currently editing a home cell
+          const as_ = Array(NUM_ENDS).fill('');
+          (sc.away_scores || []).forEach((v, i) => { if (i < NUM_ENDS) as_[i] = v; });
+          setAwayScores(as_);
+          if (!currentEditing || currentEditing.col !== 'home') {
+            const hs = Array(NUM_ENDS).fill('');
+            (sc.home_scores || []).forEach((v, i) => { if (i < NUM_ENDS) hs[i] = v; });
+            setHomeScores(hs);
+          }
+        } else if (role === 'away') {
+          // I'm away — update home scores from remote; only update away if not currently editing an away cell
+          const hs = Array(NUM_ENDS).fill('');
+          (sc.home_scores || []).forEach((v, i) => { if (i < NUM_ENDS) hs[i] = v; });
+          setHomeScores(hs);
+          if (!currentEditing || currentEditing.col !== 'away') {
+            const as_ = Array(NUM_ENDS).fill('');
+            (sc.away_scores || []).forEach((v, i) => { if (i < NUM_ENDS) as_[i] = v; });
+            setAwayScores(as_);
+          }
+        } else {
+          // Read-only or spectator — update everything
+          const hs = Array(NUM_ENDS).fill('');
+          const as_ = Array(NUM_ENDS).fill('');
+          (sc.home_scores || []).forEach((v, i) => { if (i < NUM_ENDS) hs[i] = v; });
+          (sc.away_scores || []).forEach((v, i) => { if (i < NUM_ENDS) as_[i] = v; });
+          setHomeScores(hs);
+          setAwayScores(as_);
+        }
       }
     });
     return unsub;
-  }, [scorecardId, isReadOnly]);
+  }, [scorecardId, role]);
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -128,23 +161,26 @@ export default function ScorecardDetail() {
     }
   };
 
-  const handleCellBlur = () => {
-    persistScores(homeScores, awayScores);
+  const handleCellBlur = (col, endIdx, hs, as_) => {
+    // Pass the latest scores (including any auto-filled 0s) directly to avoid stale closure
+    persistScores(hs, as_);
     setEditingCell(null);
   };
 
-  const persistScores = async (hs, as_) => {
+  const persistScores = async (hs, as_, hp, ap) => {
     if (!scorecardId || isReadOnly) return;
     await base44.entities.Scorecard.update(scorecardId, {
       home_scores: hs,
       away_scores: as_,
-      home_player: homePlayer,
-      away_player: awayPlayer,
+      home_player: hp ?? homePlayer,
+      away_player: ap ?? awayPlayer,
     });
+    // Subscription will notify the other player automatically
   };
 
   const handlePlayerBlur = async () => {
     if (!scorecardId || isReadOnly) return;
+    // Writing player names triggers a subscription event so the other user sees the new name immediately
     await base44.entities.Scorecard.update(scorecardId, { home_player: homePlayer, away_player: awayPlayer });
   };
 
@@ -288,7 +324,7 @@ export default function ScorecardDetail() {
                       value={homeScores[i]}
                       onChange={e => handleCellChange('home', i, e.target.value)}
                       onKeyDown={e => handleCellKeyDown(e, 'home', i)}
-                      onBlur={handleCellBlur}
+                      onBlur={() => handleCellBlur('home', i, homeScores, awayScores)}
                     />
                   ) : (
                     <span className="font-medium">{homeScores[i]}</span>
@@ -317,7 +353,7 @@ export default function ScorecardDetail() {
                       value={awayScores[i]}
                       onChange={e => handleCellChange('away', i, e.target.value)}
                       onKeyDown={e => handleCellKeyDown(e, 'away', i)}
-                      onBlur={handleCellBlur}
+                      onBlur={() => handleCellBlur('away', i, homeScores, awayScores)}
                     />
                   ) : (
                     <span className="font-medium">{awayScores[i]}</span>
