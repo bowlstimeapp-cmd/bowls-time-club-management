@@ -1,0 +1,58 @@
+{
+  "name": "Scorecard",
+  "type": "object",
+  "properties": {
+    "match_code": {
+      "type": "string",
+      "description": "Unique 6-digit numeric code for the match"
+    },
+    "home_player": {
+      "type": "string",
+      "description": "Name of the home player"
+    },
+    "away_player": {
+      "type": "string",
+      "description": "Name of the away player"
+    },
+    "home_player_email": {
+      "type": "string",
+      "description": "Email of the home player"
+    },
+    "away_player_email": {
+      "type": "string",
+      "description": "Email of the away player"
+    },
+    "home_scores": {
+      "type": "array",
+      "description": "Home player scores per end (25 items)",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "away_scores": {
+      "type": "array",
+      "description": "Away player scores per end (25 items)",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "saved_by": {
+      "type": "array",
+      "description": "Array of user emails who have saved this scorecard",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "is_complete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the scorecard has been completed/saved"
+    }
+  },
+  "required": [
+    "match_code"
+  ]
+}
