@@ -103,6 +103,17 @@ export default function ScorecardHub() {
     return `${homeTotal} – ${awayTotal}`;
   };
 
+  const getResult = (sc) => {
+    const homeTotal = (sc.home_scores || []).reduce((s, v) => s + (parseInt(v) || 0), 0);
+    const awayTotal = (sc.away_scores || []).reduce((s, v) => s + (parseInt(v) || 0), 0);
+    const isHome = sc.home_player_email === user?.email;
+    const myScore = isHome ? homeTotal : awayTotal;
+    const theirScore = isHome ? awayTotal : homeTotal;
+    if (myScore > theirScore) return 'W';
+    if (myScore < theirScore) return 'L';
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -233,7 +244,11 @@ export default function ScorecardHub() {
                             {' · '}Code: {sc.match_code}
                           </p>
                         </div>
-                        <span className="text-sm font-bold text-gray-700 font-mono">{getScore(sc)}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-sm font-bold text-gray-700 font-mono">{getScore(sc)}</span>
+                          {getResult(sc) === 'W' && <span className="text-xs font-bold text-white bg-emerald-500 rounded px-1.5 py-0.5">W</span>}
+                          {getResult(sc) === 'L' && <span className="text-xs font-bold text-white bg-red-500 rounded px-1.5 py-0.5">L</span>}
+                        </div>
                       </button>
                       <button
                         onClick={(e) => handleDeleteSaved(e, sc)}

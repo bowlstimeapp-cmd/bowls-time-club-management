@@ -93,10 +93,22 @@ export default function ScorecardDetail() {
       const updated = [...homeScores];
       updated[endIdx] = sanitized;
       setHomeScores(updated);
+      // Auto-fill opponent with 0 if home score > 0
+      if (parseInt(sanitized) > 0) {
+        const awayUpdated = [...awayScores];
+        if (!awayUpdated[endIdx]) awayUpdated[endIdx] = '0';
+        setAwayScores(awayUpdated);
+      }
     } else {
       const updated = [...awayScores];
       updated[endIdx] = sanitized;
       setAwayScores(updated);
+      // Auto-fill opponent with 0 if away score > 0
+      if (parseInt(sanitized) > 0) {
+        const homeUpdated = [...homeScores];
+        if (!homeUpdated[endIdx]) homeUpdated[endIdx] = '0';
+        setHomeScores(homeUpdated);
+      }
     }
   };
 
