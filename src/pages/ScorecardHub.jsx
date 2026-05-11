@@ -6,7 +6,7 @@ import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ClipboardList, Plus, Search, BookOpen, X, ArrowRight } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 
 function generateMatchCode() {
@@ -17,6 +17,7 @@ export default function ScorecardHub() {
   const [user, setUser] = useState(null);
   const [showJoin, setShowJoin] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [savedMonthFilter, setSavedMonthFilter] = useState('all');
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -74,6 +75,21 @@ export default function ScorecardHub() {
     if (sc.home_player_email === user?.email) return sc.away_player || 'Awaiting opponent';
     return sc.home_player || 'Unknown';
   };
+
+  const monthOptions = [
+    { value: 'all', label: 'All time' },
+    ...Array.from({ length: 12 }, (_, i) => {
+      const d = subMonths(new Date(), i);
+      return { value: format(d, 'yyyy-MM'), label: format(d, 'MMMM yyyy') };
+    }),
+  ];
+
+  const filteredScorecards = savedMonthFilter === 'all'
+    ? savedScorecards
+    : savedScorecards.filter(sc => {
+        if (!sc.created_date) return false;
+        return format(new Date(sc.created_date), 'yyyy-MM') === savedMonthFilter;
+      });
 
   const getScore = (sc) => {
     const homeTotal = (sc.home_scores || []).reduce((s, v) => s + (parseInt(v) || 0), 0);
@@ -178,20 +194,27 @@ export default function ScorecardHub() {
       {showSaved && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-gray-900">Saved Scorecards</h2>
               <button onClick={() => setShowSaved(false)} className="p-1 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
+            <select
+              value={savedMonthFilter}
+              onChange={e => setSavedMonthFilter(e.target.value)}
+              className="w-full mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             <div className="flex-1 overflow-y-auto">
               {savedLoading ? (
                 <p className="text-sm text-gray-400 text-center py-8">Loading...</p>
-              ) : savedScorecards.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No saved scorecards yet.</p>
+              ) : filteredScorecards.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No scorecards for this period.</p>
               ) : (
                 <div className="space-y-2">
-                  {savedScorecards.map(sc => (
+                  {filteredScorecards.map(sc => (
                     <button
                       key={sc.id}
                       onClick={() => { setShowSaved(false); navigate(`/ScorecardDetail?id=${sc.id}&readonly=1`); }}

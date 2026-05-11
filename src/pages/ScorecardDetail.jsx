@@ -21,6 +21,7 @@ export default function ScorecardDetail() {
   const [awayPlayer, setAwayPlayer] = useState('');
   const [editingCell, setEditingCell] = useState(null); // { col: 'home'|'away', end: number }
   const [saving, setSaving] = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -170,7 +171,7 @@ export default function ScorecardDetail() {
         {/* Top bar */}
         <div className="flex items-center justify-between mb-4 gap-2">
           <button
-            onClick={() => navigate('/ScorecardHub')}
+            onClick={() => isReadOnly ? navigate('/ScorecardHub') : setShowBackConfirm(true)}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back
@@ -313,6 +314,24 @@ export default function ScorecardDetail() {
             );
           })}
         </div>
+
+        {/* Back confirmation modal */}
+        {showBackConfirm && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Are you sure?</h2>
+              <p className="text-sm text-gray-500 mb-6">Once you've left this scorecard, it can no longer be edited by you.</p>
+              <div className="flex flex-col gap-2">
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate('/ScorecardHub')}>
+                  Continue
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setShowBackConfirm(false)}>
+                  Go back to scorecard
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bottom save */}
         {!isReadOnly && (
