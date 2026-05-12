@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ClipboardList, Plus, Search, BookOpen, X, ArrowRight, Trash2, BarChart2 } from 'lucide-react';
+import { ClipboardList, Plus, Search, BookOpen, X, ArrowRight, Trash2, BarChart2, Trophy } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -186,6 +186,20 @@ export default function ScorecardHub() {
             <div>
               <p className="font-semibold text-gray-900">Performance Analytics</p>
               <p className="text-xs text-gray-500 mt-0.5">Stats, insights & trends from your matches</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-300 ml-auto" />
+          </button>
+
+          <button
+            onClick={() => navigate('/EloLeaderboard')}
+            className="w-full flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-yellow-400 hover:shadow-md transition-all"
+          >
+            <div className="p-2.5 rounded-lg bg-yellow-50">
+              <Trophy className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Club Leaderboard</p>
+              <p className="text-xs text-gray-500 mt-0.5">ELO ratings & club rankings</p>
             </div>
             <ArrowRight className="w-4 h-4 text-gray-300 ml-auto" />
           </button>

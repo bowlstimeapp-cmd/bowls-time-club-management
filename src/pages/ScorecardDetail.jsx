@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Copy, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { updateEloFromMatch } from '@/lib/eloUpdater';
 
 const NUM_ENDS = 25;
 
@@ -191,6 +192,19 @@ export default function ScorecardDetail() {
     const updatedSavedBy = user && !existing.includes(user.email)
       ? [...existing, user.email]
       : existing;
+
+    const updatedScorecard = {
+      ...scorecard,
+      home_scores: homeScores,
+      away_scores: awayScores,
+      home_player: homePlayer,
+      away_player: awayPlayer,
+      is_complete: true,
+      saved_by: updatedSavedBy,
+      home_player_email: scorecard.home_player_email || (role === 'home' ? user?.email : null),
+      away_player_email: scorecard.away_player_email || (role === 'away' ? user?.email : null),
+    };
+
     await base44.entities.Scorecard.update(scorecardId, {
       home_scores: homeScores,
       away_scores: awayScores,
@@ -198,7 +212,15 @@ export default function ScorecardDetail() {
       away_player: awayPlayer,
       is_complete: true,
       saved_by: updatedSavedBy,
+      home_player_email: updatedScorecard.home_player_email,
+      away_player_email: updatedScorecard.away_player_email,
     });
+
+    // Update ELO ratings (silently — don't block or error the save flow)
+    if (user?.email) {
+      updateEloFromMatch(updatedScorecard, user.email).catch(() => {});
+    }
+
     setSaving(false);
     toast.success('Scorecard saved');
   };

@@ -1,0 +1,97 @@
+{
+  "name": "PlayerElo",
+  "type": "object",
+  "properties": {
+    "player_email": {
+      "type": "string",
+      "description": "Email of the player (null for guest players)"
+    },
+    "player_name": {
+      "type": "string",
+      "description": "Display name of the player"
+    },
+    "elo": {
+      "type": "number",
+      "default": 1200,
+      "description": "Current ELO rating"
+    },
+    "matches_played": {
+      "type": "number",
+      "default": 0,
+      "description": "Total matches played"
+    },
+    "wins": {
+      "type": "number",
+      "default": 0,
+      "description": "Total wins"
+    },
+    "losses": {
+      "type": "number",
+      "default": 0,
+      "description": "Total losses"
+    },
+    "unique_opponents": {
+      "type": "array",
+      "description": "List of unique opponent emails or names faced",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_match_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the last recorded match"
+    },
+    "elo_history": {
+      "type": "array",
+      "description": "History of ELO changes: [{date, elo, opponent, result}]",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "elo": {
+            "type": "number"
+          },
+          "opponent": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when 15+ matches AND 3+ unique opponents"
+    },
+    "is_provisional": {
+      "type": "boolean",
+      "default": true,
+      "description": "True when fewer than 15 matches played"
+    },
+    "elo_processed_scorecards": {
+      "type": "array",
+      "description": "List of scorecard IDs already processed for ELO",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "player_name"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {},
+    "write": {}
+  }
+}
