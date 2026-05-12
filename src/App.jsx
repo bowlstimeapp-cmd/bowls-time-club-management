@@ -13,6 +13,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BookingsAudit from './pages/BookingsAudit';
 import ScorecardHub from './pages/ScorecardHub';
 import ScorecardDetail from './pages/ScorecardDetail';
+import ScorecardAnalytics from './pages/ScorecardAnalytics';
 import CompetitionRegistration from './pages/CompetitionRegistration';
 import ClubMessaging from './pages/ClubMessaging';
 import MemberDirectory from './pages/MemberDirectory';
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
       <Route path="/BookingsAudit" element={<LayoutWrapper currentPageName="BookingsAudit"><BookingsAudit /></LayoutWrapper>} />
       <Route path="/ScorecardHub" element={<LayoutWrapper currentPageName="ScorecardHub"><ScorecardHub /></LayoutWrapper>} />
       <Route path="/ScorecardDetail" element={<LayoutWrapper currentPageName="ScorecardDetail"><ScorecardDetail /></LayoutWrapper>} />
+      <Route path="/ScorecardAnalytics" element={<LayoutWrapper currentPageName="ScorecardAnalytics"><ScorecardAnalytics /></LayoutWrapper>} />
       <Route path="/CompetitionRegistration" element={<LayoutWrapper currentPageName="CompetitionRegistration"><CompetitionRegistration /></LayoutWrapper>} />
       <Route path="/ClubMessaging" element={<LayoutWrapper currentPageName="ClubMessaging"><ClubMessaging /></LayoutWrapper>} />
       <Route path="/MemberDirectory" element={<LayoutWrapper currentPageName="MemberDirectory"><MemberDirectory /></LayoutWrapper>} />
