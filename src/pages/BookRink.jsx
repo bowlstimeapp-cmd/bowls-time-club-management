@@ -340,9 +340,13 @@ useEffect(() => {
       return;
     }
     setDeletingBooking(true);
-    await base44.entities.Booking.update(booking.id, { status: 'cancelled' });
-    if (isPrivileged && booking.booker_email !== user?.email) {
-      await sendBookingChangeNotification(booking, 'deleted');
+    if (isPrivileged) {
+      await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: booking.id, data: { status: 'cancelled' } });
+      if (booking.booker_email !== user?.email) {
+        await sendBookingChangeNotification(booking, 'deleted');
+      }
+    } else {
+      await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
     }
     await writeAuditLog(booking, 'cancelled');
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -388,11 +392,12 @@ useEffect(() => {
       newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
     }
 
-    await base44.entities.Booking.update(booking.id, {
-      rink_number: newRink,
-      start_time: newStartTime,
-      end_time: newEndTime,
-    });
+    // Optimistic update — reflect the move immediately in the UI
+    queryClient.setQueryData(['bookings', clubId, dateString], (old) =>
+      old ? old.map(b => b.id === booking.id ? { ...b, rink_number: newRink, start_time: newStartTime, end_time: newEndTime } : b) : old
+    );
+
+    await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: booking.id, data: { rink_number: newRink, start_time: newStartTime, end_time: newEndTime } });
 
     if (isPrivileged && booking.booker_email !== user?.email) {
       await sendBookingChangeNotification(
@@ -407,18 +412,18 @@ useEffect(() => {
   };
 
   const handleSwapBookings = async (bookingA, bookingB) => {
+    // Optimistic update — reflect swap immediately in the UI
+    queryClient.setQueryData(['bookings', clubId, dateString], (old) =>
+      old ? old.map(b => {
+        if (b.id === bookingA.id) return { ...b, rink_number: bookingB.rink_number, start_time: bookingB.start_time, end_time: bookingB.end_time };
+        if (b.id === bookingB.id) return { ...b, rink_number: bookingA.rink_number, start_time: bookingA.start_time, end_time: bookingA.end_time };
+        return b;
+      }) : old
+    );
     // Swap rink + time of two bookings
     await Promise.all([
-      base44.entities.Booking.update(bookingA.id, {
-        rink_number: bookingB.rink_number,
-        start_time: bookingB.start_time,
-        end_time: bookingB.end_time,
-      }),
-      base44.entities.Booking.update(bookingB.id, {
-        rink_number: bookingA.rink_number,
-        start_time: bookingA.start_time,
-        end_time: bookingA.end_time,
-      }),
+      base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: bookingA.id, data: { rink_number: bookingB.rink_number, start_time: bookingB.start_time, end_time: bookingB.end_time } }),
+      base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: bookingB.id, data: { rink_number: bookingA.rink_number, start_time: bookingA.start_time, end_time: bookingA.end_time } }),
     ]);
 
     // Notify both owners
@@ -745,7 +750,7 @@ useEffect(() => {
     setBulkDeleting(true);
     for (const bookingId of bulkDeleteSelected) {
       const booking = bookings.find(b => b.id === bookingId);
-      await base44.entities.Booking.update(bookingId, { status: 'cancelled' });
+      await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: bookingId, data: { status: 'cancelled' } });
       if (booking && booking.booker_email !== user?.email) {
         await sendBookingChangeNotification(booking, 'deleted');
       }
