@@ -106,26 +106,6 @@
     "create": {
       "created_by": "{{user.email}}"
     },
-    "read": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "data.booker_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "steward"
-          }
-        }
-      ]
-    },
     "update": {
       "$or": [
         {
@@ -147,6 +127,26 @@
       ]
     },
     "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.booker_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "steward"
+          }
+        }
+      ]
+    },
+    "write": {
       "$or": [
         {
           "created_by": "{{user.email}}"
