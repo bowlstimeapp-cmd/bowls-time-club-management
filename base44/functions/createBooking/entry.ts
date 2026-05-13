@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
       finalBookerName = booker_name || kioskMemberships[0].user_name || booker_email;
     }
 
-    // Status: admins/stewards can create as approved; regular members always get pending (unless auto_approve)
-    const isPrivileged = membership.role === 'admin' || membership.role === 'steward';
+    // Status: admins/stewards/selectors can create as approved; regular members always get pending (unless auto_approve)
+    const isPrivileged = membership.role === 'admin' || membership.role === 'steward' || membership.role === 'selector';
     const status = (club.auto_approve_bookings || isPrivileged) ? 'approved' : 'pending';
 
     const booking = await base44.asServiceRole.entities.Booking.create({

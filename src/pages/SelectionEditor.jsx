@@ -201,7 +201,7 @@ export default function SelectionEditor() {
   });
 
   const createBookingMutation = useMutation({
-    mutationFn: (data) => base44.entities.Booking.create(data),
+    mutationFn: (data) => base44.functions.invoke('createBooking', { ...data, clubId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },

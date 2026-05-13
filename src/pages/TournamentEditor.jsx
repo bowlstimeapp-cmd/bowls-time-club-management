@@ -118,16 +118,17 @@ export default function TournamentEditor() {
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ClubTournament.create(data),
-    onSuccess: (data) => {
+    mutationFn: (data) => base44.functions.invoke('updateClubData', { entity: 'ClubTournament', action: 'create', clubId, data }),
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       toast.success('Tournament saved');
-      navigate(createPageUrl('TournamentEditor') + `?clubId=${clubId}&tournamentId=${data.id}`);
+      const newId = res?.data?.id;
+      if (newId) navigate(createPageUrl('TournamentEditor') + `?clubId=${clubId}&tournamentId=${newId}`);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ClubTournament.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateClubData', { entity: 'ClubTournament', action: 'update', clubId, id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] });

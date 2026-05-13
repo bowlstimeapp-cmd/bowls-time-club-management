@@ -32,7 +32,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
   const handleSave = async (fixture) => {
     const s = scores[fixture.id];
     if (!s || s.home === '' || s.away === '') return;
-    await base44.entities.LeagueFixture.update(fixture.id, {
+    await base44.functions.invoke('updateClubData', { entity: 'LeagueFixture', action: 'update', clubId, id: fixture.id, data: {
       home_score: parseInt(s.home),
       away_score: parseInt(s.away),
       ...(isSetsLeague ? { home_sets: s.home_sets !== '' ? parseInt(s.home_sets) : null, away_sets: s.away_sets !== '' ? parseInt(s.away_sets) : null } : {}),
@@ -56,14 +56,14 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       conflict_second_away_sets: null,
       conflict_second_team_id: null,
       conflict_second_submitted_by_email: null,
-    });
+    } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['allLeagueFixtures', clubId] });
     toast.success('Score saved');
   };
 
   const handleClear = async (fixture) => {
-    await base44.entities.LeagueFixture.update(fixture.id, {
+    await base44.functions.invoke('updateClubData', { entity: 'LeagueFixture', action: 'update', clubId, id: fixture.id, data: {
       home_score: null,
       away_score: null,
       home_sets: null,
@@ -87,7 +87,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       conflict_second_away_sets: null,
       conflict_second_team_id: null,
       conflict_second_submitted_by_email: null,
-    });
+    } });
     setScores(prev => ({
       ...prev,
       [fixture.id]: { home: '', away: '', home_sets: '', away_sets: '' },

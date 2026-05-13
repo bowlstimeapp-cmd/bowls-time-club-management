@@ -240,7 +240,7 @@ export default function ClubAdmin() {
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: (data) => base44.entities.ClubMembership.create({ ...data, club_id: clubId }),
+    mutationFn: (data) => base44.functions.invoke('updateClubData', { entity: 'ClubMembership', action: 'create', clubId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member added successfully');
@@ -249,12 +249,12 @@ export default function ClubAdmin() {
   });
 
   const createAuditLogMutation = useMutation({
-    mutationFn: (data) => base44.entities.AuditLog.create(data),
+    mutationFn: (data) => base44.functions.invoke('updateClubData', { entity: 'AuditLog', action: 'create', clubId, data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auditLogs'] }),
   });
 
   const deleteMembershipMutation = useMutation({
-    mutationFn: (id) => base44.entities.ClubMembership.delete(id),
+    mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'ClubMembership', action: 'delete', clubId, id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member removed');
@@ -345,15 +345,10 @@ export default function ClubAdmin() {
 
   const handleDeleteAllMembers = async () => {
     setDeletingAll(true);
-    try {
-      for (const m of memberships) {
-        await base44.entities.ClubMembership.delete(m.id);
-      }
-      queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
-      toast.success(`Deleted ${memberships.length} members`);
-    } catch (err) {
-      toast.error('Failed to delete all members');
-    }
+    const ids = memberships.map(m => m.id);
+    await base44.functions.invoke('updateClubData', { entity: 'ClubMembership', action: 'bulk_delete', clubId, ids });
+    queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
+    toast.success(`Deleted ${memberships.length} members`);
     setDeletingAll(false);
     setDeleteAllConfirm(false);
   };
