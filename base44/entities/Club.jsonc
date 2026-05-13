@@ -374,18 +374,6 @@
         "role": "admin"
       }
     },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.primary_admin_email": "{{user.email}}"
-        }
-      ]
-    },
     "update": {
       "$or": [
         {
