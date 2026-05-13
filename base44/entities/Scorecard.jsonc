@@ -50,9 +50,37 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the scorecard has been completed/saved"
+    },
+    "elo_processed_scorecards": {
+      "type": "array",
+      "description": "List of user emails for whom ELO has already been calculated",
+      "items": {
+        "type": "string"
+      },
+      "default": []
     }
   },
   "required": [
     "match_code"
-  ]
+  ],
+  "rls": {
+    "read": {},
+    "create": {},
+    "update": {},
+    "delete": {
+      "$or": [
+        {
+          "data.home_player_email": "{{user.email}}"
+        },
+        {
+          "data.away_player_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
 }

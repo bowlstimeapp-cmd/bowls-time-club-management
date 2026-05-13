@@ -1,22 +1,38 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// ---------------------------------------------------------------------------
+// Auth helpers (inlined — no local imports in Deno Deploy)
+// ---------------------------------------------------------------------------
+
+function isPlatformAdmin(user) { return user?.role === 'admin'; }
+
+async function getClubMembership(base44, userEmail, clubId) {
+  const results = await base44.asServiceRole.entities.ClubMembership.filter({
+    club_id: clubId, user_email: userEmail, status: 'approved',
+  });
+  return results[0] || null;
+}
+
+// ---------------------------------------------------------------------------
+
 /**
  * Secure backend function for TeamSelection create / update / delete.
- * Requires the caller to be an approved club selector or admin.
  * 
- * Actions:
- *   create — create a new TeamSelection record
- *   update — update an existing TeamSelection record
- *   delete — delete a TeamSelection record (admin only)
+ * Authorization model:
+ *   create / update — club admin OR club selector (ClubMembership.role)
+ *   delete          — club admin only
+ *   publish         — club admin or selector
+ * 
+ * NOTE: RLS on TeamSelection uses user_condition role checks which only look at
+ * the global Users.role. This function bypasses that via asServiceRole after
+ * verifying the correct ClubMembership.role.
  */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { action, clubId, selectionId, data } = await req.json();
 
@@ -24,34 +40,27 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required fields: action, clubId' }, { status: 400 });
     }
 
-    // Verify the caller is an approved selector or admin for this club
-    const isPlatformAdmin = user.role === 'admin';
-    let callerMembership = null;
-    if (!isPlatformAdmin) {
-      const memberships = await base44.asServiceRole.entities.ClubMembership.filter({
-        club_id: clubId,
-        user_email: user.email,
-        status: 'approved',
-      });
-      callerMembership = memberships[0];
-      const isSelector = callerMembership?.role === 'selector' || callerMembership?.role === 'admin';
-      if (!isSelector) {
-        return Response.json({ error: 'Forbidden: must be a club selector or admin' }, { status: 403 });
-      }
-    }
+    const platform = isPlatformAdmin(user);
+    const membership = platform ? null : await getClubMembership(base44, user.email, clubId);
+    const memberRole = membership?.role;
+
+    const isAdminLevel = platform || memberRole === 'admin';
+    const isSelectorLevel = isAdminLevel || memberRole === 'selector';
 
     if (action === 'create') {
+      if (!isSelectorLevel) {
+        return Response.json({ error: 'Forbidden: requires selector or admin role' }, { status: 403 });
+      }
       if (!data) return Response.json({ error: 'Missing data for create' }, { status: 400 });
-      const created = await base44.asServiceRole.entities.TeamSelection.create({
-        ...data,
-        club_id: clubId,
-      });
+      const created = await base44.asServiceRole.entities.TeamSelection.create({ ...data, club_id: clubId });
       return Response.json({ success: true, id: created.id, record: created });
     }
 
     if (action === 'update') {
-      if (!selectionId || !data) return Response.json({ error: 'Missing selectionId or data for update' }, { status: 400 });
-      // Verify record belongs to this club
+      if (!isSelectorLevel) {
+        return Response.json({ error: 'Forbidden: requires selector or admin role' }, { status: 403 });
+      }
+      if (!selectionId || !data) return Response.json({ error: 'Missing selectionId or data' }, { status: 400 });
       const existing = await base44.asServiceRole.entities.TeamSelection.filter({ id: selectionId });
       if (!existing[0] || existing[0].club_id !== clubId) {
         return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
@@ -61,12 +70,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'delete') {
-      if (!selectionId) return Response.json({ error: 'Missing selectionId for delete' }, { status: 400 });
-      // Delete requires admin role (not just selector)
-      const isAdmin = isPlatformAdmin || callerMembership?.role === 'admin';
-      if (!isAdmin) {
+      if (!isAdminLevel) {
         return Response.json({ error: 'Forbidden: only club admins can delete selections' }, { status: 403 });
       }
+      if (!selectionId) return Response.json({ error: 'Missing selectionId' }, { status: 400 });
       const existing = await base44.asServiceRole.entities.TeamSelection.filter({ id: selectionId });
       if (!existing[0] || existing[0].club_id !== clubId) {
         return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
