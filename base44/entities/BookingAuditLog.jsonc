@@ -96,7 +96,18 @@
         "role": "admin"
       }
     },
-    "update": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.performed_by_email": "{{user.email}}"
+        }
+      ]
+    },
     "delete": {
       "user_condition": {
         "role": "admin"
