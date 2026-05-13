@@ -46,19 +46,24 @@
   ],
   "rls": {
     "create": {
-      "created_by": "{{user.email}}"
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
-      "created_by": "{{user.email}}"
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "update": {
-      "data.bowlstimeapp@gmail.com": "{{user.email}}"
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "delete": {
-      "data.bowlstimeapp@gmail.com": "{{user.email}}"
-    },
-    "write": {
-      "data.bowlstimeapp@gmail.com": "{{user.email}}"
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
