@@ -265,7 +265,10 @@ useEffect(() => {
     : bookingsFromDB;
 
   const createBookingMutation = useMutation({
-    mutationFn: (bookingData) => base44.entities.Booking.create(bookingData),
+    mutationFn: async (bookingData) => {
+      const res = await base44.functions.invoke('createBooking', bookingData);
+      return res.data.booking;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },
@@ -705,20 +708,18 @@ useEffect(() => {
       newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
     }
 
-    await base44.entities.Booking.create({
+    await base44.functions.invoke('createBooking', {
       club_id: booking.club_id,
       rink_number: newRink,
       date: dateString,
       start_time: newStartTime,
       end_time: newEndTime,
-      status: booking.status,
       competition_type: booking.competition_type,
       competition_other: booking.competition_other || '',
       booking_format: booking.booking_format || null,
       booker_name: booking.booker_name,
       booker_email: booking.booker_email,
       notes: booking.notes || '',
-      admin_notes: booking.admin_notes || '',
       rollup_members: booking.rollup_members || [],
     });
 
