@@ -1,0 +1,74 @@
+{
+  "name": "MatchScore",
+  "type": "object",
+  "properties": {
+    "selection_id": {
+      "type": "string",
+      "description": "Reference to the team selection"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "opposition_players": {
+      "type": "object",
+      "description": "JSON object mapping positions to opposition player names"
+    },
+    "club_scores": {
+      "type": "object",
+      "description": "JSON object mapping rink positions to club scores"
+    },
+    "opposition_scores": {
+      "type": "object",
+      "description": "JSON object mapping rink positions to opposition scores"
+    },
+    "ends": {
+      "type": "object",
+      "description": "JSON object mapping rink positions to number of ends played"
+    }
+  },
+  "required": [
+    "selection_id",
+    "club_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "live_scorer"
+          }
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "live_scorer"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
