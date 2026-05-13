@@ -142,7 +142,7 @@ export default function MyLeagueTeam() {
     : myTeams.filter(t => t.league_id === selectedLeagueFilter);
 
   const updateTeamMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LeagueTeam.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateClubData', { entity: 'LeagueTeam', action: 'captain_update', clubId, id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
       toast.success('Team updated');
@@ -257,8 +257,9 @@ export default function MyLeagueTeam() {
       rota[fixtureId] = [...currentPlayers, playerEmail];
     }
     
-    await base44.entities.LeagueTeam.update(team.id, { fixture_rota: rota });
-queryClient.invalidateQueries({ queryKey: ['leagueTeams'] , exact: false });  };
+    await base44.functions.invoke('updateClubData', { entity: 'LeagueTeam', action: 'captain_update', clubId, id: team.id, data: { fixture_rota: rota } });
+    queryClient.invalidateQueries({ queryKey: ['leagueTeams'], exact: false });
+  };
 
   const openAddPlayer = (team) => {
     setSelectedTeam(team);
@@ -362,7 +363,7 @@ const handleGenerateRota = async (team) => {
     }
     
     // Save rota to team
-    await base44.entities.LeagueTeam.update(freshTeam.id, { fixture_rota: rota });
+    await base44.functions.invoke('updateClubData', { entity: 'LeagueTeam', action: 'captain_update', clubId, id: freshTeam.id, data: { fixture_rota: rota } });
     queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
     
     setGeneratingRota(false);

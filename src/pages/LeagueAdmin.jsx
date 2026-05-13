@@ -755,7 +755,8 @@ export default function LeagueAdmin() {
       return;
     }
     const cleanBookings = bookingsToCreate.map(({ _fixtureId, ...b }) => b);
-    const createdBookings = await base44.entities.Booking.bulkCreate(cleanBookings);
+    const createdRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'bulk_create', clubId, data: cleanBookings });
+    const createdBookings = createdRes?.data?.records || [];
 
     for (let i = 0; i < bookingsToCreate.length; i++) {
       const fixtureId = bookingsToCreate[i]._fixtureId;

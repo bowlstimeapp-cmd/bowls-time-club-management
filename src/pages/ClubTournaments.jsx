@@ -78,7 +78,7 @@ export default function ClubTournaments() {
   const [deleteId, setDeleteId] = useState(null);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ClubTournament.delete(id),
+    mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'ClubTournament', action: 'delete', clubId, id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournaments', clubId] });
       toast.success('Tournament deleted');

@@ -45,7 +45,48 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required fields: entity, action, clubId' }, { status: 400 });
     }
 
-    // All operations in this function require club admin (or platform admin)
+    // Most operations require club admin (or platform admin).
+    // Exceptions handled per-action below before this check.
+
+    // ── BOOKING (member-level cancel — own booking only) ─────────────────────
+    if (entity === 'Booking' && action === 'cancel_own') {
+      if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+      const record = await verifyBelongsToClub(base44, 'Booking', id, clubId);
+      if (!record) return Response.json({ error: 'Booking not found or does not belong to this club' }, { status: 404 });
+      if (record.booker_email !== user.email) {
+        return Response.json({ error: 'Forbidden: can only cancel your own bookings' }, { status: 403 });
+      }
+      await base44.asServiceRole.entities.Booking.update(id, { status: 'cancelled' });
+      return Response.json({ success: true });
+    }
+
+    // ── LEAGUE TEAM (captain-level update — own team only) ───────────────────
+    if (entity === 'LeagueTeam' && action === 'captain_update') {
+      if (!id || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
+      const record = await verifyBelongsToClub(base44, 'LeagueTeam', id, clubId);
+      if (!record) return Response.json({ error: 'Team not found or does not belong to this club' }, { status: 404 });
+      const isPlatAdmin = isPlatformAdmin(user);
+      const isCaptain = record.captain_email === user.email;
+      const isClubAdmin = isPlatAdmin || await hasClubRole(base44, user.email, clubId, ['admin']);
+      if (!isCaptain && !isClubAdmin) {
+        return Response.json({ error: 'Forbidden: must be the team captain or club admin' }, { status: 403 });
+      }
+      // Only allow safe player/rota fields — never allow captain_email change by non-admin
+      const allowedFields = ['players', 'fixture_rota', 'player_unavailability'];
+      if (!isClubAdmin) {
+        const safeData = {};
+        for (const field of allowedFields) {
+          if (field in data) safeData[field] = data[field];
+        }
+        if (Object.keys(safeData).length === 0) return Response.json({ error: 'No allowed fields to update' }, { status: 400 });
+        await base44.asServiceRole.entities.LeagueTeam.update(id, safeData);
+      } else {
+        await base44.asServiceRole.entities.LeagueTeam.update(id, data);
+      }
+      return Response.json({ success: true });
+    }
+
+    // All remaining operations require club admin (or platform admin)
     const allowed = await isAuthorized(base44, user, clubId, ['admin']);
     if (!allowed) {
       return Response.json({ error: 'Forbidden: must be a club admin for this club' }, { status: 403 });
@@ -71,6 +112,12 @@ Deno.serve(async (req) => {
         if (!ids || !Array.isArray(ids)) return Response.json({ error: 'Missing ids array' }, { status: 400 });
         await Promise.all(ids.map(bid => base44.asServiceRole.entities.Booking.delete(bid)));
         return Response.json({ success: true, deleted: ids.length });
+      }
+      if (action === 'bulk_create') {
+        if (!data || !Array.isArray(data)) return Response.json({ error: 'Missing data array' }, { status: 400 });
+        const records = data.map(b => ({ ...b, club_id: clubId }));
+        const created = await base44.asServiceRole.entities.Booking.bulkCreate(records);
+        return Response.json({ success: true, records: created });
       }
     }
 

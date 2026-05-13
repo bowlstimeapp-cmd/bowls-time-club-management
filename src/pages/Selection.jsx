@@ -206,7 +206,7 @@ export default function Selection() {
           slotStarts.includes(b.start_time) &&
           b.status !== 'cancelled'
         );
-        await Promise.all(toCancel.map(b => base44.entities.Booking.update(b.id, { status: 'cancelled' })));
+        await Promise.all(toCancel.map(b => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: b.id, data: { status: 'cancelled' } })));
       }
       return base44.functions.invoke('updateTeamSelection', { action: 'delete', clubId, selectionId });
     },
@@ -227,7 +227,7 @@ export default function Selection() {
     const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd');
     const toArchive = selections.filter(s => !s.is_archived && s.match_date <= yesterday);
     if (toArchive.length > 0) {
-      Promise.all(toArchive.map(s => base44.entities.TeamSelection.update(s.id, { is_archived: true })))
+      Promise.all(toArchive.map(s => base44.functions.invoke('updateTeamSelection', { action: 'update', clubId, selectionId: s.id, data: { is_archived: true } })))
         .then(() => queryClient.invalidateQueries({ queryKey: ['selections'] }));
     }
     setArchiveRun(true);

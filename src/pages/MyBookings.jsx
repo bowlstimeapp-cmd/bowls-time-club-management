@@ -155,7 +155,7 @@ export default function MyBookings() {
     : allBookings;
 
   const cancelMutation = useMutation({
-    mutationFn: (booking) => base44.entities.Booking.update(booking.id, { status: 'cancelled' }),
+    mutationFn: (booking) => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myBookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
