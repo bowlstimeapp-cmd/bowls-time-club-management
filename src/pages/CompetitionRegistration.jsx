@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Trophy, Plus, Calendar, Users, Loader2, CheckCircle, AlertCircle,
-  MoreVertical, Pencil, Trash2
+  MoreVertical, Pencil, Trash2, Download, ClipboardList
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 
 const TYPE_LABELS = { singles: 'Singles', pairs: 'Pairs', triples: 'Triples', fours: 'Fours' };
@@ -370,10 +371,18 @@ export default function CompetitionRegistration() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Available Competitions</h2>
             {isAdmin && (
-              <Button onClick={handleOpenAdd} className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Competition
-              </Button>
+              <div className="flex items-center gap-2">
+                <Link to={createPageUrl('CompetitionEntriesAdmin') + `?clubId=${clubId}`}>
+                  <Button variant="outline" className="gap-2">
+                    <ClipboardList className="w-4 h-4" />
+                    View All Entries
+                  </Button>
+                </Link>
+                <Button onClick={handleOpenAdd} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Competition
+                </Button>
+              </div>
             )}
           </div>
 

@@ -28,6 +28,7 @@ import {
   ChevronDown,
   MessageSquare,
   ListChecks,
+  Download,
   MessagesSquare,
   BookOpen,
   Target,
@@ -296,6 +297,14 @@ export default function Layout({ children, currentPageName }) {
                           <Link to={createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`} className="cursor-pointer">
                             <ListChecks className="w-4 h-4 mr-2" />
                             Competition Entries
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {club?.competition_registration_enabled && isClubAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('CompetitionEntriesAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <Download className="w-4 h-4 mr-2" />
+                            Entries Admin
                           </Link>
                         </DropdownMenuItem>
                       )}
