@@ -39,6 +39,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 import PlayerAvailabilityDialog from '@/components/teams/PlayerAvailabilityDialog';
+import RegenerateRotaModal from '@/components/teams/RegenerateRotaModal';
+import { generateWithRetry } from '@/lib/rotaGenerator';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -67,6 +69,8 @@ export default function MyLeagueTeam() {
   const [rotaErrorModalOpen, setRotaErrorModalOpen] = useState(false);
   const [rotaErrors, setRotaErrors] = useState([]); // [{fixture, date, count, required}]
   const [highlightedFixtureIds, setHighlightedFixtureIds] = useState(new Set());
+  const [regenModalOpen, setRegenModalOpen] = useState(false);
+  const [regenTargetTeam, setRegenTargetTeam] = useState(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -266,108 +270,89 @@ export default function MyLeagueTeam() {
     setAddPlayerOpen(true);
   };
 
-const handleGenerateRota = async (team) => {
-  const freshTeam = teams.find(t => t.id === team.id) || team;
-  const league = leagues.find(l => l.id === freshTeam.league_id);
-  const teamFixtures = fixtures
-    .filter(f => f.home_team_id === freshTeam.id || f.away_team_id === freshTeam.id)
-    .sort((a, b) => a.match_date.localeCompare(b.match_date));
-  
-  const players = freshTeam.players || [];
-  const unavailability = freshTeam.player_unavailability || {};
-    
+  // Open rota modal: first-time generate runs immediately, regenerate shows the modal
+  const handleGenerateRotaClick = (team) => {
+    const hasRota = team.fixture_rota && Object.keys(team.fixture_rota).length > 0;
+    if (hasRota) {
+      setRegenTargetTeam(team);
+      setRegenModalOpen(true);
+    } else {
+      handleGenerateRota(team, 'all');
+    }
+  };
+
+  const handleGenerateRota = async (team, mode) => {
+    setRegenModalOpen(false);
+    const freshTeam = teams.find(t => t.id === team.id) || team;
+    const league = leagues.find(l => l.id === freshTeam.league_id);
+
+    const allTeamFixtures = fixtures
+      .filter(f => f.home_team_id === freshTeam.id || f.away_team_id === freshTeam.id)
+      .sort((a, b) => a.match_date.localeCompare(b.match_date));
+
+    const players = freshTeam.players || [];
+    const unavailability = freshTeam.player_unavailability || {};
+
     if (players.length === 0) {
       toast.error('Add players to your team first');
       return;
     }
-    
+
     const playersPerGame = league?.format === 'triples' ? 3 : 4;
-    
+
     if (players.length < playersPerGame) {
       toast.error(`Need at least ${playersPerGame} players for ${league?.format || 'fours'} format`);
       return;
     }
-    
+
     setGeneratingRota(true);
-    
-    // Track how many games each player has been assigned
-    const playerGameCount = {};
-    players.forEach(p => playerGameCount[p] = 0);
-    
-    // Track previous match groupings to ensure variety
-    const previousGroupings = {};
-    players.forEach(p => previousGroupings[p] = new Set());
-    
-    const rota = {};
-    
-    for (const fixture of teamFixtures) {
-      const fixtureDate = fixture.match_date;
-      
-      // Get available players for this date
-      const availablePlayers = players.filter(player => {
-        const playerUnavailability = unavailability[player] || [];
-        return !playerUnavailability.includes(fixtureDate);
-      });
-      
-      if (availablePlayers.length < playersPerGame) {
-        // Not enough available players - select best available
-        const sortedAvailable = [...availablePlayers].sort((a, b) => playerGameCount[a] - playerGameCount[b]);
-        rota[fixture.id] = sortedAvailable;
-        sortedAvailable.forEach(p => playerGameCount[p]++);
-        continue;
-      }
-      
-      // Try to select players with variety in groupings and low game count
-      let selectedPlayers = [];
-      let attempts = 0;
-      const maxAttempts = 10;
-      
-      while (selectedPlayers.length < playersPerGame && attempts < maxAttempts) {
-        attempts++;
-        
-        // Score each player based on: game count (lower is better) + grouping variety
-        const playerScores = availablePlayers.map(player => {
-          const gamesPlayed = playerGameCount[player];
-          const groupingScore = selectedPlayers.reduce((sum, selected) => {
-            return sum + (previousGroupings[player].has(selected) ? 1 : 0);
-          }, 0);
-          
-          return {
-            player,
-            score: gamesPlayed * 10 + groupingScore * 5 // Prioritize low game count, then grouping variety
-          };
-        });
-        
-        // Sort by score and pick the best available player not yet selected
-        playerScores.sort((a, b) => a.score - b.score);
-        
-        for (const { player } of playerScores) {
-          if (!selectedPlayers.includes(player)) {
-            selectedPlayers.push(player);
-            break;
-          }
-        }
-      }
-      
-      // Update game counts and grouping records
-      selectedPlayers.forEach(p => {
-        playerGameCount[p]++;
-        selectedPlayers.forEach(other => {
-          if (p !== other) {
-            previousGroupings[p].add(other);
-          }
-        });
-      });
-      
-      rota[fixture.id] = selectedPlayers;
-    }
-    
-    // Save rota to team
-    await base44.functions.invoke('updateClubData', { entity: 'LeagueTeam', action: 'captain_update', clubId, id: freshTeam.id, data: { fixture_rota: rota } });
+
+    // For "going forwards" mode, split fixtures into past/future
+    const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD in local time
+    const pastFixtures = mode === 'forwards'
+      ? allTeamFixtures.filter(f => f.match_date <= todayStr)
+      : [];
+    const futureFixtures = mode === 'forwards'
+      ? allTeamFixtures.filter(f => f.match_date > todayStr)
+      : allTeamFixtures;
+
+    // Existing rota to compare against (for retry logic)
+    const existingRota = freshTeam.fixture_rota || {};
+
+    // Build the previous rota slice only for the fixtures we're regenerating
+    const previousRotaSlice = {};
+    futureFixtures.forEach(f => {
+      if (existingRota[f.id]) previousRotaSlice[f.id] = existingRota[f.id];
+    });
+
+    // Generate new rota for the target fixtures, with retry if identical
+    const newRotaSlice = generateWithRetry(
+      players,
+      futureFixtures,
+      unavailability,
+      playersPerGame,
+      previousRotaSlice,
+      5
+    );
+
+    // Merge: keep past allocations, replace future ones
+    const mergedRota = { ...existingRota };
+    // Remove old future entries first
+    futureFixtures.forEach(f => delete mergedRota[f.id]);
+    // Add the newly generated ones
+    Object.assign(mergedRota, newRotaSlice);
+
+    await base44.functions.invoke('updateClubData', {
+      entity: 'LeagueTeam',
+      action: 'captain_update',
+      clubId,
+      id: freshTeam.id,
+      data: { fixture_rota: mergedRota },
+    });
     queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
-    
+
     setGeneratingRota(false);
-    toast.success('Rota generated');
+    toast.success(mode === 'forwards' ? 'Future fixtures regenerated' : 'Rota generated');
   };
 
   const openRotaView = (team) => {
@@ -637,7 +622,7 @@ const handleGenerateRota = async (team) => {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => handleGenerateRota(team)}
+                                    onClick={() => handleGenerateRotaClick(team)}
                                     disabled={generatingRota}
                                   >
                                     {generatingRota ? (
@@ -951,6 +936,15 @@ const handleGenerateRota = async (team) => {
             </div>
           </div>
         )}
+
+        {/* Regenerate Rota Modal */}
+        <RegenerateRotaModal
+          open={regenModalOpen}
+          onClose={() => setRegenModalOpen(false)}
+          onRegenAll={() => handleGenerateRota(regenTargetTeam, 'all')}
+          onRegenForwards={() => handleGenerateRota(regenTargetTeam, 'forwards')}
+          isGenerating={generatingRota}
+        />
 
         {/* Player Availability Dialog */}
         <PlayerAvailabilityDialog
