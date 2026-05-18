@@ -53,6 +53,10 @@
     "created_by": {
       "type": "string",
       "description": "user_email of the admin who created it"
+    },
+    "linked_tournament_id": {
+      "type": "string",
+      "description": "ID of the ClubTournament created from this competition's draw"
     }
   },
   "required": [

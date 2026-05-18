@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Trophy, Plus, Calendar, Users, Loader2, CheckCircle, AlertCircle,
-  MoreVertical, Pencil, Trash2, Download, ClipboardList
+  MoreVertical, Pencil, Trash2, Download, ClipboardList, UserPlus, Shuffle, ExternalLink
 } from 'lucide-react';
+import AddEntrantsModal from '@/components/competitions/AddEntrantsModal';
+import { generateKnockoutBracket, buildDrawEntries } from '@/lib/bracketGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useSearchParams, Link } from 'react-router-dom';
@@ -63,6 +65,9 @@ export default function CompetitionRegistration() {
   const [editingComp, setEditingComp] = useState(null);
   const [withdrawConfirm, setWithdrawConfirm] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [addEntrantsComp, setAddEntrantsComp] = useState(null);
+  const [isAddingEntrants, setIsAddingEntrants] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(null); // comp.id being drawn
   const [formData, setFormData] = useState({
     name: '', type: 'singles', description: '', rules: '',
     max_entries: '', price_per_entry: '', registration_deadline: ''
@@ -270,6 +275,80 @@ export default function CompetitionRegistration() {
     registerMutation.mutate();
   };
 
+  const handleAddEntrants = async (selectedEmails) => {
+    setIsAddingEntrants(true);
+    const comp = addEntrantsComp;
+    const existingEmails = new Set(
+      allEntries.filter(e => e.competition_id === comp.id).map(e => e.user_email)
+    );
+    const toAdd = selectedEmails.filter(email => !existingEmails.has(email));
+    if (toAdd.length === 0) {
+      toast.error('All selected members are already entered');
+      setIsAddingEntrants(false);
+      return;
+    }
+    for (const email of toAdd) {
+      const member = allMembers.find(m => m.user_email === email);
+      await base44.entities.CompetitionEntry.create({
+        competition_id: comp.id,
+        club_id: clubId,
+        user_email: email,
+        member_name: member?.user_name || email,
+        team_members: [],
+        entry_date: new Date().toISOString(),
+        created_by_admin: true,
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ['compEntries'] });
+    toast.success('Entrants added successfully');
+    setIsAddingEntrants(false);
+    setAddEntrantsComp(null);
+  };
+
+  const handleDrawCompetition = async (comp) => {
+    const entries = allEntries.filter(e => e.competition_id === comp.id);
+    if (entries.length < 2) {
+      toast.error('Need at least 2 entries to generate a draw');
+      return;
+    }
+    if (comp.linked_tournament_id) {
+      toast.error('A draw has already been created for this competition');
+      return;
+    }
+    setIsDrawing(comp.id);
+    const drawEntries = buildDrawEntries(entries, comp.type);
+    const bracket = generateKnockoutBracket(drawEntries);
+    if (!bracket) {
+      toast.error('Failed to generate draw — not enough valid entries');
+      setIsDrawing(null);
+      return;
+    }
+    // Build players list (for singles: email strings; others: pipe-joined)
+    const players = drawEntries;
+    const tournamentData = {
+      club_id: clubId,
+      name: comp.name,
+      tournament_type: 'knockout',
+      comp_format: comp.type,
+      players,
+      bracket,
+      status: 'draft',
+    };
+    const res = await base44.functions.invoke('updateClubData', {
+      entity: 'ClubTournament', action: 'create', clubId, data: tournamentData
+    });
+    const newTournamentId = res?.data?.id;
+    if (newTournamentId) {
+      await base44.entities.CompetitionRegistration.update(comp.id, { linked_tournament_id: newTournamentId });
+      queryClient.invalidateQueries({ queryKey: ['compRegs'] });
+      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      toast.success('Competition has been drawn and added to the Competitions Draw page');
+    } else {
+      toast.error('Draw created but could not link tournament — check Competition Draw page');
+    }
+    setIsDrawing(null);
+  };
+
   const sortedComps = [...competitions].sort((a, b) => {
     if (!a.registration_deadline) return 1;
     if (!b.registration_deadline) return -1;
@@ -450,24 +529,60 @@ export default function CompetitionRegistration() {
                             View Details
                           </Button>
                           {isAdmin && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenEdit(comp)}>
-                                  <Pencil className="w-4 h-4 mr-2" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => setDeleteConfirm(comp)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={() => setAddEntrantsComp(comp)}
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Add Entrants</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={() => handleDrawCompetition(comp)}
+                                disabled={!!comp.linked_tournament_id || isDrawing === comp.id}
+                                title={comp.linked_tournament_id ? 'Competition already drawn' : 'Generate tournament draw'}
+                              >
+                                {isDrawing === comp.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Shuffle className="w-3.5 h-3.5" />
+                                )}
+                                <span className="hidden sm:inline">
+                                  {comp.linked_tournament_id ? 'Already Drawn' : 'Draw Competition'}
+                                </span>
+                              </Button>
+                              {comp.linked_tournament_id && (
+                                <Link to={createPageUrl('TournamentView') + `?clubId=${clubId}&tournamentId=${comp.linked_tournament_id}`}>
+                                  <Button size="sm" variant="ghost" className="gap-1 text-emerald-700">
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">View Draw</span>
+                                  </Button>
+                                </Link>
+                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleOpenEdit(comp)}>
+                                    <Pencil className="w-4 h-4 mr-2" /> Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => setDeleteConfirm(comp)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </>
                           )}
                         </div>
                       </div>
@@ -739,6 +854,17 @@ export default function CompetitionRegistration() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Entrants Modal */}
+      <AddEntrantsModal
+        open={!!addEntrantsComp}
+        onClose={() => setAddEntrantsComp(null)}
+        competition={addEntrantsComp}
+        allMembers={allMembers}
+        existingEntries={addEntrantsComp ? allEntries.filter(e => e.competition_id === addEntrantsComp.id) : []}
+        onAdd={handleAddEntrants}
+        isAdding={isAddingEntrants}
+      />
 
       {/* Delete Confirm */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
