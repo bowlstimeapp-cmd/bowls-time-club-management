@@ -309,7 +309,12 @@ export default function ScorePrediction() {
 
   const togglePredictionMutation = useMutation({
     mutationFn: ({ selectionId, enabled }) =>
-      base44.entities.TeamSelection.update(selectionId, { prediction_enabled: enabled }),
+      base44.functions.invoke('updateTeamSelection', {
+        action: 'update',
+        clubId,
+        selectionId,
+        data: { prediction_enabled: enabled },
+      }),
     onSuccess: (_, { enabled }) => {
       queryClient.invalidateQueries({ queryKey: ['selections', clubId] });
       queryClient.invalidateQueries({ queryKey: ['allPredictions', clubId] });
