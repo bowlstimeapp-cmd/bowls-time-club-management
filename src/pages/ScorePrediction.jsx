@@ -23,8 +23,9 @@ import {
   Settings,
   X,
   Star,
+  AlertTriangle,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format, parseISO, isBefore, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -304,13 +305,27 @@ export default function ScorePrediction() {
     },
   });
 
+  const [toggleOffConfirm, setToggleOffConfirm] = useState(null); // selection to confirm toggling off
+
   const togglePredictionMutation = useMutation({
     mutationFn: ({ selectionId, enabled }) =>
       base44.entities.TeamSelection.update(selectionId, { prediction_enabled: enabled }),
-    onSuccess: () => {
+    onSuccess: (_, { enabled }) => {
       queryClient.invalidateQueries({ queryKey: ['selections', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['allPredictions', clubId] });
+      toast.success(enabled ? 'Fixture enabled for predictions' : 'Fixture removed from predictions');
     },
   });
+
+  const handleToggle = (sel, checked) => {
+    if (!checked) {
+      // Toggling OFF — show confirmation
+      setToggleOffConfirm(sel);
+    } else {
+      // Toggling ON — do it immediately
+      togglePredictionMutation.mutate({ selectionId: sel.id, enabled: true });
+    }
+  };
 
   // Build leaderboard for current fixture
   const fixtureLeaderboard = currentFixture
@@ -807,9 +822,8 @@ export default function ScorePrediction() {
                             </div>
                             <Switch
                               checked={!!sel.prediction_enabled}
-                              onCheckedChange={(checked) =>
-                                togglePredictionMutation.mutate({ selectionId: sel.id, enabled: checked })
-                              }
+                              disabled={togglePredictionMutation.isPending && togglePredictionMutation.variables?.selectionId === sel.id}
+                              onCheckedChange={(checked) => handleToggle(sel, checked)}
                             />
                           </div>
                         ))}
@@ -821,6 +835,39 @@ export default function ScorePrediction() {
           )}
         </Tabs>
       </div>
+
+      {/* Toggle Off Confirmation Dialog */}
+      <Dialog open={!!toggleOffConfirm} onOpenChange={() => setToggleOffConfirm(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="w-5 h-5" />
+              Remove fixture from predictions?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2 text-sm text-gray-700">
+            <p>
+              You are about to disable <strong>{toggleOffConfirm?.match_name || toggleOffConfirm?.competition}</strong> ({toggleOffConfirm?.match_date ? format(parseISO(toggleOffConfirm.match_date), 'd MMM yyyy') : ''}) from Score Prediction.
+            </p>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs space-y-1">
+              <p className="font-semibold">⚠️ This will hide the fixture from members — but all existing predictions and scores are <u>not</u> deleted.</p>
+              <p>You can re-enable the fixture at any time and all data will be restored.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setToggleOffConfirm(null)}>Cancel</Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => {
+                togglePredictionMutation.mutate({ selectionId: toggleOffConfirm.id, enabled: false });
+                setToggleOffConfirm(null);
+              }}
+            >
+              Yes, remove from predictions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Prediction Detail Modal */}
       <Dialog open={!!viewingPrediction} onOpenChange={() => setViewingPrediction(null)}>
