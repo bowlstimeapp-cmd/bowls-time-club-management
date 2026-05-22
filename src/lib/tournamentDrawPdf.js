@@ -9,9 +9,9 @@ const getRoundName = (roundIndex, totalRounds) => {
 };
 
 /**
- * Generate a knockout draw PDF with a proper table-cell layout.
- * Each round column has exactly the right number of cells (half of previous).
- * Cells are bordered boxes; connector lines link each pair to the next round cell.
+ * Generate a knockout draw PDF.
+ * Every cell is the same height. Later-round cells sit at the midpoint
+ * between the two feeder cells, so spacing is perfectly equal throughout.
  */
 export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
   const bracket = tournament.bracket;
@@ -27,7 +27,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
   const MARGIN = 12;
   const CONTENT_W = PAGE_W - MARGIN * 2;
 
-  // ── Header ─────────────────────────────────────────────────────────────────
+  // ── Header ──────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.text(clubName.toUpperCase(), PAGE_W / 2, MARGIN + 5, { align: 'center' });
@@ -42,43 +42,60 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
   doc.setTextColor(0, 0, 0);
 
   const HEADER_BOTTOM = MARGIN + 20;
-
-  // ── Layout maths ────────────────────────────────────────────────────────────
-  // First round: players are individual entries (each match has 2 slots visible)
-  // We show each *player slot* as a cell, so round 0 = N players, round 1 = N/2 cells, etc.
-  const firstRoundMatches = rounds[0].length;
-  const totalPlayerSlots = firstRoundMatches * 2; // e.g. 8 for 4 matches
-
-  // Round header area height
   const ROUND_HEADER_H = 12;
-
-  // Available bracket area height
-  const BRACKET_H = PAGE_H - HEADER_BOTTOM - MARGIN - 4;
   const BRACKET_TOP = HEADER_BOTTOM;
-
-  // Players area (below round headers)
+  const BRACKET_H = PAGE_H - HEADER_BOTTOM - MARGIN - 4;
   const PLAYERS_TOP = BRACKET_TOP + ROUND_HEADER_H;
   const PLAYERS_H = BRACKET_H - ROUND_HEADER_H;
 
-  // Cell height: all cells are the same height = PLAYERS_H / totalPlayerSlots
+  // Total player slots = players in first round (2 per match)
+  const totalPlayerSlots = rounds[0].length * 2;
+
+  // CELL_H is uniform for every cell in every round
   const CELL_H = PLAYERS_H / totalPlayerSlots;
 
-  // Column widths
   const colW = CONTENT_W / totalRounds;
 
-  // ── Draw round headers ──────────────────────────────────────────────────────
+  // ── Pre-compute cell Y centres for round 0 ──────────────────────────────
+  // Each round-0 match has 2 cells. Cell centres are evenly spaced.
+  // cellCentres[rIdx][mIdx] = Y centre of the result cell for that match.
+  // Round 0 is special: each match has TWO input cells (player1, player2),
+  // the result centre is the midpoint.
+  const cellCentres = [];
+
+  // Round 0: player slot centres
+  // Slot i (0-indexed) has centre at PLAYERS_TOP + (i + 0.5) * CELL_H
+  const round0Centres = [];
+  for (let mIdx = 0; mIdx < rounds[0].length; mIdx++) {
+    const topSlot = mIdx * 2;       // player 1 slot index
+    const botSlot = mIdx * 2 + 1;   // player 2 slot index
+    const topY = PLAYERS_TOP + (topSlot + 0.5) * CELL_H;
+    const botY = PLAYERS_TOP + (botSlot + 0.5) * CELL_H;
+    round0Centres.push((topY + botY) / 2); // midpoint = result cell centre
+  }
+  cellCentres.push(round0Centres);
+
+  // Later rounds: each match result sits at midpoint of its two feeder cells
+  for (let rIdx = 1; rIdx < totalRounds; rIdx++) {
+    const prevCentres = cellCentres[rIdx - 1];
+    const centres = [];
+    for (let mIdx = 0; mIdx < rounds[rIdx].length; mIdx++) {
+      const topFeeder = prevCentres[mIdx * 2];
+      const botFeeder = prevCentres[mIdx * 2 + 1];
+      centres.push((topFeeder + botFeeder) / 2);
+    }
+    cellCentres.push(centres);
+  }
+
+  // ── Draw round headers ──────────────────────────────────────────────────
   for (let rIdx = 0; rIdx < totalRounds; rIdx++) {
     const roundName = getRoundName(rIdx, totalRounds);
     const x = MARGIN + rIdx * colW;
 
-    doc.setDrawColor(80, 80, 80);
-    doc.setLineWidth(0.4);
-    doc.rect(x, BRACKET_TOP, colW, ROUND_HEADER_H);
-
-    // Fill header with light grey
     doc.setFillColor(240, 240, 240);
     doc.rect(x, BRACKET_TOP, colW, ROUND_HEADER_H, 'F');
     doc.setDrawColor(80, 80, 80);
+    doc.setLineWidth(0.4);
     doc.rect(x, BRACKET_TOP, colW, ROUND_HEADER_H);
 
     doc.setFont('helvetica', 'bold');
@@ -86,7 +103,6 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     doc.setTextColor(0, 0, 0);
     doc.text(roundName, x + colW / 2, BRACKET_TOP + 5, { align: 'center' });
 
-    // Round date if set
     const roundDate = bracket.round_dates?.[roundName];
     if (roundDate) {
       const d = new Date(roundDate + 'T00:00:00');
@@ -97,109 +113,106 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     }
   }
 
-  // ── Draw cells for each round ───────────────────────────────────────────────
-  for (let rIdx = 0; rIdx < totalRounds; rIdx++) {
-    const round = rounds[rIdx];
-    const matchCount = round.length; // e.g. 4 in round 0, 2 in round 1, 1 in final
+  // ── Draw round 0 player cells ───────────────────────────────────────────
+  {
+    const rIdx = 0;
     const x = MARGIN + rIdx * colW;
 
-    // Each match occupies a "block" of rows proportional to the spacing
-    // Round 0: each match = 2 player cells
-    // Round 1: each match = 4 player cells (sits in middle of its 4-cell block)
-    // etc.
-    const blockSize = totalPlayerSlots / matchCount; // number of player-slot heights per match
-    const blockH = blockSize * CELL_H;
+    for (let mIdx = 0; mIdx < rounds[0].length; mIdx++) {
+      const match = rounds[0][mIdx];
+      const topSlot = mIdx * 2;
+      const botSlot = mIdx * 2 + 1;
 
-    for (let mIdx = 0; mIdx < matchCount; mIdx++) {
-      const match = round[mIdx];
-      const blockTop = PLAYERS_TOP + mIdx * blockH;
+      const cell1Y = PLAYERS_TOP + topSlot * CELL_H;
+      const cell2Y = PLAYERS_TOP + botSlot * CELL_H;
 
-      if (rIdx === 0) {
-        // First round: draw 2 individual player cells stacked
-        const p1Name = match.player1 ? getMemberName(match.player1) : 'BYE';
-        const p2Name = match.player2 ? getMemberName(match.player2) : 'BYE';
+      const p1Name = match.player1 ? getMemberName(match.player1) : 'BYE';
+      const p2Name = match.player2 ? getMemberName(match.player2) : 'BYE';
+      const p1Won = match.winner && match.winner === match.player1;
+      const p2Won = match.winner && match.winner === match.player2;
 
-        const cell1Top = blockTop;
-        const cell2Top = blockTop + CELL_H;
-        const p1Won = match.winner && match.winner === match.player1;
-        const p2Won = match.winner && match.winner === match.player2;
+      drawCell(doc, x, cell1Y, colW, CELL_H, p1Name, p1Won);
+      drawCell(doc, x, cell2Y, colW, CELL_H, p2Name, p2Won);
 
-        // Cell 1
-        drawCell(doc, x, cell1Top, colW, CELL_H, p1Name, p1Won);
-        // Cell 2
-        drawCell(doc, x, cell2Top, colW, CELL_H, p2Name, p2Won);
+      // Score label
+      if (match.player1_score != null && match.player2_score != null) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.setTextColor(80, 80, 80);
+        doc.text(
+          `${match.player1_score}-${match.player2_score}`,
+          x + colW - 1.5,
+          cell1Y + CELL_H + CELL_H * 0.05,
+          { align: 'right' }
+        );
+      }
 
-        // Score between the two cells
-        if (match.player1_score != null && match.player2_score != null) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(6);
-          doc.setTextColor(80, 80, 80);
-          const scoreY = cell1Top + CELL_H + (CELL_H * 0.05);
-          // Small score badge at right edge
-          doc.text(`${match.player1_score}-${match.player2_score}`, x + colW - 1.5, scoreY, { align: 'right' });
-        }
+      // Connector: bracket from cell 1 mid and cell 2 mid to next-round cell centre
+      if (totalRounds > 1) {
+        const connX = x + colW;
+        const topY = cell1Y + CELL_H / 2;
+        const botY = cell2Y + CELL_H / 2;
+        const midY = (topY + botY) / 2;
 
-        // Connector line from right edge of the match block to next round
-        if (totalRounds > 1) {
-          const connX = x + colW;
-          const topY = cell1Top + CELL_H / 2;
-          const botY = cell2Top + CELL_H / 2;
-          const midY = (topY + botY) / 2;
-
-          doc.setDrawColor(160, 160, 160);
-          doc.setLineWidth(0.3);
-          // Vertical bracket
-          doc.line(connX - 0.5, topY, connX - 0.5, botY);
-          // Horizontal to next column
-          doc.line(connX - 0.5, midY, connX + 0.5, midY);
-        }
-
-      } else {
-        // Later rounds: one "result cell" centred in its block
-        // The winner cell sits at the vertical centre of the block
-        const cellTop = blockTop + (blockH - CELL_H) / 2;
-
-        const winnerEntry = match.winner || match.player1 || null;
-        const winnerName = winnerEntry ? getMemberName(winnerEntry) : '';
-
-        drawCell(doc, x, cellTop, colW, CELL_H, winnerName, false, true);
-
-        // Score
-        if (match.player1_score != null && match.player2_score != null) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(5.5);
-          doc.setTextColor(100, 100, 100);
-          doc.text(`${match.player1_score}-${match.player2_score}`, x + colW - 1.5, cellTop + CELL_H / 2 + 2, { align: 'right' });
-        }
-
-        // Connector to next round
-        if (rIdx < totalRounds - 1) {
-          const connX = x + colW;
-          const midY = cellTop + CELL_H / 2;
-
-          const nextBlockSize = totalPlayerSlots / (matchCount / 2);
-          const nextBlockH = nextBlockSize * CELL_H;
-          const nextMatchIdx = Math.floor(mIdx / 2);
-          const nextBlockTop = PLAYERS_TOP + nextMatchIdx * nextBlockH;
-          const nextCellTop = nextBlockTop + (nextBlockH - CELL_H) / 2;
-          const nextMidY = nextCellTop + CELL_H / 2;
-
-          doc.setDrawColor(160, 160, 160);
-          doc.setLineWidth(0.3);
-          // From current cell mid-right
-          doc.line(connX - 0.5, midY, connX - 0.5, nextMidY);
-          doc.line(connX - 0.5, nextMidY, connX + 0.5, nextMidY);
-        }
+        doc.setDrawColor(160, 160, 160);
+        doc.setLineWidth(0.3);
+        doc.line(connX - 0.5, topY, connX - 0.5, botY);  // vertical bracket
+        doc.line(connX - 0.5, midY, connX + 1, midY);    // horizontal to next col
       }
     }
   }
 
-  // ── Outer border ──────────────────────────────────────────────────────────
+  // ── Draw later round cells ──────────────────────────────────────────────
+  for (let rIdx = 1; rIdx < totalRounds; rIdx++) {
+    const round = rounds[rIdx];
+    const x = MARGIN + rIdx * colW;
+    const centres = cellCentres[rIdx];
+
+    for (let mIdx = 0; mIdx < round.length; mIdx++) {
+      const match = round[mIdx];
+      const centreY = centres[mIdx];
+      const cellY = centreY - CELL_H / 2;
+
+      const winnerEntry = match.winner || match.player1 || null;
+      const winnerName = winnerEntry ? getMemberName(winnerEntry) : '';
+      const isWinner = !!match.winner;
+
+      drawCell(doc, x, cellY, colW, CELL_H, winnerName, isWinner, !isWinner);
+
+      // Score
+      if (match.player1_score != null && match.player2_score != null) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text(
+          `${match.player1_score}-${match.player2_score}`,
+          x + colW - 1.5,
+          cellY + CELL_H / 2 + 2,
+          { align: 'right' }
+        );
+      }
+
+      // Connector to next round
+      if (rIdx < totalRounds - 1) {
+        const connX = x + colW;
+        const myMidY = centreY;
+        const nextMatchIdx = Math.floor(mIdx / 2);
+        const nextMidY = cellCentres[rIdx + 1][nextMatchIdx];
+
+        doc.setDrawColor(160, 160, 160);
+        doc.setLineWidth(0.3);
+        doc.line(connX - 0.5, myMidY, connX - 0.5, nextMidY);
+        doc.line(connX - 0.5, nextMidY, connX + 1, nextMidY);
+      }
+    }
+  }
+
+  // ── Outer border ────────────────────────────────────────────────────────
   doc.setDrawColor(60, 60, 60);
   doc.setLineWidth(0.6);
   doc.rect(MARGIN, BRACKET_TOP, CONTENT_W, BRACKET_H);
 
-  // ── Footer ────────────────────────────────────────────────────────────────
+  // ── Footer ──────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6);
   doc.setTextColor(150, 150, 150);
@@ -209,13 +222,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
   doc.save(`${safeName}_draw.pdf`);
 }
 
-/**
- * Draw a single bordered cell with a player name inside.
- * @param {boolean} isWinner  - bold green text
- * @param {boolean} isResult  - slightly different shade for result cells
- */
 function drawCell(doc, x, y, w, h, name, isWinner, isResult = false) {
-  // Background
   if (isWinner) {
     doc.setFillColor(230, 255, 235);
   } else if (isResult) {
@@ -225,18 +232,14 @@ function drawCell(doc, x, y, w, h, name, isWinner, isResult = false) {
   }
   doc.rect(x, y, w, h, 'F');
 
-  // Border
   doc.setDrawColor(160, 160, 160);
   doc.setLineWidth(0.25);
   doc.rect(x, y, w, h);
 
-  // Text
   if (!name) return;
   doc.setFont('helvetica', isWinner ? 'bold' : 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(isWinner ? 0 : 30, isWinner ? 120 : 30, 0);
-  // Truncate if needed
-  const maxW = w - 4;
-  doc.text(name, x + 2, y + h / 2 + 2, { maxWidth: maxW });
+  doc.text(name, x + 2, y + h / 2 + 2, { maxWidth: w - 4 });
   doc.setTextColor(0, 0, 0);
 }
