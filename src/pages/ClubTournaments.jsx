@@ -11,8 +11,10 @@ import {
   Trophy,
   Eye,
   Pencil,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
+import { generateTournamentDrawPdf } from '@/lib/tournamentDrawPdf';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +67,12 @@ export default function ClubTournaments() {
     enabled: !!clubId,
   });
 
+  const { data: members = [] } = useQuery({
+    queryKey: ['clubMembers', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId, status: 'approved' }),
+    enabled: !!clubId,
+  });
+
   const { data: club } = useQuery({
     queryKey: ['club', clubId],
     queryFn: async () => {
@@ -87,6 +95,18 @@ export default function ClubTournaments() {
   });
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+
+  const getMemberName = (entry) => {
+    if (!entry) return '';
+    return entry.split('|').map(email => {
+      const m = members.find(x => x.user_email === email);
+      return m?.user_name || email;
+    }).join(' / ');
+  };
+
+  const handleDownloadDraw = (tournament) => {
+    generateTournamentDrawPdf(tournament, club?.name || 'Club', getMemberName);
+  };
 
   const publishedTournaments = tournaments.filter(t => t.status === 'published');
   const draftTournaments = tournaments.filter(t => t.status === 'draft');
@@ -145,7 +165,7 @@ export default function ClubTournaments() {
                           </div>
                           <Badge variant="secondary">Draft</Badge>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Link to={createPageUrl('TournamentView') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>
                             <Button variant="outline" size="sm">
                               <Eye className="w-4 h-4 mr-1" />
@@ -158,6 +178,12 @@ export default function ClubTournaments() {
                               Edit
                             </Button>
                           </Link>
+                          {tournament.bracket && (
+                            <Button variant="outline" size="sm" onClick={() => handleDownloadDraw(tournament)}>
+                              <Download className="w-4 h-4 mr-1" />
+                              PDF
+                            </Button>
+                          )}
                           <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteId(tournament.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -200,13 +226,19 @@ export default function ClubTournaments() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Link to={createPageUrl('TournamentView') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>
                             <Button variant="outline" size="sm">
                               <Eye className="w-4 h-4 mr-1" />
                               View
                             </Button>
                           </Link>
+                          {tournament.bracket && (
+                            <Button variant="outline" size="sm" onClick={() => handleDownloadDraw(tournament)}>
+                              <Download className="w-4 h-4 mr-1" />
+                              PDF
+                            </Button>
+                          )}
                           {isClubAdmin && (
                             <>
                               <Link to={createPageUrl('TournamentEditor') + `?clubId=${clubId}&tournamentId=${tournament.id}`}>

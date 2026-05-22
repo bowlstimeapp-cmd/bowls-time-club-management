@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy } from 'lucide-react';
+import { ArrowLeft, Trophy, Download } from 'lucide-react';
+import { generateTournamentDrawPdf } from '@/lib/tournamentDrawPdf';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import TournamentBracket from '@/components/tournament/TournamentBracket';
@@ -68,6 +69,20 @@ export default function TournamentView() {
     }).join(' / ');
   };
 
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
+  const handleDownloadDraw = () => {
+    if (!tournament) return;
+    generateTournamentDrawPdf(tournament, club?.name || 'Club', getMemberName);
+  };
+
   const handleUpdateBracket = async (newBracket) => {
     await updateMutation.mutateAsync({ id: tournamentId, data: { ...tournament, bracket: newBracket } });
     toast.success('Bracket updated');
@@ -112,6 +127,12 @@ export default function TournamentView() {
               <Badge variant="outline" className="text-sm border-amber-300 text-amber-700 bg-amber-50">
                 {formatLabel}
               </Badge>
+            )}
+            {tournament.bracket && (
+              <Button variant="outline" size="sm" onClick={handleDownloadDraw} className="ml-auto">
+                <Download className="w-4 h-4 mr-1" />
+                Download Draw (PDF)
+              </Button>
             )}
           </div>
           <p className="text-gray-600 mt-2">
