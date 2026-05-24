@@ -125,7 +125,7 @@ function WelcomeModal({ onStart, onDismiss }) {
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-lg mx-4 pointer-events-auto relative">
         <div className="mb-5 flex justify-center">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-            <span className="text-3xl">🎳</span>
+            <span className="text-3xl">👋</span>
           </div>
         </div>
         <h2 className="text-xl font-bold text-gray-900 text-center mb-3">Welcome to BowlsTime!</h2>
