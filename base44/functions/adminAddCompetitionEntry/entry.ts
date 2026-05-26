@@ -4,15 +4,14 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Verify the requesting user is authenticated and a club admin
     const user = await base44.auth.me();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { clubId, competitionId, emails } = await req.json();
+    const { clubId, competitionId, emails, teamEntry } = await req.json();
 
-    if (!clubId || !competitionId || !Array.isArray(emails) || emails.length === 0) {
+    if (!clubId || !competitionId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -27,18 +26,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Club admin access required' }, { status: 403 });
     }
 
-    // Fetch existing entries to avoid duplicates
-    const existingEntries = await base44.asServiceRole.entities.CompetitionEntry.filter({
-      competition_id: competitionId,
-    });
-    const existingEmails = new Set(existingEntries.map(e => e.user_email));
-
-    const toAdd = emails.filter(email => !existingEmails.has(email));
-    if (toAdd.length === 0) {
-      return Response.json({ added: 0, message: 'All selected members are already entered' });
-    }
-
-    // Fetch member names
+    // Fetch member names map
     const allMembers = await base44.asServiceRole.entities.ClubMembership.filter({
       club_id: clubId,
       status: 'approved',
@@ -46,7 +34,52 @@ Deno.serve(async (req) => {
     const memberMap = {};
     allMembers.forEach(m => { memberMap[m.user_email] = m.user_name || m.user_email; });
 
-    // Create entries using service role (bypasses deadline/status restrictions)
+    // Fetch existing entries to avoid duplicates
+    const existingEntries = await base44.asServiceRole.entities.CompetitionEntry.filter({
+      competition_id: competitionId,
+    });
+
+    // ─── Team Entry (pairs / triples) ───
+    if (teamEntry) {
+      const { leadEmail, teamMembers } = teamEntry;
+
+      if (!leadEmail || !Array.isArray(teamMembers) || teamMembers.length === 0) {
+        return Response.json({ error: 'Invalid team entry data' }, { status: 400 });
+      }
+
+      // Check if lead is already entered as lead
+      const alreadyLead = existingEntries.some(e => e.user_email === leadEmail);
+      if (alreadyLead) {
+        return Response.json({ added: 0, message: `${memberMap[leadEmail] || leadEmail} is already entered as a lead entrant` });
+      }
+
+      await base44.asServiceRole.entities.CompetitionEntry.create({
+        competition_id: competitionId,
+        club_id: clubId,
+        user_email: leadEmail,
+        member_name: memberMap[leadEmail] || leadEmail,
+        team_members: teamMembers.map(m => ({
+          email: m.email,
+          name: memberMap[m.email] || m.name || m.email,
+        })),
+        entry_date: new Date().toISOString(),
+      });
+
+      return Response.json({ added: 1, message: 'Team entry added successfully' });
+    }
+
+    // ─── Bulk Singles / Fours ───
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return Response.json({ error: 'Missing emails or teamEntry' }, { status: 400 });
+    }
+
+    const existingEmails = new Set(existingEntries.map(e => e.user_email));
+    const toAdd = emails.filter(email => !existingEmails.has(email));
+
+    if (toAdd.length === 0) {
+      return Response.json({ added: 0, message: 'All selected members are already entered' });
+    }
+
     for (const email of toAdd) {
       await base44.asServiceRole.entities.CompetitionEntry.create({
         competition_id: competitionId,

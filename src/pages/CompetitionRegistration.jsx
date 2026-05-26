@@ -275,13 +275,13 @@ export default function CompetitionRegistration() {
     registerMutation.mutate();
   };
 
-  const handleAddEntrants = async (selectedEmails) => {
+  const handleAddEntrants = async (payload) => {
     setIsAddingEntrants(true);
     const comp = addEntrantsComp;
     const res = await base44.functions.invoke('adminAddCompetitionEntry', {
       clubId,
       competitionId: comp.id,
-      emails: selectedEmails,
+      ...payload,
     });
     queryClient.invalidateQueries({ queryKey: ['compEntries'] });
     if (res?.data?.added === 0) {
