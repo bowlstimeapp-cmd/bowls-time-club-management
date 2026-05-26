@@ -278,29 +278,17 @@ export default function CompetitionRegistration() {
   const handleAddEntrants = async (selectedEmails) => {
     setIsAddingEntrants(true);
     const comp = addEntrantsComp;
-    const existingEmails = new Set(
-      allEntries.filter(e => e.competition_id === comp.id).map(e => e.user_email)
-    );
-    const toAdd = selectedEmails.filter(email => !existingEmails.has(email));
-    if (toAdd.length === 0) {
-      toast.error('All selected members are already entered');
-      setIsAddingEntrants(false);
-      return;
-    }
-    for (const email of toAdd) {
-      const member = allMembers.find(m => m.user_email === email);
-      await base44.entities.CompetitionEntry.create({
-        competition_id: comp.id,
-        club_id: clubId,
-        user_email: email,
-        member_name: member?.user_name || email,
-        team_members: [],
-        entry_date: new Date().toISOString(),
-        created_by_admin: true,
-      });
-    }
+    const res = await base44.functions.invoke('adminAddCompetitionEntry', {
+      clubId,
+      competitionId: comp.id,
+      emails: selectedEmails,
+    });
     queryClient.invalidateQueries({ queryKey: ['compEntries'] });
-    toast.success('Entrants added successfully');
+    if (res?.data?.added === 0) {
+      toast.error(res?.data?.message || 'All selected members are already entered');
+    } else {
+      toast.success(res?.data?.message || 'Entrants added successfully');
+    }
     setIsAddingEntrants(false);
     setAddEntrantsComp(null);
   };
