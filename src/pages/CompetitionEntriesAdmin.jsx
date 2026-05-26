@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Download, Users, ArrowLeft, Loader2, PoundSterling } from 'lucide-react';
+import { Trophy, Download, Users, ArrowLeft, Loader2, PoundSterling, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const TYPE_LABELS = { singles: 'Singles', pairs: 'Pairs', triples: 'Triples', fours: 'Fours' };
 const TYPE_COLORS = {
@@ -78,6 +79,21 @@ export default function CompetitionEntriesAdmin() {
   const clubId = searchParams.get('clubId');
   const [user, setUser] = useState(null);
   const [filterComp, setFilterComp] = useState('all');
+  const [removingEntryId, setRemovingEntryId] = useState(null);
+  const queryClient = useQueryClient();
+
+  const removeEntryMutation = useMutation({
+    mutationFn: ({ entryId }) => base44.functions.invoke('adminRemoveCompetitionEntry', { clubId, entryId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compEntries', clubId] });
+      toast.success('Entry removed');
+      setRemovingEntryId(null);
+    },
+    onError: () => {
+      toast.error('Failed to remove entry');
+      setRemovingEntryId(null);
+    },
+  });
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -264,7 +280,8 @@ export default function CompetitionEntriesAdmin() {
                               <th className="pb-2 pr-4">Email</th>
                               <th className="pb-2 pr-4">Team Members</th>
                               <th className="pb-2 pr-4">Entered</th>
-                              {comp.price_per_entry > 0 && <th className="pb-2">Amount Owed</th>}
+                              {comp.price_per_entry > 0 && <th className="pb-2 pr-4">Amount Owed</th>}
+                              <th className="pb-2"></th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
@@ -285,11 +302,26 @@ export default function CompetitionEntriesAdmin() {
                                   {entry.entry_date ? format(new Date(entry.entry_date), 'dd/MM/yyyy') : '—'}
                                 </td>
                                 {comp.price_per_entry > 0 && (
-                                  <td className="py-2 font-medium text-emerald-600">
+                                  <td className="py-2 pr-4 font-medium text-emerald-600">
                                     £{(comp.price_per_entry).toFixed(2)}
                                   </td>
                                 )}
-                              </tr>
+                                <td className="py-2">
+                                  <button
+                                    className="text-red-400 hover:text-red-600 disabled:opacity-40"
+                                    disabled={removingEntryId === entry.id}
+                                    onClick={() => {
+                                      setRemovingEntryId(entry.id);
+                                      removeEntryMutation.mutate({ entryId: entry.id });
+                                    }}
+                                    title="Remove entry"
+                                  >
+                                    {removingEntryId === entry.id
+                                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                                      : <Trash2 className="w-4 h-4" />}
+                                  </button>
+                                </td>
+                                </tr>
                             ))}
                           </tbody>
                           {comp.price_per_entry > 0 && (
