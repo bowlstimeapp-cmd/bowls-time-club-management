@@ -247,11 +247,16 @@ export default function NewUserTour({
       }
     };
     measure();
-    const t = setTimeout(measure, 120);
+    // Retry multiple times to handle async rendering of the slot grid
+    const t1 = setTimeout(measure, 150);
+    const t2 = setTimeout(measure, 400);
+    const t3 = setTimeout(measure, 800);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
     return () => {
-      clearTimeout(t);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };

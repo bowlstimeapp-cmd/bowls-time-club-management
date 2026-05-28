@@ -312,10 +312,10 @@ export default function TimeSlotGrid({
                   const isMobileCopySource = copyMode && isAdmin && mobileCopySource?.id === booking?.id;
                   const isMobileCopyTarget = false;
 
-                  // Attach tour refs
-                  const isTourSlot1 = rink === 1 && slot.start === '09:00';
-                  const isTourSlot2 = rink === 2 && slot.start === '09:00';
-                  const isTourSlot1_10 = rink === 1 && slot.start === '10:00';
+                  // Attach tour refs — target first/second slot regardless of opening time
+                  const isTourSlot1 = rink === 1 && slotIndex === 0;
+                  const isTourSlot2 = rink === 2 && slotIndex === 0;
+                  const isTourSlot1_10 = rink === 1 && slotIndex === 1;
                   const isTourBookingCell = booking?.id === 'tour-booking';
 
                   return (

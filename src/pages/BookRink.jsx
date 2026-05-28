@@ -373,9 +373,9 @@ useEffect(() => {
   };
 
   const handleMoveBooking = async (booking, newRink, newStartTime) => {
-    // Intercept tour move — only allow dropping onto Rink 2 @ 09:00
+    // Intercept tour move — only allow dropping onto Rink 2 (any first slot)
     if (tourStep === 5 && booking.id === 'tour-booking') {
-      if (newRink === 2 && newStartTime === '09:00') {
+      if (newRink === 2) {
         handleTourMoveBooking(booking, newRink, newStartTime);
       }
       return;
@@ -949,9 +949,9 @@ useEffect(() => {
                   club={club}
                   selectedSlots={selectedSlots}
                   onMultiSlotSelect={(slots) => {
-                    // Step 1: only allow clicking Rink 1 @ 9am → advance to step 2
+                    // Step 1: only allow clicking Rink 1 first slot → advance to step 2
                     if (tourStep === 1) {
-                      const ok = slots.some(s => s.rink === 1 && s.slot.start === '09:00');
+                      const ok = slots.some(s => s.rink === 1 && s.slotIndex === 0);
                       if (ok) { setSelectedSlots(slots); setTourStep(2); }
                       return;
                     }
@@ -959,9 +959,9 @@ useEffect(() => {
                     if (tourStep >= 2 && tourStep <= 4) return;
                     // Steps 5–8: drag/view/cancel flow, block slot changes
                     if (tourStep >= 5 && tourStep <= 8) return;
-                    // Step 9: only allow Rink 1 @ 9am and 10am
+                    // Step 9: only allow Rink 1 first two slots
                     if (tourStep === 9) {
-                      const valid = slots.filter(s => s.rink === 1 && (s.slot.start === '09:00' || s.slot.start === '10:00'));
+                      const valid = slots.filter(s => s.rink === 1 && (s.slotIndex === 0 || s.slotIndex === 1));
                       setSelectedSlots(valid);
                       if (valid.length === 2) setTourStep(10);
                       return;
