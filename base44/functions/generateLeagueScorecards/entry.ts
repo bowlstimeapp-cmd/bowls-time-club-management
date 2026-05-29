@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     }
 
     const allFixtures = fixtures.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-    const sortedFixtures = matchDate ? allFixtures.filter(f => f.match_date === matchDate) : allFixtures;
+    const sortedFixtures = (matchDate && typeof matchDate === 'string') ? allFixtures.filter(f => f.match_date === matchDate) : allFixtures;
 
     const dateToRound = {};
     let currentRound = 1;

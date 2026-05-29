@@ -845,7 +845,7 @@ export default function LeagueAdmin() {
     try {
       if (club?.scorecard_format === 'xlsx') {
         toast.info('Generating CSV scorecards...');
-        const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId, matchDate: matchDate || undefined });
+        const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId, matchDate: matchDate || null });
         const csv = result?.data?.csv;
         const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
         if (!csv) { toast.error('No CSV data returned'); return; }
@@ -859,7 +859,7 @@ export default function LeagueAdmin() {
         toast.success('CSV scorecards downloaded');
       } else {
         toast.info('Generating scorecards...');
-        const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: matchDate || undefined });
+        const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: matchDate || null });
         const html = typeof result === 'string' ? result : result?.html || result?.data;
         if (!html) { toast.error('No scorecard data returned'); return; }
         const printWindow = window.open('', '_blank');
@@ -1883,49 +1883,62 @@ export default function LeagueAdmin() {
         />
 
         {/* Scorecard Date Filter Dialog */}
-        <Dialog open={!!scorecardDialogLeague} onOpenChange={(open) => { if (!open) setScorecardDialogLeague(null); }}>
-          <DialogContent className="mx-4 sm:mx-auto max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Print Scorecards — {scorecardDialogLeague?.name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <p className="text-sm text-gray-600">Print all scorecards, or select a specific fixture date to print only that round.</p>
-              <div>
-                <Label>Fixture Date (optional)</Label>
-                <Input
-                  type="date"
-                  value={scorecardMatchDate}
-                  onChange={(e) => setScorecardMatchDate(e.target.value)}
-                />
-                {scorecardMatchDate && (
-                  <p className="text-xs text-emerald-600 mt-1">
-                    Only fixtures on {format(new Date(scorecardMatchDate + 'T12:00:00'), 'd MMM yyyy')} will be printed.
-                  </p>
-                )}
-              </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setScorecardDialogLeague(null)}>Cancel</Button>
-              {scorecardMatchDate && (
-                <Button
-                  variant="outline"
-                  className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => handlePrintScorecards(scorecardDialogLeague, scorecardMatchDate)}
-                >
-                  <Printer className="w-4 h-4 mr-1" />
-                  Print This Date
-                </Button>
-              )}
-              <Button
-                className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => handlePrintScorecards(scorecardDialogLeague, '')}
-              >
-                <Printer className="w-4 h-4 mr-1" />
-                Print All
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {scorecardDialogLeague && (() => {
+          const leagueFixtureDates = [...new Set(
+            fixtures
+              .filter(f => f.league_id === scorecardDialogLeague.id)
+              .map(f => f.match_date)
+          )].sort();
+          return (
+            <Dialog open={!!scorecardDialogLeague} onOpenChange={(open) => { if (!open) setScorecardDialogLeague(null); }}>
+              <DialogContent className="mx-4 sm:mx-auto max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Print Scorecards — {scorecardDialogLeague.name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <p className="text-sm text-gray-600">Print all scorecards, or select a specific fixture date to print only that round.</p>
+                  {leagueFixtureDates.length > 0 && (
+                    <div>
+                      <Label>Fixture Date (optional)</Label>
+                      <Select value={scorecardMatchDate} onValueChange={setScorecardMatchDate}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All dates" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {leagueFixtureDates.map(d => (
+                            <SelectItem key={d} value={d}>
+                              {format(new Date(d + 'T12:00:00'), 'EEEE d MMM yyyy')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter className="flex-col sm:flex-row gap-2">
+                  <Button variant="outline" onClick={() => setScorecardDialogLeague(null)}>Cancel</Button>
+                  {scorecardMatchDate && (
+                    <Button
+                      variant="outline"
+                      className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => handlePrintScorecards(scorecardDialogLeague, scorecardMatchDate)}
+                    >
+                      <Printer className="w-4 h-4 mr-1" />
+                      Print This Date
+                    </Button>
+                  )}
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => handlePrintScorecards(scorecardDialogLeague, null)}
+                  >
+                    <Printer className="w-4 h-4 mr-1" />
+                    Print All
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          );
+        })()}
 
         {/* Manual Fixtures Modal */}
         <ManualFixturesModal
