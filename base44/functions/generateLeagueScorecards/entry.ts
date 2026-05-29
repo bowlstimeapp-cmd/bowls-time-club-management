@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { leagueId, clubId } = await req.json();
+    const { leagueId, clubId, matchDate } = await req.json();
 
     if (!leagueId || !clubId) {
       return Response.json({ error: 'Missing leagueId or clubId' }, { status: 400 });
@@ -29,11 +29,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'League or club not found' }, { status: 404 });
     }
 
-    const sortedFixtures = fixtures.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    const allFixtures = fixtures.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    const sortedFixtures = matchDate ? allFixtures.filter(f => f.match_date === matchDate) : allFixtures;
 
     const dateToRound = {};
     let currentRound = 1;
-    sortedFixtures.forEach(fixture => {
+    allFixtures.forEach(fixture => {
       if (!dateToRound[fixture.match_date]) {
         dateToRound[fixture.match_date] = currentRound++;
       }

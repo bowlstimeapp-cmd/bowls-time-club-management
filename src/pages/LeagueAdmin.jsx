@@ -141,6 +141,10 @@ export default function LeagueAdmin() {
   const [manualFixturesLeague, setManualFixturesLeague] = useState(null);
   const [leagueCreationMode, setLeagueCreationMode] = useState('auto');
 
+  // Scorecard date filter dialog
+  const [scorecardDialogLeague, setScorecardDialogLeague] = useState(null);
+  const [scorecardMatchDate, setScorecardMatchDate] = useState('');
+
   useEffect(() => {
     const loadUser = async () => {
       const currentUser = await base44.auth.me();
@@ -832,6 +836,44 @@ export default function LeagueAdmin() {
     setScoresModalOpen(true);
   };
 
+  const openScorecardDialog = (league) => {
+    setScorecardDialogLeague(league);
+    setScorecardMatchDate('');
+  };
+
+  const handlePrintScorecards = async (league, matchDate) => {
+    try {
+      if (club?.scorecard_format === 'xlsx') {
+        toast.info('Generating CSV scorecards...');
+        const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId, matchDate: matchDate || undefined });
+        const csv = result?.data?.csv;
+        const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
+        if (!csv) { toast.error('No CSV data returned'); return; }
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('CSV scorecards downloaded');
+      } else {
+        toast.info('Generating scorecards...');
+        const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: matchDate || undefined });
+        const html = typeof result === 'string' ? result : result?.html || result?.data;
+        if (!html) { toast.error('No scorecard data returned'); return; }
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+        toast.success('Scorecards ready — use Print > Save as PDF');
+      }
+      setScorecardDialogLeague(null);
+    } catch (error) {
+      toast.error('Failed to generate scorecards');
+    }
+  };
+
   const handleSaveTeam = (players) => {
     if (!teamName.trim()) {
       toast.error('Please enter a team name');
@@ -962,37 +1004,7 @@ export default function LeagueAdmin() {
             onBlacklist={(league) => { setBlacklistLeague(league); setBlacklistDialogOpen(true); }}
             generatingFixtures={generatingFixtures}
             bookingRinks={bookingRinks}
-            onGenerateScorecards={async (league) => {
-              try {
-                if (club?.scorecard_format === 'xlsx') {
-                  toast.info('Generating CSV scorecards...');
-                  const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId });
-                  const csv = result?.data?.csv;
-                  const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
-                  if (!csv) { toast.error('No CSV data returned'); return; }
-                  const blob = new Blob([csv], { type: 'text/csv' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = filename;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  toast.success('CSV scorecards downloaded');
-                } else {
-                  toast.info('Generating scorecards...');
-                  const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId });
-                  const html = typeof result === 'string' ? result : result?.html || result?.data;
-                  if (!html) { toast.error('No scorecard data returned'); return; }
-                  const printWindow = window.open('', '_blank');
-                  printWindow.document.write(html);
-                  printWindow.document.close();
-                  printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
-                  toast.success('Scorecards ready — use Print > Save as PDF');
-                }
-              } catch (error) {
-                toast.error('Failed to generate scorecards');
-              }
-            }}
+            onGenerateScorecards={(league) => openScorecardDialog(league)}
           />
         ) : (
           <div className="space-y-6">
@@ -1118,44 +1130,13 @@ export default function LeagueAdmin() {
                                 Table
                               </Button>
 <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={async () => {
-                                 try {
-                                   if (club?.scorecard_format === 'xlsx') {
-                                     toast.info('Generating CSV scorecards...');
-                                     const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId });
-                                     const csv = result?.data?.csv;
-                                     const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
-                                     if (!csv) { toast.error('No CSV data returned'); return; }
-                                     const blob = new Blob([csv], { type: 'text/csv' });
-                                     const url = URL.createObjectURL(blob);
-                                     const a = document.createElement('a');
-                                     a.href = url;
-                                     a.download = filename;
-                                     a.click();
-                                     URL.revokeObjectURL(url);
-                                     toast.success('CSV scorecards downloaded');
-                                   } else {
-                                     toast.info('Generating scorecards...');
-                                     const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId });
-                                     const html = typeof result === 'string' ? result : result?.html || result?.data;
-                                     if (!html) { toast.error('No scorecard data returned'); return; }
-                                     const printWindow = window.open('', '_blank');
-                                     printWindow.document.write(html);
-                                     printWindow.document.close();
-                                     printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
-                                     toast.success('Scorecards ready — use Print > Save as PDF');
-                                   }
-                                 } catch (error) {
-                                   toast.error('Failed to generate scorecards');
-                                   console.error(error);
-                                 }
-                                }}
-                              >
-                                <Printer className="w-4 h-4 mr-1" />
-                                Scorecards
-                              </Button>
+                                 variant="outline" 
+                                 size="sm"
+                                 onClick={() => openScorecardDialog(league)}
+                               >
+                                 <Printer className="w-4 h-4 mr-1" />
+                                 Scorecards
+                               </Button>
                             </>
                           )}
                           <Button 
@@ -1900,6 +1881,51 @@ export default function LeagueAdmin() {
           club={club}
           clubId={clubId}
         />
+
+        {/* Scorecard Date Filter Dialog */}
+        <Dialog open={!!scorecardDialogLeague} onOpenChange={(open) => { if (!open) setScorecardDialogLeague(null); }}>
+          <DialogContent className="mx-4 sm:mx-auto max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Print Scorecards — {scorecardDialogLeague?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-gray-600">Print all scorecards, or select a specific fixture date to print only that round.</p>
+              <div>
+                <Label>Fixture Date (optional)</Label>
+                <Input
+                  type="date"
+                  value={scorecardMatchDate}
+                  onChange={(e) => setScorecardMatchDate(e.target.value)}
+                />
+                {scorecardMatchDate && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    Only fixtures on {format(new Date(scorecardMatchDate + 'T12:00:00'), 'd MMM yyyy')} will be printed.
+                  </p>
+                )}
+              </div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setScorecardDialogLeague(null)}>Cancel</Button>
+              {scorecardMatchDate && (
+                <Button
+                  variant="outline"
+                  className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => handlePrintScorecards(scorecardDialogLeague, scorecardMatchDate)}
+                >
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print This Date
+                </Button>
+              )}
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => handlePrintScorecards(scorecardDialogLeague, '')}
+              >
+                <Printer className="w-4 h-4 mr-1" />
+                Print All
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Manual Fixtures Modal */}
         <ManualFixturesModal
