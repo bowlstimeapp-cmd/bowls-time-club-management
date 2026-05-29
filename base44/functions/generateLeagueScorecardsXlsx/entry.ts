@@ -6,7 +6,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { leagueId, clubId } = await req.json();
+    const { leagueId, clubId, matchDate } = await req.json();
     if (!leagueId || !clubId) return Response.json({ error: 'Missing leagueId or clubId' }, { status: 400 });
 
     const [leagues, fixtures, teams, clubs] = await Promise.all([
@@ -20,12 +20,13 @@ Deno.serve(async (req) => {
     const club = clubs[0];
     if (!league || !club) return Response.json({ error: 'League or club not found' }, { status: 404 });
 
-    const sortedFixtures = fixtures.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    const allFixtures = fixtures.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    const sortedFixtures = (matchDate && typeof matchDate === 'string') ? allFixtures.filter(f => f.match_date === matchDate) : allFixtures;
 
-    // Assign round numbers by unique date
+    // Assign round numbers by unique date (use all fixtures so round numbers are consistent)
     const dateToRound = {};
     let roundNum = 1;
-    sortedFixtures.forEach(f => {
+    allFixtures.forEach(f => {
       if (!dateToRound[f.match_date]) dateToRound[f.match_date] = roundNum++;
     });
 

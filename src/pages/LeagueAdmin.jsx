@@ -843,9 +843,10 @@ export default function LeagueAdmin() {
 
   const handlePrintScorecards = async (league, matchDate) => {
     try {
+      const dateFilter = (matchDate && typeof matchDate === 'string' && matchDate.length > 0) ? matchDate : null;
       if (club?.scorecard_format === 'xlsx') {
         toast.info('Generating CSV scorecards...');
-        const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId, matchDate: matchDate || null });
+        const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId, matchDate: dateFilter });
         const csv = result?.data?.csv;
         const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
         if (!csv) { toast.error('No CSV data returned'); return; }
@@ -859,7 +860,7 @@ export default function LeagueAdmin() {
         toast.success('CSV scorecards downloaded');
       } else {
         toast.info('Generating scorecards...');
-        const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: matchDate || null });
+        const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: dateFilter });
         const html = typeof result === 'string' ? result : result?.html || result?.data;
         if (!html) { toast.error('No scorecard data returned'); return; }
         const printWindow = window.open('', '_blank');
