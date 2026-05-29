@@ -543,7 +543,7 @@ useEffect(() => {
     const firstSlot = sortedSlots[0];
     
     const bookingDateTime = new Date(selectedDate);
-    const [hours, minutes] = firstSlot.slot.start.split(':');
+    const [hours, minutes] = firstSlot.slot.end.split(':');
     bookingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
     if (bookingDateTime <= now) {

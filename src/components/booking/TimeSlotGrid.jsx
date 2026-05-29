@@ -145,8 +145,11 @@ export default function TimeSlotGrid({
   const isSlotInPast = (slotStart) => {
     if (!selectedDate) return false;
     const now = new Date();
+    // Find the end time for this slot
+    const slotDef = TIME_SLOTS.find(s => s.start === slotStart);
+    const endTime = slotDef?.end ?? slotStart;
     const slotDateTime = new Date(selectedDate);
-    const [hours, mins] = slotStart.split(':').map(Number);
+    const [hours, mins] = endTime.split(':').map(Number);
     slotDateTime.setHours(hours, mins, 0, 0);
     return slotDateTime <= now;
   };
