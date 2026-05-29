@@ -861,7 +861,7 @@ export default function LeagueAdmin() {
       } else {
         toast.info('Generating scorecards...');
         const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: dateFilter });
-        const html = typeof result === 'string' ? result : result?.html || result?.data;
+        const html = result?.data?.html;
         if (!html) { toast.error('No scorecard data returned'); return; }
         const printWindow = window.open('', '_blank');
         printWindow.document.write(html);

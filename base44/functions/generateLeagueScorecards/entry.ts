@@ -308,10 +308,7 @@ ${isEndPage ? '</div>' : ''}`;
 </body>
 </html>`;
 
-    return new Response(html, {
-      status: 200,
-      headers: { 'Content-Type': 'text/html' }
-    });
+    return Response.json({ html });
   } catch (error) {
     console.error('Scorecard generation error:', error);
     return Response.json({ error: error.message }, { status: 500 });
