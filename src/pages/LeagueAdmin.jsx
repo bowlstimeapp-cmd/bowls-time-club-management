@@ -863,21 +863,26 @@ export default function LeagueAdmin() {
         const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: dateFilter });
         const html = result?.data?.html;
         if (!html) { toast.error('No scorecard data returned'); return; }
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
+        const printWindow = window.open('', '_blank');
         if (printWindow) {
-          printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
+          printWindow.document.open();
+          printWindow.document.write(html);
+          printWindow.document.close();
+          setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
         } else {
-          // Fallback: download as HTML file
+          const blob = new Blob([html], { type: 'text/html' });
+          const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
           a.download = `${league.name}-scorecards.html`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
         }
+        setScorecardDialogLeague(null);
         toast.success('Scorecards ready — use Print > Save as PDF');
       }
-      setScorecardDialogLeague(null);
     } catch (error) {
       console.error('Scorecard error:', error);
       toast.error('Failed to generate scorecards: ' + (error?.message || error));
