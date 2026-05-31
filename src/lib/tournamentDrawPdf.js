@@ -55,12 +55,18 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     // Slots in this round: always 2 per match (both players), except Final = 1
     const slotsInRound = isLast ? 1 : roundMatches.length * 2;
 
+    // Each "half slot" height doubles every round so that a pair in round R
+    // spans exactly the same vertical space as the two pairs that feed into it.
+    // Base: round 0 half-height = 34px (slot + surrounding space).
+    // Round R half-height = 34 * 2^R  px.
+    const halfH = 34 * Math.pow(2, rIdx);
+
     // Build slot items — two per match for all rounds (top player + bottom player)
     // Final is a special case: single trophy cell
     let slotsHtml = '';
 
     if (isLast) {
-      // Final — single centred trophy slot
+      // Final — single centred trophy slot (fills full column height via flex:1)
       const match = roundMatches[0];
       const w = match?.winner ? getMemberName(match.winner) : '';
       const cls = w ? 'slot final-slot' : 'slot final-slot empty';
@@ -102,10 +108,10 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
           return isFirst ? 'slot' : 'slot result';
         };
 
-        return `<div class="match-pair-slot connector-top">
+        return `<div class="match-pair-slot connector-top" style="height:${halfH}px;">
           <div class="${slotClass(top)}">${escHtml(top.name)}</div>
         </div>
-        <div class="match-pair-slot connector-bottom">
+        <div class="match-pair-slot connector-bottom" style="height:${halfH}px;">
           <div class="${slotClass(bot)}">${escHtml(bot.name)}</div>
         </div>`;
       }).join('\n');
@@ -263,38 +269,39 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     display: flex;
     flex-direction: column;
     flex: 1;
-    justify-content: space-around;
-    padding: 4px 0;
     position: relative;
   }
 
   /* ── Match pair slot wrapper ─────────────────────── */
+  /* Each half-match takes an explicit pixel height set inline via style="height:Npx"
+     so that every round's pairs are proportionally taller than the previous.
+     The slot is pinned to the connector line; the rest is empty space. */
   .match-pair-slot {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
     position: relative;
     padding: 0 6px;
+    flex-shrink: 0;
   }
 
-  /* Connector lines — top half of pair */
+  /* Top half: slot sits at bottom, connector runs along bottom+right edges */
   .connector-top {
     justify-content: flex-end;
     border-right: 1.5px solid var(--line);
     border-bottom: 1.5px solid var(--line);
   }
-  /* Connector lines — bottom half of pair */
+  /* Bottom half: slot sits at top, connector runs along top+right edges */
   .connector-bottom {
     justify-content: flex-start;
     border-right: 1.5px solid var(--line);
     border-top: 1.5px solid var(--line);
   }
 
-  /* Final pair: no connectors, just centred */
+  /* Final pair: no connectors, centred vertically */
   .final-pair {
     justify-content: center;
     border: none;
+    flex: 1;
   }
 
   /* ── Slot (name cell) ────────────────────────────── */
