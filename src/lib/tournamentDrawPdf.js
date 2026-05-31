@@ -108,6 +108,22 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
           return isFirst ? 'slot' : 'slot result';
         };
 
+        if (isFirst) {
+          // R1: wrap both players in a fixture-box so the match reads as one unit.
+          // The outer wrapper is a full-height spacer that carries the right-side
+          // connector line outward to the next round.
+          return `<div style="height:${halfH * 2}px; display:flex; flex-direction:column; justify-content:center; border-right:1.5px solid var(--line); padding:0 0 0 4px; margin:0;">
+            <div class="fixture-box">
+              <div class="match-pair-slot connector-top" style="height:${halfH}px;">
+                <div class="${slotClass(top)}">${escHtml(top.name)}</div>
+              </div>
+              <div class="match-pair-slot connector-bottom" style="height:${halfH}px;">
+                <div class="${slotClass(bot)}">${escHtml(bot.name)}</div>
+              </div>
+            </div>
+          </div>`;
+        }
+
         return `<div class="match-pair-slot connector-top" style="height:${halfH}px;">
           <div class="${slotClass(top)}">${escHtml(top.name)}</div>
         </div>
