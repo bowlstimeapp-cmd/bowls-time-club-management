@@ -22,15 +22,6 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
 
   const roundNames = rounds.map((_, i) => getRoundName(i, totalRounds));
 
-  // Compute winner for each round (for rounds > 0)
-  const roundWinners = rounds.map((roundMatches, rIdx) =>
-    roundMatches.map(match => {
-      if (rIdx === 0) return null;
-      const w = match.winner || match.player1 || null;
-      return w ? getMemberName(w) : '';
-    })
-  );
-
   // Final winner
   const finalMatch = rounds[totalRounds - 1]?.[0];
   const finalWinner = finalMatch?.winner ? getMemberName(finalMatch.winner) : null;
@@ -61,70 +52,64 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
       dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    // Slots in this round
-    const slotsInRound = isFirst ? numPlayers : roundMatches.length;
+    // Slots in this round: always 2 per match (both players), except Final = 1
+    const slotsInRound = isLast ? 1 : roundMatches.length * 2;
 
-    // Build slot items
-    const slotItems = [];
+    // Build slot items — two per match for all rounds (top player + bottom player)
+    // Final is a special case: single trophy cell
+    let slotsHtml = '';
 
-    if (isFirst) {
-      // One slot per player
-      playerSlots.forEach((name, pIdx) => {
-        const matchIdx = Math.floor(pIdx / 2);
-        const match = roundMatches[matchIdx];
-        const isBye = name === 'BYE';
-        const isWinner = !isBye && match?.winner && (
-          (pIdx % 2 === 0 && match.winner === match.player1) ||
-          (pIdx % 2 === 1 && match.winner === match.player2)
-        );
-        const isLoser = !isBye && match?.winner && !isWinner;
-        const isBottom = pIdx % 2 === 1; // bottom of a pair gets connector
-
-        slotItems.push({
-          name,
-          isBye,
-          isWinner,
-          isLoser,
-          isBottom,
-          isPair: true,
-          pairStart: pIdx % 2 === 0,
-        });
-      });
+    if (isLast) {
+      // Final — single centred trophy slot
+      const match = roundMatches[0];
+      const w = match?.winner ? getMemberName(match.winner) : '';
+      const cls = w ? 'slot final-slot' : 'slot final-slot empty';
+      slotsHtml = `<div class="match-pair-slot final-pair">
+        <div class="${cls}">
+          ${w ? `<span class="trophy">&#127942;</span>${escHtml(w)}` : '<span class="tbd">Winner</span>'}
+        </div>
+      </div>`;
     } else {
-      // One slot per match (advancing player)
-      roundMatches.forEach((match, mIdx) => {
-        const w = match.winner || match.player1 || null;
-        const name = w ? getMemberName(w) : '';
-        const hasResult = !!match.winner;
-        slotItems.push({ name, hasResult, isLast });
-      });
-    }
+      // Every other round: two slots per match with connector lines
+      slotsHtml = roundMatches.map((match, mIdx) => {
+        // Determine player names and states
+        const getSlot = (player, isTopSlot) => {
+          if (isFirst) {
+            // Round 0: pull directly from playerSlots
+            const pIdx = mIdx * 2 + (isTopSlot ? 0 : 1);
+            const name = playerSlots[pIdx] || 'BYE';
+            const isBye = name === 'BYE';
+            const isWinner = !isBye && match?.winner && match.winner === player;
+            const isLoser = !isBye && match?.winner && !isWinner;
+            return { name, isBye, isWinner, isLoser };
+          } else {
+            // Later rounds: both players are advancing winners from prior round
+            const name = player ? getMemberName(player) : '';
+            const isBye = !player;
+            const isWinner = !!match.winner && match.winner === player;
+            const isLoser = !!match.winner && !isWinner && !!player;
+            return { name: name || 'TBD', isBye, isWinner, isLoser };
+          }
+        };
 
-    // Render slots as HTML
-    const slotsHtml = slotItems.map((slot, sIdx) => {
-      if (isFirst) {
-        const cls = slot.isBye ? 'slot bye' : slot.isWinner ? 'slot winner' : slot.isLoser ? 'slot loser' : 'slot';
-        const connectorClass = slot.isBottom ? 'connector-bottom' : 'connector-top';
-        return `<div class="match-pair-slot ${connectorClass}">
-          <div class="${cls}">${escHtml(slot.name)}</div>
+        const top = getSlot(match.player1, true);
+        const bot = getSlot(match.player2, false);
+
+        const slotClass = (s) => {
+          if (s.isBye) return 'slot bye';
+          if (s.isWinner) return isFirst ? 'slot winner' : 'slot result winner';
+          if (s.isLoser) return isFirst ? 'slot loser' : 'slot result loser';
+          return isFirst ? 'slot' : 'slot result';
+        };
+
+        return `<div class="match-pair-slot connector-top">
+          <div class="${slotClass(top)}">${escHtml(top.name)}</div>
+        </div>
+        <div class="match-pair-slot connector-bottom">
+          <div class="${slotClass(bot)}">${escHtml(bot.name)}</div>
         </div>`;
-      } else if (isLast) {
-        // Final — single centred trophy slot
-        const cls = slot.name ? 'slot final-slot' : 'slot final-slot empty';
-        return `<div class="match-pair-slot final-pair">
-          <div class="${cls}">
-            ${slot.name ? `<span class="trophy">&#9819;</span>${escHtml(slot.name)}` : '<span class="tbd">Winner</span>'}
-          </div>
-        </div>`;
-      } else {
-        const cls = slot.hasResult ? 'slot result winner' : 'slot result';
-        const isEven = sIdx % 2 === 0;
-        const connectorClass = isEven ? 'connector-top' : 'connector-bottom';
-        return `<div class="match-pair-slot ${connectorClass}">
-          <div class="${cls}">${escHtml(slot.name)}</div>
-        </div>`;
-      }
-    }).join('\n');
+      }).join('\n');
+    }
 
     const headerDateHtml = dateStr ? `<div class="round-date">Play by ${dateStr}</div>` : '';
     const isFinalCol = isLast;
@@ -134,7 +119,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
         <div class="round-title">${escHtml(roundName)}</div>
         ${headerDateHtml}
       </div>
-      <div class="slots-col" style="--slot-count: ${slotsInRound};">
+      <div class="slots-col">
         ${slotsHtml}
       </div>
     </div>`;
