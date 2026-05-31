@@ -1906,7 +1906,7 @@ export default function LeagueAdmin() {
           )].sort();
           return (
             <Dialog open={!!scorecardDialogLeague} onOpenChange={(open) => { if (!open) setScorecardDialogLeague(null); }}>
-              <DialogContent className="mx-4 sm:mx-auto max-w-sm">
+              <DialogContent className="mx-4 sm:mx-auto max-w-md">
                 <DialogHeader>
                   <DialogTitle>Print Scorecards — {scorecardDialogLeague.name}</DialogTitle>
                 </DialogHeader>
