@@ -46,6 +46,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     const isLast = rIdx === totalRounds - 1;
     const roundName = roundNames[rIdx];
     const roundDate = bracket.round_dates?.[roundName]
+                   ?? bracket.round_dates?.[roundName + 's']
                    ?? bracket.round_dates?.[`Round ${rIdx + 1}`];
     let dateStr = '';
     if (roundDate) {
