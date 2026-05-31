@@ -284,15 +284,15 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     flex-shrink: 0;
   }
 
-  /* Top half: slot sits at bottom, connector runs along bottom+right edges */
+  /* Top half: name centred in the half, connector bracket on bottom+right */
   .connector-top {
-    justify-content: flex-end;
+    justify-content: center;
     border-right: 1.5px solid var(--line);
     border-bottom: 1.5px solid var(--line);
   }
-  /* Bottom half: slot sits at top, connector runs along top+right edges */
+  /* Bottom half: name centred in the half, connector bracket on top+right */
   .connector-bottom {
-    justify-content: flex-start;
+    justify-content: center;
     border-right: 1.5px solid var(--line);
     border-top: 1.5px solid var(--line);
   }
