@@ -1,8 +1,8 @@
 const getRoundName = (roundIndex, totalRounds) => {
   const remaining = totalRounds - roundIndex;
   if (remaining === 1) return 'Final';
-  if (remaining === 2) return 'Semi-Finals';
-  if (remaining === 3) return 'Quarter-Finals';
+  if (remaining === 2) return 'Semi Final';
+  if (remaining === 3) return 'Quarter Final';
   return `Round ${roundIndex + 1}`;
 };
 
@@ -45,7 +45,8 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     const isFirst = rIdx === 0;
     const isLast = rIdx === totalRounds - 1;
     const roundName = roundNames[rIdx];
-    const roundDate = bracket.round_dates?.[roundName];
+    const roundDate = bracket.round_dates?.[roundName]
+                   ?? bracket.round_dates?.[`Round ${rIdx + 1}`];
     let dateStr = '';
     if (roundDate) {
       const d = new Date(roundDate + 'T00:00:00');
@@ -124,10 +125,10 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
           </div>`;
         }
 
-        return `<div class="match-pair-slot connector-top" style="height:${halfH}px;">
+        return `<div class="match-pair-slot connector-top no-divider" style="height:${halfH}px;">
           <div class="${slotClass(top)}">${escHtml(top.name)}</div>
         </div>
-        <div class="match-pair-slot connector-bottom" style="height:${halfH}px;">
+        <div class="match-pair-slot connector-bottom no-divider" style="height:${halfH}px;">
           <div class="${slotClass(bot)}">${escHtml(bot.name)}</div>
         </div>`;
       }).join('\n');
@@ -313,6 +314,10 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     border-top: 1.5px solid var(--line);
   }
 
+  /* Rounds 2+: keep only the right-side bracket line; no horizontal divider between players */
+  .connector-top.no-divider  { border-bottom: none; }
+  .connector-bottom.no-divider { border-top: none; }
+
   /* Final pair: no connectors, centred vertically */
   .final-pair {
     justify-content: center;
@@ -347,7 +352,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
   }
   .fixture-box .slot.winner { background: var(--green-light); color: var(--green-dark); }
   .fixture-box .slot.loser  { color: #bbb; text-decoration: line-through; }
-  .fixture-box .slot.bye    { color: var(--muted); font-style: italic; font-weight: 400; }
+  .fixture-box .slot.bye    { color: var(--muted); font-style: italic; font-weight: 400; border: none; }
 
   /* ── Slot (name cell) ────────────────────────────── */
   .slot {
@@ -372,7 +377,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     background: #f7f7f7;
     font-style: italic;
     font-weight: 400;
-    
+    border-style: dashed;
   }
 
   .slot.winner {
