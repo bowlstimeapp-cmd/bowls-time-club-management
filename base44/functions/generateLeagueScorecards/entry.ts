@@ -84,26 +84,23 @@ Deno.serve(async (req) => {
         const rows = Array.from({ length: totalEnds }, (_, i) => {
           const isFirstInPosition = i % endsPerPosition === 0;
           const posLabel = positions[Math.floor(i / endsPerPosition)];
-          const playerCell = isFirstInPosition
-            ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>`
-            : '';
+          const endCell = isFirstInPosition
+            ? `<td class="end-num pos-first" rowspan="${endsPerPosition}"><span class="pos-label">${posLabel}</span><br>${i + 1}</td>`
+            : `<td class="end-num">${i + 1}</td>`;
 
           return `<tr>
-          ${playerCell}
           <td></td>
           <td></td>
-          <td class="end-num">${i + 1}</td>
+          ${endCell}
           <td></td>
           <td></td>
-          ${playerCell ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>` : ''}
         </tr>`;
         }).join('');
 
         const total = `<tr class="total-row">
-          <td colspan="2"></td>
-          <td style="text-align:left;padding-left:1mm;">Total</td>
-          <td colspan="2"></td>
-          <td style="text-align:left;padding-left:1mm;">Total</td>
+          <td colspan="2" style="text-align:left;padding-left:1mm;">Total</td>
+          <td></td>
+          <td colspan="2" style="text-align:left;padding-left:1mm;">Total</td>
         </tr>`;
         return rows + total;
       }
@@ -120,40 +117,38 @@ Deno.serve(async (req) => {
         for (let e = 1; e <= setsEnds; e++) {
           const isFirstInPosition = globalEndIdx % endsPerPosition === 0;
           const posLabel = positions[Math.floor(globalEndIdx / endsPerPosition)];
-          const playerCell = isFirstInPosition
-            ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>`
-            : '';
+          const endCell = isFirstInPosition
+            ? `<td class="end-num pos-first" rowspan="${endsPerPosition}"><span class="pos-label">${posLabel}</span><br>${e}</td>`
+            : `<td class="end-num">${e}</td>`;
 
           rows += `<tr>
-          ${playerCell}
           <td></td>
           <td></td>
-          <td class="end-num">${e}</td>
+          ${endCell}
           <td></td>
           <td></td>
-          ${playerCell ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>` : ''}
         </tr>`;
           globalEndIdx++;
         }
 
-        // TOTAL row after each set — spans across player columns
+        // TOTAL row after each set
         rows += `<tr class="total-row">
-          <td colspan="2"></td>
-          <td style="text-align:left;padding-left:1mm;">TOTAL</td>
-          <td colspan="2"></td>
-          <td style="text-align:left;padding-left:1mm;">TOTAL</td>
+          <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
+          <td></td>
+          <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
         </tr>`;
 
         // Spacer rows between sets
         if (set < 1) {
-          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
-          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
+          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
         }
       }
 
       rows += `<tr class="sets-row">
-        <td colspan="3" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
-        <td colspan="3" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
+        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
+        <td></td>
+        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
       </tr>`;
 
       return rows;
@@ -258,20 +253,20 @@ Deno.serve(async (req) => {
     .score-table .total-row { background: #dcdcdc; font-weight: bold; font-size: 7pt; }
     .score-table .spacer-row td { background: #f9f9f9; border-color: #e0e0e0; }
     .score-table .sets-row { background: #e8e8ff; font-weight: bold; }
-    /* Player position column — vertical text, centred over its rowspan */
-    .score-table .player-pos {
-      background: #efefef;
-      font-weight: bold;
-      font-size: 7pt;
-      writing-mode: vertical-lr;
-      text-orientation: mixed;
-      transform: rotate(180deg);
+    /* Position label shown in the Ends column, centred above each group's first end number */
+    .score-table .pos-first {
+      vertical-align: top;
       text-align: center;
-      vertical-align: middle;
-      width: 5mm;
-      border: 1px solid #aaa;
-      padding: 0;
-      white-space: nowrap;
+      padding: 1px 0;
+      background: #efefef;
+    }
+    .score-table .pos-label {
+      display: block;
+      font-weight: bold;
+      font-size: 6.5pt;
+      color: #333;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 1px;
     }
     .signatures {
       text-align: center;
@@ -320,13 +315,11 @@ ${scorecards.map((card, idx) => {
     <table class="score-table">
       <thead>
         <tr>
-          <th style="width:5mm;"></th>
-          <th style="width:11mm;">Score</th>
-          <th style="width:11mm;">Total</th>
-          <th style="width:13mm;">Ends</th>
-          <th style="width:11mm;">Score</th>
-          <th style="width:11mm;">Total</th>
-          <th style="width:5mm;"></th>
+          <th style="width:13mm;">Score</th>
+          <th style="width:13mm;">Total</th>
+          <th style="width:15mm;">Ends</th>
+          <th style="width:13mm;">Score</th>
+          <th style="width:13mm;">Total</th>
         </tr>
       </thead>
       <tbody>
