@@ -81,21 +81,27 @@ Deno.serve(async (req) => {
         const totalEnds = 24;
         const endsPerPosition = totalEnds / positions.length; // 6
 
-        const rows = Array.from({ length: totalEnds }, (_, i) => {
+        let rows = '';
+        for (let i = 0; i < totalEnds; i++) {
           const isFirstInPosition = i % endsPerPosition === 0;
           const posLabel = positions[Math.floor(i / endsPerPosition)];
-          const endCell = isFirstInPosition
-            ? `<td class="end-num pos-first" rowspan="${endsPerPosition}"><span class="pos-label">${posLabel}</span><br>${i + 1}</td>`
-            : `<td class="end-num">${i + 1}</td>`;
 
-          return `<tr>
-          <td></td>
-          <td></td>
-          ${endCell}
-          <td></td>
-          <td></td>
-        </tr>`;
-        }).join('');
+          if (isFirstInPosition) {
+            rows += `<tr class="pos-label-row">
+              <td colspan="2" class="pos-label-cell">${posLabel}</td>
+              <td class="end-num">${i + 1}</td>
+              <td colspan="2" class="pos-label-cell">${posLabel}</td>
+            </tr>`;
+          } else {
+            rows += `<tr>
+              <td></td>
+              <td></td>
+              <td class="end-num">${i + 1}</td>
+              <td></td>
+              <td></td>
+            </tr>`;
+          }
+        }
 
         const total = `<tr class="total-row">
           <td colspan="2" style="text-align:left;padding-left:1mm;">Total</td>
@@ -117,17 +123,22 @@ Deno.serve(async (req) => {
         for (let e = 1; e <= setsEnds; e++) {
           const isFirstInPosition = globalEndIdx % endsPerPosition === 0;
           const posLabel = positions[Math.floor(globalEndIdx / endsPerPosition)];
-          const endCell = isFirstInPosition
-            ? `<td class="end-num pos-first" rowspan="${endsPerPosition}"><span class="pos-label">${posLabel}</span><br>${e}</td>`
-            : `<td class="end-num">${e}</td>`;
 
-          rows += `<tr>
-          <td></td>
-          <td></td>
-          ${endCell}
-          <td></td>
-          <td></td>
-        </tr>`;
+          if (isFirstInPosition) {
+            rows += `<tr class="pos-label-row">
+              <td colspan="2" class="pos-label-cell">${posLabel}</td>
+              <td class="end-num">${e}</td>
+              <td colspan="2" class="pos-label-cell">${posLabel}</td>
+            </tr>`;
+          } else {
+            rows += `<tr>
+              <td></td>
+              <td></td>
+              <td class="end-num">${e}</td>
+              <td></td>
+              <td></td>
+            </tr>`;
+          }
           globalEndIdx++;
         }
 
@@ -253,20 +264,14 @@ Deno.serve(async (req) => {
     .score-table .total-row { background: #dcdcdc; font-weight: bold; font-size: 7pt; }
     .score-table .spacer-row td { background: #f9f9f9; border-color: #e0e0e0; }
     .score-table .sets-row { background: #e8e8ff; font-weight: bold; }
-    /* Position label shown in the Ends column, centred above each group's first end number */
-    .score-table .pos-first {
-      vertical-align: top;
+    /* Position label row — shown as a full-width shaded banner between player groups */
+    .score-table .pos-label-row { background: #efefef; }
+    .score-table .pos-label-cell {
       text-align: center;
-      padding: 1px 0;
-      background: #efefef;
-    }
-    .score-table .pos-label {
-      display: block;
       font-weight: bold;
-      font-size: 6.5pt;
+      font-size: 8pt;
+      padding: 0.5mm 0;
       color: #333;
-      border-bottom: 1px solid #ccc;
-      margin-bottom: 1px;
     }
     .signatures {
       text-align: center;
