@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
       background: #efefef;
       font-weight: bold;
       font-size: 7pt;
-      writing-mode: vertical-rl;
+      writing-mode: vertical-lr;
       text-orientation: mixed;
       transform: rotate(180deg);
       text-align: center;
@@ -271,6 +271,7 @@ Deno.serve(async (req) => {
       width: 5mm;
       border: 1px solid #aaa;
       padding: 0;
+      white-space: nowrap;
     }
     .signatures {
       text-align: center;
