@@ -1,8 +1,8 @@
 const getRoundName = (roundIndex, totalRounds) => {
   const remaining = totalRounds - roundIndex;
   if (remaining === 1) return 'Final';
-  if (remaining === 2) return 'Semi Final';
-  if (remaining === 3) return 'Quarter Final';
+  if (remaining === 2) return 'Semi-Final';
+  if (remaining === 3) return 'Quarter-Final';
   return `Round ${roundIndex + 1}`;
 };
 
