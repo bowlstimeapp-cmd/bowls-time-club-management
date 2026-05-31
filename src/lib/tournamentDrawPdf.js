@@ -372,7 +372,7 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     background: #f7f7f7;
     font-style: italic;
     font-weight: 400;
-    border-style: dashed;
+    
   }
 
   .slot.winner {
