@@ -69,63 +69,93 @@ Deno.serve(async (req) => {
       };
     }).filter(Boolean);
 
-    // Build score table rows for a scorecard
-    // Standard: 24 ends + TOTAL row
-    // Sets: group into blocks of `setsEnds`, each followed by TOTAL row, with 2 blank gap rows between sets
+    // Player positions — same 4 labels for both sides
+    const positions = ['1', '2', '3', 'Skip'];
+
+    // Build score table rows.
+    // Each position covers (totalEnds / 4) consecutive end rows, using rowspan on the player columns.
+    // Standard: 24 ends, so 6 ends per position.
+    // Sets: setsEnds ends per set × 2 sets, but positions span across the whole card (6 ends each for 8-end sets).
     const buildScoreRows = () => {
       if (!isSets) {
-        const rows = Array.from({ length: 24 }, (_, i) => `
-        <tr>
+        const totalEnds = 24;
+        const endsPerPosition = totalEnds / positions.length; // 6
+
+        const rows = Array.from({ length: totalEnds }, (_, i) => {
+          const isFirstInPosition = i % endsPerPosition === 0;
+          const posLabel = positions[Math.floor(i / endsPerPosition)];
+          const playerCell = isFirstInPosition
+            ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>`
+            : '';
+
+          return `<tr>
+          ${playerCell}
           <td></td>
           <td></td>
           <td class="end-num">${i + 1}</td>
           <td></td>
           <td></td>
-        </tr>`).join('');
+          ${playerCell ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>` : ''}
+        </tr>`;
+        }).join('');
+
         const total = `<tr class="total-row">
+          <td colspan="2"></td>
           <td style="text-align:left;padding-left:1mm;">Total</td>
-          <td></td>
-          <td></td>
+          <td colspan="2"></td>
           <td style="text-align:left;padding-left:1mm;">Total</td>
-          <td></td>
         </tr>`;
         return rows + total;
       }
 
-      // Sets scorecard: each set = setsEnds ends + TOTAL + 2 blank spacer rows (except after last set)
-      // We always show 2 sets worth of rows
+      // Sets: setsEnds ends per set, 2 sets
+      // Positions span the full card: across both sets combined (setsEnds*2 total ends / 4 positions)
+      const totalEnds = setsEnds * 2;
+      const endsPerPosition = Math.ceil(totalEnds / positions.length);
+
       let rows = '';
+      let globalEndIdx = 0;
+
       for (let set = 0; set < 2; set++) {
         for (let e = 1; e <= setsEnds; e++) {
-          rows += `
-        <tr>
+          const isFirstInPosition = globalEndIdx % endsPerPosition === 0;
+          const posLabel = positions[Math.floor(globalEndIdx / endsPerPosition)];
+          const playerCell = isFirstInPosition
+            ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>`
+            : '';
+
+          rows += `<tr>
+          ${playerCell}
           <td></td>
           <td></td>
           <td class="end-num">${e}</td>
           <td></td>
           <td></td>
+          ${playerCell ? `<td class="player-pos" rowspan="${endsPerPosition}">${posLabel}</td>` : ''}
         </tr>`;
+          globalEndIdx++;
         }
-        // TOTAL row after each set
+
+        // TOTAL row after each set — spans across player columns
         rows += `<tr class="total-row">
+          <td colspan="2"></td>
           <td style="text-align:left;padding-left:1mm;">TOTAL</td>
-          <td></td>
-          <td></td>
+          <td colspan="2"></td>
           <td style="text-align:left;padding-left:1mm;">TOTAL</td>
-          <td></td>
         </tr>`;
-        // 2 blank spacer rows between sets (not after last set)
+
+        // Spacer rows between sets
         if (set < 1) {
-          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
-          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
+          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
         }
       }
-      // Sets result row at bottom
+
       rows += `<tr class="sets-row">
-        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
-        <td></td>
-        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
+        <td colspan="3" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
+        <td colspan="3" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
       </tr>`;
+
       return rows;
     };
 
@@ -210,12 +240,6 @@ Deno.serve(async (req) => {
       border-bottom: 1px solid #000;
     }
     .vs { font-size: 7pt; }
-    .players-section div {
-      border-bottom: 1px solid #b4b4b4;
-      padding: 1mm 2mm;
-      height: 6mm;
-    }
-    .players-section div:last-child { border-bottom: none; }
     .score-table { width: 100%; border-collapse: collapse; font-size: 6pt; }
     .score-table th {
       background: #dcdcdc;
@@ -234,6 +258,20 @@ Deno.serve(async (req) => {
     .score-table .total-row { background: #dcdcdc; font-weight: bold; font-size: 7pt; }
     .score-table .spacer-row td { background: #f9f9f9; border-color: #e0e0e0; }
     .score-table .sets-row { background: #e8e8ff; font-weight: bold; }
+    /* Player position column — vertical text, centred over its rowspan */
+    .score-table .player-pos {
+      background: #efefef;
+      font-weight: bold;
+      font-size: 7pt;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      text-align: center;
+      vertical-align: middle;
+      width: 5mm;
+      border: 1px solid #aaa;
+      padding: 0;
+    }
     .signatures {
       text-align: center;
       padding: 0.5mm 0;
@@ -278,20 +316,16 @@ ${scorecards.map((card, idx) => {
       <span class="vs" style="text-align:center;padding:0 2mm;">Vs</span>
       <span style="text-align:right;">${card.teamBName}</span>
     </div>
-    <div class="players-section">
-      <div>1</div>
-      <div>2</div>
-      <div>3</div>
-      <div>Skip</div>
-    </div>
     <table class="score-table">
       <thead>
         <tr>
-          <th style="width:13mm;">Score</th>
-          <th style="width:13mm;">Total</th>
-          <th style="width:17mm;">Ends</th>
-          <th style="width:13mm;">Score</th>
-          <th style="width:13mm;">Total</th>
+          <th style="width:5mm;"></th>
+          <th style="width:11mm;">Score</th>
+          <th style="width:11mm;">Total</th>
+          <th style="width:13mm;">Ends</th>
+          <th style="width:11mm;">Score</th>
+          <th style="width:11mm;">Total</th>
+          <th style="width:5mm;"></th>
         </tr>
       </thead>
       <tbody>
