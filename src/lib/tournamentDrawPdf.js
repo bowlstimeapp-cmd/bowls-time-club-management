@@ -304,6 +304,35 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     flex: 1;
   }
 
+  /* ── Round 1 fixture box ─────────────────────────── */
+  .fixture-box {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid #a8c8b0;
+    border-right: 1.5px solid var(--line);
+    border-radius: 4px 0 0 4px;
+    background: var(--green-pale);
+    overflow: hidden;
+    margin: 4px 0 4px 4px;
+  }
+  .fixture-box .match-pair-slot {
+    padding: 0;
+    border: none !important;
+  }
+  .fixture-box .slot {
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0 8px;
+    background: transparent;
+  }
+  .fixture-box .connector-top {
+    border-bottom: 1px dashed #c0d8c4;
+  }
+  .fixture-box .slot.winner { background: var(--green-light); color: var(--green-dark); }
+  .fixture-box .slot.loser  { color: #bbb; text-decoration: line-through; }
+  .fixture-box .slot.bye    { color: var(--muted); font-style: italic; font-weight: 400; }
+
   /* ── Slot (name cell) ────────────────────────────── */
   .slot {
     height: var(--slot-h);
