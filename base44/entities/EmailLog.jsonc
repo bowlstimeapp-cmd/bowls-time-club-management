@@ -1,0 +1,56 @@
+{
+  "name": "EmailLog",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Club the email relates to"
+    },
+    "club_name": {
+      "type": "string",
+      "description": "Snapshot of club name"
+    },
+    "to_email": {
+      "type": "string",
+      "description": "Recipient email"
+    },
+    "to_name": {
+      "type": "string",
+      "description": "Recipient name"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Email subject"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "selection"
+      ],
+      "default": "selection",
+      "description": "Type of email"
+    },
+    "related_id": {
+      "type": "string",
+      "description": "Related entity ID (e.g. selection ID)"
+    },
+    "related_label": {
+      "type": "string",
+      "description": "Human-readable label (e.g. competition + date)"
+    },
+    "sent_by": {
+      "type": "string",
+      "description": "Email of the user who triggered the send"
+    }
+  },
+  "required": [
+    "club_id",
+    "to_email",
+    "subject"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

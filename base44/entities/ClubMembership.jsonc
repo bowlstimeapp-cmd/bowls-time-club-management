@@ -76,7 +76,7 @@
         "member"
       ],
       "default": "member",
-      "description": "User's role within the club. Stewards have access to Booking Management."
+      "description": "User's club-scoped role. NOT the same as Users.role. Admin authorization is enforced in backend functions via ClubMembership lookups."
     },
     "status": {
       "type": "string",
@@ -121,17 +121,9 @@
     "user_email"
   ],
   "rls": {
-    "create": {
-      "created_by": "{{user.email}}"
-    },
-    "update": {
-      "created_by": "{{user.email}}"
-    },
-    "delete": {
-      "created_by": "{{user.email}}"
-    },
-    "write": {
-      "created_by": "{{user.email}}"
-    }
+    "read": {},
+    "create": {},
+    "update": {},
+    "delete": {}
   }
 }

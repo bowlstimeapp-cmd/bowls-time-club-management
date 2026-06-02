@@ -42,35 +42,17 @@
     "name"
   ],
   "rls": {
+    "read": {},
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.captain_email": "{{user.email}}"
-        },
-        {
-          "data.players": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "created_by": "{{user.email}}"
     },
     "update": {
       "$or": [
         {
-          "data.captain_email": "{{user.email}}"
+          "created_by": "{{user.email}}"
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.captain_email": "{{user.email}}"
         }
       ]
     },

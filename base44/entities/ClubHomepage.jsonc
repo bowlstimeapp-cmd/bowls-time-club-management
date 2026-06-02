@@ -1,0 +1,56 @@
+{
+  "name": "ClubHomepage",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club (unique per club)"
+    },
+    "hero_image_url": {
+      "type": "string",
+      "description": "Hero / banner image URL"
+    },
+    "welcome_text": {
+      "type": "string",
+      "description": "Welcome message shown in the hero section"
+    },
+    "external_html": {
+      "type": "string",
+      "description": "Custom HTML embed (e.g. external league table)"
+    },
+    "external_html_title": {
+      "type": "string",
+      "description": "Title for the external HTML section"
+    },
+    "sections_config": {
+      "type": "array",
+      "description": "Array of section config objects {id, label, visible, order}",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "club_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

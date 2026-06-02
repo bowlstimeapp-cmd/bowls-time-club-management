@@ -1,0 +1,107 @@
+{
+  "name": "FunctionRoomBooking",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "room_id": {
+      "type": "string",
+      "description": "Reference to the FunctionRoom"
+    },
+    "room_name": {
+      "type": "string",
+      "description": "Snapshot of room name at time of booking"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the booking"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Start time (HH:MM)"
+    },
+    "duration_hours": {
+      "type": "number",
+      "description": "Duration in hours"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "End time (HH:MM) - calculated"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new_enquiry",
+        "contacted",
+        "awaiting_response",
+        "provisional_hold",
+        "confirmed",
+        "rejected",
+        "cancelled",
+        "completed",
+        "pending",
+        "approved"
+      ],
+      "default": "new_enquiry",
+      "description": "Enquiry/booking status"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Name of the person requesting the booking"
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Email of the requester"
+    },
+    "contact_phone": {
+      "type": "string",
+      "description": "Phone number of the requester"
+    },
+    "organisation": {
+      "type": "string",
+      "description": "Organisation or group name (optional)"
+    },
+    "purpose": {
+      "type": "string",
+      "description": "Purpose / description of the event"
+    },
+    "attendees": {
+      "type": "number",
+      "description": "Expected number of attendees"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Internal admin notes (timestamped entries)"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Staff member assigned to handle this enquiry"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "internal",
+        "api"
+      ],
+      "default": "internal",
+      "description": "Whether booking came from internal app or external API"
+    }
+  },
+  "required": [
+    "club_id",
+    "room_id",
+    "date",
+    "start_time",
+    "duration_hours",
+    "contact_name",
+    "contact_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

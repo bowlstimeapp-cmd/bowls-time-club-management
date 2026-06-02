@@ -96,50 +96,12 @@
     "match_date"
   ],
   "rls": {
+    "read": {},
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "selector"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.status": "published"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "selector"
-          }
-        }
-      ]
+      "created_by": "{{user.email}}"
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "selector"
-          }
-        }
-      ]
+      "created_by": "{{user.email}}"
     },
     "delete": {
       "user_condition": {

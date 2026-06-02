@@ -1,0 +1,58 @@
+{
+  "name": "Feedback",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user submitting feedback"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of the user submitting feedback"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "bug",
+        "feature",
+        "improvement",
+        "other"
+      ],
+      "default": "feature",
+      "description": "Type of feedback"
+    },
+    "title": {
+      "type": "string",
+      "description": "Feedback title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed feedback description"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new_feedback",
+        "reviewed",
+        "implemented",
+        "abandoned"
+      ],
+      "default": "new_feedback",
+      "description": "Status of the feedback"
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "Admin response to the feedback, visible to the user"
+    }
+  },
+  "required": [
+    "user_email",
+    "title",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

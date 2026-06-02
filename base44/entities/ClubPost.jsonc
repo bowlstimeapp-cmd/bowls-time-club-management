@@ -1,0 +1,64 @@
+{
+  "name": "ClubPost",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "news",
+        "social_event",
+        "match_result"
+      ],
+      "default": "news",
+      "description": "Type of post"
+    },
+    "title": {
+      "type": "string",
+      "description": "Post title"
+    },
+    "content": {
+      "type": "string",
+      "description": "Post content / body text"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Optional featured image URL"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the event or match (for social events and match results)"
+    },
+    "opponent": {
+      "type": "string",
+      "description": "Opponent name (for match results)"
+    },
+    "club_score": {
+      "type": "number",
+      "description": "Club score (for match results)"
+    },
+    "opponent_score": {
+      "type": "number",
+      "description": "Opponent score (for match results)"
+    },
+    "is_published": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the post is visible"
+    }
+  },
+  "required": [
+    "club_id",
+    "title",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

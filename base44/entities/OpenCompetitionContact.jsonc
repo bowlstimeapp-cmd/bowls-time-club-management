@@ -1,0 +1,51 @@
+{
+  "name": "OpenCompetitionContact",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "team_name": {
+      "type": "string",
+      "description": "Name of the team"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Primary contact person name"
+    },
+    "email": {
+      "type": "string",
+      "description": "Contact email address"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Contact phone number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_contacted",
+        "contacted",
+        "not_entering",
+        "entered_team"
+      ],
+      "default": "not_contacted",
+      "description": "Status of the contact"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the contact"
+    }
+  },
+  "required": [
+    "club_id",
+    "team_name",
+    "contact_name"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

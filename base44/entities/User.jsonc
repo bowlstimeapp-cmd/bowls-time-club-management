@@ -1,0 +1,42 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user",
+      "description": "User role"
+    },
+    "title": {
+      "type": "string",
+      "description": "User's title (Mr, Mrs, Miss, Ms, Dr, Prof)"
+    },
+    "known_as": {
+      "type": "string",
+      "description": "Preferred name or nickname"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "User's first name"
+    },
+    "surname": {
+      "type": "string",
+      "description": "User's surname"
+    },
+    "phone": {
+      "type": "string",
+      "description": "User's phone number"
+    }
+  },
+  "required": [
+    "title",
+    "known_as",
+    "first_name",
+    "surname",
+    "phone"
+  ]
+}

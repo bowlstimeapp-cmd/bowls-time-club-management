@@ -1,0 +1,91 @@
+{
+  "name": "TeamBoardPost",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "post_type": {
+      "type": "string",
+      "enum": [
+        "looking_for_team",
+        "looking_for_players"
+      ],
+      "description": "Whether player is looking for a team, or captain is looking for players"
+    },
+    "league_id": {
+      "type": "string",
+      "description": "Reference to the league"
+    },
+    "league_name": {
+      "type": "string",
+      "description": "Snapshot of league name"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "Reference to the team (for looking_for_players posts)"
+    },
+    "team_name": {
+      "type": "string",
+      "description": "Snapshot of team name"
+    },
+    "preferred_position": {
+      "type": "string",
+      "enum": [
+        "Lead",
+        "Two",
+        "Three",
+        "Skip",
+        "Any"
+      ],
+      "description": "Preferred bowling position"
+    },
+    "title": {
+      "type": "string",
+      "description": "Post title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Post description"
+    },
+    "contact_details": {
+      "type": "string",
+      "description": "How to contact the poster"
+    },
+    "poster_name": {
+      "type": "string",
+      "description": "Display name of the poster"
+    },
+    "poster_email": {
+      "type": "string",
+      "description": "Email of the poster"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "default": "active",
+      "description": "Post status"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional expiry date"
+    }
+  },
+  "required": [
+    "club_id",
+    "post_type",
+    "league_id",
+    "title",
+    "poster_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

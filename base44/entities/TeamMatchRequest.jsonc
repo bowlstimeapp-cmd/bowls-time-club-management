@@ -1,0 +1,81 @@
+{
+  "name": "TeamMatchRequest",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "invite",
+        "request"
+      ],
+      "description": "invite = captain inviting a player; request = player requesting to join a team"
+    },
+    "post_id": {
+      "type": "string",
+      "description": "Reference to the TeamBoardPost"
+    },
+    "league_id": {
+      "type": "string",
+      "description": "Reference to the league"
+    },
+    "league_name": {
+      "type": "string",
+      "description": "Snapshot of league name"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "Reference to the team"
+    },
+    "team_name": {
+      "type": "string",
+      "description": "Snapshot of team name"
+    },
+    "from_email": {
+      "type": "string",
+      "description": "Email of who sent the invite/request"
+    },
+    "from_name": {
+      "type": "string",
+      "description": "Display name of sender"
+    },
+    "to_email": {
+      "type": "string",
+      "description": "Email of who receives it (player for invite, captain for request)"
+    },
+    "to_name": {
+      "type": "string",
+      "description": "Display name of recipient"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Request status"
+    },
+    "feedback": {
+      "type": "string",
+      "description": "Optional feedback on rejection"
+    }
+  },
+  "required": [
+    "club_id",
+    "request_type",
+    "league_id",
+    "team_id",
+    "from_email",
+    "to_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

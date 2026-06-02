@@ -195,12 +195,17 @@
     "name"
   ],
   "rls": {
+    "read": {},
     "create": {
       "created_by": "{{user.email}}"
     },
-    "read": {},
-    "update": {},
-    "delete": {},
-    "write": {}
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
   }
 }
