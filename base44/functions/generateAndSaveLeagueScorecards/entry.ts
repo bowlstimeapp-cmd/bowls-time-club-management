@@ -79,6 +79,9 @@ Deno.serve(async (req) => {
     const marginX = 8.5;
     const marginY = 6;
 
+    // Define colWidths up here so it's available for the positions loop
+    const colWidths = { score: 13, total: 13, ends: 20 };
+
     let cardCount = 0;
 
     for (const card of scorecards) {
@@ -141,9 +144,15 @@ Deno.serve(async (req) => {
       doc.text('Vs', x + cardWidth / 2, teamsY + 4, { align: 'center' });
       doc.text(card.teamBName, x + cardWidth - 3, teamsY + 4, { align: 'right' });
 
-      // Player positions — each as a centred shaded row
+      // Player positions — centered in the middle "Ends" column zone
       const posRowHeight = 4;
       const posStartY = teamsY + 6;
+
+      // Pre-calculate the center X of the Ends column so positions align with it
+      const endsColStart = x + colWidths.score + colWidths.total;
+      const endsColEnd = x + cardWidth - colWidths.score - colWidths.total;
+      const endsColCenterX = (endsColStart + endsColEnd) / 2;
+
       doc.setFontSize(7);
       doc.setFont(undefined, 'normal');
       ['1', '2', '3', 'Skip'].forEach((pos, idx) => {
@@ -154,12 +163,11 @@ Deno.serve(async (req) => {
         doc.setLineWidth(0.2);
         doc.rect(x, rowY, cardWidth, posRowHeight);
         doc.setTextColor(0, 0, 0);
-        doc.text(pos, x + cardWidth / 2, rowY + posRowHeight - 1, { align: 'center' });
+        doc.text(pos, endsColCenterX, rowY + posRowHeight - 1, { align: 'center' });
       });
 
       // Score table
       const tableY = posStartY + (4 * posRowHeight);
-      const colWidths = { score: 13, total: 13, ends: 20 };
       
       // Table header
       doc.setFillColor(220, 220, 220);
