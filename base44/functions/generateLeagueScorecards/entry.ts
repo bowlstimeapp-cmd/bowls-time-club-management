@@ -76,33 +76,29 @@ Deno.serve(async (req) => {
     // Each position covers (totalEnds / 4) consecutive end rows, using rowspan on the player columns.
     // Standard: 24 ends, so 6 ends per position.
     // Sets: setsEnds ends per set × 2 sets, but positions span across the whole card (6 ends each for 8-end sets).
+    // Build the 4 position header rows (each has 3 cells aligned with score columns)
+    const buildPositionRows = () => {
+      return positions.map(pos => `
+        <tr class="pos-label-row">
+          <td colspan="2" class="pos-label-cell"></td>
+          <td class="pos-label-cell">${pos}</td>
+          <td colspan="2" class="pos-label-cell"></td>
+        </tr>`).join('');
+    };
+
     const buildScoreRows = () => {
       if (!isSets) {
         const totalEnds = 24;
-        const endsPerPosition = totalEnds / positions.length; // 6
-
         let rows = '';
         for (let i = 0; i < totalEnds; i++) {
-          const isFirstInPosition = i % endsPerPosition === 0;
-          const posLabel = positions[Math.floor(i / endsPerPosition)];
-
-          if (isFirstInPosition) {
-            rows += `<tr class="pos-label-row">
-              <td colspan="2" class="pos-label-cell">${posLabel}</td>
-              <td class="end-num">${i + 1}</td>
-              <td colspan="2" class="pos-label-cell">${posLabel}</td>
-            </tr>`;
-          } else {
-            rows += `<tr>
-              <td></td>
-              <td></td>
-              <td class="end-num">${i + 1}</td>
-              <td></td>
-              <td></td>
-            </tr>`;
-          }
+          rows += `<tr>
+            <td></td>
+            <td></td>
+            <td class="end-num">${i + 1}</td>
+            <td></td>
+            <td></td>
+          </tr>`;
         }
-
         const total = `<tr class="total-row">
           <td colspan="2" style="text-align:left;padding-left:1mm;">Total</td>
           <td></td>
@@ -111,45 +107,29 @@ Deno.serve(async (req) => {
         return rows + total;
       }
 
-      // Sets: setsEnds ends per set, 2 sets
-      // Positions span the full card: across both sets combined (setsEnds*2 total ends / 4 positions)
+      // Sets mode
       const totalEnds = setsEnds * 2;
-      const endsPerPosition = Math.ceil(totalEnds / positions.length);
-
       let rows = '';
       let globalEndIdx = 0;
 
       for (let set = 0; set < 2; set++) {
         for (let e = 1; e <= setsEnds; e++) {
-          const isFirstInPosition = globalEndIdx % endsPerPosition === 0;
-          const posLabel = positions[Math.floor(globalEndIdx / endsPerPosition)];
-
-          if (isFirstInPosition) {
-            rows += `<tr class="pos-label-row">
-              <td colspan="2" class="pos-label-cell">${posLabel}</td>
-              <td class="end-num">${e}</td>
-              <td colspan="2" class="pos-label-cell">${posLabel}</td>
-            </tr>`;
-          } else {
-            rows += `<tr>
-              <td></td>
-              <td></td>
-              <td class="end-num">${e}</td>
-              <td></td>
-              <td></td>
-            </tr>`;
-          }
+          rows += `<tr>
+            <td></td>
+            <td></td>
+            <td class="end-num">${e}</td>
+            <td></td>
+            <td></td>
+          </tr>`;
           globalEndIdx++;
         }
 
-        // TOTAL row after each set
         rows += `<tr class="total-row">
           <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
           <td></td>
           <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
         </tr>`;
 
-        // Spacer rows between sets
         if (set < 1) {
           rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
           rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
@@ -165,6 +145,7 @@ Deno.serve(async (req) => {
       return rows;
     };
 
+    const positionRows = buildPositionRows();
     const scoreRows = buildScoreRows();
 
     const html = `
@@ -264,14 +245,15 @@ Deno.serve(async (req) => {
     .score-table .total-row { background: #dcdcdc; font-weight: bold; font-size: 7pt; }
     .score-table .spacer-row td { background: #f9f9f9; border-color: #e0e0e0; }
     .score-table .sets-row { background: #e8e8ff; font-weight: bold; }
-    /* Position label row — shown as a full-width shaded banner between player groups */
-    .score-table .pos-label-row { background: #efefef; }
+    /* Position label rows — 3 cells: left (score+total wide), centre (ends wide), right (score+total wide) */
+    .score-table .pos-label-row { background: #f5f5f5; }
     .score-table .pos-label-cell {
       text-align: center;
       font-weight: bold;
-      font-size: 8pt;
+      font-size: 7pt;
       padding: 0.5mm 0;
       color: #333;
+      border: 1px solid #b4b4b4;
     }
     .signatures {
       text-align: center;
@@ -317,6 +299,11 @@ ${scorecards.map((card, idx) => {
       <span class="vs" style="text-align:center;padding:0 2mm;">Vs</span>
       <span style="text-align:right;">${card.teamBName}</span>
     </div>
+    <table class="score-table">
+      <tbody>
+        ${positionRows}
+      </tbody>
+    </table>
     <table class="score-table">
       <thead>
         <tr>
