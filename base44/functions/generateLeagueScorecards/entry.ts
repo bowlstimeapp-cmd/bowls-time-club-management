@@ -76,13 +76,11 @@ Deno.serve(async (req) => {
     // Each position covers (totalEnds / 4) consecutive end rows, using rowspan on the player columns.
     // Standard: 24 ends, so 6 ends per position.
     // Sets: setsEnds ends per set × 2 sets, but positions span across the whole card (6 ends each for 8-end sets).
-    // Build the 4 position header rows (each has 3 cells aligned with score columns)
+    // Build the 4 position header rows (full width, single cell)
     const buildPositionRows = () => {
       return positions.map(pos => `
         <tr class="pos-label-row">
-          <td colspan="2" class="pos-label-cell"></td>
-          <td class="pos-label-cell">${pos}</td>
-          <td colspan="2" class="pos-label-cell"></td>
+          <td colspan="5" class="pos-label-cell">${pos}</td>
         </tr>`).join('');
     };
 
