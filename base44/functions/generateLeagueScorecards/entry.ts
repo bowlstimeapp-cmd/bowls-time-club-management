@@ -80,9 +80,9 @@ Deno.serve(async (req) => {
     const buildPositionRows = () => {
       return positions.map(pos => `
         <tr class="pos-label-row">
-          
+          <td colspan="2" class="pos-label-cell"></td>
           <td class="pos-label-cell">${pos}</td>
-          
+          <td colspan="2" class="pos-label-cell"></td>
         </tr>`).join('');
     };
 
