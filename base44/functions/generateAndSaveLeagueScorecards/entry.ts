@@ -141,24 +141,16 @@ Deno.serve(async (req) => {
       doc.text('Vs', x + cardWidth / 2, teamsY + 4, { align: 'center' });
       doc.text(card.teamBName, x + cardWidth - 3, teamsY + 4, { align: 'right' });
 
-      // Player positions — each as a centred shaded row
-      const posRowHeight = 4;
-      const posStartY = teamsY + 6;
+      // Player positions
+      const posStartY = teamsY + 7;
       doc.setFontSize(7);
       doc.setFont(undefined, 'normal');
       ['1', '2', '3', 'Skip'].forEach((pos, idx) => {
-        const rowY = posStartY + (idx * posRowHeight);
-        doc.setFillColor(245, 245, 245);
-        doc.rect(x, rowY, cardWidth, posRowHeight, 'F');
-        doc.setDrawColor(180, 180, 180);
-        doc.setLineWidth(0.2);
-        doc.rect(x, rowY, cardWidth, posRowHeight);
-        doc.setTextColor(0, 0, 0);
-        doc.text(pos, x + cardWidth / 2, rowY + posRowHeight - 1, { align: 'center' });
+        doc.text(pos, x + cardWidth / 2, posStartY + (idx * 3), { align: 'center' });
       });
 
       // Score table
-      const tableY = posStartY + (4 * posRowHeight);
+      const tableY = posStartY + 13;
       const colWidths = { score: 13, total: 13, ends: 20 };
       
       // Table header
