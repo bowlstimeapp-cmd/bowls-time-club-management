@@ -141,17 +141,35 @@ Deno.serve(async (req) => {
       doc.text('Vs', x + cardWidth / 2, teamsY + 4, { align: 'center' });
       doc.text(card.teamBName, x + cardWidth - 3, teamsY + 4, { align: 'right' });
 
-      // Player positions
-      const posStartY = teamsY + 7;
+      // Column widths — score/total cols are 13mm each; ends col fills the middle
+      const colWidths = { score: 13, total: 13 };
+      const leftCellW = colWidths.score + colWidths.total; // 26mm
+      const midCellStart = x + leftCellW;
+      const midCellW = cardWidth - 2 * leftCellW;          // 17mm
+      const rightCellStart = x + cardWidth - leftCellW;
+
+      // Player positions — 4 rows, 3 cells aligned with score table columns
+      const posRowHeight = 4;
+      const posStartY = teamsY + 6;
       doc.setFontSize(7);
       doc.setFont(undefined, 'normal');
       ['1', '2', '3', 'Skip'].forEach((pos, idx) => {
-        doc.text(pos, x + cardWidth / 2, posStartY + (idx * 3), { align: 'center' });
+        const rowY = posStartY + (idx * posRowHeight);
+        doc.setFillColor(245, 245, 245);
+        doc.rect(x, rowY, leftCellW, posRowHeight, 'F');
+        doc.rect(midCellStart, rowY, midCellW, posRowHeight, 'F');
+        doc.rect(rightCellStart, rowY, leftCellW, posRowHeight, 'F');
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.2);
+        doc.rect(x, rowY, leftCellW, posRowHeight);
+        doc.rect(midCellStart, rowY, midCellW, posRowHeight);
+        doc.rect(rightCellStart, rowY, leftCellW, posRowHeight);
+        doc.setTextColor(0, 0, 0);
+        doc.text(pos, midCellStart + midCellW / 2, rowY + posRowHeight - 1, { align: 'center' });
       });
 
       // Score table
-      const tableY = posStartY + 13;
-      const colWidths = { score: 13, total: 13, ends: 20 };
+      const tableY = posStartY + (4 * posRowHeight);
       
       // Table header
       doc.setFillColor(220, 220, 220);
@@ -160,18 +178,18 @@ Deno.serve(async (req) => {
       doc.setFontSize(7);
       doc.setFont(undefined, 'bold');
       doc.text('Score', x + colWidths.score / 2, tableY + 3, { align: 'center' });
-      doc.text('Total', x + colWidths.score + colWidths.total / 2, tableY + 3, { align: 'center' });
-      doc.text('Ends', x + cardWidth / 2, tableY + 3, { align: 'center' });
-      doc.text('Score', x + cardWidth - colWidths.score - colWidths.total / 2, tableY + 3, { align: 'center' });
-      doc.text('Total', x + cardWidth - colWidths.total / 2, tableY + 3, { align: 'center' });
+      doc.text('Total', x + leftCellW - colWidths.total / 2, tableY + 3, { align: 'center' });
+      doc.text('Ends', midCellStart + midCellW / 2, tableY + 3, { align: 'center' });
+      doc.text('Score', rightCellStart + colWidths.score / 2, tableY + 3, { align: 'center' });
+      doc.text('Total', rightCellStart + leftCellW - colWidths.total / 2, tableY + 3, { align: 'center' });
 
       // Vertical lines
       doc.setDrawColor(180, 180, 180);
       doc.setLineWidth(0.2);
       const tableHeight = 38;
       doc.line(x + colWidths.score, tableY, x + colWidths.score, tableY + tableHeight);
-      doc.line(x + colWidths.score + colWidths.total, tableY, x + colWidths.score + colWidths.total, tableY + tableHeight);
-      doc.line(x + cardWidth - colWidths.score - colWidths.total, tableY, x + cardWidth - colWidths.score - colWidths.total, tableY + tableHeight);
+      doc.line(x + leftCellW, tableY, x + leftCellW, tableY + tableHeight);
+      doc.line(x + leftCellW + midCellW, tableY, x + leftCellW + midCellW, tableY + tableHeight);
       doc.line(x + cardWidth - colWidths.total, tableY, x + cardWidth - colWidths.total, tableY + tableHeight);
 
       // End numbers (1-24)
@@ -180,7 +198,7 @@ Deno.serve(async (req) => {
       const rowHeight = 1.55;
       for (let end = 1; end <= 24; end++) {
         const rowY = tableY + 4 + (end * rowHeight);
-        doc.text(String(end), x + cardWidth / 2, rowY, { align: 'center' });
+        doc.text(String(end), midCellStart + midCellW / 2, rowY, { align: 'center' });
       }
 
       // Total row
@@ -189,8 +207,8 @@ Deno.serve(async (req) => {
       doc.rect(x, totalY, cardWidth, 4, 'F');
       doc.setFont(undefined, 'bold');
       doc.setFontSize(7);
-      doc.text('Total', x + colWidths.score + colWidths.total / 2, totalY + 3, { align: 'center' });
-      doc.text('Total', x + cardWidth - colWidths.total / 2, totalY + 3, { align: 'center' });
+      doc.text('Total', x + leftCellW - colWidths.total / 2, totalY + 3, { align: 'center' });
+      doc.text('Total', rightCellStart + leftCellW - colWidths.total / 2, totalY + 3, { align: 'center' });
 
       // Signatures
       const sigY = totalY + 6;
