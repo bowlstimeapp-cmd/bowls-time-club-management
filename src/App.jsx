@@ -9,6 +9,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { KioskProvider } from '@/lib/KioskContext';
 import { LayoutThemeProvider } from '@/lib/layoutTheme.jsx';
+import { AccessibilityProvider } from '@/lib/AccessibilityContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BookingsAudit from './pages/BookingsAudit';
 import ScorecardHub from './pages/ScorecardHub';
@@ -108,6 +109,7 @@ function App() {
   return (
     <AuthProvider>
       <KioskProvider>
+        <AccessibilityProvider>
         <LayoutThemeProvider>
           <QueryClientProvider client={queryClientInstance}>
             <Router>
@@ -149,6 +151,7 @@ function App() {
             <Toaster />
           </QueryClientProvider>
         </LayoutThemeProvider>
+        </AccessibilityProvider>
       </KioskProvider>
     </AuthProvider>
   )
