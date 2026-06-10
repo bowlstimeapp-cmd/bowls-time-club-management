@@ -164,12 +164,17 @@ export default function TournamentEditor() {
     }
   };
 
+  const resolveName = (email) => {
+    const m = members.find(mem => mem.user_email === email);
+    if (!m) return email;
+    if (m.user_name) return m.user_name;
+    if (m.first_name || m.surname) return [m.first_name, m.surname].filter(Boolean).join(' ');
+    return email;
+  };
+
   const getMemberName = (entry) => {
     if (!entry) return '';
-    return entry.split('|').map(email => {
-      const member = members.find(m => m.user_email === email);
-      return member?.user_name || email;
-    }).join(' / ');
+    return entry.split('|').map(resolveName).join(' / ');
   };
 
   const getDrawEntries = () => {
@@ -436,10 +441,7 @@ export default function TournamentEditor() {
                         <PlayerTeamBuilder
                           players={selectedPlayers}
                           teamSize={teamSize}
-                          getMemberName={(email) => {
-                            const m = members.find(mem => mem.user_email === email);
-                            return m?.user_name || email;
-                          }}
+                          getMemberName={resolveName}
                           teams={playerTeams}
                           onChange={setPlayerTeams}
                         />

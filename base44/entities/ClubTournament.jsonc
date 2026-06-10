@@ -34,6 +34,17 @@
       "type": "array",
       "description": "Array of player emails (for knockout tournaments)"
     },
+    "player_teams": {
+      "type": "array",
+      "description": "Array of teams (each team is an array of player emails) for pairs/triples/fours knockout tournaments",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "default": []
+    },
     "bracket": {
       "type": "object",
       "description": "Tournament bracket structure (for knockout tournaments)"
