@@ -14,6 +14,7 @@ import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
 import PlayerAccolades from '@/components/accolades/PlayerAccolades';
 import PasswordChangeCard from '@/components/profile/PasswordChangeCard';
 import AccessibilitySettingsCard from '@/components/profile/AccessibilitySettingsCard';
+import SeniorModeToggleCard from '@/components/profile/SeniorModeToggleCard';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
@@ -525,6 +526,9 @@ export default function Profile() {
             {clubId && membership && club && (
               <PayMembershipFeeCard club={club} clubId={clubId} userEmail={user.email} />
             )}
+
+            {/* Senior Experience Mode */}
+            <SeniorModeToggleCard />
 
             {/* Accessibility / Display settings */}
             <AccessibilitySettingsCard />

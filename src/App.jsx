@@ -10,6 +10,12 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { KioskProvider } from '@/lib/KioskContext';
 import { LayoutThemeProvider } from '@/lib/layoutTheme.jsx';
 import { AccessibilityProvider } from '@/lib/AccessibilityContext';
+import { SeniorModeProvider } from '@/lib/SeniorModeContext';
+import SeniorHome from './pages/senior/SeniorHome';
+import SeniorBookRink from './pages/senior/SeniorBookRink';
+import SeniorFixtures from './pages/senior/SeniorFixtures';
+import SeniorCompetitions from './pages/senior/SeniorCompetitions';
+import SeniorMembers from './pages/senior/SeniorMembers';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import BookingsAudit from './pages/BookingsAudit';
 import ScorecardHub from './pages/ScorecardHub';
@@ -78,6 +84,12 @@ const AuthenticatedApp = () => {
       <Route path="/MemberDirectory" element={<LayoutWrapper currentPageName="MemberDirectory"><MemberDirectory /></LayoutWrapper>} />
       <Route path="/ScorePrediction" element={<LayoutWrapper currentPageName="ScorePrediction"><ScorePrediction /></LayoutWrapper>} />
       <Route path="/CompetitionEntriesAdmin" element={<LayoutWrapper currentPageName="CompetitionEntriesAdmin"><CompetitionEntriesAdmin /></LayoutWrapper>} />
+      {/* Senior Experience Mode routes — no layout wrapper, they have their own SeniorLayout */}
+      <Route path="/SeniorHome" element={<SeniorHome />} />
+      <Route path="/SeniorBookRink" element={<SeniorBookRink />} />
+      <Route path="/SeniorFixtures" element={<SeniorFixtures />} />
+      <Route path="/SeniorCompetitions" element={<SeniorCompetitions />} />
+      <Route path="/SeniorMembers" element={<SeniorMembers />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -109,6 +121,7 @@ function App() {
   return (
     <AuthProvider>
       <KioskProvider>
+        <SeniorModeProvider>
         <AccessibilityProvider>
         <LayoutThemeProvider>
           <QueryClientProvider client={queryClientInstance}>
@@ -152,6 +165,7 @@ function App() {
           </QueryClientProvider>
         </LayoutThemeProvider>
         </AccessibilityProvider>
+        </SeniorModeProvider>
       </KioskProvider>
     </AuthProvider>
   )
