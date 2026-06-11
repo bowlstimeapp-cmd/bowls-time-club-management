@@ -267,8 +267,14 @@ export default function ScorePrediction() {
     ? allMatchScores.find(ms => ms.selection_id === currentFixture.id)
     : null;
 
+  // Check if admin has temporarily reopened predictions (stored as ISO timestamp on the selection)
+  const reopenUntil = currentFixture?.prediction_reopen_until
+    ? new Date(currentFixture.prediction_reopen_until)
+    : null;
+  const isReopenActive = reopenUntil && isAfter(reopenUntil, new Date());
+
   const canPredict = currentFixture
-    ? isBefore(today, parseISO(currentFixture.match_date))
+    ? isBefore(today, parseISO(currentFixture.match_date)) || isReopenActive
     : false;
 
   // Match has started = today >= match_date
@@ -306,6 +312,38 @@ export default function ScorePrediction() {
   });
 
   const [toggleOffConfirm, setToggleOffConfirm] = useState(null); // selection to confirm toggling off
+  const [reopenCountdown, setReopenCountdown] = useState('');
+
+  // Countdown timer for reopen window
+  useEffect(() => {
+    if (!isReopenActive || !reopenUntil) { setReopenCountdown(''); return; }
+    const tick = () => {
+      const diff = Math.max(0, reopenUntil - new Date());
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setReopenCountdown(`${mins}:${String(secs).padStart(2, '0')}`);
+      if (diff === 0) queryClient.invalidateQueries({ queryKey: ['selections', clubId] });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [isReopenActive, reopenUntil?.toISOString()]);
+
+  const reopenMutation = useMutation({
+    mutationFn: () => {
+      const until = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      return base44.functions.invoke('updateTeamSelection', {
+        action: 'update',
+        clubId,
+        selectionId: currentFixture.id,
+        data: { prediction_reopen_until: until },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['selections', clubId] });
+      toast.success('Predictions reopened for 30 minutes');
+    },
+  });
 
   const togglePredictionMutation = useMutation({
     mutationFn: ({ selectionId, enabled }) =>
@@ -445,13 +483,32 @@ export default function ScorePrediction() {
                 {/* Rink Predictions */}
                 <Card className="mb-4">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center justify-between gap-2 flex-wrap">
                       <span>Rink Predictions</span>
-                      {!canPredict && (
-                        <span className="text-xs font-normal text-gray-400 flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> Predictions closed
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {isReopenActive && (
+                          <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full flex items-center gap-1">
+                            🔓 Reopened · {reopenCountdown}
+                          </span>
+                        )}
+                        {!canPredict && !isReopenActive && (
+                          <span className="text-xs font-normal text-gray-400 flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> Predictions closed
+                          </span>
+                        )}
+                        {isAdmin && matchStarted && (
+                          <Button
+                            size="sm"
+                            variant={isReopenActive ? "outline" : "default"}
+                            className={isReopenActive ? "h-7 text-xs border-emerald-300 text-emerald-700" : "h-7 text-xs bg-emerald-600 hover:bg-emerald-700"}
+                            onClick={() => reopenMutation.mutate()}
+                            disabled={reopenMutation.isPending}
+                          >
+                            {reopenMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : '🔓'}
+                            {isReopenActive ? 'Extend 30 mins' : 'Reopen 30 mins'}
+                          </Button>
+                        )}
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

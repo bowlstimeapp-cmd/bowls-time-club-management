@@ -84,6 +84,10 @@
       "default": false,
       "description": "Whether this match is included in Score Prediction"
     },
+    "prediction_reopen_until": {
+      "type": "string",
+      "description": "ISO timestamp until which predictions are temporarily reopened by an admin"
+    },
     "is_archived": {
       "type": "boolean",
       "default": false,
