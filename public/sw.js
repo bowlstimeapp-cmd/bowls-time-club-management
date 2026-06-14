@@ -1,8 +1,8 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
 
-self.addEventListener('push', function (event) {
-  let data = { title: 'BowlsTime', body: 'You have a new notification', url: '/' };
+self.addEventListener('push', (event) => {
+  let data = { title: 'New notification', body: '', url: '/' };
 
   if (event.data) {
     try {
@@ -12,25 +12,28 @@ self.addEventListener('push', function (event) {
     }
   }
 
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: data.url || '/' },
+    vibrate: [200, 100, 200]
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'BowlsTime', {
-      body: data.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data: { url: data.url || '/' },
-    })
+    self.registration.showNotification(data.title, options)
   );
 });
 
-self.addEventListener('notificationclick', function (event) {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
-      for (const client of list) {
-        if ('focus' in client) return client.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) return client.focus();
       }
-      return clients.openWindow(url);
+      if (clients.openWindow) return clients.openWindow(url);
     })
   );
 });
