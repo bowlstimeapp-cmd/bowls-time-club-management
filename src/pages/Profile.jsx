@@ -517,7 +517,7 @@ export default function Profile() {
               </CardContent>
             </Card>
 
-            {/* Notifications */}
+            {/* Club-specific Notifications (Email + SMS) */}
             {clubId && membership && (
               <Card className="shadow-lg">
                 <CardHeader>
@@ -525,7 +525,7 @@ export default function Profile() {
                     <Bell className="w-5 h-5 text-emerald-600" />
                     Notification Preferences
                   </CardTitle>
-                  <CardDescription>Manage how you receive notifications from the club</CardDescription>
+                  <CardDescription>Manage how you receive notifications from {club?.name || 'this club'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -542,34 +542,42 @@ export default function Profile() {
                         <p className="text-sm text-gray-500">
                           {phone ? 'Receive SMS when you are selected for matches' : 'Add a phone number above to enable SMS notifications'}
                           <p className="text-sm text-red-500">Registered phone number must be a <b>mobile</b> number for SMS notifications to work</p>
-
                         </p>
                       </div>
                       <Switch checked={smsNotifications} onCheckedChange={handleSmsNotificationsChange} disabled={!phone} />
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div>
-                      <Label className="text-base flex items-center gap-2">
-                        <Smartphone className="w-4 h-4 text-emerald-600" />
-                        Push Notifications
-                      </Label>
-                      <p className="text-sm text-gray-500">
-                        {!pushSupported
-                          ? 'Not supported in this browser. Use Chrome or Safari (iOS 16.4+ PWA).'
-                          : pushEnabled
-                            ? 'You will receive push notifications on this device'
-                            : 'Get notified on this device even when the app is closed'}
-                      </p>
-                    </div>
-                    {pushLoading
-                      ? <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                      : <Switch checked={pushEnabled} onCheckedChange={handleTogglePush} disabled={!pushSupported} />
-                    }
-                  </div>
                 </CardContent>
               </Card>
             )}
+
+            {/* Push Notifications — global, not club-specific */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Smartphone className="w-5 h-5 text-emerald-600" />
+                  Push Notifications
+                </CardTitle>
+                <CardDescription>Receive notifications on this device across all your clubs</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      {!pushSupported
+                        ? 'Not supported in this browser. Use Chrome or Safari (iOS 16.4+ PWA).'
+                        : pushEnabled
+                          ? 'You will receive push notifications on this device'
+                          : 'Get notified on this device even when the app is closed'}
+                    </p>
+                  </div>
+                  {pushLoading
+                    ? <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                    : <Switch checked={pushEnabled} onCheckedChange={handleTogglePush} disabled={!pushSupported} />
+                  }
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Unavailability */}
             <Card className="shadow-lg">
