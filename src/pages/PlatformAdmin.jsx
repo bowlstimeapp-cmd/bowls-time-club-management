@@ -60,6 +60,7 @@ import MarketingPDFGenerator from '@/components/admin/MarketingPDFGenerator';
 import PlatformSettings from '@/components/admin/PlatformSettings';
 import PlatformDocuments from '@/components/admin/PlatformDocuments';
 import SmsUsageTab from '@/components/admin/SmsUsageTab';
+import TestPushNotification from '@/components/admin/TestPushNotification';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -882,6 +883,9 @@ export default function PlatformAdmin() {
             {/* ── SETTINGS ── */}
             <TabsContent value="settings">
              <PlatformSettings />
+             <div className="mt-6">
+               <TestPushNotification />
+             </div>
             </TabsContent>
 
             {/* ── DOCUMENTS ── */}
