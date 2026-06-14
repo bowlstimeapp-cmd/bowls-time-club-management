@@ -1,7 +1,7 @@
 {
   "name": "BowlsTime",
   "short_name": "BowlsTime",
-  "description": "Your club management app",
+  "description": "Club management for lawn bowls clubs",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
