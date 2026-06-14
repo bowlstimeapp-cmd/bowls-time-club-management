@@ -127,8 +127,7 @@ export default function Profile() {
       const json = sub.toJSON();
       await base44.functions.invoke('savePushSubscription', {
         endpoint: json.endpoint,
-        p256dh: json.keys?.p256dh || '',
-        auth: json.keys?.auth || '',
+        keys: json.keys,
       });
 
       setPushEnabled(true);

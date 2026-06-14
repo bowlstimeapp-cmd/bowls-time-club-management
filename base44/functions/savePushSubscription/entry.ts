@@ -6,23 +6,15 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { endpoint, p256dh, auth } = await req.json();
-    if (!endpoint) return Response.json({ error: 'Missing endpoint' }, { status: 400 });
+    const { endpoint, keys } = await req.json();
 
-    // Remove any existing subscription for this user
-    const existing = await base44.asServiceRole.entities.PushSubscription.filter({ user_email: user.email });
+    // Remove existing subscriptions for this user
+    const existing = await base44.asServiceRole.entities.PushSubscription.filter({ user_id: user.id });
     for (const sub of existing) {
       await base44.asServiceRole.entities.PushSubscription.delete(sub.id);
     }
 
-    // Save new subscription
-    await base44.asServiceRole.entities.PushSubscription.create({
-      user_email: user.email,
-      endpoint,
-      p256dh: p256dh || '',
-      auth: auth || '',
-    });
-
+    await base44.asServiceRole.entities.PushSubscription.create({ user_id: user.id, endpoint, keys });
     return Response.json({ success: true });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

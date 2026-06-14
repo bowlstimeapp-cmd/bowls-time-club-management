@@ -2,26 +2,24 @@
   "name": "PushSubscription",
   "type": "object",
   "properties": {
-    "user_email": {
+    "user_id": {
       "type": "string",
-      "description": "Email of the subscribed user"
+      "description": "User ID this subscription belongs to"
     },
     "endpoint": {
       "type": "string",
       "description": "Push subscription endpoint URL"
     },
-    "p256dh": {
-      "type": "string",
-      "description": "Client public key (base64url)"
-    },
-    "auth": {
-      "type": "string",
-      "description": "Client auth secret (base64url)"
+    "keys": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Push subscription keys (p256dh, auth)"
     }
   },
   "required": [
-    "user_email",
-    "endpoint"
+    "user_id",
+    "endpoint",
+    "keys"
   ],
   "rls": {
     "create": {},
