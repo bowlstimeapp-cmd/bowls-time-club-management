@@ -35,7 +35,7 @@ async function buildVapidJwt(audience, email, privateKeyB64url) {
 
   const now = Math.floor(Date.now() / 1000);
   const jwt = await new jose.SignJWT({ sub: email })
-    .setProtectedHeader({ alg: 'ES256', typ: 'JWT' })
+    .setProtectedHeader({ alg: 'ES256' })
     .setAudience(audience)
     .setIssuedAt(now)
     .setExpirationTime(now + 12 * 3600)
@@ -148,7 +148,9 @@ Deno.serve(async (req) => {
       try {
         const parsedUrl = new URL(sub.endpoint);
         const audience = `${parsedUrl.protocol}//${parsedUrl.host}`;
-        const jwt = await buildVapidJwt(audience, vapidEmail, privateKeyB64);
+        // Apple requires sub to be in mailto: format
+        const subEmail = vapidEmail.startsWith('mailto:') ? vapidEmail : `mailto:${vapidEmail}`;
+        const jwt = await buildVapidJwt(audience, subEmail, privateKeyB64);
         const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
 
         let body;
