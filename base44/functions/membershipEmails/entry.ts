@@ -86,6 +86,16 @@ Deno.serve(async (req) => {
         `.trim(),
       });
 
+      // Push notification (best-effort)
+      try {
+        await base44.asServiceRole.functions.invoke('sendPushNotification', {
+          userEmail: memberEmail,
+          title: `Welcome to ${clubName}!`,
+          message: 'Your membership has been approved. Tap to get started.',
+          url: 'https://app.bowls-time.com',
+        });
+      } catch { /* push is best-effort */ }
+
       return Response.json({ sent: 1 });
 
     } else {

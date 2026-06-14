@@ -384,6 +384,15 @@ if (club?.email_member_notifications) {
       console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
       continue;
     }
+    // Also send a push notification
+    try {
+      await base44.functions.invoke('sendPushNotification', {
+        userEmail: member.user_email,
+        title: `Match Selection — ${competition}`,
+        message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+        url: matchUrl,
+      });
+    } catch { /* push is best-effort */ }
     await base44.entities.EmailLog.create({
       club_id: clubId,
       club_name: club?.name || '',

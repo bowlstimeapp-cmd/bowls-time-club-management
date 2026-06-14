@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert, MessageSquare } from 'lucide-react';
+import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert, MessageSquare, Smartphone } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
@@ -43,6 +43,9 @@ export default function Profile() {
   const [endDate, setEndDate] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushSupported, setPushSupported] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -61,6 +64,82 @@ export default function Profile() {
     };
     loadUser();
   }, []);
+
+  // Check current push subscription status
+  useEffect(() => {
+    const checkPush = async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setPushSupported(false);
+        return;
+      }
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+      } catch {
+        setPushSupported(false);
+      }
+    };
+    checkPush();
+  }, []);
+
+  const handleTogglePush = async (checked) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      toast.error('Push notifications are not supported in this browser');
+      return;
+    }
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      if (!checked) {
+        // Unsubscribe
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+        setPushEnabled(false);
+        toast.success('Push notifications disabled');
+        setPushLoading(false);
+        return;
+      }
+
+      // Get VAPID public key from backend
+      const keyRes = await base44.functions.invoke('getVapidPublicKey', {});
+      const publicKey = keyRes?.data?.publicKey;
+      if (!publicKey) throw new Error('Could not fetch VAPID key');
+
+      // Convert base64url to Uint8Array
+      const raw = publicKey.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = raw.length % 4;
+      const b64 = pad ? raw + '='.repeat(4 - pad) : raw;
+      const binary = atob(b64);
+      const applicationServerKey = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) applicationServerKey[i] = binary.charCodeAt(i);
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+
+      const json = sub.toJSON();
+      await base44.functions.invoke('savePushSubscription', {
+        endpoint: json.endpoint,
+        p256dh: json.keys?.p256dh || '',
+        auth: json.keys?.auth || '',
+      });
+
+      setPushEnabled(true);
+      toast.success('Push notifications enabled!');
+    } catch (err) {
+      if (err.name === 'NotAllowedError') {
+        toast.error('Permission denied. Please allow notifications in your browser settings.');
+      } else {
+        toast.error('Could not enable push notifications: ' + err.message);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const { data: myFeedback = [], isLoading: loadingFeedback } = useQuery({
     queryKey: ['myFeedback', user?.email],
@@ -466,6 +545,25 @@ export default function Profile() {
                       <Switch checked={smsNotifications} onCheckedChange={handleSmsNotificationsChange} disabled={!phone} />
                     </div>
                   )}
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div>
+                      <Label className="text-base flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-emerald-600" />
+                        Push Notifications
+                      </Label>
+                      <p className="text-sm text-gray-500">
+                        {!pushSupported
+                          ? 'Not supported in this browser. Use Chrome or Safari (iOS 16.4+ PWA).'
+                          : pushEnabled
+                            ? 'You will receive push notifications on this device'
+                            : 'Get notified on this device even when the app is closed'}
+                      </p>
+                    </div>
+                    {pushLoading
+                      ? <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                      : <Switch checked={pushEnabled} onCheckedChange={handleTogglePush} disabled={!pushSupported} />
+                    }
+                  </div>
                 </CardContent>
               </Card>
             )}
