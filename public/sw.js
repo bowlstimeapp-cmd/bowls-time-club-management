@@ -1,51 +1,36 @@
-// BowlsTime Service Worker — Web Push handler
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
 
-self.addEventListener('install', function(event) {
-  // Take control immediately, don't wait for old SW to be replaced
-  self.skipWaiting();
-});
+self.addEventListener('push', function (event) {
+  let data = { title: 'BowlsTime', body: 'You have a new notification', url: '/' };
 
-self.addEventListener('activate', function(event) {
-  // Take control of all pages immediately
-  event.waitUntil(clients.claim());
-});
-
-self.addEventListener('push', function(event) {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch (e) {
-    data = { title: 'BowlsTime', body: event.data ? event.data.text() : '' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data.body = event.data.text();
+    }
   }
 
-  const title = data.title || 'BowlsTime';
-  const options = {
-    body: data.body || data.message || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    data: { url: data.url || 'https://app.bowls-time.com' },
-  };
-
-  // CRITICAL for iOS Safari: must wrap showNotification in event.waitUntil()
-  // so the service worker does not terminate before the notification is shown.
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(data.title || 'BowlsTime', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: data.url || '/' },
+    })
   );
 });
 
-self.addEventListener('notificationclick', function(event) {
+self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  const url = event.notification.data?.url || 'https://app.bowls-time.com';
+  const url = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      for (const client of clientList) {
-        if (client.url === url && 'focus' in client) {
-          return client.focus();
-        }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+      for (const client of list) {
+        if ('focus' in client) return client.focus();
       }
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
+      return clients.openWindow(url);
     })
   );
 });
