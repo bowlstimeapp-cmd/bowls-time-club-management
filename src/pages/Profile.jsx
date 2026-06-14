@@ -91,6 +91,9 @@ export default function Profile() {
     setPushLoading(true);
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
+
+      // Wait for the SW to be fully active (handles the case where
+      // a new SW is waiting to take over — skipWaiting handles this automatically)
       await navigator.serviceWorker.ready;
 
       if (!checked) {

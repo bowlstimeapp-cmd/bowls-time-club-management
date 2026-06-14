@@ -1,5 +1,15 @@
 // BowlsTime Service Worker — Web Push handler
 
+self.addEventListener('install', function(event) {
+  // Take control immediately, don't wait for old SW to be replaced
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  // Take control of all pages immediately
+  event.waitUntil(clients.claim());
+});
+
 self.addEventListener('push', function(event) {
   let data = {};
   try {
