@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { userEmail, user_id, title, message, body, url } = await req.json();
+    const { userEmail, user_id, title, message, body, url, unreadCount } = await req.json();
 
     let subscriptions = [];
 
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     const results = [];
     for (const sub of subscriptions) {
       const jwt = await buildVapidJwt(sub.endpoint, vapidPrivateKey, vapidPublicKey, vapidEmail);
-      const encryptedBody = await encryptPayload(sub.keys, JSON.stringify({ title, body: message || body || '', url: url || '/' }));
+      const encryptedBody = await encryptPayload(sub.keys, JSON.stringify({ title, body: message || body || '', url: url || '/', unreadCount: unreadCount || 0 }));
 
       const response = await fetch(sub.endpoint, {
         method: 'POST',

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { updateAppBadge } from '@/lib/appBadge';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Popover,
@@ -39,11 +40,17 @@ export default function NotificationDropdown({ userEmail, clubId }) {
     ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', userEmail] });
+      updateAppBadge(0);
     },
   });
 
   const unreadNotifications = notifications.filter(n => !n.is_read);
   const recentNotifications = notifications.slice(0, 5);
+
+  // Sync badge count with unread notifications on load
+  useEffect(() => {
+    updateAppBadge(unreadNotifications.length);
+  }, [unreadNotifications.length]);
 
   const handleOpen = (isOpen) => {
     setOpen(isOpen);

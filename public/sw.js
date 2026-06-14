@@ -1,27 +1,33 @@
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 self.addEventListener('push', (event) => {
   let data = { title: 'New notification', body: '', url: '/' };
-
   if (event.data) {
-    try {
-      data = event.data.json();
-    } catch {
-      data.body = event.data.text();
-    }
+    try { data = event.data.json(); } catch { data.body = event.data.text(); }
   }
 
-  const options = {
-    body: data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    data: { url: data.url || '/' },
-    vibrate: [200, 100, 200]
-  };
+  const unreadCount = data.unreadCount || 0;
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    (async () => {
+      // Update app icon badge
+      if ('setAppBadge' in self) {
+        if (unreadCount > 0) {
+          await self.setAppBadge(unreadCount);
+        } else {
+          await self.clearAppBadge();
+        }
+      }
+
+      await self.registration.showNotification(data.title, {
+        body: data.body || '',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        data: { url: data.url || '/' },
+        vibrate: [200, 100, 200]
+      });
+    })()
   );
 });
 
