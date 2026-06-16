@@ -1,5 +1,32 @@
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+// Service Worker — Network-first strategy.
+// Always serve the latest version from the network when online.
+// No app shell or asset caching — freshness is prioritised.
+
+self.addEventListener('install', () => {
+  // Activate immediately without waiting for existing tabs to close
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  // Take control of all open clients immediately
+  event.waitUntil(
+    // Clear any previously cached data from old SW versions
+    caches.keys().then(keys =>
+      Promise.all(keys.map(key => caches.delete(key)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Network-first fetch: always try the network, never serve stale cache
+self.addEventListener('fetch', (event) => {
+  // Only handle GET requests; ignore non-http(s) schemes (chrome-extension, etc.)
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
+
+  event.respondWith(fetch(event.request));
+});
+
+// ── Push Notifications ────────────────────────────────────────────────────────
 
 self.addEventListener('push', (event) => {
   console.log('[SW] Push event received');
@@ -20,14 +47,11 @@ self.addEventListener('push', (event) => {
   const unreadCount = data.unreadCount || 0;
   console.log('[SW] unreadCount from payload:', unreadCount);
 
-  // Note: In service worker context, the Badging API is on 'self' not 'navigator'.
-  // self.setAppBadge / self.clearAppBadge are the correct SW equivalents.
   const hasBadgeAPI = 'setAppBadge' in self;
   console.log('[SW] setAppBadge available on self:', hasBadgeAPI);
 
   event.waitUntil(
     (async () => {
-      // Update app icon badge
       if (hasBadgeAPI) {
         try {
           if (unreadCount > 0) {
@@ -49,7 +73,7 @@ self.addEventListener('push', (event) => {
         icon: '/icon-192.png',
         badge: '/icon-192.png',
         data: { url: data.url || '/' },
-        vibrate: [200, 100, 200]
+        vibrate: [200, 100, 200],
       });
 
       console.log('[SW] Notification shown');
