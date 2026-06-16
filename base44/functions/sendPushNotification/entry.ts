@@ -86,20 +86,28 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { userEmail, user_id, title, message, body, url, unreadCount } = await req.json();
+    const { userEmail, userEmails, user_id, title, message, body, url, unreadCount } = await req.json();
 
+    // Resolve target emails into subscriptions
     let subscriptions = [];
 
     if (user_id) {
       subscriptions = await base44.asServiceRole.entities.PushSubscription.filter({ user_id });
-    } else if (userEmail) {
-      // Look up user_id by email via memberships or direct user lookup
-      const allSubs = await base44.asServiceRole.entities.PushSubscription.list();
-      // Fall back: find by matching user email through platform users
-      const users = await base44.asServiceRole.entities.User.filter({ email: userEmail });
-      if (users.length > 0) {
-        subscriptions = await base44.asServiceRole.entities.PushSubscription.filter({ user_id: users[0].id });
-      }
+    } else {
+      // Support single email or bulk array of emails
+      const emails = userEmails || (userEmail ? [userEmail] : []);
+      if (emails.length === 0) return Response.json({ success: false, reason: 'no_target' });
+
+      // Fetch all users matching those emails, then fetch their subscriptions in parallel
+      const userResults = await Promise.all(
+        emails.map(email => base44.asServiceRole.entities.User.filter({ email }))
+      );
+      const userIds = userResults.flat().map(u => u.id);
+
+      const subResults = await Promise.all(
+        userIds.map(uid => base44.asServiceRole.entities.PushSubscription.filter({ user_id: uid }))
+      );
+      subscriptions = subResults.flat();
     }
 
     if (subscriptions.length === 0) return Response.json({ success: false, reason: 'no_subscription' });

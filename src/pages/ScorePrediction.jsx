@@ -358,20 +358,19 @@ export default function ScorePrediction() {
       queryClient.invalidateQueries({ queryKey: ['allPredictions', clubId] });
       toast.success(enabled ? 'Fixture enabled for predictions' : 'Fixture removed from predictions');
 
-      // Send push notifications to all club members when a fixture is enabled
+      // Send a single bulk push notification to all club members when a fixture is enabled
       if (enabled && sel) {
         const matchName = sel.match_name || sel.competition;
         const matchDate = sel.match_date ? format(parseISO(sel.match_date), 'd MMMM yyyy') : '';
-        members.forEach(member => {
-          if (member.user_email) {
-            base44.functions.invoke('sendPushNotification', {
-              userEmail: member.user_email,
-              title: '🎯 Score Prediction Open!',
-              message: `${matchName} (${matchDate}) is now available for score predictions. Get your entry in!`,
-              url: `/ScorePrediction?clubId=${clubId}`,
-            }).catch(() => {}); // fire and forget
-          }
-        });
+        const emails = members.map(m => m.user_email).filter(Boolean);
+        if (emails.length > 0) {
+          base44.functions.invoke('sendPushNotification', {
+            userEmails: emails,
+            title: '🎯 Score Prediction Open!',
+            message: `${matchName} (${matchDate}) is now available for score predictions. Get your entry in!`,
+            url: `/ScorePrediction?clubId=${clubId}`,
+          }).catch(() => {});
+        }
       }
     },
   });

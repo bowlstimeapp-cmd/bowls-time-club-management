@@ -17,13 +17,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network-first fetch: always try the network, never serve stale cache
+// Network-first fetch: always try the network, never serve stale cache.
+// For navigation requests, fall back gracefully so the PWA doesn't freeze.
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests; ignore non-http(s) schemes (chrome-extension, etc.)
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
-  event.respondWith(fetch(event.request));
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      // Offline fallback for navigation — return a minimal offline page
+      if (event.request.mode === 'navigate') {
+        return new Response(
+          '<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>You are offline</h2><p>Please check your connection and try again.</p><button onclick="location.reload()">Retry</button></body></html>',
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      }
+      // For other requests (assets, API), just fail gracefully
+      return new Response('', { status: 503 });
+    })
+  );
 });
 
 // ── Push Notifications ────────────────────────────────────────────────────────
