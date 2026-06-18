@@ -72,6 +72,16 @@ export default function MemberDashboard() {
     }
   };
 
+  const handleDragStart = () => {
+    // Prevent body scroll on touch devices during drag
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleDragEndWithScroll = (result) => {
+    document.body.style.overflow = '';
+    handleDragEnd(result);
+  };
+
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
   const { data: club } = useQuery({
@@ -580,7 +590,7 @@ export default function MemberDashboard() {
         </div>
 
         {/* Draggable sections */}
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEndWithScroll}>
           <Droppable droppableId="dashboard-sections" isDropDisabled={!reordering}>
             {(provided) => (
               <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-5">
