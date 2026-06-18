@@ -8,23 +8,18 @@ import {
   Calendar, User, CheckCircle, XCircle, Clock, ArrowRight,
   Trophy, Users, Bell, MapPin, ChevronRight
 } from 'lucide-react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { format, parseISO, isAfter, isBefore, addDays, startOfDay, endOfDay, addWeeks } from 'date-fns';
+import { format, parseISO, addDays, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function MemberDashboard() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
-
-  // ── Queries ────────────────────────────────────────────────────────────────
+  useEffect(() => { base44.auth.me().then(setUser); }, []);
 
   const { data: club } = useQuery({
     queryKey: ['club', clubId],
@@ -36,6 +31,12 @@ export default function MemberDashboard() {
     queryKey: ['myMembership', clubId, user?.email],
     queryFn: async () => (await base44.entities.ClubMembership.filter({ club_id: clubId, user_email: user.email }))[0],
     enabled: !!clubId && !!user?.email,
+  });
+
+  const { data: members = [] } = useQuery({
+    queryKey: ['clubMembers', clubId],
+    queryFn: () => base44.entities.ClubMembership.filter({ club_id: clubId, status: 'approved' }),
+    enabled: !!clubId,
   });
 
   // Upcoming bookings
@@ -52,31 +53,35 @@ export default function MemberDashboard() {
     enabled: !!clubId && !!user?.email,
   });
 
-  // Team selections the member is in
+  // All published selections
   const { data: allSelections = [] } = useQuery({
     queryKey: ['allSelections', clubId],
     queryFn: () => base44.entities.TeamSelection.filter({ club_id: clubId, status: 'published' }),
     enabled: !!clubId,
   });
 
-  // Member availability
-  const { data: availabilities = [] } = useQuery({
+  // My availability records (uses user_email + is_available boolean)
+  const { data: myAvailabilities = [] } = useQuery({
     queryKey: ['myAvailabilities', clubId, user?.email],
-    queryFn: () => base44.entities.MemberAvailability.filter({ club_id: clubId, member_email: user.email }),
+    queryFn: () => base44.entities.MemberAvailability.filter({ club_id: clubId, user_email: user.email }),
     enabled: !!clubId && !!user?.email,
   });
 
   // League teams & fixtures
-  const { data: leagueTeams = [] } = useQuery({
-    queryKey: ['myLeagueTeams', clubId, user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.LeagueTeam.filter({ club_id: clubId });
-      return all.filter(t => t.players && t.players.includes(user.email));
-    },
-    enabled: !!clubId && !!user?.email,
+  const { data: allLeagueTeams = [] } = useQuery({
+    queryKey: ['leagueTeams', clubId],
+    queryFn: () => base44.entities.LeagueTeam.filter({ club_id: clubId }),
+    enabled: !!clubId,
   });
 
-  const myTeamIds = leagueTeams.map(t => t.id);
+  const { data: leagues = [] } = useQuery({
+    queryKey: ['leagues', clubId],
+    queryFn: () => base44.entities.League.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
+  const myTeams = allLeagueTeams.filter(t => t.players && t.players.includes(user?.email));
+  const myTeamIds = myTeams.map(t => t.id);
 
   const { data: leagueFixtures = [] } = useQuery({
     queryKey: ['myLeagueFixtures', clubId, myTeamIds],
@@ -95,108 +100,126 @@ export default function MemberDashboard() {
     enabled: !!clubId && myTeamIds.length > 0,
   });
 
-  // Club tournaments where user is a participant
+  // Published club tournaments
   const { data: tournaments = [] } = useQuery({
     queryKey: ['myTournaments', clubId, user?.email],
     queryFn: () => base44.entities.ClubTournament.filter({ club_id: clubId, status: 'published' }),
     enabled: !!clubId && !!user?.email,
   });
 
-  // Notifications (unread)
+  // Unread notifications
   const { data: notifications = [] } = useQuery({
     queryKey: ['myNotifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email, is_read: false }),
     enabled: !!user?.email,
   });
 
-  // ── Availability mutation ──────────────────────────────────────────────────
-  const availabilityMutation = useMutation({
-    mutationFn: async ({ selectionId, status }) => {
-      const existing = availabilities.find(a => a.selection_id === selectionId);
+  // ── Availability mutation (matches Selection page pattern) ─────────────
+  const setAvailabilityMutation = useMutation({
+    mutationFn: async ({ selectionId, isAvailable }) => {
+      const existing = myAvailabilities.find(a => a.selection_id === selectionId);
       if (existing) {
-        return base44.entities.MemberAvailability.update(existing.id, { status });
+        return base44.entities.MemberAvailability.update(existing.id, { is_available: isAvailable });
       }
       return base44.entities.MemberAvailability.create({
         club_id: clubId,
         selection_id: selectionId,
-        member_email: user.email,
-        member_name: membership?.user_name || user.full_name,
-        status,
+        user_email: user.email,
+        is_available: isAvailable,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['myAvailabilities', clubId, user?.email] });
+      queryClient.invalidateQueries({ queryKey: ['myAvailabilities'] });
       toast.success('Availability updated');
     },
   });
 
-  // ── Derived data ───────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────
+  const getMemberName = (email) => {
+    const member = members.find(m => m.user_email === email);
+    if (member?.first_name && member?.surname) return `${member.first_name} ${member.surname}`;
+    return member?.user_name || email;
+  };
 
   const today = startOfDay(new Date());
+  const todayStr = format(today, 'yyyy-MM-dd');
 
-  // Selections where this member is included
+  // Selections where this member is included (upcoming only)
   const mySelections = allSelections.filter(sel => {
     if (!sel.selections || !sel.match_date) return false;
-    if (sel.match_date < format(today, 'yyyy-MM-dd')) return false;
-    const allPositions = Object.values(sel.selections);
-    return allPositions.includes(user?.email);
+    if (sel.match_date < todayStr) return false;
+    if (sel.is_archived) return false;
+    return Object.values(sel.selections).includes(user?.email);
   }).sort((a, b) => a.match_date.localeCompare(b.match_date));
 
-  const getAvailabilityForSelection = (selectionId) =>
-    availabilities.find(a => a.selection_id === selectionId);
+  const getMyAvailability = (selectionId) => {
+    const avail = myAvailabilities.find(a => a.selection_id === selectionId);
+    return avail?.is_available; // true, false, or undefined
+  };
 
-  // Active tournament matches for this user
+  // ── Tournament matches (knockout & round-robin) ─────────────────────────
   const myTournamentMatches = [];
   if (user?.email) {
     tournaments.forEach(t => {
       if (t.tournament_type === 'knockout' && t.bracket) {
-        const processRound = (rounds) => {
-          Object.entries(rounds || {}).forEach(([roundName, matches]) => {
-            (matches || []).forEach(match => {
-              if (!match || match.winner_id) return;
-              const participants = [
-                ...(Array.isArray(match.player1) ? match.player1 : [match.player1]),
-                ...(Array.isArray(match.player2) ? match.player2 : [match.player2]),
-              ].filter(Boolean);
-              if (participants.includes(user.email)) {
-                myTournamentMatches.push({
-                  tournament: t,
-                  round: roundName,
-                  match,
-                  opponent: participants.filter(p => p !== user.email),
-                });
-              }
+        const rounds = t.bracket?.rounds || t.bracket;
+        Object.entries(rounds || {}).forEach(([roundName, matches]) => {
+          (matches || []).forEach(match => {
+            if (!match || match.winner_id) return;
+            const p1 = Array.isArray(match.player1) ? match.player1 : [match.player1];
+            const p2 = Array.isArray(match.player2) ? match.player2 : [match.player2];
+            const all = [...p1, ...p2].filter(Boolean);
+            if (all.includes(user.email)) {
+              const opponents = all.filter(p => p !== user.email);
+              myTournamentMatches.push({
+                tournamentName: t.name,
+                round: roundName,
+                opponents,
+                playByDate: match.play_by_date || null,
+              });
+            }
+          });
+        });
+      }
+      if (t.tournament_type === 'round_robin' && t.fixtures) {
+        // Find teams the user is in
+        const myTeamIds = (t.teams || [])
+          .filter(team => {
+            const captain = team.captain;
+            return captain === user.email || captain === getMemberName(user.email);
+          })
+          .map(team => team.id);
+
+        t.fixtures
+          .filter(f => !f.winner_id && f.team1_score === undefined && f.team2_score === undefined)
+          .filter(f => myTeamIds.includes(f.team1_id) || myTeamIds.includes(f.team2_id))
+          .forEach(f => {
+            const opponentId = myTeamIds.includes(f.team1_id) ? f.team2_id : f.team1_id;
+            const opponentTeam = (t.teams || []).find(team => team.id === opponentId);
+            myTournamentMatches.push({
+              tournamentName: t.name,
+              round: f.round || f.group || '',
+              opponents: [opponentTeam?.name || opponentTeam?.captain || 'TBD'],
+              playByDate: null,
             });
           });
-        };
-        processRound(t.bracket?.rounds || t.bracket);
       }
     });
   }
 
-  // Notifications summary items
+  // ── Notifications summary ─────────────────────────────────────────────
   const notifItems = [];
-  const unreadCount = notifications.length;
-  if (unreadCount > 0) {
-    notifItems.push({ text: `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`, type: 'notification' });
-  }
-  // Selections needing availability response
-  const pendingSelections = mySelections.filter(sel => !getAvailabilityForSelection(sel.id));
-  if (pendingSelections.length > 0) {
-    notifItems.push({ text: `You have ${pendingSelections.length} match selection${pendingSelections.length > 1 ? 's' : ''} awaiting your availability`, type: 'selection' });
-  }
-  // Upcoming bookings this week
+  if (notifications.length > 0)
+    notifItems.push(`You have ${notifications.length} unread notification${notifications.length > 1 ? 's' : ''}`);
+  const pendingSelections = mySelections.filter(sel => getMyAvailability(sel.id) === undefined);
+  if (pendingSelections.length > 0)
+    notifItems.push(`${pendingSelections.length} match selection${pendingSelections.length > 1 ? 's' : ''} awaiting your availability`);
   const weekEnd = format(addDays(today, 7), 'yyyy-MM-dd');
   const bookingsThisWeek = bookings.filter(b => b.date <= weekEnd);
-  if (bookingsThisWeek.length > 0) {
-    notifItems.push({ text: `You have ${bookingsThisWeek.length} upcoming booking${bookingsThisWeek.length > 1 ? 's' : ''} this week`, type: 'booking' });
-  }
-  // League fixtures in next 14 days
-  const twoWeeksEnd = format(addDays(today, 14), 'yyyy-MM-dd');
-  const upcomingFixtures = leagueFixtures.filter(f => f.match_date <= twoWeeksEnd);
-  if (upcomingFixtures.length > 0) {
-    notifItems.push({ text: `You have ${upcomingFixtures.length} league fixture${upcomingFixtures.length > 1 ? 's' : ''} in the next 14 days`, type: 'fixture' });
-  }
+  if (bookingsThisWeek.length > 0)
+    notifItems.push(`${bookingsThisWeek.length} upcoming booking${bookingsThisWeek.length > 1 ? 's' : ''} this week`);
+  if (myTournamentMatches.length > 0)
+    notifItems.push(`${myTournamentMatches.length} outstanding competition match${myTournamentMatches.length > 1 ? 'es' : ''}`);
 
   const memberFirstName = user?.first_name || user?.full_name?.split(' ')[0] || 'Member';
 
@@ -212,14 +235,14 @@ export default function MemberDashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        {/* ── Welcome Header ──────────────────────────────────────────────── */}
+        {/* Welcome Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl p-5 text-white">
           <p className="text-emerald-100 text-sm mb-1">{club?.name}</p>
           <h1 className="text-2xl font-bold">Welcome back, {memberFirstName} 👋</h1>
           <p className="text-emerald-100 text-sm mt-1">{format(new Date(), 'EEEE, d MMMM yyyy')}</p>
         </div>
 
-        {/* ── Notifications Summary ────────────────────────────────────────── */}
+        {/* Notifications Summary */}
         {notifItems.length > 0 && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4">
@@ -228,10 +251,10 @@ export default function MemberDashboard() {
                 <span className="font-semibold text-amber-800 text-sm">Action Required</span>
               </div>
               <ul className="space-y-2">
-                {notifItems.map((item, i) => (
+                {notifItems.map((text, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                    {item.text}
+                    {text}
                   </li>
                 ))}
               </ul>
@@ -239,7 +262,7 @@ export default function MemberDashboard() {
           </Card>
         )}
 
-        {/* ── Quick Actions ────────────────────────────────────────────────── */}
+        {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
           <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
             <Button className="w-full h-16 text-base bg-emerald-600 hover:bg-emerald-700 flex-col gap-1">
@@ -255,7 +278,7 @@ export default function MemberDashboard() {
           </Link>
         </div>
 
-        {/* ── Selected Matches & Availability ─────────────────────────────── */}
+        {/* Selected Matches & Availability */}
         {mySelections.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
@@ -267,8 +290,7 @@ export default function MemberDashboard() {
             <CardContent className="p-0">
               <div className="divide-y">
                 {mySelections.map(sel => {
-                  const avail = getAvailabilityForSelection(sel.id);
-                  const status = avail?.status;
+                  const avail = getMyAvailability(sel.id);
                   return (
                     <div key={sel.id} className="p-4">
                       <div className="flex items-start justify-between gap-3 mb-2">
@@ -293,15 +315,15 @@ export default function MemberDashboard() {
                             )}
                           </div>
                         </div>
-                        <AvailabilityBadge status={status} />
+                        <AvailabilityBadge isAvailable={avail} />
                       </div>
-                      {!status && (
+                      {avail === undefined && (
                         <div className="flex gap-2 mt-2">
                           <Button
                             size="sm"
                             className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
-                            onClick={() => availabilityMutation.mutate({ selectionId: sel.id, status: 'available' })}
-                            disabled={availabilityMutation.isPending}
+                            onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: true })}
+                            disabled={setAvailabilityMutation.isPending}
                           >
                             <CheckCircle className="w-3.5 h-3.5 mr-1" />
                             Available
@@ -310,8 +332,8 @@ export default function MemberDashboard() {
                             size="sm"
                             variant="outline"
                             className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
-                            onClick={() => availabilityMutation.mutate({ selectionId: sel.id, status: 'unavailable' })}
-                            disabled={availabilityMutation.isPending}
+                            onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: false })}
+                            disabled={setAvailabilityMutation.isPending}
                           >
                             <XCircle className="w-3.5 h-3.5 mr-1" />
                             Not Available
@@ -333,7 +355,7 @@ export default function MemberDashboard() {
           </Card>
         )}
 
-        {/* ── Upcoming Bookings ────────────────────────────────────────────── */}
+        {/* Upcoming Bookings */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -379,7 +401,7 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        {/* ── Competition Matches ───────────────────────────────────────────── */}
+        {/* Competition Matches */}
         {myTournamentMatches.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
@@ -391,27 +413,42 @@ export default function MemberDashboard() {
             <CardContent className="p-0">
               <div className="divide-y">
                 {myTournamentMatches.map((item, i) => (
-                  <div key={i} className="p-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 truncate">{item.tournament.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{item.round}</p>
-                      {item.opponent.length > 0 && (
-                        <p className="text-xs text-gray-600 mt-0.5">vs {item.opponent.join(', ')}</p>
-                      )}
+                  <div key={i} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-gray-900 truncate">{item.tournamentName}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{item.round}</p>
+                        <p className="text-xs text-gray-700 mt-1">
+                          vs {item.opponents.map(o => getMemberName(o)).join(', ')}
+                        </p>
+                        {item.playByDate && (
+                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Play by {format(parseISO(item.playByDate), 'd MMM yyyy')}
+                          </p>
+                        )}
+                      </div>
+                      <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
+                        <Button size="sm" variant="outline" className="shrink-0 text-xs h-8">
+                          View <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </Link>
                     </div>
-                    <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs h-8">
-                        View <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </Link>
                   </div>
                 ))}
+              </div>
+              <div className="p-3 border-t">
+                <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
+                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                    View All Competitions <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* ── League Fixtures ───────────────────────────────────────────────── */}
+        {/* League Fixtures */}
         {leagueFixtures.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
@@ -423,25 +460,40 @@ export default function MemberDashboard() {
             <CardContent className="p-0">
               <div className="divide-y">
                 {leagueFixtures.map(fixture => {
-                  const myTeam = leagueTeams.find(t => t.id === fixture.home_team_id || t.id === fixture.away_team_id);
+                  const myTeam = myTeams.find(t => t.id === fixture.home_team_id || t.id === fixture.away_team_id);
                   const isHome = myTeam?.id === fixture.home_team_id;
+                  const opponentTeamId = isHome ? fixture.away_team_id : fixture.home_team_id;
+                  const opponentTeam = allLeagueTeams.find(t => t.id === opponentTeamId);
+                  const league = leagues.find(l => l.id === myTeam?.league_id);
                   return (
-                    <div key={fixture.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm text-gray-900 truncate">{myTeam?.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {format(parseISO(fixture.match_date), 'd MMM yyyy')}
-                          {' · '}
-                          <span className={isHome ? 'text-emerald-600 font-medium' : 'text-blue-600 font-medium'}>
-                            {isHome ? 'Home' : 'Away'}
-                          </span>
-                        </p>
+                    <div key={fixture.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-gray-900 truncate">
+                            {myTeam?.name} vs {opponentTeam?.name || 'TBD'}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+                            </span>
+                            <span className={isHome ? 'text-emerald-600 font-medium' : 'text-blue-600 font-medium'}>
+                              {isHome ? 'Home' : 'Away'}
+                            </span>
+                            {fixture.rink_number && (
+                              <span>Rink {fixture.rink_number}</span>
+                            )}
+                            {league && (
+                              <span className="text-gray-400">{league.name}</span>
+                            )}
+                          </div>
+                        </div>
+                        <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
+                          <Button size="sm" variant="ghost" className="shrink-0 text-xs h-8 text-emerald-700">
+                            View <ChevronRight className="w-3 h-3 ml-1" />
+                          </Button>
+                        </Link>
                       </div>
-                      <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
-                        <Button size="sm" variant="ghost" className="shrink-0 text-xs h-8 text-emerald-700">
-                          View <ChevronRight className="w-3 h-3 ml-1" />
-                        </Button>
-                      </Link>
                     </div>
                   );
                 })}
@@ -449,7 +501,7 @@ export default function MemberDashboard() {
               <div className="p-3 border-t">
                 <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
                   <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                    View Team Fixtures <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    View My Teams <ChevronRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </Link>
               </div>
@@ -462,9 +514,9 @@ export default function MemberDashboard() {
   );
 }
 
-function AvailabilityBadge({ status }) {
-  if (status === 'available') return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0">Available</Badge>;
-  if (status === 'unavailable') return <Badge className="bg-red-100 text-red-800 border-red-200 shrink-0">Not Available</Badge>;
+function AvailabilityBadge({ isAvailable }) {
+  if (isAvailable === true) return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0">Available</Badge>;
+  if (isAvailable === false) return <Badge className="bg-red-100 text-red-800 border-red-200 shrink-0">Not Available</Badge>;
   return <Badge className="bg-amber-100 text-amber-800 border-amber-200 shrink-0">Awaiting</Badge>;
 }
 
