@@ -129,7 +129,18 @@ export default function MemberDashboard() {
     tournaments.forEach(t => {
       if (t.tournament_type === 'knockout' && t.bracket) {
         const rounds = t.bracket?.rounds || t.bracket;
-        Object.entries(rounds || {}).forEach(([roundName, roundMatches]) => {
+        const totalRounds = Array.isArray(rounds) ? rounds.length : Object.keys(rounds || {}).length;
+        const getRoundName = (idx, total) => {
+          const remaining = total - idx;
+          if (remaining === 1) return 'Final';
+          if (remaining === 2) return 'Semi-Finals';
+          if (remaining === 3) return 'Quarter-Finals';
+          return `Round ${idx + 1}`;
+        };
+        Object.entries(rounds || {}).forEach(([roundKey, roundMatches]) => {
+          const roundIndex = parseInt(roundKey);
+          const roundName = isNaN(roundIndex) ? roundKey : getRoundName(roundIndex, totalRounds);
+          const playByDate = t.bracket?.round_dates?.[roundName] || null;
           (roundMatches || []).forEach(match => {
             if (!match || match.winner_id) return;
             // Skip if a score has been entered
@@ -143,9 +154,9 @@ export default function MemberDashboard() {
             if (opponents.length === 0) return;
             matches.push({
               tournamentName: t.name,
-              round: isNaN(parseInt(roundName)) ? roundName : `Round ${parseInt(roundName) + 1}`,
+              round: roundName,
               opponents,
-              playByDate: match.play_by_date || null,
+              playByDate,
             });
           });
         });
