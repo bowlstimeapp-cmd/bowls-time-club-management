@@ -567,11 +567,11 @@ export default function MemberDashboard() {
         </div>
 
         {/* Reorder toggle */}
-        <div className="flex justify-end">
+        <div className="flex">
           <Button
             variant={reordering ? 'default' : 'outline'}
             size="sm"
-            className={reordering ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'text-gray-600'}
+            className={`w-full sm:w-auto ${reordering ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'text-gray-600'}`}
             onClick={() => setReordering(r => !r)}
           >
             <Settings2 className="w-3.5 h-3.5 mr-1.5" />
