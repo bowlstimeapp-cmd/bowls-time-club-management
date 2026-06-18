@@ -13,6 +13,9 @@ import { format, parseISO } from 'date-fns';
 
 const EMPTY_FORM = { title: '', content: '', image_url: '', is_published: true };
 
+const invoke = (action, payload) =>
+  base44.functions.invoke('manageClubNews', { action, ...payload }).then(r => r.data);
+
 export default function ClubNewsAdmin({ clubId }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -22,35 +25,37 @@ export default function ClubNewsAdmin({ clubId }) {
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['clubPosts', clubId],
-    queryFn: () => base44.entities.ClubPost.filter({ club_id: clubId, type: 'news' }),
+    queryFn: () => invoke('list', { club_id: clubId }).then(r => r.posts),
     enabled: !!clubId,
-    select: (data) => [...data].sort((a, b) => b.created_date?.localeCompare(a.created_date || '') || 0),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ClubPost.create({ ...data, club_id: clubId, type: 'news' }),
+    mutationFn: (data) => invoke('create', { club_id: clubId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubPosts', clubId] });
       toast.success('Post created');
       closeForm();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ClubPost.update(id, data),
+    mutationFn: ({ id, data }) => invoke('update', { club_id: clubId, post_id: id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubPosts', clubId] });
       toast.success('Post updated');
       closeForm();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ClubPost.delete(id),
+    mutationFn: (id) => invoke('delete', { club_id: clubId, post_id: id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubPosts', clubId] });
       toast.success('Post deleted');
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const handleImageUpload = async (e) => {
@@ -63,23 +68,13 @@ export default function ClubNewsAdmin({ clubId }) {
     toast.success('Image uploaded');
   };
 
-  const openCreate = () => {
-    setEditingPost(null);
-    setForm(EMPTY_FORM);
-    setShowForm(true);
-  };
-
+  const openCreate = () => { setEditingPost(null); setForm(EMPTY_FORM); setShowForm(true); };
   const openEdit = (post) => {
     setEditingPost(post);
     setForm({ title: post.title || '', content: post.content || '', image_url: post.image_url || '', is_published: post.is_published !== false });
     setShowForm(true);
   };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingPost(null);
-    setForm(EMPTY_FORM);
-  };
+  const closeForm = () => { setShowForm(false); setEditingPost(null); setForm(EMPTY_FORM); };
 
   const handleSave = () => {
     if (!form.title.trim()) { toast.error('Title is required'); return; }
@@ -134,19 +129,12 @@ export default function ClubNewsAdmin({ clubId }) {
               />
             </div>
 
-            {/* Header image */}
             <div>
               <Label>Header Image (optional)</Label>
               {form.image_url ? (
                 <div className="mt-2 relative">
                   <img src={form.image_url} alt="Header" className="w-full h-40 object-cover rounded-lg border" />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2 bg-white/80 hover:bg-white h-7 w-7 p-0"
-                    onClick={() => setForm(f => ({ ...f, image_url: '' }))}
-                  >
+                  <Button type="button" variant="ghost" size="sm" className="absolute top-2 right-2 bg-white/80 hover:bg-white h-7 w-7 p-0" onClick={() => setForm(f => ({ ...f, image_url: '' }))}>
                     <X className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -193,10 +181,9 @@ export default function ClubNewsAdmin({ clubId }) {
           <div className="space-y-3">
             {posts.map(post => (
               <div key={post.id} className="flex items-start gap-3 p-3 rounded-lg border bg-white">
-                {post.image_url && (
+                {post.image_url ? (
                   <img src={post.image_url} alt="" className="w-14 h-14 object-cover rounded-md shrink-0 border" />
-                )}
-                {!post.image_url && (
+                ) : (
                   <div className="w-14 h-14 bg-gray-100 rounded-md flex items-center justify-center shrink-0">
                     <Image className="w-5 h-5 text-gray-300" />
                   </div>

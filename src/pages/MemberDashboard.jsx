@@ -89,10 +89,10 @@ export default function MemberDashboard() {
   const { data: clubNews = [] } = useQuery({
     queryKey: ['clubPosts', clubId],
     queryFn: async () => {
-      const posts = await base44.entities.ClubPost.filter({ club_id: clubId, type: 'news' });
+      const res = await base44.functions.invoke('manageClubNews', { action: 'list', club_id: clubId });
+      const posts = res.data?.posts || [];
       return posts
         .filter(p => p.is_published !== false)
-        .sort((a, b) => (b.created_date || '').localeCompare(a.created_date || ''))
         .slice(0, 5);
     },
     enabled: !!clubId,
