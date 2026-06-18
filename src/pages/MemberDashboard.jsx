@@ -502,32 +502,30 @@ export default function MemberDashboard() {
 
         {/* ── Club News ── */}
         {clubNews.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Newspaper className="w-4 h-4 text-emerald-600" />
-                Club News
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {clubNews.map(post => (
-                  <div key={post.id} className="p-4">
-                    {post.image_url && (
-                      <img src={post.image_url} alt="" className="w-full h-40 object-cover rounded-lg mb-3" />
-                    )}
-                    <p className="font-semibold text-sm text-gray-900">{post.title}</p>
-                    {post.content && (
-                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{post.content}</p>
-                    )}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Newspaper className="w-4 h-4 text-emerald-600" />
+              <h2 className="font-semibold text-gray-900 text-base">Club News</h2>
+            </div>
+            <div className="space-y-4">
+              {clubNews.map(post => (
+                <div key={post.id} className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                  {post.image_url && (
+                    <img src={post.image_url} alt={post.title} className="w-full h-48 object-cover" />
+                  )}
+                  <div className="p-4">
                     {post.created_date && (
-                      <p className="text-xs text-gray-400 mt-2">{format(parseISO(post.created_date), 'd MMM yyyy')}</p>
+                      <p className="text-xs text-emerald-600 font-medium mb-1">{format(parseISO(post.created_date), 'd MMM yyyy')}</p>
+                    )}
+                    <h3 className="font-bold text-gray-900 text-base leading-snug">{post.title}</h3>
+                    {post.content && (
+                      <p className="text-sm text-gray-600 mt-2 whitespace-pre-line leading-relaxed">{post.content}</p>
                     )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* ── Upcoming Bookings ── */}

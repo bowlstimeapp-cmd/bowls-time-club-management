@@ -8,21 +8,26 @@ Deno.serve(async (req) => {
 
     const { action, club_id, post_id, data } = await req.json();
 
-    // Verify the caller is a club admin
-    const memberships = await base44.asServiceRole.entities.ClubMembership.filter({
-      club_id,
-      user_email: user.email,
-      status: 'approved',
-    });
-    const membership = memberships[0];
-    if (!membership || membership.role !== 'admin') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const isPlatformAdmin = user.role === 'admin';
 
+    // 'list' is readable by any authenticated user (members reading news)
     if (action === 'list') {
       const posts = await base44.asServiceRole.entities.ClubPost.filter({ club_id, type: 'news' });
       posts.sort((a, b) => (b.created_date || '').localeCompare(a.created_date || ''));
       return Response.json({ posts });
+    }
+
+    // All write actions require club admin or platform admin
+    if (!isPlatformAdmin) {
+      const memberships = await base44.asServiceRole.entities.ClubMembership.filter({
+        club_id,
+        user_email: user.email,
+        status: 'approved',
+      });
+      const membership = memberships[0];
+      if (!membership || membership.role !== 'admin') {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     if (action === 'create') {
