@@ -7,20 +7,70 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar, User, CheckCircle, XCircle, Clock,
-  Trophy, Users, Bell, MapPin, ChevronRight, ArrowRight, Newspaper
+  Trophy, Users, Bell, MapPin, ChevronRight, ArrowRight, Newspaper, GripVertical, Settings2
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO, addDays, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+
+// Section IDs
+const SECTION_SELECTIONS = 'selections';
+const SECTION_FIXTURES   = 'fixtures';
+const SECTION_COMPETITIONS = 'competitions';
+const SECTION_NEWS       = 'news';
+const SECTION_BOOKINGS   = 'bookings';
+
+const DEFAULT_ORDER = [
+  SECTION_SELECTIONS,
+  SECTION_FIXTURES,
+  SECTION_COMPETITIONS,
+  SECTION_NEWS,
+  SECTION_BOOKINGS,
+];
+
+function getStorageKey(userId, clubId) {
+  return `dashboard_order_${userId}_${clubId}`;
+}
 
 export default function MemberDashboard() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
+  const [sectionOrder, setSectionOrder] = useState(DEFAULT_ORDER);
+  const [reordering, setReordering] = useState(false);
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
+
+  // Load saved order from localStorage
+  useEffect(() => {
+    if (!user?.id || !clubId) return;
+    const saved = localStorage.getItem(getStorageKey(user.id, clubId));
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Ensure all default sections exist (in case new ones added)
+        const merged = [
+          ...parsed.filter(id => DEFAULT_ORDER.includes(id)),
+          ...DEFAULT_ORDER.filter(id => !parsed.includes(id)),
+        ];
+        setSectionOrder(merged);
+      } catch {}
+    }
+  }, [user?.id, clubId]);
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const newOrder = Array.from(sectionOrder);
+    const [moved] = newOrder.splice(result.source.index, 1);
+    newOrder.splice(result.destination.index, 0, moved);
+    setSectionOrder(newOrder);
+    if (user?.id && clubId) {
+      localStorage.setItem(getStorageKey(user.id, clubId), JSON.stringify(newOrder));
+    }
+  };
 
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
@@ -29,8 +79,6 @@ export default function MemberDashboard() {
     queryFn: async () => (await base44.entities.Club.filter({ id: clubId }))[0],
     enabled: !!clubId,
   });
-
-  // ── Data queries ───────────────────────────────────────────────────────
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
@@ -91,14 +139,10 @@ export default function MemberDashboard() {
     queryFn: async () => {
       const res = await base44.functions.invoke('manageClubNews', { action: 'list', club_id: clubId });
       const posts = res.data?.posts || [];
-      return posts
-        .filter(p => p.is_published !== false)
-        .slice(0, 5);
+      return posts.filter(p => p.is_published !== false).slice(0, 5);
     },
     enabled: !!clubId,
   });
-
-  // ── Derived data — memoised to avoid query key instability ─────────────
 
   const myTeams = useMemo(() => {
     if (!user?.email) return [];
@@ -155,29 +199,20 @@ export default function MemberDashboard() {
           const playByDate = t.bracket?.round_dates?.[roundName] || null;
           (roundMatches || []).forEach(match => {
             if (!match || match.winner_id) return;
-            // Skip if a score has been entered
             if (match.player1_score != null || match.player2_score != null) return;
             const p1 = Array.isArray(match.player1) ? match.player1 : [match.player1];
             const p2 = Array.isArray(match.player2) ? match.player2 : [match.player2];
             const all = [...p1, ...p2].filter(Boolean);
             if (!all.includes(user.email)) return;
             const opponents = all.filter(p => p !== user.email);
-            // Skip byes (no opponent assigned yet)
             if (opponents.length === 0) return;
-            matches.push({
-              tournamentName: t.name,
-              round: roundName,
-              opponents,
-              playByDate,
-            });
+            matches.push({ tournamentName: t.name, round: roundName, opponents, playByDate });
           });
         });
       }
     });
     return matches;
   }, [tournaments, user?.email]);
-
-  // ── Helpers ────────────────────────────────────────────────────────────
 
   const getMemberName = (email) => {
     const m = members.find(m => m.user_email === email);
@@ -189,8 +224,6 @@ export default function MemberDashboard() {
     const avail = myAvailabilities.find(a => a.selection_id === selectionId);
     return avail?.is_available;
   };
-
-  // ── Availability mutation ──────────────────────────────────────────────
 
   const setAvailabilityMutation = useMutation({
     mutationFn: async ({ selectionId, isAvailable }) => {
@@ -211,8 +244,6 @@ export default function MemberDashboard() {
     },
   });
 
-  // ── Notifications banner items ─────────────────────────────────────────
-
   const notifItems = [];
   if (notifications.length > 0)
     notifItems.push(`${notifications.length} unread notification${notifications.length > 1 ? 's' : ''}`);
@@ -228,8 +259,6 @@ export default function MemberDashboard() {
 
   const memberFirstName = user?.first_name || user?.full_name?.split(' ')[0] || 'Member';
 
-  // ── Loading state ──────────────────────────────────────────────────────
-
   if (!user || !club) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -237,6 +266,260 @@ export default function MemberDashboard() {
       </div>
     );
   }
+
+  // ── Section renderers ──────────────────────────────────────────────────
+
+  const renderSelections = (dragging) => {
+    if (club?.module_selection === false) return null;
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            {dragging && <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />}
+            <Users className="w-4 h-4 text-emerald-600" />
+            My Selected Matches
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {selectionsLoading ? (
+            <div className="p-4 space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+          ) : mySelections.length === 0 ? (
+            <div className="p-5 text-center text-sm text-gray-400">You have no upcoming match selections.</div>
+          ) : (
+            <div className="divide-y">
+              {mySelections.map(sel => {
+                const avail = getMyAvailability(sel.id);
+                return (
+                  <div key={sel.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{sel.match_name || sel.competition}</p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(parseISO(sel.match_date), 'd MMM yyyy')}</span>
+                          {sel.match_start_time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{sel.match_start_time}</span>}
+                          {sel.friendly_location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{sel.friendly_location}</span>}
+                        </div>
+                      </div>
+                      <AvailabilityBadge isAvailable={avail} />
+                    </div>
+                    {avail === undefined && (
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
+                          onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: true })}
+                          disabled={setAvailabilityMutation.isPending}>
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />Available
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                          onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: false })}
+                          disabled={setAvailabilityMutation.isPending}>
+                          <XCircle className="w-3.5 h-3.5 mr-1" />Not Available
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="p-3 border-t">
+            <Link to={createPageUrl('Selection') + `?clubId=${clubId}`}>
+              <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                View All Selections <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderFixtures = (dragging) => {
+    if (club?.module_leagues === false) return null;
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            {dragging && <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />}
+            <Users className="w-4 h-4 text-emerald-600" />
+            My League Fixtures
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {(teamsLoading || fixturesLoading) ? (
+            <div className="p-4 space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+          ) : myTeams.length === 0 ? (
+            <div className="p-5 text-center text-sm text-gray-400">You are not currently assigned to a league team.</div>
+          ) : leagueFixtures.length === 0 ? (
+            <div className="p-5 text-center text-sm text-gray-400">No upcoming league fixtures for your teams.</div>
+          ) : (
+            <div className="divide-y">
+              {leagueFixtures.map(fixture => {
+                const myTeam = myTeams.find(t => t.id === fixture.home_team_id || t.id === fixture.away_team_id);
+                const isHome = myTeam?.id === fixture.home_team_id;
+                const opponentTeamId = isHome ? fixture.away_team_id : fixture.home_team_id;
+                const opponentTeam = allLeagueTeams.find(t => t.id === opponentTeamId);
+                const league = leagues.find(l => l.id === myTeam?.league_id);
+                return (
+                  <div key={fixture.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-gray-900 truncate">
+                          {myTeam?.name} <span className="text-gray-400">vs</span> {opponentTeam?.name || 'TBD'}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(parseISO(fixture.match_date), 'd MMM yyyy')}</span>
+                          <Badge className={`text-xs px-1.5 py-0 ${isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{isHome ? 'Home' : 'Away'}</Badge>
+                          {fixture.rink_number && <span>Rink {fixture.rink_number}</span>}
+                          {league && <span className="text-gray-400">{league.name}</span>}
+                        </div>
+                      </div>
+                      <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
+                        <Button size="sm" variant="ghost" className="shrink-0 text-xs h-8 text-emerald-700"><ChevronRight className="w-4 h-4" /></Button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="p-3 border-t">
+            <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
+              <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                View My Teams <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCompetitions = (dragging) => {
+    if (club?.module_competitions === false) return null;
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            {dragging && <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />}
+            <Trophy className="w-4 h-4 text-emerald-600" />
+            Competition Matches
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {tournamentsLoading ? (
+            <div className="p-4 space-y-3"><Skeleton className="h-12 w-full" /></div>
+          ) : myTournamentMatches.length === 0 ? (
+            <div className="p-5 text-center text-sm text-gray-400">No outstanding competition matches.</div>
+          ) : (
+            <div className="divide-y">
+              {myTournamentMatches.map((item, i) => (
+                <div key={i} className="p-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{item.tournamentName}</p>
+                    {item.round && <p className="text-xs text-gray-500 mt-0.5">{item.round}</p>}
+                    <p className="text-xs text-gray-700 mt-1">vs {item.opponents.map(o => getMemberName(o)).join(', ')}</p>
+                    {item.playByDate && (
+                      <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />Play by {format(parseISO(item.playByDate), 'd MMM yyyy')}
+                      </p>
+                    )}
+                  </div>
+                  <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
+                    <Button size="sm" variant="outline" className="shrink-0 text-xs h-8">View <ArrowRight className="w-3 h-3 ml-1" /></Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="p-3 border-t">
+            <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
+              <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                View All Competitions <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderNews = (dragging) => {
+    if (clubNews.length === 0) return null;
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          {dragging && <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />}
+          <Newspaper className="w-4 h-4 text-emerald-600" />
+          <h2 className="font-semibold text-gray-900 text-base">Club News</h2>
+        </div>
+        <div className="space-y-4">
+          {clubNews.map(post => (
+            <div key={post.id} className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+              {post.image_url && <img src={post.image_url} alt={post.title} className="w-full h-48 object-cover" />}
+              <div className="p-4">
+                {post.created_date && <p className="text-xs text-emerald-600 font-medium mb-1">{format(parseISO(post.created_date), 'd MMM yyyy')}</p>}
+                <h3 className="font-bold text-gray-900 text-base leading-snug">{post.title}</h3>
+                {post.content && <p className="text-sm text-gray-600 mt-2 whitespace-pre-line leading-relaxed">{post.content}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderBookings = (dragging) => (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          {dragging && <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />}
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          Upcoming Bookings
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {bookingsLoading ? (
+          <div className="p-4 space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+        ) : bookings.length === 0 ? (
+          <div className="p-5 text-center">
+            <p className="text-sm text-gray-400 mb-3">You have no upcoming bookings.</p>
+            <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700"><Calendar className="w-4 h-4 mr-2" />Book a Rink</Button>
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="divide-y">
+              {bookings.map(booking => (
+                <div key={booking.id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="font-medium text-sm text-gray-900">Rink {booking.rink_number}</p>
+                    <p className="text-xs text-gray-500">{format(parseISO(booking.date), 'd MMM yyyy')} · {booking.start_time} – {booking.end_time}</p>
+                  </div>
+                  <BookingStatusBadge status={booking.status} />
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t">
+              <Link to={createPageUrl('MyBookings') + `?clubId=${clubId}`}>
+                <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                  View All Bookings <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const sectionRenderers = {
+    [SECTION_SELECTIONS]: renderSelections,
+    [SECTION_FIXTURES]:   renderFixtures,
+    [SECTION_COMPETITIONS]: renderCompetitions,
+    [SECTION_NEWS]:       renderNews,
+    [SECTION_BOOKINGS]:   renderBookings,
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -273,311 +556,59 @@ export default function MemberDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
             <Button className="w-full h-16 text-sm bg-emerald-600 hover:bg-emerald-700 flex-col gap-1">
-              <Calendar className="w-5 h-5" />
-              Book a Rink
+              <Calendar className="w-5 h-5" />Book a Rink
             </Button>
           </Link>
           <Link to={createPageUrl('Profile') + `?clubId=${clubId}`}>
             <Button variant="outline" className="w-full h-16 text-sm flex-col gap-1 border-2">
-              <User className="w-5 h-5" />
-              My Profile
+              <User className="w-5 h-5" />My Profile
             </Button>
           </Link>
         </div>
 
-        {/* ── Selected Matches & Availability ── */}
-        {club?.module_selection !== false && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                My Selected Matches
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {selectionsLoading ? (
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : mySelections.length === 0 ? (
-                <div className="p-5 text-center text-sm text-gray-400">
-                  You have no upcoming match selections.
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {mySelections.map(sel => {
-                    const avail = getMyAvailability(sel.id);
-                    return (
-                      <div key={sel.id} className="p-4">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">{sel.match_name || sel.competition}</p>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {format(parseISO(sel.match_date), 'd MMM yyyy')}
-                              </span>
-                              {sel.match_start_time && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {sel.match_start_time}
-                                </span>
-                              )}
-                              {sel.friendly_location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {sel.friendly_location}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <AvailabilityBadge isAvailable={avail} />
+        {/* Reorder toggle */}
+        <div className="flex justify-end">
+          <Button
+            variant={reordering ? 'default' : 'outline'}
+            size="sm"
+            className={reordering ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'text-gray-600'}
+            onClick={() => setReordering(r => !r)}
+          >
+            <Settings2 className="w-3.5 h-3.5 mr-1.5" />
+            {reordering ? 'Done' : 'Customise'}
+          </Button>
+        </div>
+
+        {/* Draggable sections */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="dashboard-sections" isDropDisabled={!reordering}>
+            {(provided) => (
+              <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-5">
+                {sectionOrder.map((sectionId, index) => {
+                  const renderer = sectionRenderers[sectionId];
+                  if (!renderer) return null;
+                  const content = renderer(reordering);
+                  if (content === null) return null;
+                  return (
+                    <Draggable key={sectionId} draggableId={sectionId} index={index} isDragDisabled={!reordering}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`transition-shadow ${snapshot.isDragging ? 'shadow-xl ring-2 ring-emerald-400 rounded-2xl' : ''}`}
+                        >
+                          {content}
                         </div>
-                        {avail === undefined && (
-                          <div className="flex gap-2 mt-2">
-                            <Button
-                              size="sm"
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
-                              onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: true })}
-                              disabled={setAvailabilityMutation.isPending}
-                            >
-                              <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                              Available
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
-                              onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: false })}
-                              disabled={setAvailabilityMutation.isPending}
-                            >
-                              <XCircle className="w-3.5 h-3.5 mr-1" />
-                              Not Available
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="p-3 border-t">
-                <Link to={createPageUrl('Selection') + `?clubId=${clubId}`}>
-                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                    View All Selections <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                </Link>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ── League Fixtures ── */}
-        {club?.module_leagues !== false && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                My League Fixtures
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {(teamsLoading || fixturesLoading) ? (
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : myTeams.length === 0 ? (
-                <div className="p-5 text-center text-sm text-gray-400">
-                  You are not currently assigned to a league team.
-                </div>
-              ) : leagueFixtures.length === 0 ? (
-                <div className="p-5 text-center text-sm text-gray-400">
-                  No upcoming league fixtures for your teams.
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {leagueFixtures.map(fixture => {
-                    const myTeam = myTeams.find(t => t.id === fixture.home_team_id || t.id === fixture.away_team_id);
-                    const isHome = myTeam?.id === fixture.home_team_id;
-                    const opponentTeamId = isHome ? fixture.away_team_id : fixture.home_team_id;
-                    const opponentTeam = allLeagueTeams.find(t => t.id === opponentTeamId);
-                    const league = leagues.find(l => l.id === myTeam?.league_id);
-                    return (
-                      <div key={fixture.id} className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm text-gray-900 truncate">
-                              {myTeam?.name} <span className="text-gray-400">vs</span> {opponentTeam?.name || 'TBD'}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {format(parseISO(fixture.match_date), 'd MMM yyyy')}
-                              </span>
-                              <Badge className={`text-xs px-1.5 py-0 ${isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {isHome ? 'Home' : 'Away'}
-                              </Badge>
-                              {fixture.rink_number && <span>Rink {fixture.rink_number}</span>}
-                              {league && <span className="text-gray-400">{league.name}</span>}
-                            </div>
-                          </div>
-                          <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
-                            <Button size="sm" variant="ghost" className="shrink-0 text-xs h-8 text-emerald-700">
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="p-3 border-t">
-                <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
-                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                    View My Teams <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ── Competition Matches ── */}
-        {club?.module_competitions !== false && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-emerald-600" />
-                Competition Matches
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {tournamentsLoading ? (
-                <div className="p-4 space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : myTournamentMatches.length === 0 ? (
-                <div className="p-5 text-center text-sm text-gray-400">
-                  No outstanding competition matches.
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {myTournamentMatches.map((item, i) => (
-                    <div key={i} className="p-4 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 truncate">{item.tournamentName}</p>
-                        {item.round && <p className="text-xs text-gray-500 mt-0.5">{item.round}</p>}
-                        <p className="text-xs text-gray-700 mt-1">
-                          vs {item.opponents.map(o => getMemberName(o)).join(', ')}
-                        </p>
-                        {item.playByDate && (
-                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Play by {format(parseISO(item.playByDate), 'd MMM yyyy')}
-                          </p>
-                        )}
-                      </div>
-                      <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
-                        <Button size="sm" variant="outline" className="shrink-0 text-xs h-8">
-                          View <ArrowRight className="w-3 h-3 ml-1" />
-                        </Button>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="p-3 border-t">
-                <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
-                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                    View All Competitions <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ── Club News ── */}
-        {clubNews.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Newspaper className="w-4 h-4 text-emerald-600" />
-              <h2 className="font-semibold text-gray-900 text-base">Club News</h2>
-            </div>
-            <div className="space-y-4">
-              {clubNews.map(post => (
-                <div key={post.id} className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                  {post.image_url && (
-                    <img src={post.image_url} alt={post.title} className="w-full h-48 object-cover" />
-                  )}
-                  <div className="p-4">
-                    {post.created_date && (
-                      <p className="text-xs text-emerald-600 font-medium mb-1">{format(parseISO(post.created_date), 'd MMM yyyy')}</p>
-                    )}
-                    <h3 className="font-bold text-gray-900 text-base leading-snug">{post.title}</h3>
-                    {post.content && (
-                      <p className="text-sm text-gray-600 mt-2 whitespace-pre-line leading-relaxed">{post.content}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Upcoming Bookings ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              Upcoming Bookings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {bookingsLoading ? (
-              <div className="p-4 space-y-3">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : bookings.length === 0 ? (
-              <div className="p-5 text-center">
-                <p className="text-sm text-gray-400 mb-3">You have no upcoming bookings.</p>
-                <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Book a Rink
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="divide-y">
-                  {bookings.map(booking => (
-                    <div key={booking.id} className="flex items-center justify-between px-4 py-3">
-                      <div>
-                        <p className="font-medium text-sm text-gray-900">Rink {booking.rink_number}</p>
-                        <p className="text-xs text-gray-500">
-                          {format(parseISO(booking.date), 'd MMM yyyy')} · {booking.start_time} – {booking.end_time}
-                        </p>
-                      </div>
-                      <BookingStatusBadge status={booking.status} />
-                    </div>
-                  ))}
-                </div>
-                <div className="p-3 border-t">
-                  <Link to={createPageUrl('MyBookings') + `?clubId=${clubId}`}>
-                    <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                      View All Bookings <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  </Link>
-                </div>
-              </>
             )}
-          </CardContent>
-        </Card>
+          </Droppable>
+        </DragDropContext>
 
       </div>
     </div>
