@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Calendar, User, CheckCircle, XCircle, Clock, ArrowRight,
-  Trophy, Users, Bell, MapPin, ChevronRight
+  Calendar, User, CheckCircle, XCircle, Clock,
+  Trophy, Users, Bell, MapPin, ChevronRight, ArrowRight
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -21,17 +22,15 @@ export default function MemberDashboard() {
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
+  const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
+
   const { data: club } = useQuery({
     queryKey: ['club', clubId],
     queryFn: async () => (await base44.entities.Club.filter({ id: clubId }))[0],
     enabled: !!clubId,
   });
 
-  const { data: membership } = useQuery({
-    queryKey: ['myMembership', clubId, user?.email],
-    queryFn: async () => (await base44.entities.ClubMembership.filter({ club_id: clubId, user_email: user.email }))[0],
-    enabled: !!clubId && !!user?.email,
-  });
+  // ── Data queries ───────────────────────────────────────────────────────
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
@@ -39,36 +38,31 @@ export default function MemberDashboard() {
     enabled: !!clubId,
   });
 
-  // Upcoming bookings
-  const { data: bookings = [] } = useQuery({
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['myUpcomingBookings', clubId, user?.email],
     queryFn: async () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
       const all = await base44.entities.Booking.filter({ club_id: clubId, booker_email: user.email });
       return all
-        .filter(b => b.date >= today && b.status !== 'cancelled' && b.status !== 'rejected')
+        .filter(b => b.date >= todayStr && b.status !== 'cancelled' && b.status !== 'rejected')
         .sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time))
         .slice(0, 5);
     },
     enabled: !!clubId && !!user?.email,
   });
 
-  // All published selections
-  const { data: allSelections = [] } = useQuery({
+  const { data: allSelections = [], isLoading: selectionsLoading } = useQuery({
     queryKey: ['allSelections', clubId],
     queryFn: () => base44.entities.TeamSelection.filter({ club_id: clubId, status: 'published' }),
     enabled: !!clubId,
   });
 
-  // My availability records (uses user_email + is_available boolean)
   const { data: myAvailabilities = [] } = useQuery({
     queryKey: ['myAvailabilities', clubId, user?.email],
     queryFn: () => base44.entities.MemberAvailability.filter({ club_id: clubId, user_email: user.email }),
     enabled: !!clubId && !!user?.email,
   });
 
-  // League teams & fixtures
-  const { data: allLeagueTeams = [] } = useQuery({
+  const { data: allLeagueTeams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['leagueTeams', clubId],
     queryFn: () => base44.entities.LeagueTeam.filter({ club_id: clubId }),
     enabled: !!clubId,
@@ -80,41 +74,96 @@ export default function MemberDashboard() {
     enabled: !!clubId,
   });
 
-  const myTeams = allLeagueTeams.filter(t => t.players && t.players.includes(user?.email));
-  const myTeamIds = myTeams.map(t => t.id);
-
-  const { data: leagueFixtures = [] } = useQuery({
-    queryKey: ['myLeagueFixtures', clubId, myTeamIds],
-    queryFn: async () => {
-      if (myTeamIds.length === 0) return [];
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const all = await base44.entities.LeagueFixture.filter({ club_id: clubId });
-      return all
-        .filter(f =>
-          f.match_date >= today &&
-          f.status !== 'cancelled' &&
-          (myTeamIds.includes(f.home_team_id) || myTeamIds.includes(f.away_team_id))
-        )
-        .sort((a, b) => a.match_date.localeCompare(b.match_date));
-    },
-    enabled: !!clubId && myTeamIds.length > 0,
-  });
-
-  // Published club tournaments
-  const { data: tournaments = [] } = useQuery({
-    queryKey: ['myTournaments', clubId, user?.email],
+  const { data: tournaments = [], isLoading: tournamentsLoading } = useQuery({
+    queryKey: ['myTournaments', clubId],
     queryFn: () => base44.entities.ClubTournament.filter({ club_id: clubId, status: 'published' }),
-    enabled: !!clubId && !!user?.email,
+    enabled: !!clubId,
   });
 
-  // Unread notifications
   const { data: notifications = [] } = useQuery({
     queryKey: ['myNotifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email, is_read: false }),
     enabled: !!user?.email,
   });
 
-  // ── Availability mutation (matches Selection page pattern) ─────────────
+  // ── Derived data — memoised to avoid query key instability ─────────────
+
+  const myTeams = useMemo(() => {
+    if (!user?.email) return [];
+    return allLeagueTeams.filter(t => t.players && t.players.includes(user.email));
+  }, [allLeagueTeams, user?.email]);
+
+  const myTeamIdStr = useMemo(() => myTeams.map(t => t.id).join(','), [myTeams]);
+
+  const { data: leagueFixtures = [], isLoading: fixturesLoading } = useQuery({
+    queryKey: ['myLeagueFixtures', clubId, myTeamIdStr],
+    queryFn: async () => {
+      const myTeamIds = myTeamIdStr.split(',').filter(Boolean);
+      const all = await base44.entities.LeagueFixture.filter({ club_id: clubId });
+      return all
+        .filter(f =>
+          f.match_date >= todayStr &&
+          f.status !== 'cancelled' &&
+          (myTeamIds.includes(f.home_team_id) || myTeamIds.includes(f.away_team_id))
+        )
+        .sort((a, b) => a.match_date.localeCompare(b.match_date));
+    },
+    enabled: !!clubId && !!myTeamIdStr,
+  });
+
+  const mySelections = useMemo(() => {
+    if (!user?.email || !allSelections.length) return [];
+    return allSelections
+      .filter(sel => {
+        if (!sel.selections || !sel.match_date) return false;
+        if (sel.match_date < todayStr) return false;
+        if (sel.is_archived) return false;
+        return Object.values(sel.selections).includes(user.email);
+      })
+      .sort((a, b) => a.match_date.localeCompare(b.match_date));
+  }, [allSelections, user?.email, todayStr]);
+
+  const myTournamentMatches = useMemo(() => {
+    if (!user?.email || !tournaments.length) return [];
+    const matches = [];
+    tournaments.forEach(t => {
+      if (t.tournament_type === 'knockout' && t.bracket) {
+        const rounds = t.bracket?.rounds || t.bracket;
+        Object.entries(rounds || {}).forEach(([roundName, roundMatches]) => {
+          (roundMatches || []).forEach(match => {
+            if (!match || match.winner_id) return;
+            const p1 = Array.isArray(match.player1) ? match.player1 : [match.player1];
+            const p2 = Array.isArray(match.player2) ? match.player2 : [match.player2];
+            const all = [...p1, ...p2].filter(Boolean);
+            if (!all.includes(user.email)) return;
+            matches.push({
+              tournamentName: t.name,
+              round: isNaN(parseInt(roundName)) ? roundName : `Round ${parseInt(roundName) + 1}`,
+              opponents: all.filter(p => p !== user.email),
+              playByDate: match.play_by_date || null,
+            });
+          });
+        });
+      }
+    });
+    return matches;
+  }, [tournaments, user?.email]);
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+
+  const getMemberName = (email) => {
+    const m = members.find(m => m.user_email === email);
+    if (m?.first_name && m?.surname) return `${m.first_name} ${m.surname}`;
+    return m?.user_name || email;
+  };
+
+  const getMyAvailability = (selectionId) => {
+    const avail = myAvailabilities.find(a => a.selection_id === selectionId);
+    return avail?.is_available;
+  };
+
+  // ── Availability mutation ──────────────────────────────────────────────
+
   const setAvailabilityMutation = useMutation({
     mutationFn: async ({ selectionId, isAvailable }) => {
       const existing = myAvailabilities.find(a => a.selection_id === selectionId);
@@ -134,98 +183,28 @@ export default function MemberDashboard() {
     },
   });
 
-  // ── Helpers ────────────────────────────────────────────────────────────
-  const getMemberName = (email) => {
-    const member = members.find(m => m.user_email === email);
-    if (member?.first_name && member?.surname) return `${member.first_name} ${member.surname}`;
-    return member?.user_name || email;
-  };
+  // ── Notifications banner items ─────────────────────────────────────────
 
-  const today = startOfDay(new Date());
-  const todayStr = format(today, 'yyyy-MM-dd');
-
-  // Selections where this member is included (upcoming only)
-  const mySelections = allSelections.filter(sel => {
-    if (!sel.selections || !sel.match_date) return false;
-    if (sel.match_date < todayStr) return false;
-    if (sel.is_archived) return false;
-    return Object.values(sel.selections).includes(user?.email);
-  }).sort((a, b) => a.match_date.localeCompare(b.match_date));
-
-  const getMyAvailability = (selectionId) => {
-    const avail = myAvailabilities.find(a => a.selection_id === selectionId);
-    return avail?.is_available; // true, false, or undefined
-  };
-
-  // ── Tournament matches (knockout & round-robin) ─────────────────────────
-  const myTournamentMatches = [];
-  if (user?.email) {
-    tournaments.forEach(t => {
-      if (t.tournament_type === 'knockout' && t.bracket) {
-        const rounds = t.bracket?.rounds || t.bracket;
-        Object.entries(rounds || {}).forEach(([roundName, matches]) => {
-          (matches || []).forEach(match => {
-            if (!match || match.winner_id) return;
-            const p1 = Array.isArray(match.player1) ? match.player1 : [match.player1];
-            const p2 = Array.isArray(match.player2) ? match.player2 : [match.player2];
-            const all = [...p1, ...p2].filter(Boolean);
-            if (all.includes(user.email)) {
-              const opponents = all.filter(p => p !== user.email);
-              myTournamentMatches.push({
-                tournamentName: t.name,
-                round: roundName,
-                opponents,
-                playByDate: match.play_by_date || null,
-              });
-            }
-          });
-        });
-      }
-      if (t.tournament_type === 'round_robin' && t.fixtures) {
-        // Find teams the user is in
-        const myTeamIds = (t.teams || [])
-          .filter(team => {
-            const captain = team.captain;
-            return captain === user.email || captain === getMemberName(user.email);
-          })
-          .map(team => team.id);
-
-        t.fixtures
-          .filter(f => !f.winner_id && f.team1_score === undefined && f.team2_score === undefined)
-          .filter(f => myTeamIds.includes(f.team1_id) || myTeamIds.includes(f.team2_id))
-          .forEach(f => {
-            const opponentId = myTeamIds.includes(f.team1_id) ? f.team2_id : f.team1_id;
-            const opponentTeam = (t.teams || []).find(team => team.id === opponentId);
-            myTournamentMatches.push({
-              tournamentName: t.name,
-              round: f.round || f.group || '',
-              opponents: [opponentTeam?.name || opponentTeam?.captain || 'TBD'],
-              playByDate: null,
-            });
-          });
-      }
-    });
-  }
-
-  // ── Notifications summary ─────────────────────────────────────────────
   const notifItems = [];
   if (notifications.length > 0)
-    notifItems.push(`You have ${notifications.length} unread notification${notifications.length > 1 ? 's' : ''}`);
+    notifItems.push(`${notifications.length} unread notification${notifications.length > 1 ? 's' : ''}`);
   const pendingSelections = mySelections.filter(sel => getMyAvailability(sel.id) === undefined);
   if (pendingSelections.length > 0)
     notifItems.push(`${pendingSelections.length} match selection${pendingSelections.length > 1 ? 's' : ''} awaiting your availability`);
-  const weekEnd = format(addDays(today, 7), 'yyyy-MM-dd');
+  if (myTournamentMatches.length > 0)
+    notifItems.push(`${myTournamentMatches.length} outstanding competition match${myTournamentMatches.length > 1 ? 'es' : ''}`);
+  const weekEnd = format(addDays(startOfDay(new Date()), 7), 'yyyy-MM-dd');
   const bookingsThisWeek = bookings.filter(b => b.date <= weekEnd);
   if (bookingsThisWeek.length > 0)
     notifItems.push(`${bookingsThisWeek.length} upcoming booking${bookingsThisWeek.length > 1 ? 's' : ''} this week`);
-  if (myTournamentMatches.length > 0)
-    notifItems.push(`${myTournamentMatches.length} outstanding competition match${myTournamentMatches.length > 1 ? 'es' : ''}`);
 
   const memberFirstName = user?.first_name || user?.full_name?.split(' ')[0] || 'Member';
 
+  // ── Loading state ──────────────────────────────────────────────────────
+
   if (!user || !club) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
       </div>
     );
@@ -242,15 +221,15 @@ export default function MemberDashboard() {
           <p className="text-emerald-100 text-sm mt-1">{format(new Date(), 'EEEE, d MMMM yyyy')}</p>
         </div>
 
-        {/* Notifications Summary */}
+        {/* Notifications Banner */}
         {notifItems.length > 0 && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Bell className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-amber-800 text-sm">Action Required</span>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {notifItems.map((text, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
@@ -265,85 +244,96 @@ export default function MemberDashboard() {
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
           <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
-            <Button className="w-full h-16 text-base bg-emerald-600 hover:bg-emerald-700 flex-col gap-1">
+            <Button className="w-full h-16 text-sm bg-emerald-600 hover:bg-emerald-700 flex-col gap-1">
               <Calendar className="w-5 h-5" />
               Book a Rink
             </Button>
           </Link>
           <Link to={createPageUrl('Profile') + `?clubId=${clubId}`}>
-            <Button variant="outline" className="w-full h-16 text-base flex-col gap-1 border-2">
+            <Button variant="outline" className="w-full h-16 text-sm flex-col gap-1 border-2">
               <User className="w-5 h-5" />
               My Profile
             </Button>
           </Link>
         </div>
 
-        {/* Selected Matches & Availability */}
-        {mySelections.length > 0 && (
+        {/* ── Selected Matches & Availability ── */}
+        {club?.module_selection !== false && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-600" />
-                Your Selected Matches
+                My Selected Matches
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y">
-                {mySelections.map(sel => {
-                  const avail = getMyAvailability(sel.id);
-                  return (
-                    <div key={sel.id} className="p-4">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 text-sm truncate">{sel.match_name || sel.competition}</p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {format(parseISO(sel.match_date), 'd MMM yyyy')}
-                            </span>
-                            {sel.match_start_time && (
+              {selectionsLoading ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : mySelections.length === 0 ? (
+                <div className="p-5 text-center text-sm text-gray-400">
+                  You have no upcoming match selections.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {mySelections.map(sel => {
+                    const avail = getMyAvailability(sel.id);
+                    return (
+                      <div key={sel.id} className="p-4">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{sel.match_name || sel.competition}</p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
                               <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {sel.match_start_time}
+                                <Calendar className="w-3 h-3" />
+                                {format(parseISO(sel.match_date), 'd MMM yyyy')}
                               </span>
-                            )}
-                            {sel.friendly_location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {sel.friendly_location}
-                              </span>
-                            )}
+                              {sel.match_start_time && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {sel.match_start_time}
+                                </span>
+                              )}
+                              {sel.friendly_location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {sel.friendly_location}
+                                </span>
+                              )}
+                            </div>
                           </div>
+                          <AvailabilityBadge isAvailable={avail} />
                         </div>
-                        <AvailabilityBadge isAvailable={avail} />
+                        {avail === undefined && (
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
+                              onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: true })}
+                              disabled={setAvailabilityMutation.isPending}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                              Available
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                              onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: false })}
+                              disabled={setAvailabilityMutation.isPending}
+                            >
+                              <XCircle className="w-3.5 h-3.5 mr-1" />
+                              Not Available
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      {avail === undefined && (
-                        <div className="flex gap-2 mt-2">
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
-                            onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: true })}
-                            disabled={setAvailabilityMutation.isPending}
-                          >
-                            <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                            Available
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50"
-                            onClick={() => setAvailabilityMutation.mutate({ selectionId: sel.id, isAvailable: false })}
-                            disabled={setAvailabilityMutation.isPending}
-                          >
-                            <XCircle className="w-3.5 h-3.5 mr-1" />
-                            Not Available
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="p-3 border-t">
                 <Link to={createPageUrl('Selection') + `?clubId=${clubId}`}>
                   <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
@@ -355,7 +345,134 @@ export default function MemberDashboard() {
           </Card>
         )}
 
-        {/* Upcoming Bookings */}
+        {/* ── League Fixtures ── */}
+        {club?.module_leagues !== false && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-600" />
+                My League Fixtures
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {(teamsLoading || fixturesLoading) ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : myTeams.length === 0 ? (
+                <div className="p-5 text-center text-sm text-gray-400">
+                  You are not currently assigned to a league team.
+                </div>
+              ) : leagueFixtures.length === 0 ? (
+                <div className="p-5 text-center text-sm text-gray-400">
+                  No upcoming league fixtures for your teams.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {leagueFixtures.map(fixture => {
+                    const myTeam = myTeams.find(t => t.id === fixture.home_team_id || t.id === fixture.away_team_id);
+                    const isHome = myTeam?.id === fixture.home_team_id;
+                    const opponentTeamId = isHome ? fixture.away_team_id : fixture.home_team_id;
+                    const opponentTeam = allLeagueTeams.find(t => t.id === opponentTeamId);
+                    const league = leagues.find(l => l.id === myTeam?.league_id);
+                    return (
+                      <div key={fixture.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-gray-900 truncate">
+                              {myTeam?.name} <span className="text-gray-400">vs</span> {opponentTeam?.name || 'TBD'}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+                              </span>
+                              <Badge className={`text-xs px-1.5 py-0 ${isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {isHome ? 'Home' : 'Away'}
+                              </Badge>
+                              {fixture.rink_number && <span>Rink {fixture.rink_number}</span>}
+                              {league && <span className="text-gray-400">{league.name}</span>}
+                            </div>
+                          </div>
+                          <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
+                            <Button size="sm" variant="ghost" className="shrink-0 text-xs h-8 text-emerald-700">
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="p-3 border-t">
+                <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
+                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                    View My Teams <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Competition Matches ── */}
+        {club?.module_competitions !== false && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-emerald-600" />
+                Competition Matches
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {tournamentsLoading ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : myTournamentMatches.length === 0 ? (
+                <div className="p-5 text-center text-sm text-gray-400">
+                  No outstanding competition matches.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {myTournamentMatches.map((item, i) => (
+                    <div key={i} className="p-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-gray-900 truncate">{item.tournamentName}</p>
+                        {item.round && <p className="text-xs text-gray-500 mt-0.5">{item.round}</p>}
+                        <p className="text-xs text-gray-700 mt-1">
+                          vs {item.opponents.map(o => getMemberName(o)).join(', ')}
+                        </p>
+                        {item.playByDate && (
+                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Play by {format(parseISO(item.playByDate), 'd MMM yyyy')}
+                          </p>
+                        )}
+                      </div>
+                      <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
+                        <Button size="sm" variant="outline" className="shrink-0 text-xs h-8">
+                          View <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="p-3 border-t">
+                <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
+                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
+                    View All Competitions <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Upcoming Bookings ── */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -364,9 +481,14 @@ export default function MemberDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {bookings.length === 0 ? (
+            {bookingsLoading ? (
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : bookings.length === 0 ? (
               <div className="p-5 text-center">
-                <p className="text-sm text-gray-500 mb-3">You have no upcoming bookings.</p>
+                <p className="text-sm text-gray-400 mb-3">You have no upcoming bookings.</p>
                 <Link to={createPageUrl('BookRink') + `?clubId=${clubId}`}>
                   <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
                     <Calendar className="w-4 h-4 mr-2" />
@@ -401,123 +523,15 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        {/* Competition Matches */}
-        {myTournamentMatches.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-emerald-600" />
-                Competition Matches
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {myTournamentMatches.map((item, i) => (
-                  <div key={i} className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 truncate">{item.tournamentName}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{item.round}</p>
-                        <p className="text-xs text-gray-700 mt-1">
-                          vs {item.opponents.map(o => getMemberName(o)).join(', ')}
-                        </p>
-                        {item.playByDate && (
-                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Play by {format(parseISO(item.playByDate), 'd MMM yyyy')}
-                          </p>
-                        )}
-                      </div>
-                      <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
-                        <Button size="sm" variant="outline" className="shrink-0 text-xs h-8">
-                          View <ArrowRight className="w-3 h-3 ml-1" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="p-3 border-t">
-                <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`}>
-                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                    View All Competitions <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* League Fixtures */}
-        {leagueFixtures.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                League Fixtures
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {leagueFixtures.map(fixture => {
-                  const myTeam = myTeams.find(t => t.id === fixture.home_team_id || t.id === fixture.away_team_id);
-                  const isHome = myTeam?.id === fixture.home_team_id;
-                  const opponentTeamId = isHome ? fixture.away_team_id : fixture.home_team_id;
-                  const opponentTeam = allLeagueTeams.find(t => t.id === opponentTeamId);
-                  const league = leagues.find(l => l.id === myTeam?.league_id);
-                  return (
-                    <div key={fixture.id} className="px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm text-gray-900 truncate">
-                            {myTeam?.name} vs {opponentTeam?.name || 'TBD'}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {format(parseISO(fixture.match_date), 'd MMM yyyy')}
-                            </span>
-                            <span className={isHome ? 'text-emerald-600 font-medium' : 'text-blue-600 font-medium'}>
-                              {isHome ? 'Home' : 'Away'}
-                            </span>
-                            {fixture.rink_number && (
-                              <span>Rink {fixture.rink_number}</span>
-                            )}
-                            {league && (
-                              <span className="text-gray-400">{league.name}</span>
-                            )}
-                          </div>
-                        </div>
-                        <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
-                          <Button size="sm" variant="ghost" className="shrink-0 text-xs h-8 text-emerald-700">
-                            View <ChevronRight className="w-3 h-3 ml-1" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="p-3 border-t">
-                <Link to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}>
-                  <Button variant="ghost" size="sm" className="w-full text-emerald-700 hover:text-emerald-800 text-xs">
-                    View My Teams <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
       </div>
     </div>
   );
 }
 
 function AvailabilityBadge({ isAvailable }) {
-  if (isAvailable === true) return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0">Available</Badge>;
-  if (isAvailable === false) return <Badge className="bg-red-100 text-red-800 border-red-200 shrink-0">Not Available</Badge>;
-  return <Badge className="bg-amber-100 text-amber-800 border-amber-200 shrink-0">Awaiting</Badge>;
+  if (isAvailable === true) return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0 text-xs">Available</Badge>;
+  if (isAvailable === false) return <Badge className="bg-red-100 text-red-800 border-red-200 shrink-0 text-xs">Not Available</Badge>;
+  return <Badge className="bg-amber-100 text-amber-800 border-amber-200 shrink-0 text-xs">Awaiting</Badge>;
 }
 
 function BookingStatusBadge({ status }) {
