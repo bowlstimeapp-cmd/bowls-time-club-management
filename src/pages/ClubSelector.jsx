@@ -87,10 +87,15 @@ export default function ClubSelector() {
     requestMutation.mutate(clubId);
   };
 
+  const getLandingPage = (club) => {
+    if (club?.member_landing_page_enabled) return 'MemberDashboard';
+    if (club?.module_homepage && club?.default_landing_page === 'homepage') return 'ClubHome';
+    return 'BookRink';
+  };
+
   const handleEnterClub = (clubId) => {
     const club = clubs.find(c => c.id === clubId);
-    const useHomepage = club?.module_homepage && club?.default_landing_page === 'homepage';
-    navigate(createPageUrl(useHomepage ? 'ClubHome' : 'BookRink') + `?clubId=${clubId}`);
+    navigate(createPageUrl(getLandingPage(club)) + `?clubId=${clubId}`);
   };
 
   // Check for approved memberships and redirect if only one —
@@ -99,9 +104,10 @@ export default function ClubSelector() {
   
   useEffect(() => {
     if (!isSwitchingClubs && !membershipsLoading && approvedMemberships.length === 1) {
-      navigate(createPageUrl('BookRink') + `?clubId=${approvedMemberships[0].club_id}`);
+      const club = clubs.find(c => c.id === approvedMemberships[0].club_id);
+      navigate(createPageUrl(getLandingPage(club)) + `?clubId=${approvedMemberships[0].club_id}`);
     }
-  }, [approvedMemberships, membershipsLoading, navigate, isSwitchingClubs]);
+  }, [approvedMemberships, membershipsLoading, navigate, isSwitchingClubs, clubs]);
 
   const isLoading = clubsLoading || membershipsLoading;
   

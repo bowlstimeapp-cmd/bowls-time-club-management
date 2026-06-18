@@ -105,6 +105,7 @@ export default function ClubSettings() {
   const [competitionRegistrationEnabled, setCompetitionRegistrationEnabled] = useState(false);
   const [competitionPageHeader, setCompetitionPageHeader] = useState('');
   const [clubTheme, setClubTheme] = useState('emerald');
+  const [memberLandingPageEnabled, setMemberLandingPageEnabled] = useState(false);
 
   // ── Auth / routing ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -172,6 +173,7 @@ export default function ClubSettings() {
     setCompetitionRegistrationEnabled(club.competition_registration_enabled || false);
     setCompetitionPageHeader(club.competition_page_header || '');
     setClubTheme(club.club_theme || 'emerald');
+    setMemberLandingPageEnabled(club.member_landing_page_enabled || false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id]);
 
@@ -330,6 +332,7 @@ export default function ClubSettings() {
       competition_registration_enabled: competitionRegistrationEnabled,
       competition_page_header: competitionPageHeader || null,
       club_theme: clubTheme,
+      member_landing_page_enabled: memberLandingPageEnabled,
       ...teamSheetSettings,
     };
     updateMutation.mutate(payload);
@@ -393,6 +396,23 @@ export default function ClubSettings() {
           </CardContent>
         </Card>
       )}
+
+      {/* Member Landing Page */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Monitor className="w-5 h-5" />Member Landing Page</CardTitle>
+          <CardDescription>Choose what members see immediately after logging in to your club</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Enable Member Dashboard</Label>
+              <p className="text-sm text-gray-500">When enabled, members are directed to a personalised dashboard showing their bookings, selections, and fixtures after login</p>
+            </div>
+            <Switch checked={memberLandingPageEnabled} onCheckedChange={setMemberLandingPageEnabled} />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Alternative Page Views */}
       <Card>

@@ -170,6 +170,11 @@
       "default": "rink_booking",
       "description": "Default page members see after selecting the club"
     },
+    "member_landing_page_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "When enabled, members are directed to the Member Dashboard after login"
+    },
     "stripe_secret_key": {
       "type": "string",
       "description": "Club's own Stripe secret key (optional, overrides platform key)"
