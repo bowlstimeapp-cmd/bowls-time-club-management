@@ -132,14 +132,19 @@ export default function MemberDashboard() {
         Object.entries(rounds || {}).forEach(([roundName, roundMatches]) => {
           (roundMatches || []).forEach(match => {
             if (!match || match.winner_id) return;
+            // Skip if a score has been entered
+            if (match.player1_score != null || match.player2_score != null) return;
             const p1 = Array.isArray(match.player1) ? match.player1 : [match.player1];
             const p2 = Array.isArray(match.player2) ? match.player2 : [match.player2];
             const all = [...p1, ...p2].filter(Boolean);
             if (!all.includes(user.email)) return;
+            const opponents = all.filter(p => p !== user.email);
+            // Skip byes (no opponent assigned yet)
+            if (opponents.length === 0) return;
             matches.push({
               tournamentName: t.name,
               round: isNaN(parseInt(roundName)) ? roundName : `Round ${parseInt(roundName) + 1}`,
-              opponents: all.filter(p => p !== user.email),
+              opponents,
               playByDate: match.play_by_date || null,
             });
           });
