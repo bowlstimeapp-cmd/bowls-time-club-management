@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy,
   Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette,
-  ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush, Bell, Layers
+  ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush, Bell, Layers, Newspaper
 } from 'lucide-react';
+import ClubNewsAdmin from '@/components/club/ClubNewsAdmin';
 import { Textarea } from "@/components/ui/textarea";
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
@@ -30,6 +31,7 @@ const TABS = [
   { id: 'rinks',        label: 'Rinks & Bookings',       icon: Layers    },
   { id: 'members',      label: 'Members',                icon: Users     },
   { id: 'competitions', label: 'Competitions',           icon: Trophy    },
+  { id: 'news',         label: 'Club News',              icon: Newspaper },
   { id: 'display',      label: 'Display & Integrations', icon: Tv        },
 ];
 
@@ -821,11 +823,18 @@ export default function ClubSettings() {
     </div>
   );
 
+  const renderNews = () => (
+    <div className="space-y-6">
+      <ClubNewsAdmin clubId={clubId} />
+    </div>
+  );
+
   const tabContent = {
     general: renderGeneral,
     rinks: renderRinks,
     members: renderMembers,
     competitions: renderCompetitions,
+    news: renderNews,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

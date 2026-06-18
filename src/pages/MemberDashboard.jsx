@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar, User, CheckCircle, XCircle, Clock,
-  Trophy, Users, Bell, MapPin, ChevronRight, ArrowRight
+  Trophy, Users, Bell, MapPin, ChevronRight, ArrowRight, Newspaper
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -84,6 +84,18 @@ export default function MemberDashboard() {
     queryKey: ['myNotifications', user?.email],
     queryFn: () => base44.entities.Notification.filter({ user_email: user.email, is_read: false }),
     enabled: !!user?.email,
+  });
+
+  const { data: clubNews = [] } = useQuery({
+    queryKey: ['clubPosts', clubId],
+    queryFn: async () => {
+      const posts = await base44.entities.ClubPost.filter({ club_id: clubId, type: 'news' });
+      return posts
+        .filter(p => p.is_published !== false)
+        .sort((a, b) => (b.created_date || '').localeCompare(a.created_date || ''))
+        .slice(0, 5);
+    },
+    enabled: !!clubId,
   });
 
   // ── Derived data — memoised to avoid query key instability ─────────────
@@ -483,6 +495,36 @@ export default function MemberDashboard() {
                     View All Competitions <ChevronRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Club News ── */}
+        {clubNews.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-emerald-600" />
+                Club News
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {clubNews.map(post => (
+                  <div key={post.id} className="p-4">
+                    {post.image_url && (
+                      <img src={post.image_url} alt="" className="w-full h-40 object-cover rounded-lg mb-3" />
+                    )}
+                    <p className="font-semibold text-sm text-gray-900">{post.title}</p>
+                    {post.content && (
+                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{post.content}</p>
+                    )}
+                    {post.created_date && (
+                      <p className="text-xs text-gray-400 mt-2">{format(parseISO(post.created_date), 'd MMM yyyy')}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
