@@ -279,7 +279,8 @@ useEffect(() => {
 
   const isAdmin = membership?.role === 'admin' && membership?.status === 'approved';
   const isSteward = membership?.role === 'steward' && membership?.status === 'approved';
-  const isPrivileged = isAdmin || isSteward;
+  const isPlatformAdmin = user?.role === 'admin';
+  const isPrivileged = isAdmin || isSteward || isPlatformAdmin;
 
   const writeAuditLog = async (booking, action, details = '') => {
     if (!isPrivileged || !user) return;
@@ -340,20 +341,25 @@ useEffect(() => {
       return;
     }
     setDeletingBooking(true);
-    if (isPrivileged) {
-      await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
-      if (booking.booker_email !== user?.email) {
-        await sendBookingChangeNotification(booking, 'deleted');
+    try {
+      if (isPrivileged) {
+        await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
+        if (booking.booker_email !== user?.email) {
+          await sendBookingChangeNotification(booking, 'deleted');
+        }
+      } else {
+        await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
       }
-    } else {
-      await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
+      await writeAuditLog(booking, 'cancelled');
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success('Booking cancelled');
+      setBookingDetailOpen(false);
+      setSelectedBooking(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to cancel booking');
+    } finally {
+      setDeletingBooking(false);
     }
-    await writeAuditLog(booking, 'cancelled');
-    queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    toast.success('Booking cancelled');
-    setBookingDetailOpen(false);
-    setSelectedBooking(null);
-    setDeletingBooking(false);
   };
 
   const handleTourMoveBooking = (booking, newRink, newStartTime) => {
@@ -750,18 +756,23 @@ useEffect(() => {
     setBulkDeleting(true);
     const bookingIds = bulkDeleteSelected;
     const bookingRecords = bookingIds.map(bid => bookings.find(b => b.id === bid)).filter(Boolean);
-    await base44.functions.invoke('manageBooking', { action: 'bulk_cancel', clubId, ids: bookingIds });
-    for (const booking of bookingRecords) {
-      if (booking.booker_email !== user?.email) {
-        await sendBookingChangeNotification(booking, 'deleted');
+    try {
+      await base44.functions.invoke('manageBooking', { action: 'bulk_cancel', clubId, ids: bookingIds });
+      for (const booking of bookingRecords) {
+        if (booking.booker_email !== user?.email) {
+          await sendBookingChangeNotification(booking, 'deleted');
+        }
+        await writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bookingIds.length} bookings in batch)`);
       }
-      await writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bookingIds.length} bookings in batch)`);
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success(`${bulkDeleteSelected.length} booking(s) cancelled`);
+      setBulkDeleteSelected([]);
+      setBulkDeleteMode(false);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to bulk cancel bookings');
+    } finally {
+      setBulkDeleting(false);
     }
-    queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    toast.success(`${bulkDeleteSelected.length} booking(s) cancelled`);
-    setBulkDeleteSelected([]);
-    setBulkDeleteMode(false);
-    setBulkDeleting(false);
   };
 
   const toggleBulkDeleteBooking = (bookingId) => {
@@ -859,10 +870,10 @@ useEffect(() => {
                 <DateSelector 
                   selectedDate={selectedDate} 
                   onDateChange={setSelectedDate}
-                  allowPast={isAdmin || isSteward}
+                  allowPast={isPrivileged}
                 />
                 <div className="flex gap-2 flex-wrap">
-                  {(membership?.role === 'admin' || membership?.role === 'steward') && (
+                  {isPrivileged && (
                     <>
                       <DailyBookingsSummary
                         clubId={clubId}
@@ -1099,6 +1110,7 @@ useEffect(() => {
           club={club}
           onDelete={handleDeleteBooking}
           deleteLoading={deletingBooking}
+          isPrivileged={isPrivileged}
           cancelBtnRef={tourStep === 8 ? tourCancelBtnRef : undefined}
         />
 

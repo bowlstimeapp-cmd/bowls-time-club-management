@@ -107,6 +107,9 @@ export default function AdminBookings() {
       queryClient.invalidateQueries({ queryKey: ['myBookings'] });
       toast.success('Booking deleted');
     },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete booking');
+    },
   });
 
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
@@ -248,10 +251,14 @@ export default function AdminBookings() {
 
   const handleConfirmDelete = async () => {
     if (bookingToDelete) {
-      await writeAuditLog(bookingToDelete, 'deleted');
-      await deleteMutation.mutateAsync(bookingToDelete.id);
-      setDeleteDialogOpen(false);
-      setBookingToDelete(null);
+      try {
+        await writeAuditLog(bookingToDelete, 'deleted');
+        await deleteMutation.mutateAsync(bookingToDelete.id);
+        setDeleteDialogOpen(false);
+        setBookingToDelete(null);
+      } catch (err) {
+        toast.error(err?.response?.data?.error || 'Failed to delete booking');
+      }
     }
   };
 

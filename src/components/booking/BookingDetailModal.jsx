@@ -22,7 +22,7 @@ const statusColors = {
 };
 
 export default function BookingDetailModal({
-  booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club, onDelete, deleteLoading, cancelBtnRef,
+  booking, open, onClose, currentUserEmail, onJoinRollup, joinLoading, club, onDelete, deleteLoading, isPrivileged, cancelBtnRef,
 }) {
   if (!booking) return null;
 
@@ -37,7 +37,7 @@ export default function BookingDetailModal({
   );
   const canJoin = isRollup && club?.open_rollups && !isFull && !alreadyJoined && currentUserEmail;
   const isOwnBooking = booking.booker_email === currentUserEmail;
-  const canDelete = isOwnBooking && onDelete;
+  const canDelete = (isOwnBooking || isPrivileged) && onDelete;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
