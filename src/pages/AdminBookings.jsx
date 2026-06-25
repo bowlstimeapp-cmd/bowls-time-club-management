@@ -252,12 +252,13 @@ export default function AdminBookings() {
   const handleConfirmDelete = async () => {
     if (bookingToDelete) {
       try {
-        await writeAuditLog(bookingToDelete, 'deleted');
         await deleteMutation.mutateAsync(bookingToDelete.id);
         setDeleteDialogOpen(false);
         setBookingToDelete(null);
+        // Fire audit log in the background — don't block the delete
+        writeAuditLog(bookingToDelete, 'deleted').catch(() => {});
       } catch (err) {
-        toast.error(err?.response?.data?.error || 'Failed to delete booking');
+        toast.error(err?.response?.data?.error || err?.message || 'Failed to delete booking');
       }
     }
   };

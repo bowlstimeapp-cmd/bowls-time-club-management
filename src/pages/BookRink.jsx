@@ -344,19 +344,23 @@ useEffect(() => {
     try {
       if (isPrivileged) {
         await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
-        if (booking.booker_email !== user?.email) {
-          await sendBookingChangeNotification(booking, 'deleted');
-        }
       } else {
         await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
       }
-      await writeAuditLog(booking, 'cancelled');
+      // Update UI immediately after the backend confirms cancellation
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast.success('Booking cancelled');
       setBookingDetailOpen(false);
       setSelectedBooking(null);
+      // Fire notification + audit log in the background — don't let their failure block the UI
+      Promise.all([
+        isPrivileged && booking.booker_email !== user?.email
+          ? sendBookingChangeNotification(booking, 'deleted').catch(() => {})
+          : Promise.resolve(),
+        writeAuditLog(booking, 'cancelled').catch(() => {}),
+      ]);
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to cancel booking');
+      toast.error(err?.response?.data?.error || err?.message || 'Failed to cancel booking');
     } finally {
       setDeletingBooking(false);
     }
@@ -758,18 +762,22 @@ useEffect(() => {
     const bookingRecords = bookingIds.map(bid => bookings.find(b => b.id === bid)).filter(Boolean);
     try {
       await base44.functions.invoke('manageBooking', { action: 'bulk_cancel', clubId, ids: bookingIds });
-      for (const booking of bookingRecords) {
-        if (booking.booker_email !== user?.email) {
-          await sendBookingChangeNotification(booking, 'deleted');
-        }
-        await writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bookingIds.length} bookings in batch)`);
-      }
+      // Update UI immediately after the backend confirms cancellation
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast.success(`${bulkDeleteSelected.length} booking(s) cancelled`);
       setBulkDeleteSelected([]);
       setBulkDeleteMode(false);
+      // Fire notifications + audit logs in the background
+      Promise.all(bookingRecords.map(booking =>
+        Promise.all([
+          booking.booker_email !== user?.email
+            ? sendBookingChangeNotification(booking, 'deleted').catch(() => {})
+            : Promise.resolve(),
+          writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bookingIds.length} bookings in batch)`).catch(() => {}),
+        ])
+      ));
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Failed to bulk cancel bookings');
+      toast.error(err?.response?.data?.error || err?.message || 'Failed to bulk cancel bookings');
     } finally {
       setBulkDeleting(false);
     }
