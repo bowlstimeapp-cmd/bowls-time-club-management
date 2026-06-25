@@ -342,13 +342,17 @@ useEffect(() => {
     }
     setDeletingBooking(true);
     try {
-      if (isPrivileged) {
-        await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
-      } else {
+      // Use isOwnBooking (always available) instead of isPrivileged (may not be loaded yet)
+      // to avoid a race condition where membership hasn't loaded and admin/steward
+      // gets the wrong code path for other people's bookings.
+      const isOwnBooking = booking.booker_email === user?.email;
+      if (isOwnBooking) {
         await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
+      } else {
+        await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
       }
-      // Update UI immediately after the backend confirms cancellation
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      // Force an immediate refetch and wait for it so the UI always updates
+      await queryClient.refetchQueries({ queryKey: ['bookings'] });
       toast.success('Booking cancelled');
       setBookingDetailOpen(false);
       setSelectedBooking(null);
@@ -762,8 +766,8 @@ useEffect(() => {
     const bookingRecords = bookingIds.map(bid => bookings.find(b => b.id === bid)).filter(Boolean);
     try {
       await base44.functions.invoke('manageBooking', { action: 'bulk_cancel', clubId, ids: bookingIds });
-      // Update UI immediately after the backend confirms cancellation
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      // Force an immediate refetch and wait for it so the UI always updates
+      await queryClient.refetchQueries({ queryKey: ['bookings'] });
       toast.success(`${bulkDeleteSelected.length} booking(s) cancelled`);
       setBulkDeleteSelected([]);
       setBulkDeleteMode(false);

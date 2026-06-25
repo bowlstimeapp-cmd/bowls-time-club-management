@@ -92,19 +92,23 @@ export default function AdminBookings() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id, data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['myBookings'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['clubBookings'] }),
+        queryClient.refetchQueries({ queryKey: ['bookings'] }),
+        queryClient.refetchQueries({ queryKey: ['myBookings'] }),
+      ]);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.functions.invoke('manageBooking', { action: 'delete', clubId, id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['myBookings'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['clubBookings'] }),
+        queryClient.refetchQueries({ queryKey: ['bookings'] }),
+        queryClient.refetchQueries({ queryKey: ['myBookings'] }),
+      ]);
       toast.success('Booking deleted');
     },
     onError: (err) => {

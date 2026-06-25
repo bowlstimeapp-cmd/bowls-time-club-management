@@ -155,16 +155,24 @@ export default function MyBookings() {
     : allBookings;
 
   const cancelMutation = useMutation({
-    mutationFn: (booking) => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['myBookings'] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    mutationFn: async (booking) => {
+      // Use isOwnBooking to pick the right endpoint — avoids race condition
+      // where membership hasn't loaded and admin gets the wrong code path.
+      const isOwnBooking = booking.booker_email === user?.email;
+      if (isOwnBooking) {
+        return base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
+      }
+      return base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['myBookings'] });
+      await queryClient.refetchQueries({ queryKey: ['bookings'] });
       toast.success('Booking cancelled successfully');
       setCancelDialogOpen(false);
       setBookingToCancel(null);
     },
-    onError: () => {
-      toast.error('Failed to cancel booking');
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Failed to cancel booking');
     },
   });
 
