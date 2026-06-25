@@ -341,7 +341,7 @@ useEffect(() => {
     }
     setDeletingBooking(true);
     if (isPrivileged) {
-      await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: booking.id, data: { status: 'cancelled' } });
+      await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
       if (booking.booker_email !== user?.email) {
         await sendBookingChangeNotification(booking, 'deleted');
       }
@@ -748,15 +748,14 @@ useEffect(() => {
   const handleBulkDeleteConfirm = async () => {
     if (bulkDeleteSelected.length === 0) return;
     setBulkDeleting(true);
-    for (const bookingId of bulkDeleteSelected) {
-      const booking = bookings.find(b => b.id === bookingId);
-      await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: bookingId, data: { status: 'cancelled' } });
-      if (booking && booking.booker_email !== user?.email) {
+    const bookingIds = bulkDeleteSelected;
+    const bookingRecords = bookingIds.map(bid => bookings.find(b => b.id === bid)).filter(Boolean);
+    await base44.functions.invoke('manageBooking', { action: 'bulk_cancel', clubId, ids: bookingIds });
+    for (const booking of bookingRecords) {
+      if (booking.booker_email !== user?.email) {
         await sendBookingChangeNotification(booking, 'deleted');
       }
-      if (booking) {
-        await writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bulkDeleteSelected.length} bookings in batch)`);
-      }
+      await writeAuditLog(booking, 'bulk_deleted', `Bulk cancelled (${bookingIds.length} bookings in batch)`);
     }
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`${bulkDeleteSelected.length} booking(s) cancelled`);

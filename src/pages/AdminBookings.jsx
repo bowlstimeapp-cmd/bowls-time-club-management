@@ -100,7 +100,7 @@ export default function AdminBookings() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'delete', clubId, id }),
+    mutationFn: (id) => base44.functions.invoke('manageBooking', { action: 'delete', clubId, id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubBookings'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
