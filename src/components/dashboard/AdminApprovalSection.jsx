@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +7,29 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   ShieldAlert, Calendar, Trophy, Table2, ChevronRight,
-  AlertTriangle, Clock,
+  AlertTriangle, Clock, ChevronDown,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO, startOfDay } from 'date-fns';
 
-export default function AdminApprovalSection({ clubId, membership }) {
+export default function AdminApprovalSection({ clubId, membership, members = [] }) {
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const [collapsed, setCollapsed] = useState(false);
+
+  const getMemberName = (email) => {
+    if (!email) return 'TBD';
+    const m = members.find(m => m.user_email === email);
+    if (m?.first_name && m?.surname) return `${m.first_name} ${m.surname}`;
+    return m?.user_name || email;
+  };
+
+  const resolvePlayer = (player) => {
+    if (!player) return 'TBD';
+    if (Array.isArray(player)) return player.map(getMemberName).join(' / ');
+    return getMemberName(player);
+  };
 
   const { data: pendingBookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['adminPendingBookings', clubId],
@@ -64,8 +78,8 @@ export default function AdminApprovalSection({ clubId, membership }) {
               results.push({
                 tournamentName: t.name,
                 round: roundName,
-                p1: Array.isArray(match.player1) ? match.player1.join(' / ') : (match.player1 || 'TBD'),
-                p2: Array.isArray(match.player2) ? match.player2.join(' / ') : (match.player2 || 'TBD'),
+                p1: resolvePlayer(match.player1),
+                p2: resolvePlayer(match.player2),
                 s1: match.player1_score,
                 s2: match.player2_score,
               });
@@ -92,7 +106,7 @@ export default function AdminApprovalSection({ clubId, membership }) {
       }
     });
     return results;
-  }, [allTournaments, leagueTeams]);
+  }, [allTournaments, leagueTeams, members]);
 
   // League fixtures with score clashes or missing results
   const leagueIssues = useMemo(() => {
@@ -134,13 +148,15 @@ export default function AdminApprovalSection({ clubId, membership }) {
 
   return (
     <Card className="border-amber-200">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 cursor-pointer select-none" onClick={() => setCollapsed(c => !c)}>
         <CardTitle className="text-base flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-amber-600" />
           Admin Action Required
           <Badge className="bg-amber-100 text-amber-800 border-amber-200 ml-1">{totalItems}</Badge>
+          <ChevronDown className={`w-4 h-4 ml-auto text-gray-400 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
         </CardTitle>
       </CardHeader>
+      {!collapsed && (
       <CardContent className="p-0">
         {isLoading ? (
           <div className="p-4 space-y-3">
@@ -242,6 +258,7 @@ export default function AdminApprovalSection({ clubId, membership }) {
           </div>
         )}
       </CardContent>
+      )}
     </Card>
   );
 }

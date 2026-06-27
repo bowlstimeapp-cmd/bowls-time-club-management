@@ -593,7 +593,7 @@ export default function MemberDashboard() {
         </div>
 
         {/* Admin Action Required (club admins only) */}
-        <AdminApprovalSection clubId={clubId} membership={myMembership} />
+        <AdminApprovalSection clubId={clubId} membership={myMembership} members={members} />
 
         {/* Draggable sections */}
         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEndWithScroll}>
