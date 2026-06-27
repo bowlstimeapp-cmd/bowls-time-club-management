@@ -14,6 +14,7 @@ import { createPageUrl } from '@/utils';
 import { format, parseISO, addDays, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import AdminApprovalSection from '@/components/dashboard/AdminApprovalSection';
 
 // Section IDs
 const SECTION_SELECTIONS = 'selections';
@@ -158,6 +159,8 @@ export default function MemberDashboard() {
     if (!user?.email) return [];
     return allLeagueTeams.filter(t => t.players && t.players.includes(user.email));
   }, [allLeagueTeams, user?.email]);
+
+  const myMembership = useMemo(() => members.find(m => m.user_email === user?.email), [members, user?.email]);
 
   const myTeamIdStr = useMemo(() => myTeams.map(t => t.id).join(','), [myTeams]);
 
@@ -588,6 +591,9 @@ export default function MemberDashboard() {
             {reordering ? 'Done' : 'Customise'}
           </Button>
         </div>
+
+        {/* Admin Action Required (club admins only) */}
+        <AdminApprovalSection clubId={clubId} membership={myMembership} />
 
         {/* Draggable sections */}
         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEndWithScroll}>
