@@ -73,7 +73,10 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
           const roundIndex = parseInt(roundKey);
           const roundName = isNaN(roundIndex) ? roundKey : getRoundName(roundIndex, totalRounds);
           (roundMatches || []).forEach(match => {
-            if (!match || match.winner_id) return;
+            if (!match) return;
+            // Skip matches already approved by admin (winner set or score accepted)
+            if (match.winner || match.score_status === 'accepted') return;
+            // Show matches with scores submitted, pending admin approval
             if (match.player1_score != null && match.player2_score != null) {
               results.push({
                 tournamentName: t.name,
@@ -89,7 +92,9 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
       }
       if (t.tournament_type === 'round_robin' && t.fixtures) {
         t.fixtures.forEach(fixture => {
-          if (!fixture || fixture.winner_id) return;
+          if (!fixture) return;
+          // Skip matches already approved by admin
+          if (fixture.winner_id || fixture.score_status === 'accepted') return;
           if (fixture.team1_score != null && fixture.team2_score != null) {
             const team1 = leagueTeams.find(tm => tm.id === fixture.team1_id);
             const team2 = leagueTeams.find(tm => tm.id === fixture.team2_id);
