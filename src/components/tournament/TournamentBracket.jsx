@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { base44 } from '@/api/base44Client';
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
-import { CheckCircle, Clock, Edit2, Calendar } from 'lucide-react';
+import { CheckCircle, Clock, Edit2, Calendar, Upload, Eye, Loader2 } from 'lucide-react';
+import ScorecardImageModal from './ScorecardImageModal';
 
 const getRoundName = (roundIndex, totalRounds) => {
   const remaining = totalRounds - roundIndex;
@@ -27,6 +30,10 @@ export default function TournamentBracket({
   const [editingMatch, setEditingMatch] = useState(null);
   const [scoreInput, setScoreInput] = useState({ p1: '', p2: '' });
   const [hovered, setHovered] = useState(null); // { rIdx, mIdx, side, rect }
+  const fileInputRef = useRef(null);
+  const [uploadTarget, setUploadTarget] = useState(null);
+  const [uploadingMatch, setUploadingMatch] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
 
   if (!bracket || !bracket.rounds) return null;
 
@@ -156,6 +163,42 @@ export default function TournamentBracket({
     const inPlayer1 = match.player1.split('|').includes(userEmail);
     const inPlayer2 = match.player2.split('|').includes(userEmail);
     return inPlayer1 || inPlayer2;
+  };
+
+  const canUploadScorecard = (match) => {
+    if (!scoringMode || !userEmail) return false;
+    if (!match.player1 || !match.player2) return false;
+    const inPlayer1 = match.player1.split('|').includes(userEmail);
+    const inPlayer2 = match.player2.split('|').includes(userEmail);
+    return inPlayer1 || inPlayer2;
+  };
+
+  const isUploading = (ri, mi) => uploadingMatch?.roundIndex === ri && uploadingMatch?.matchIndex === mi;
+
+  const triggerUpload = (roundIndex, matchIndex, match) => {
+    setUploadTarget({ roundIndex, matchIndex, match });
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    const target = uploadTarget;
+    if (file && target) {
+      setUploadingMatch({ roundIndex: target.roundIndex, matchIndex: target.matchIndex });
+      try {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const newRounds = bracket.rounds.map(r => r.map(m => ({ ...m })));
+        newRounds[target.roundIndex][target.matchIndex] = { ...target.match, scorecard_image_url: file_url };
+        onUpdateBracket({ ...bracket, rounds: newRounds });
+        toast.success('Scorecard uploaded');
+      } catch (err) {
+        toast.error('Failed to upload scorecard');
+      } finally {
+        setUploadingMatch(null);
+      }
+    }
+    e.target.value = '';
+    setUploadTarget(null);
   };
 
   const showDateControls = editable || isAdmin;
@@ -332,6 +375,26 @@ export default function TournamentBracket({
                                   {isAdmin ? 'Enter Score' : 'Submit Score'}
                                 </Button>
                               ) : null}
+                              {/* Scorecard image upload / view */}
+                              {(canUploadScorecard(match) || match.scorecard_image_url) && (
+                                <div className="flex gap-1">
+                                  {match.scorecard_image_url && (
+                                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={() => setViewingImage({ url: match.scorecard_image_url, title: `${getMemberName(match.player1)} vs ${getMemberName(match.player2)}` })}>
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      View Scorecard
+                                    </Button>
+                                  )}
+                                  {canUploadScorecard(match) && (
+                                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={() => triggerUpload(roundIndex, matchIndex, match)} disabled={isUploading(roundIndex, matchIndex)}>
+                                      {isUploading(roundIndex, matchIndex) ? (
+                                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Uploading</>
+                                      ) : (
+                                        <><Upload className="w-3 h-3 mr-1" /> {match.scorecard_image_url ? 'Change' : 'Upload Scorecard'}</>
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -344,6 +407,8 @@ export default function TournamentBracket({
           </div>
         </div>
       </CardContent>
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+      <ScorecardImageModal imageUrl={viewingImage?.url} title={viewingImage?.title} onClose={() => setViewingImage(null)} />
     </Card>
   );
 }
