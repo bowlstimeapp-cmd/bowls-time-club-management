@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   ShieldAlert, Calendar, Trophy, Table2, ChevronRight,
-  AlertTriangle, Clock, ChevronDown,
+  AlertTriangle, Clock, ChevronDown, Check, Loader2,
 } from 'lucide-react';
+import { toast } from "sonner";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO, startOfDay } from 'date-fns';
@@ -17,6 +18,8 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
   const [collapsed, setCollapsed] = useState(false);
+  const [acceptingId, setAcceptingId] = useState(null);
+  const queryClient = useQueryClient();
 
   const getMemberName = (email) => {
     if (!email) return 'TBD';
@@ -55,6 +58,51 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
     enabled: !!clubId && isClubAdmin,
   });
 
+  const acceptMutation = useMutation({
+    mutationFn: async ({ tournamentId, data }) => base44.entities.ClubTournament.update(tournamentId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminAllTournaments', clubId] });
+      setAcceptingId(null);
+      toast.success('Tournament result accepted');
+    },
+    onError: (err) => {
+      setAcceptingId(null);
+      toast.error(err?.message || 'Failed to accept result');
+    },
+  });
+
+  const handleAcceptTournamentResult = (result) => {
+    const tournament = allTournaments.find(t => t.id === result.tournamentId);
+    if (!tournament) return;
+    setAcceptingId(result.key);
+
+    if (result.tournamentType === 'knockout' && tournament.bracket) {
+      const bracket = tournament.bracket;
+      const rounds = bracket.rounds || [];
+      const match = rounds[result.roundIndex]?.[result.matchIndex];
+      if (!match) { setAcceptingId(null); return; }
+      const winner = match.player1_score >= match.player2_score ? match.player1 : match.player2;
+      const newRounds = rounds.map(r => r.map(m => ({ ...m })));
+      newRounds[result.roundIndex][result.matchIndex] = { ...match, score_status: 'accepted', winner };
+      // Propagate winner to next round
+      if (result.roundIndex < newRounds.length - 1) {
+        const nextIdx = Math.floor(result.matchIndex / 2);
+        const nextMatch = { ...newRounds[result.roundIndex + 1][nextIdx] };
+        if (result.matchIndex % 2 === 0) nextMatch.player1 = winner;
+        else nextMatch.player2 = winner;
+        newRounds[result.roundIndex + 1][nextIdx] = nextMatch;
+      }
+      acceptMutation.mutate({ tournamentId: tournament.id, data: { ...tournament, bracket: { ...bracket, rounds: newRounds } } });
+    } else if (result.tournamentType === 'round_robin' && tournament.fixtures) {
+      const newFixtures = tournament.fixtures.map((f, idx) => {
+        if (idx !== result.fixtureIndex) return f;
+        const winner_id = f.team1_score >= f.team2_score ? f.team1_id : f.team2_id;
+        return { ...f, winner_id, score_status: 'accepted' };
+      });
+      acceptMutation.mutate({ tournamentId: tournament.id, data: { ...tournament, fixtures: newFixtures } });
+    }
+  };
+
   // Tournament matches with scores entered but no winner confirmed
   const pendingTournamentResults = useMemo(() => {
     const results = [];
@@ -72,13 +120,18 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
         Object.entries(rounds || {}).forEach(([roundKey, roundMatches]) => {
           const roundIndex = parseInt(roundKey);
           const roundName = isNaN(roundIndex) ? roundKey : getRoundName(roundIndex, totalRounds);
-          (roundMatches || []).forEach(match => {
+          (roundMatches || []).forEach((match, matchIndex) => {
             if (!match) return;
             // Skip matches already approved by admin (winner set or score accepted)
             if (match.winner || match.score_status === 'accepted') return;
             // Show matches with scores submitted, pending admin approval
             if (match.player1_score != null && match.player2_score != null) {
               results.push({
+                key: `${t.id}-ko-${roundIndex}-${matchIndex}`,
+                tournamentId: t.id,
+                tournamentType: 'knockout',
+                roundIndex,
+                matchIndex,
                 tournamentName: t.name,
                 round: roundName,
                 p1: resolvePlayer(match.player1),
@@ -91,7 +144,7 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
         });
       }
       if (t.tournament_type === 'round_robin' && t.fixtures) {
-        t.fixtures.forEach(fixture => {
+        t.fixtures.forEach((fixture, fixtureIndex) => {
           if (!fixture) return;
           // Skip matches already approved by admin
           if (fixture.winner_id || fixture.score_status === 'accepted') return;
@@ -99,6 +152,10 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
             const team1 = leagueTeams.find(tm => tm.id === fixture.team1_id);
             const team2 = leagueTeams.find(tm => tm.id === fixture.team2_id);
             results.push({
+              key: `${t.id}-rr-${fixtureIndex}`,
+              tournamentId: t.id,
+              tournamentType: 'round_robin',
+              fixtureIndex,
               tournamentName: t.name,
               round: null,
               p1: team1?.name || 'TBD',
@@ -206,12 +263,25 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
                   <Badge className="bg-amber-100 text-amber-800 text-xs">{pendingTournamentResults.length}</Badge>
                 </div>
                 <div className="space-y-2">
-                  {pendingTournamentResults.slice(0, 4).map((m, i) => (
-                    <div key={i} className="text-sm">
-                      <span className="font-medium text-gray-900 truncate block">{m.tournamentName}</span>
-                      <span className="text-xs text-gray-500">
-                        {m.round ? `${m.round} · ` : ''}{m.p1} {m.s1}–{m.s2} {m.p2}
-                      </span>
+                  {pendingTournamentResults.slice(0, 4).map((m) => (
+                    <div key={m.key} className="flex items-center justify-between gap-2 text-sm">
+                      <div className="min-w-0">
+                        <span className="font-medium text-gray-900 truncate block">{m.tournamentName}</span>
+                        <span className="text-xs text-gray-500">
+                          {m.round ? `${m.round} · ` : ''}{m.p1} {m.s1}–{m.s2} {m.p2}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 shrink-0 h-7 px-2"
+                        disabled={acceptingId === m.key}
+                        onClick={() => handleAcceptTournamentResult(m)}
+                      >
+                        {acceptingId === m.key
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <><Check className="w-3.5 h-3.5" /> Accept</>}
+                      </Button>
                     </div>
                   ))}
                 </div>
