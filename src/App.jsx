@@ -101,9 +101,10 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  const SHOW_LIVE_CHAT = false;
 
   useEffect(() => {
-    if (window.Tawk_API) return;
+    if (!SHOW_LIVE_CHAT || window.Tawk_API) return;
 
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
@@ -135,11 +136,8 @@ function App() {
             </Router>
 
             {/* ✅ YOUR CUSTOM CHAT BUTTON */}
- 
- 
- 
- 
- <div
+            {SHOW_LIVE_CHAT && (
+            <div
       className="hidden sm:flex fixed bottom-6 right-6 z-50 items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105"
   onClick={() => window.Tawk_API?.maximize()}
   onMouseEnter={(e) => {
@@ -164,6 +162,7 @@ function App() {
 
   Live chat
 </div>
+            )}
 
             <Toaster />
           </QueryClientProvider>
