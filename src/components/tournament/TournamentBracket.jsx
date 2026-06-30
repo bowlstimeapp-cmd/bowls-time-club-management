@@ -34,6 +34,7 @@ export default function TournamentBracket({
   const [uploadTarget, setUploadTarget] = useState(null);
   const [uploadingMatch, setUploadingMatch] = useState(null);
   const [viewingImage, setViewingImage] = useState(null);
+  const [walkoverMatch, setWalkoverMatch] = useState(null);
 
   if (!bracket || !bracket.rounds) return null;
 
@@ -99,6 +100,7 @@ export default function TournamentBracket({
   const cancelEditing = () => {
     setEditingMatch(null);
     setScoreInput({ p1: '', p2: '' });
+    setWalkoverMatch(null);
   };
 
   const propagateWinner = (rounds, roundIndex, matchIndex, winner) => {
@@ -124,6 +126,34 @@ export default function TournamentBracket({
       const winner = p1 >= p2 ? match.player1 : match.player2;
       newMatch.score_status = 'accepted';
       newMatch.winner = winner;
+      newRounds[roundIndex][matchIndex] = newMatch;
+      propagateWinner(newRounds, roundIndex, matchIndex, winner);
+    } else {
+      newMatch.score_status = 'pending';
+      newMatch.score_submitted_by = userEmail;
+      newRounds[roundIndex][matchIndex] = newMatch;
+    }
+
+    onUpdateBracket({ ...bracket, rounds: newRounds });
+    cancelEditing();
+  };
+
+  const submitWalkover = (roundIndex, matchIndex, match, winnerSide) => {
+    const winner = winnerSide === 'player1' ? match.player1 : match.player2;
+    const p1Score = winnerSide === 'player1' ? 1 : 0;
+    const p2Score = winnerSide === 'player1' ? 0 : 1;
+
+    const newRounds = bracket.rounds.map(r => r.map(m => ({ ...m })));
+    const newMatch = {
+      ...newRounds[roundIndex][matchIndex],
+      player1_score: p1Score,
+      player2_score: p2Score,
+      is_walkover: true,
+      winner,
+    };
+
+    if (isAdmin) {
+      newMatch.score_status = 'accepted';
       newRounds[roundIndex][matchIndex] = newMatch;
       propagateWinner(newRounds, roundIndex, matchIndex, winner);
     } else {
@@ -283,7 +313,12 @@ export default function TournamentBracket({
                             )}
                           </div>
 
-                          <div className="text-center text-xs text-gray-400 my-1">vs</div>
+                          <div className="relative flex items-center text-xs text-gray-400 my-1">
+                            <span className="flex-1 text-center">vs</span>
+                            {match.is_walkover && (
+                              <span className="absolute right-0 text-blue-600 font-bold bg-blue-100 border border-blue-300 px-1 rounded text-[10px]">WO</span>
+                            )}
+                          </div>
 
                           {/* Player 2 row */}
                           <div
@@ -324,18 +359,35 @@ export default function TournamentBracket({
                           {scoringMode && (
                             <div className="mt-2 space-y-1">
                               {editing ? (
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    className="flex-1 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                                    onClick={() => submitScore(roundIndex, matchIndex, match)}
-                                    disabled={scoreInput.p1 === '' || scoreInput.p2 === ''}
-                                  >
-                                    Save
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={cancelEditing}>
-                                    ✕
-                                  </Button>
+                                <div className="space-y-1">
+                                  {walkoverMatch?.roundIndex === roundIndex && walkoverMatch?.matchIndex === matchIndex ? (
+                                    <div className="border border-blue-200 rounded p-2 space-y-1 bg-blue-50">
+                                      <p className="text-xs text-center text-gray-600">Select the winner</p>
+                                      <Button size="sm" variant="outline" className="w-full h-7 text-xs justify-start truncate" onClick={() => submitWalkover(roundIndex, matchIndex, match, 'player1')}>
+                                        {getMemberName(match.player1)}
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="w-full h-7 text-xs justify-start truncate" onClick={() => submitWalkover(roundIndex, matchIndex, match, 'player2')}>
+                                        {getMemberName(match.player2)}
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button size="sm" variant="outline" className="w-full h-7 text-xs text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => setWalkoverMatch({ roundIndex, matchIndex })}>
+                                      Walkover
+                                    </Button>
+                                  )}
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      className="flex-1 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
+                                      onClick={() => submitScore(roundIndex, matchIndex, match)}
+                                      disabled={scoreInput.p1 === '' || scoreInput.p2 === ''}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={cancelEditing}>
+                                      ✕
+                                    </Button>
+                                  </div>
                                 </div>
                               ) : isPending && isAdmin ? (
                                 <>
