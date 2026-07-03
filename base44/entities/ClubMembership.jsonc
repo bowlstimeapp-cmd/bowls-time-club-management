@@ -71,6 +71,7 @@
       "enum": [
         "admin",
         "steward",
+        "secretary",
         "selector",
         "live_scorer",
         "member"
@@ -121,7 +122,6 @@
     "user_email"
   ],
   "rls": {
-    "read": {},
     "create": {},
     "update": {},
     "delete": {}
