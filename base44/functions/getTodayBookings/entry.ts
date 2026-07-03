@@ -30,9 +30,23 @@ Deno.serve(async (req) => {
       .filter(b => b.status !== 'cancelled' && b.status !== 'rejected')
       .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
 
+    // Deduplicate by rink + time slot — keep one booking per rink slot,
+    // preferring approved over pending
+    const bySlot = new Map();
+    for (const b of filtered) {
+      const key = `${b.rink_number}|${b.start_time}|${b.end_time}`;
+      const existing = bySlot.get(key);
+      if (!existing) {
+        bySlot.set(key, b);
+      } else if (b.status === 'approved' && existing.status !== 'approved') {
+        bySlot.set(key, b);
+      }
+    }
+    const deduped = Array.from(bySlot.values());
+
     return Response.json({
       date: londonDate,
-      bookings: filtered.map(b => ({
+      bookings: deduped.map(b => ({
         id: b.id,
         rink_number: b.rink_number,
         start_time: b.start_time,
