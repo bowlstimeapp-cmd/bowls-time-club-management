@@ -342,14 +342,13 @@ useEffect(() => {
     }
     setDeletingBooking(true);
     try {
-      // Use isOwnBooking (always available) instead of isPrivileged (may not be loaded yet)
-      // to avoid a race condition where membership hasn't loaded and admin/steward
-      // gets the wrong code path for other people's bookings.
       const isOwnBooking = booking.booker_email === user?.email;
-      if (isOwnBooking) {
-        await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
+      if (isPrivileged) {
+        // Admins/stewards hard-delete the booking so it's removed from DB and UI
+        await base44.functions.invoke('manageBooking', { action: 'delete', clubId, id: booking.id });
       } else {
-        await base44.functions.invoke('manageBooking', { action: 'cancel', clubId, id: booking.id });
+        // Regular members soft-cancel their own booking
+        await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'cancel_own', clubId, id: booking.id });
       }
       // Force an immediate refetch and wait for it so the UI always updates
       await queryClient.refetchQueries({ queryKey: ['bookings'] });
