@@ -25,8 +25,10 @@ import { format, parseISO } from 'date-fns';
 
 const roleColors = {
   admin: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  secretary: 'bg-cyan-100 text-cyan-800 border-cyan-200',
   selector: 'bg-amber-100 text-amber-800 border-amber-200',
   live_scorer: 'bg-teal-100 text-teal-800 border-teal-200',
+  steward: 'bg-purple-100 text-purple-800 border-purple-200',
   member: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
@@ -292,6 +294,7 @@ export default function MemberDetailModal({
                     <SelectItem value="member">Member</SelectItem>
                     <SelectItem value="live_scorer">Live Scorer</SelectItem>
                     <SelectItem value="selector">Selector</SelectItem>
+                    <SelectItem value="secretary">Secretary</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

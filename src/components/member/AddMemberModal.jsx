@@ -180,6 +180,7 @@ export default function AddMemberModal({
                 <SelectItem value="member">Member</SelectItem>
                 <SelectItem value="live_scorer">Live Scorer</SelectItem>
                 <SelectItem value="selector">Selector</SelectItem>
+                <SelectItem value="secretary">Secretary</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
