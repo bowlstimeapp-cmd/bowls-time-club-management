@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
         updateData = { status: 'rejected' };
         break;
       case 'change_role': {
-        const allowedRoles = ['admin', 'steward', 'selector', 'live_scorer', 'member'];
+        const allowedRoles = ['admin', 'steward', 'secretary', 'selector', 'live_scorer', 'member'];
         if (!updates?.role || !allowedRoles.includes(updates.role)) {
           return Response.json({ error: 'Invalid role' }, { status: 400 });
         }
