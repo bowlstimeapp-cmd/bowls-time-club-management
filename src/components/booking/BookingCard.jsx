@@ -15,7 +15,6 @@ import {
   Trophy,
   Pencil
 } from 'lucide-react';
-import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -55,10 +54,7 @@ export default function BookingCard({
   onDelete,
   isAdmin = false,
   isOwn = false,
-  isLoading = false,
-  selectable = false,
-  selected = false,
-  onSelect = null
+  isLoading = false 
 }) {
   const status = statusConfig[booking.status];
   const StatusIcon = status.icon;
@@ -90,15 +86,7 @@ export default function BookingCard({
               booking.status === 'cancelled' && "bg-gray-300"
             )} />
 
-            <div className={cn("flex-1 p-4", selectable && "flex items-center gap-3")}>
-              {selectable && (
-                <Checkbox
-                  checked={selected}
-                  onCheckedChange={(checked) => onSelect?.(booking, checked)}
-                  className="shrink-0"
-                />
-              )}
-              <div className="flex-1">
+            <div className="flex-1 p-4">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -215,10 +203,9 @@ export default function BookingCard({
                       <span className="hidden sm:inline">Cancel</span>
                     </Button>
                   )}
-                  </div>
-                  </div>
-                  </div>
-                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
