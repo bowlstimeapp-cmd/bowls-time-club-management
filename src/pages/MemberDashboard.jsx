@@ -15,6 +15,7 @@ import { format, parseISO, addDays, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AdminApprovalSection from '@/components/dashboard/AdminApprovalSection';
+import TodaySummary from '@/components/dashboard/TodaySummary';
 
 // Section IDs
 const SECTION_SELECTIONS = 'selections';
@@ -591,6 +592,11 @@ export default function MemberDashboard() {
             {reordering ? 'Done' : 'Customise'}
           </Button>
         </div>
+
+        {/* Today's Summary (secretaries and admins only) */}
+        {(myMembership?.role === 'secretary' || myMembership?.role === 'admin') && (
+          <TodaySummary clubId={clubId} />
+        )}
 
         {/* Admin Action Required (club admins only) */}
         <AdminApprovalSection clubId={clubId} membership={myMembership} members={members} />
