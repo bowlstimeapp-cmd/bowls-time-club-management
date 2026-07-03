@@ -5,22 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, MapPin } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
 
 export default function TodaySummary({ clubId }) {
-  const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
-
-  const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['secretaryTodayBookings', clubId, todayStr],
+  const { data, isLoading } = useQuery({
+    queryKey: ['secretaryTodayBookings', clubId],
     queryFn: async () => {
-      const all = await base44.entities.Booking.filter({ club_id: clubId, date: todayStr });
-      return all
-        .filter(b => b.status !== 'cancelled' && b.status !== 'rejected')
-        .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+      const res = await base44.functions.invoke('getTodayBookings', { club_id: clubId });
+      return res.data;
     },
     enabled: !!clubId,
   });
 
+  const bookings = data?.bookings || [];
   const approvedCount = bookings.filter(b => b.status === 'approved').length;
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
 
