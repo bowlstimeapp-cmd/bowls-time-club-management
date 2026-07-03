@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -18,7 +19,8 @@ import {
   CalendarClock,
   Pencil,
   Trash2,
-  Loader2
+  Loader2,
+  Ban
 } from 'lucide-react';
 import { toast } from "sonner";
 import { parseISO, isBefore, startOfToday } from 'date-fns';
@@ -47,6 +49,9 @@ export default function AdminBookings() {
   const [editBooking, setEditBooking] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -115,6 +120,57 @@ export default function AdminBookings() {
       toast.error(err?.response?.data?.error || 'Failed to delete booking');
     },
   });
+
+  const bulkMutation = useMutation({
+    mutationFn: ({ action, ids }) => base44.functions.invoke('manageBooking', { action, clubId, ids }),
+    onSuccess: async (response) => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['clubBookings'] }),
+        queryClient.refetchQueries({ queryKey: ['bookings'] }),
+        queryClient.refetchQueries({ queryKey: ['myBookings'] }),
+      ]);
+      const count = response?.data?.deleted ?? response?.data?.cancelled ?? 0;
+      toast.success(`${count} booking${count !== 1 ? 's' : ''} ${bulkAction === 'bulk_delete' ? 'deleted' : 'cancelled'}`);
+      setSelectedIds(new Set());
+      setBulkDialogOpen(false);
+      setBulkAction(null);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Bulk operation failed');
+    },
+  });
+
+  const toggleSelection = (booking, checked) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(booking.id);
+      else next.delete(booking.id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (list) => {
+    setSelectedIds(prev => {
+      const allSelected = list.every(b => prev.has(b.id));
+      const next = new Set(prev);
+      if (allSelected) {
+        list.forEach(b => next.delete(b.id));
+      } else {
+        list.forEach(b => next.add(b.id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkAction = (action) => {
+    setBulkAction(action);
+    setBulkDialogOpen(true);
+  };
+
+  const confirmBulkAction = async () => {
+    const ids = Array.from(selectedIds);
+    await bulkMutation.mutateAsync({ action: bulkAction, ids });
+  };
 
   const isClubAdmin = myMembership?.role === 'admin' && myMembership?.status === 'approved';
   const isClubSteward = myMembership?.role === 'steward' && myMembership?.status === 'approved';
@@ -363,6 +419,47 @@ export default function AdminBookings() {
           </Card>
         </motion.div>
 
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="sticky top-16 z-40 mb-4 flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-md p-3"
+          >
+            <span className="text-sm font-medium text-gray-700">
+              {selectedIds.size} selected
+            </span>
+            <div className="h-4 w-px bg-gray-200" />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleBulkAction('bulk_cancel')}
+              disabled={bulkMutation.isPending}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <Ban className="w-4 h-4 mr-1" />
+              Cancel Selected
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleBulkAction('bulk_delete')}
+              disabled={bulkMutation.isPending}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete Selected
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-gray-500 ml-auto"
+            >
+              Clear
+            </Button>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -393,6 +490,13 @@ export default function AdminBookings() {
                 </div>
               ) : pendingBookings.length > 0 ? (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Checkbox
+                      checked={pendingBookings.every(b => selectedIds.has(b.id))}
+                      onCheckedChange={() => toggleSelectAll(pendingBookings)}
+                    />
+                    Select All
+                  </div>
                   <AnimatePresence>
                     {pendingBookings.map(booking => (
                       <BookingCard
@@ -403,6 +507,9 @@ export default function AdminBookings() {
                         onReject={handleRejectClick}
                         onDelete={handleDeleteClick}
                         isLoading={updateMutation.isPending || deleteMutation.isPending}
+                        selectable={true}
+                        selected={selectedIds.has(booking.id)}
+                        onSelect={toggleSelection}
                       />
                     ))}
                   </AnimatePresence>
@@ -425,6 +532,13 @@ export default function AdminBookings() {
                 </div>
               ) : upcomingApproved.length > 0 ? (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Checkbox
+                      checked={upcomingApproved.every(b => selectedIds.has(b.id))}
+                      onCheckedChange={() => toggleSelectAll(upcomingApproved)}
+                    />
+                    Select All
+                  </div>
                   <AnimatePresence>
                     {upcomingApproved.map(booking => (
                       <BookingCard
@@ -434,6 +548,9 @@ export default function AdminBookings() {
                         onEdit={() => setEditBooking(booking)}
                         onDelete={handleDeleteClick}
                         isLoading={deleteMutation.isPending}
+                        selectable={true}
+                        selected={selectedIds.has(booking.id)}
+                        onSelect={toggleSelection}
                       />
                     ))}
                   </AnimatePresence>
@@ -467,6 +584,13 @@ export default function AdminBookings() {
                 </div>
               ) : allBookings.length > 0 ? (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Checkbox
+                      checked={allBookings.every(b => selectedIds.has(b.id))}
+                      onCheckedChange={() => toggleSelectAll(allBookings)}
+                    />
+                    Select All
+                  </div>
                   <AnimatePresence>
                     {allBookings.map(booking => (
                       <BookingCard
@@ -478,6 +602,9 @@ export default function AdminBookings() {
                         onEdit={() => setEditBooking(booking)}
                         onDelete={handleDeleteClick}
                         isLoading={updateMutation.isPending || deleteMutation.isPending}
+                        selectable={true}
+                        selected={selectedIds.has(booking.id)}
+                        onSelect={toggleSelection}
                       />
                     ))}
                   </AnimatePresence>
@@ -529,6 +656,42 @@ export default function AdminBookings() {
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Reject Booking
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {bulkAction === 'bulk_delete' ? 'Delete Selected Bookings' : 'Cancel Selected Bookings'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-gray-600">
+                {bulkAction === 'bulk_delete'
+                  ? `Are you sure you want to permanently delete ${selectedIds.size} booking${selectedIds.size !== 1 ? 's' : ''}? This action cannot be undone.`
+                  : `Are you sure you want to cancel ${selectedIds.size} booking${selectedIds.size !== 1 ? 's' : ''}? Cancelled bookings will remain in the system with a "cancelled" status.`}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmBulkAction}
+                disabled={bulkMutation.isPending}
+                className={bulkAction === 'bulk_delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}
+              >
+                {bulkMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : bulkAction === 'bulk_delete' ? (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                ) : (
+                  <Ban className="w-4 h-4 mr-2" />
+                )}
+                {bulkAction === 'bulk_delete' ? 'Delete' : 'Cancel'} {selectedIds.size} Booking{selectedIds.size !== 1 ? 's' : ''}
               </Button>
             </DialogFooter>
           </DialogContent>
