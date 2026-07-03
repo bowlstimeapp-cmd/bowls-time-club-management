@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const STATUS_STYLES = {
+  approved: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  pending: 'bg-amber-100 text-amber-800 border-amber-200',
+};
+
+const STATUS_LABELS = {
+  approved: 'Confirmed',
+  pending: 'Pending',
+};
 
 export default function TodaySummary({ clubId }) {
+  const [open, setOpen] = useState(true);
   const { data, isLoading } = useQuery({
     queryKey: ['secretaryTodayBookings', clubId],
     queryFn: async () => {
@@ -22,52 +34,59 @@ export default function TodaySummary({ clubId }) {
 
   return (
     <Card className="border-emerald-200">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-emerald-600" />
-          Today's Summary
-        </CardTitle>
-        <div className="flex gap-2 mt-1">
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs">{approvedCount} confirmed</Badge>
-          {pendingCount > 0 && (
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">{pendingCount} pending</Badge>
-          )}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between p-4 text-left"
+      >
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-emerald-600" />
+            Today's Summary
+          </CardTitle>
+          <div className="flex gap-2 mt-1.5">
+            <Badge className={cn('text-xs', STATUS_STYLES.approved)}>{approvedCount} confirmed</Badge>
+            {pendingCount > 0 && (
+              <Badge className={cn('text-xs', STATUS_STYLES.pending)}>{pendingCount} pending</Badge>
+            )}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        {isLoading ? (
-          <div className="p-4 space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : bookings.length === 0 ? (
-          <div className="p-5 text-center text-sm text-gray-400">No rink bookings for today.</div>
-        ) : (
-          <div className="divide-y">
-            {bookings.map(booking => (
-              <div key={booking.id} className="flex items-center justify-between px-4 py-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm text-gray-900">Rink {booking.rink_number}</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{booking.start_time} – {booking.end_time}</span>
-                    <span>{booking.booker_name}</span>
-                    {booking.competition_type && (
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{booking.competition_type === 'Other' ? (booking.competition_other || 'Other') : booking.competition_type}</span>
-                    )}
+        <ChevronDown className={cn('w-5 h-5 text-gray-400 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="p-5 text-center text-sm text-gray-400">No rink bookings for today.</div>
+          ) : (
+            <div className="divide-y">
+              {bookings.map(booking => (
+                <div key={booking.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm text-gray-900">Rink {booking.rink_number}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 text-xs text-gray-500">
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{booking.start_time} – {booking.end_time}</span>
+                      <span>{booking.booker_name}</span>
+                      {booking.competition_type && (
+                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{booking.competition_type === 'Other' ? (booking.competition_other || 'Other') : booking.competition_type}</span>
+                      )}
+                    </div>
                   </div>
+                  <Badge
+                    className={cn('text-xs', STATUS_STYLES[booking.status] || '')}
+                    variant={STATUS_STYLES[booking.status] ? 'default' : 'outline'}
+                  >
+                    {STATUS_LABELS[booking.status] || booking.status}
+                  </Badge>
                 </div>
-                <BookingStatusBadge status={booking.status} />
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
-}
-
-function BookingStatusBadge({ status }) {
-  if (status === 'approved') return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs">Confirmed</Badge>;
-  if (status === 'pending') return <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Pending</Badge>;
-  return <Badge variant="outline" className="text-xs">{status}</Badge>;
 }
