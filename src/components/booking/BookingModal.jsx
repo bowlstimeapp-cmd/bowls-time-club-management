@@ -81,9 +81,9 @@ export default function BookingModal({
     const sortedSlots = [...selectedSlots].sort((a, b) => a.slotIndex - b.slotIndex);
     const firstSlot = sortedSlots[0];
     
-    // Combine selected date with start time to create full datetime
+    // Combine selected date with END time — allow booking as long as the session hasn't ended yet
     const bookingDateTime = new Date(selectedDate);
-    const [hours, minutes] = firstSlot.slot.start.split(':');
+    const [hours, minutes] = firstSlot.slot.end.split(':');
     bookingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
     if (bookingDateTime <= now) {
