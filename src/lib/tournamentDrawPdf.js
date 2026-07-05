@@ -82,6 +82,8 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
       slotsHtml = roundMatches.map((match, mIdx) => {
         // Determine player names and states
         const getSlot = (player, isTopSlot) => {
+          const score = isTopSlot ? match?.player1_score : match?.player2_score;
+          const hasScore = score != null && !isNaN(score);
           if (isFirst) {
             // Round 0: pull directly from playerSlots
             const pIdx = mIdx * 2 + (isTopSlot ? 0 : 1);
@@ -89,14 +91,14 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
             const isBye = name === 'BYE';
             const isWinner = !isBye && match?.winner && match.winner === player;
             const isLoser = !isBye && match?.winner && !isWinner;
-            return { name, isBye, isWinner, isLoser };
+            return { name, isBye, isWinner, isLoser, score: hasScore ? score : null };
           } else {
             // Later rounds: both players are advancing winners from prior round
             const name = player ? getMemberName(player) : '';
             const isBye = !player;
             const isWinner = !!match.winner && match.winner === player;
             const isLoser = !!match.winner && !isWinner && !!player;
-            return { name: name || 'TBD', isBye, isWinner, isLoser };
+            return { name: name || 'TBD', isBye, isWinner, isLoser, score: hasScore ? score : null };
           }
         };
 
@@ -117,20 +119,20 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
           return `<div style="height:${halfH * 2}px; display:flex; flex-direction:column; justify-content:center; border-right:1.5px solid var(--line); padding:0 0 0 4px; margin:0;">
             <div class="fixture-box">
               <div class="match-pair-slot connector-top" style="height:${halfH}px;">
-                <div class="${slotClass(top)}">${escHtml(top.name)}</div>
+                <div class="${slotClass(top)}">${escHtml(top.name)}${top.score != null ? `<span class="slot-score">${top.score}</span>` : ''}</div>
               </div>
               <div class="match-pair-slot connector-bottom" style="height:${halfH}px;">
-                <div class="${slotClass(bot)}">${escHtml(bot.name)}</div>
+                <div class="${slotClass(bot)}">${escHtml(bot.name)}${bot.score != null ? `<span class="slot-score">${bot.score}</span>` : ''}</div>
               </div>
             </div>
           </div>`;
         }
 
         return `<div class="match-pair-slot connector-top no-divider" style="height:${halfH}px;">
-          <div class="${slotClass(top)}">${escHtml(top.name)}</div>
+          <div class="${slotClass(top)}">${escHtml(top.name)}${top.score != null ? `<span class="slot-score">${top.score}</span>` : ''}</div>
         </div>
         <div class="match-pair-slot connector-bottom no-divider" style="height:${halfH}px;">
-          <div class="${slotClass(bot)}">${escHtml(bot.name)}</div>
+          <div class="${slotClass(bot)}">${escHtml(bot.name)}${bot.score != null ? `<span class="slot-score">${bot.score}</span>` : ''}</div>
         </div>`;
       }).join('\n');
     }
@@ -400,6 +402,18 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     color: #aaa;
     text-decoration: line-through;
     background: #fafafa;
+  }
+
+  /* Score shown to the right of a player name for played matches */
+  .slot-score {
+    float: right;
+    margin-left: 8px;
+    font-weight: 700;
+    color: var(--green-dark);
+  }
+  .slot.loser .slot-score {
+    color: #999;
+    text-decoration: none;
   }
 
   .slot.result {
