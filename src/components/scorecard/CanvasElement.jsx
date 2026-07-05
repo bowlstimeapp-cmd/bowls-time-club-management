@@ -11,6 +11,7 @@ export const ELEMENT_LABELS = {
   scoreTable: 'Score Table',
   signatures: 'Signatures',
   image: 'Uploaded Image',
+  text: 'Text',
 };
 
 function ElementContent({ type, styles }) {
@@ -22,9 +23,20 @@ function ElementContent({ type, styles }) {
         <img
           src={styles.imageUrl}
           alt="Scorecard sample"
-          className="w-full h-full object-contain pointer-events-none"
+          className="w-full h-full pointer-events-none"
+          style={{
+            objectFit: styles.objectFit || 'contain',
+            opacity: styles.opacity != null ? styles.opacity : 1,
+          }}
           draggable={false}
         />
+      );
+
+    case 'text':
+      return (
+        <div className="flex items-center w-full h-full p-0.5" style={{ fontSize: fs, lineHeight: 1.2 }}>
+          {styles.detectedText || 'Text'}
+        </div>
       );
 
     case 'logo':
