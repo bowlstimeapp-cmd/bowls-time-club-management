@@ -14,7 +14,7 @@ export const PALETTE_ITEMS = [
   { type: 'signatures', label: 'Signatures', bg: '#fce7f3' },
 ];
 
-export default function ElementPalette({ onImageUploaded, extracting }) {
+export default function ElementPalette({ onImageUploaded }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
@@ -59,21 +59,17 @@ export default function ElementPalette({ onImageUploaded, extracting }) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || extracting}
+            disabled={uploading}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-dashed border-blue-400 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 cursor-pointer select-none text-xs text-blue-700 font-medium transition-colors"
           >
             {uploading ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading…</>
-            ) : extracting ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analysing…</>
             ) : (
               <><Upload className="w-3.5 h-3.5" /> Upload Scorecard</>
             )}
           </button>
           <p className="text-[10px] text-gray-400 mt-1 text-center leading-tight">
-            {extracting
-              ? 'AI is detecting editable elements from your scorecard…'
-              : 'Upload a sample scorecard to auto-detect editable elements'}
+            Upload a scan of your pre-printed scorecard to use as a positioning guide
           </p>
           <input
             ref={fileInputRef}

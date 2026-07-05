@@ -26,16 +26,6 @@ export default function PropertiesPanel({ element, onUpdate, onDelete }) {
       </div>
 
       <div className="p-3 space-y-4 overflow-y-auto flex-1">
-        {styles.detectedText !== undefined && (
-          <div>
-            <Label className="text-xs text-gray-500 uppercase tracking-wide mb-1.5 block">Detected Text</Label>
-            <Input
-              value={styles.detectedText}
-              onChange={(e) => update('detectedText', e.target.value)}
-              className="h-8 text-sm"
-            />
-          </div>
-        )}
         <div>
           <Label className="text-xs text-gray-500 uppercase tracking-wide mb-1.5 block">Font Size (px)</Label>
           <Input

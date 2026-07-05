@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useSearchParams, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, RotateCcw, Loader2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Save, RotateCcw, Loader2, ShieldAlert, Eye } from 'lucide-react';
 import ElementPalette from '@/components/scorecard/ElementPalette';
 import CanvasElement from '@/components/scorecard/CanvasElement';
 import PropertiesPanel from '@/components/scorecard/PropertiesPanel';
@@ -46,7 +46,8 @@ export default function ScorecardLayoutEditor() {
   const [elements, setElements] = useState(DEFAULT_ELEMENTS.map(e => ({ ...e })));
   const [selectedId, setSelectedId] = useState(null);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [extracting, setExtracting] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState(null);
+  const [showBackground, setShowBackground] = useState(true);
   const canvasAreaRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -75,6 +76,9 @@ export default function ScorecardLayoutEditor() {
     if (layout?.layout_config?.elements?.length > 0) {
       setElements(layout.layout_config.elements);
     }
+    if (layout?.layout_config?.backgroundImage) {
+      setBackgroundImage(layout.layout_config.backgroundImage);
+    }
   }, [layout]);
 
   // Scale canvas to fit container width
@@ -92,7 +96,7 @@ export default function ScorecardLayoutEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async (elems) => {
-      const layoutConfig = { elements: elems };
+      const layoutConfig = { elements: elems, backgroundImage };
       const isActive = club?.use_custom_scorecard_layout === true;
       if (layout?.id) {
         return base44.entities.ScorecardLayout.update(layout.id, { layout_config: layoutConfig, is_active: isActive });
@@ -115,104 +119,11 @@ export default function ScorecardLayoutEditor() {
     setSelectedId(prev => prev === id ? null : prev);
   }, []);
 
-  const handleAddImage = useCallback(async (imageUrl) => {
-    // Place image as faded full-canvas background reference
-    const imgId = genId();
-    setElements(prev => [...prev, {
-      id: imgId,
-      type: 'image',
-      x: 0,
-      y: 0,
-      width: CANVAS_W,
-      height: CANVAS_H,
-      styles: {
-        fontSize: 8, fontWeight: 'normal', textAlign: 'left',
-        backgroundColor: '', borderColor: '', imageUrl,
-        opacity: 0.35, objectFit: 'fill',
-      },
-    }]);
-
-    // AI vision analysis to detect individual scorecard elements
-    setExtracting(true);
-    try {
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are analysing a lawn bowls scorecard image. Identify every distinct visual element/section that makes up this scorecard's layout. For each element, determine its type and bounding box.
-
-Element types:
-- "logo": Club logo or image (usually top-left)
-- "competition": Competition or league name text
-- "matchName": Home club vs opponent text
-- "date": Date and/or time text
-- "matchDetailsBar": A bar or section with match details (day, date, rink number)
-- "teamsRow": A row showing "Home Club" vs "Opponents" team names
-- "players": Player list with names and positions (Lead, 2, 3, Skip)
-- "scoreTable": Table with scores per end (shots, totals, end numbers)
-- "signatures": Signature area at the bottom
-- "text": Any other text element not covered above
-
-For each element provide its bounding box as fractions (0.0 to 1.0) of the total image dimensions:
-- x: left edge (0 = far left, 1 = far right)
-- y: top edge (0 = very top, 1 = very bottom)
-- width: element width as fraction of image width
-- height: element height as fraction of image height
-
-Also include any visible text content in the "text" field.
-
-Return elements ordered top to bottom. Bounding boxes should tightly wrap each element without overlapping.`,
-        file_urls: [imageUrl],
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            elements: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  type: { type: 'string', enum: ['logo', 'competition', 'matchName', 'date', 'matchDetailsBar', 'teamsRow', 'players', 'scoreTable', 'signatures', 'text'] },
-                  x: { type: 'number' },
-                  y: { type: 'number' },
-                  width: { type: 'number' },
-                  height: { type: 'number' },
-                  text: { type: 'string' },
-                },
-                required: ['type', 'x', 'y', 'width', 'height'],
-              },
-            },
-          },
-          required: ['elements'],
-        },
-      });
-
-      const detected = result.elements || [];
-      const boldTypes = ['competition', 'teamsRow', 'matchDetailsBar'];
-      const bgMap = { matchDetailsBar: '#f5f5f5', teamsRow: '#e6e6e6' };
-      const borderedTypes = ['players', 'scoreTable', 'matchDetailsBar', 'teamsRow'];
-
-      const detectedElements = detected.map((det) => ({
-        id: genId(),
-        type: det.type,
-        x: Math.round(det.x * CANVAS_W),
-        y: Math.round(det.y * CANVAS_H),
-        width: Math.round(det.width * CANVAS_W),
-        height: Math.round(det.height * CANVAS_H),
-        styles: {
-          fontSize: 8,
-          fontWeight: boldTypes.includes(det.type) ? 'bold' : 'normal',
-          textAlign: 'left',
-          backgroundColor: bgMap[det.type] || '',
-          borderColor: borderedTypes.includes(det.type) ? '#000000' : '',
-          detectedText: det.text || '',
-        },
-      }));
-
-      setElements(prev => [...prev, ...detectedElements]);
-      toast.success(`Detected ${detectedElements.length} editable elements from the scorecard`);
-    } catch (err) {
-      console.error('Extraction failed:', err);
-      toast.error('Could not analyse scorecard — the image has been placed on the canvas for manual reference');
-    } finally {
-      setExtracting(false);
-    }
+  // Upload sets the scorecard as a background reference for positioning print fields
+  const handleAddImage = useCallback((imageUrl) => {
+    setBackgroundImage(imageUrl);
+    setShowBackground(true);
+    toast.success('Scorecard uploaded — drag the data fields below to match the positions on your pre-printed card');
   }, []);
 
   const handleCanvasDrop = (e) => {
@@ -273,6 +184,15 @@ Return elements ordered top to bottom. Bounding boxes should tightly wrap each e
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md border">277mm × 190mm</span>
         </div>
         <div className="flex items-center gap-2">
+          {backgroundImage && (
+            <Button
+              variant="outline" size="sm"
+              onClick={() => setShowBackground(prev => !prev)}
+            >
+              <Eye className="w-3.5 h-3.5 mr-1.5" />
+              {showBackground ? 'Hide' : 'Show'} Card
+            </Button>
+          )}
           <Button
             variant="outline" size="sm"
             onClick={() => {
@@ -299,7 +219,7 @@ Return elements ordered top to bottom. Bounding boxes should tightly wrap each e
 
       {/* Editor body */}
       <div className="flex flex-1 overflow-hidden">
-        <ElementPalette onImageUploaded={handleAddImage} extracting={extracting} />
+        <ElementPalette onImageUploaded={handleAddImage} />
 
         {/* Canvas area */}
         <div
@@ -322,6 +242,16 @@ Return elements ordered top to bottom. Bounding boxes should tightly wrap each e
               onDrop={handleCanvasDrop}
               onClick={(e) => { if (e.target === canvasRef.current) setSelectedId(null); }}
             >
+              {backgroundImage && showBackground && (
+                <img
+                  src={backgroundImage}
+                  alt="Scorecard reference"
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  style={{ objectFit: 'fill', opacity: 0.4, zIndex: 0 }}
+                  draggable={false}
+                />
+              )}
+
               {elements.map(el => (
                 <CanvasElement
                   key={el.id}
