@@ -10,9 +10,9 @@ import ElementPalette from '@/components/scorecard/ElementPalette';
 import CanvasElement from '@/components/scorecard/CanvasElement';
 import PropertiesPanel from '@/components/scorecard/PropertiesPanel';
 
-// Canvas represents a single scorecard: 67mm × 190mm at ~4px/mm
-export const CANVAS_W = 268;
-export const CANVAS_H = 760;
+// Default canvas represents a single scorecard: 67mm × 190mm at ~4px/mm
+export const DEFAULT_CANVAS_W = 268;
+export const DEFAULT_CANVAS_H = 760;
 
 const S = (v) => ({ fontSize: v, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' });
 const SB = (v, bg) => ({ fontSize: v, fontWeight: 'bold', textAlign: 'left', backgroundColor: bg || '', borderColor: '' });
@@ -48,6 +48,8 @@ export default function ScorecardLayoutEditor() {
   const [canvasScale, setCanvasScale] = useState(1);
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [showBackground, setShowBackground] = useState(true);
+  const [canvasW, setCanvasW] = useState(DEFAULT_CANVAS_W);
+  const [canvasH, setCanvasH] = useState(DEFAULT_CANVAS_H);
   const canvasAreaRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -79,6 +81,12 @@ export default function ScorecardLayoutEditor() {
     if (layout?.layout_config?.backgroundImage) {
       setBackgroundImage(layout.layout_config.backgroundImage);
     }
+    if (layout?.layout_config?.canvasWidth) {
+      setCanvasW(layout.layout_config.canvasWidth);
+    }
+    if (layout?.layout_config?.canvasHeight) {
+      setCanvasH(layout.layout_config.canvasHeight);
+    }
   }, [layout]);
 
   // Scale canvas to fit container width
@@ -86,17 +94,17 @@ export default function ScorecardLayoutEditor() {
     const update = () => {
       if (canvasAreaRef.current) {
         const availW = canvasAreaRef.current.offsetWidth - 48;
-        setCanvasScale(Math.min(1, Math.max(0.4, availW / CANVAS_W)));
+        setCanvasScale(Math.min(1, Math.max(0.4, availW / canvasW)));
       }
     };
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, []);
+  }, [canvasW]);
 
   const saveMutation = useMutation({
     mutationFn: async (elems) => {
-      const layoutConfig = { elements: elems, backgroundImage };
+      const layoutConfig = { elements: elems, backgroundImage, canvasWidth: canvasW, canvasHeight: canvasH };
       const isActive = club?.use_custom_scorecard_layout === true;
       if (layout?.id) {
         return base44.entities.ScorecardLayout.update(layout.id, { layout_config: layoutConfig, is_active: isActive });
@@ -142,8 +150,8 @@ export default function ScorecardLayoutEditor() {
     const id = genId();
     setElements(prev => [...prev, {
       id, type,
-      x: Math.max(0, Math.min(CANVAS_W - defaults.width, x - defaults.width / 2)),
-      y: Math.max(0, Math.min(CANVAS_H - defaults.height, y - defaults.height / 2)),
+      x: Math.max(0, Math.min(canvasW - defaults.width, x - defaults.width / 2)),
+      y: Math.max(0, Math.min(canvasH - defaults.height, y - defaults.height / 2)),
       ...defaults,
       styles: { fontSize: 12, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '' },
     }]);
@@ -181,7 +189,23 @@ export default function ScorecardLayoutEditor() {
           </Link>
           <div className="h-5 w-px bg-gray-200" />
           <h1 className="text-base font-semibold text-gray-900">Scorecard Layout Editor</h1>
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md border">277mm × 190mm</span>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span>Canvas</span>
+            <input
+              type="number"
+              value={canvasW}
+              onChange={(e) => setCanvasW(Math.max(50, parseInt(e.target.value) || DEFAULT_CANVAS_W))}
+              className="w-14 h-7 px-1.5 text-xs border border-gray-300 rounded-md text-center focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <span className="text-gray-400">×</span>
+            <input
+              type="number"
+              value={canvasH}
+              onChange={(e) => setCanvasH(Math.max(50, parseInt(e.target.value) || DEFAULT_CANVAS_H))}
+              className="w-14 h-7 px-1.5 text-xs border border-gray-300 rounded-md text-center focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <span className="text-gray-400">px</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {backgroundImage && (
@@ -198,6 +222,8 @@ export default function ScorecardLayoutEditor() {
             onClick={() => {
               setElements(DEFAULT_ELEMENTS.map(e => ({ ...e })));
               setSelectedId(null);
+              setCanvasW(DEFAULT_CANVAS_W);
+              setCanvasH(DEFAULT_CANVAS_H);
               toast.info('Reset to default layout');
             }}
           >
@@ -228,13 +254,13 @@ export default function ScorecardLayoutEditor() {
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
         >
           {/* Wrapper sized to scaled canvas so scroll works correctly */}
-          <div style={{ width: CANVAS_W * canvasScale, height: CANVAS_H * canvasScale, flexShrink: 0 }}>
+          <div style={{ width: canvasW * canvasScale, height: canvasH * canvasScale, flexShrink: 0 }}>
             <div
               ref={canvasRef}
               className="bg-white shadow-2xl relative"
               style={{
-                width: CANVAS_W,
-                height: CANVAS_H,
+                width: canvasW,
+                height: canvasH,
                 transform: `scale(${canvasScale})`,
                 transformOrigin: 'top left',
               }}
