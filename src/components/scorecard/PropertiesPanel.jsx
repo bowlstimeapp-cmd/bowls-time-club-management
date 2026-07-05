@@ -9,6 +9,7 @@ const ELEMENT_LABELS = {
   competition: 'Competition', matchName: 'Match Name', date: 'Date',
   time: 'Time', rink: 'Rink', clubName: 'Club Name', opponentName: 'Opponent',
   players: 'Players List', scoreTable: 'Score Table', logo: 'Logo', signatures: 'Signatures',
+  image: 'Uploaded Image',
 };
 
 export default function PropertiesPanel({ element, onUpdate, onDelete }) {

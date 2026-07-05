@@ -114,6 +114,23 @@ export default function ScorecardLayoutEditor() {
     setSelectedId(prev => prev === id ? null : prev);
   }, []);
 
+  const handleAddImage = useCallback((imageUrl) => {
+    const id = genId();
+    const width = 200;
+    const height = 280;
+    setElements(prev => [...prev, {
+      id,
+      type: 'image',
+      x: Math.max(0, (CANVAS_W - width) / 2),
+      y: Math.max(0, (CANVAS_H - height) / 2),
+      width,
+      height,
+      styles: { fontSize: 8, fontWeight: 'normal', textAlign: 'left', backgroundColor: '', borderColor: '', imageUrl },
+    }]);
+    setSelectedId(id);
+    toast.success('Scorecard image added — drag and resize to position');
+  }, []);
+
   const handleCanvasDrop = (e) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('elementType');
@@ -126,6 +143,7 @@ export default function ScorecardLayoutEditor() {
     if (type === 'scoreTable') { defaults.width = 400; defaults.height = 200; }
     if (type === 'logo') { defaults.width = 150; defaults.height = 60; }
     if (type === 'signatures') { defaults.width = 600; defaults.height = 100; }
+    if (type === 'image') { defaults.width = 200; defaults.height = 280; }
     const id = genId();
     setElements(prev => [...prev, {
       id, type,
@@ -197,7 +215,7 @@ export default function ScorecardLayoutEditor() {
 
       {/* Editor body */}
       <div className="flex flex-1 overflow-hidden">
-        <ElementPalette />
+        <ElementPalette onImageUploaded={handleAddImage} />
 
         {/* Canvas area */}
         <div

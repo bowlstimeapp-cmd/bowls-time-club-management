@@ -10,12 +10,23 @@ export const ELEMENT_LABELS = {
   players: 'Players List',
   scoreTable: 'Score Table',
   signatures: 'Signatures',
+  image: 'Uploaded Image',
 };
 
 function ElementContent({ type, styles }) {
   const fs = styles?.fontSize || 8;
 
   switch (type) {
+    case 'image':
+      return (
+        <img
+          src={styles.imageUrl}
+          alt="Scorecard sample"
+          className="w-full h-full object-contain pointer-events-none"
+          draggable={false}
+        />
+      );
+
     case 'logo':
       return (
         <div className="flex items-center justify-center w-full h-full">
