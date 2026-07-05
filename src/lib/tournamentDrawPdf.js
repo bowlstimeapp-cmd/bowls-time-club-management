@@ -388,15 +388,6 @@ export function generateTournamentDrawPdf(tournament, clubName, getMemberName) {
     border-color: var(--green-mid);
     color: var(--green-dark);
   }
-  .slot.winner::after {
-    content: '✓';
-    position: absolute;
-    right: 7px;
-    top: 0;
-    line-height: var(--slot-h);
-    font-size: 9px;
-    color: var(--green-mid);
-  }
 
   .slot.loser {
     color: #aaa;
