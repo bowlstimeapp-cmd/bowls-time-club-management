@@ -25,10 +25,10 @@ const SECTION_NEWS       = 'news';
 const SECTION_BOOKINGS   = 'bookings';
 
 const DEFAULT_ORDER = [
+  SECTION_NEWS,
   SECTION_SELECTIONS,
   SECTION_FIXTURES,
   SECTION_COMPETITIONS,
-  SECTION_NEWS,
   SECTION_BOOKINGS,
 ];
 
@@ -58,7 +58,11 @@ export default function MemberDashboard() {
           ...parsed.filter(id => DEFAULT_ORDER.includes(id)),
           ...DEFAULT_ORDER.filter(id => !parsed.includes(id)),
         ];
-        setSectionOrder(merged);
+        // If the saved order doesn't match the current default, refresh it
+        // so structural changes (e.g. a section moved to the top) take effect.
+        const sameAsDefault = merged.length === DEFAULT_ORDER.length &&
+          merged.every((id, i) => id === DEFAULT_ORDER[i]);
+        setSectionOrder(sameAsDefault ? merged : DEFAULT_ORDER);
       } catch {}
     }
   }, [user?.id, clubId]);
