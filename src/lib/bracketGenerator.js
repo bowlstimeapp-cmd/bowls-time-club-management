@@ -36,8 +36,19 @@ export function generateKnockoutBracket(entries) {
       player2: entriesWithByes[i * 2 + 1] || null,
       winner: null,
     };
-    if (match.player1 && !match.player2) match.winner = match.player1;
-    else if (!match.player1 && match.player2) match.winner = match.player2;
+    if (match.player1 && !match.player2) {
+      match.winner = match.player1;
+      match.is_walkover = true;
+      match.score_status = 'accepted';
+      match.player1_score = 1;
+      match.player2_score = 0;
+    } else if (!match.player1 && match.player2) {
+      match.winner = match.player2;
+      match.is_walkover = true;
+      match.score_status = 'accepted';
+      match.player1_score = 0;
+      match.player2_score = 1;
+    }
     firstRound.push(match);
   }
   rounds.push(firstRound);
@@ -52,6 +63,17 @@ export function generateKnockoutBracket(entries) {
     rounds.push(round);
     prevRoundSize = round.length;
     roundNum++;
+  }
+
+  // Propagate bye (walkover) winners into the next round
+  if (rounds.length > 1) {
+    firstRound.forEach((match, i) => {
+      if (match.winner && match.is_walkover) {
+        const nextIdx = Math.floor(i / 2);
+        if (i % 2 === 0) rounds[1][nextIdx].player1 = match.winner;
+        else rounds[1][nextIdx].player2 = match.winner;
+      }
+    });
   }
 
   return { rounds, players: shuffled };
