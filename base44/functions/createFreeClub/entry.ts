@@ -46,7 +46,7 @@ export default async function(req: Request): Promise<Response> {
       primary_admin_email: user.email,
       is_active: true,
       club_tier: 'free',
-      module_rink_booking: false,
+      module_rink_booking: true,
       module_selection: false,
       module_competitions: false,
       module_leagues: false,

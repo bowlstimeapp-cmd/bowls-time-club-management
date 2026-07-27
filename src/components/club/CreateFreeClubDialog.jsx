@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, Check } from 'lucide-react';
 import { toast } from "sonner";
 
 const MODULE_LIST = [
-  { key: 'module_rink_booking', label: 'Rink Booking' },
+  { key: 'module_rink_booking', label: 'Rink Booking', included: true },
   { key: 'module_selection', label: 'Match Selection' },
   { key: 'module_competitions', label: 'Competitions' },
   { key: 'module_leagues', label: 'Leagues' },
@@ -97,15 +97,21 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
             <Label className="text-base font-medium mb-1 block">Available Modules</Label>
             <p className="text-xs text-gray-500 mb-3">These features are available on the standard (paid) tier.</p>
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-              {MODULE_LIST.map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+              {MODULE_LIST.map(({ key, label, included }) => (
+                <div key={key} className={`flex items-center justify-between rounded-lg px-3 py-2 ${included ? 'bg-emerald-50' : 'bg-gray-50'}`}>
                   <div>
                     <span className="text-sm font-normal text-gray-700">{label}</span>
-                    <p className="text-xs text-gray-400">Not included in the Bowls Time free tier</p>
+                    <p className={`text-xs ${included ? 'text-emerald-600' : 'text-gray-400'}`}>
+                      {included ? 'Included in the free tier' : 'Not included in the Bowls Time free tier'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Lock className="w-3.5 h-3.5 text-gray-400" />
-                    <Switch checked={false} disabled />
+                    {included ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    )}
+                    <Switch checked={!!included} disabled />
                   </div>
                 </div>
               ))}

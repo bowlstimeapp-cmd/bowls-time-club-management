@@ -275,7 +275,7 @@ export default function ClubSelector() {
 
           return (
             <div className="space-y-8">
-              {!membershipsLoading && memberships.length === 0 && (
+              {!membershipsLoading && (memberships.length === 0 || user?.role === 'admin') && (
                 <Card className="border-emerald-200 bg-emerald-50">
                   <CardContent className="p-6 text-center">
                     <Building2 className="w-10 h-10 mx-auto mb-3 text-emerald-600" />
