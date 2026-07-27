@@ -366,6 +366,15 @@
       "type": "object",
       "description": "Map of competition name to hex colour for selection card headers",
       "default": {}
+    },
+    "club_tier": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "free"
+      ],
+      "default": "standard",
+      "description": "Club subscription tier \u2014 'free' clubs have all modules locked until upgraded to 'standard'"
     }
   },
   "required": [

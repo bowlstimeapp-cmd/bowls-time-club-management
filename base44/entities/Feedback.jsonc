@@ -16,7 +16,8 @@
         "bug",
         "feature",
         "improvement",
-        "other"
+        "other",
+        "paid_enquiry"
       ],
       "default": "feature",
       "description": "Type of feedback"
@@ -43,6 +44,14 @@
     "admin_response": {
       "type": "string",
       "description": "Admin response to the feedback, visible to the user"
+    },
+    "related_club_id": {
+      "type": "string",
+      "description": "The club a paid enquiry originated from"
+    },
+    "related_module": {
+      "type": "string",
+      "description": "Which locked module triggered the enquiry (e.g. module_leagues)"
     }
   },
   "required": [

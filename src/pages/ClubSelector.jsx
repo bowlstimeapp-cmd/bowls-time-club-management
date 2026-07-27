@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import CreateFreeClubDialog from '@/components/club/CreateFreeClubDialog';
 
 export default function ClubSelector() {
   const [user, setUser] = useState(null);
@@ -57,6 +58,7 @@ export default function ClubSelector() {
   });
 
   const [requestSentModal, setRequestSentModal] = useState(false);
+  const [createClubOpen, setCreateClubOpen] = useState(false);
 
   const requestMutation = useMutation({
     mutationFn: (clubId) => base44.entities.ClubMembership.create({
@@ -208,9 +210,14 @@ export default function ClubSelector() {
                             <p className="text-sm text-gray-500">{club.rink_count} rinks</p>
                           </div>
                         </div>
-                        {isAdmin && (
-                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Admin</Badge>
-                        )}
+                        <div className="flex gap-1 flex-wrap justify-end">
+                          {club.club_tier === 'free' && (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">Free Club</Badge>
+                          )}
+                          {isAdmin && (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Admin</Badge>
+                          )}
+                        </div>
                       </div>
 
                       {club.description && (
@@ -268,6 +275,18 @@ export default function ClubSelector() {
 
           return (
             <div className="space-y-8">
+              {!membershipsLoading && memberships.length === 0 && (
+                <Card className="border-emerald-200 bg-emerald-50">
+                  <CardContent className="p-6 text-center">
+                    <Building2 className="w-10 h-10 mx-auto mb-3 text-emerald-600" />
+                    <h3 className="font-semibold text-gray-900 mb-1">Don't have a club?</h3>
+                    <p className="text-sm text-gray-600 mb-4">Create your own club and get started with Bowls Time for free.</p>
+                    <Button onClick={() => setCreateClubOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+                      Create New Club
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
               {myClubs.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -326,6 +345,17 @@ export default function ClubSelector() {
           </button>
         </DialogContent>
       </Dialog>
+
+      <CreateFreeClubDialog
+        open={createClubOpen}
+        onClose={() => setCreateClubOpen(false)}
+        user={user}
+        onCreated={(club) => {
+          queryClient.invalidateQueries({ queryKey: ['myMemberships'] });
+          queryClient.invalidateQueries({ queryKey: ['clubs'] });
+          navigate(createPageUrl('BookRink') + `?clubId=${club.id}`);
+        }}
+      />
     </div>
   );
 }

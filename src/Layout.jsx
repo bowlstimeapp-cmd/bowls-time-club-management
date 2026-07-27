@@ -39,6 +39,26 @@ import NotificationDropdown from '@/components/NotificationDropdown';
 import LiveMatchBanner from '@/components/LiveMatchBanner';
 import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
 import { useKiosk } from '@/lib/KioskContext';
+import ModuleLockedNotice from '@/components/club/ModuleLockedNotice';
+
+const MODULE_PAGE_MAP = {
+  BookRink: { key: 'module_rink_booking', name: 'Rink Booking', desc: 'Book rinks, manage sessions, and track availability across your club facilities.' },
+  Selection: { key: 'module_selection', name: 'Match Selection', desc: 'Create and publish team selections with availability tracking and automatic notifications.' },
+  SelectionEditor: { key: 'module_selection', name: 'Match Selection', desc: 'Create and publish team selections with availability tracking and automatic notifications.' },
+  SelectionView: { key: 'module_selection', name: 'Match Selection', desc: 'Create and publish team selections with availability tracking and automatic notifications.' },
+  ClubTournaments: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  TournamentEditor: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  TournamentView: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  OpenCompetitions: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  CompetitionRegistration: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  LeagueAdmin: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
+  LeagueView: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
+  ClubHome: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
+  ClubHomepageAdmin: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
+  FunctionRoomAdmin: { key: 'module_function_rooms', name: 'Function Room Bookings', desc: 'Manage function room bookings, enquiries, and availability for your club facilities.' },
+  ScorecardLayoutEditor: { key: 'module_custom_branding', name: 'Custom Branding', desc: 'Design custom scorecard layouts with your club branding, colours, and logo.' },
+  ClubMessaging: { key: 'module_messaging', name: 'Club Messaging', desc: 'Chat with members in dedicated channels for announcements, social events, and selection discussions.' },
+};
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
@@ -124,34 +144,37 @@ export default function Layout({ children, currentPageName }) {
   }
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const isFreeClub = club?.club_tier === 'free';
+  const lockedModule = isFreeClub && needsClub && clubId ? MODULE_PAGE_MAP[currentPageName] : null;
+  const isModuleLocked = lockedModule && club?.[lockedModule.key] === false;
   const isClubSteward = membership?.role === 'steward' && membership?.status === 'approved';
   const isSelector = (membership?.role === 'selector' || membership?.role === 'admin') && membership?.status === 'approved';
   const isPlatformAdmin = user?.role === 'admin';
 
   const clubNavigation = [
-    ...(club?.module_homepage ? [
+    ...((club?.module_homepage || isFreeClub) ? [
       { name: 'Club Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 },
     ] : []),
-    ...(club?.module_rink_booking !== false ? [
+    ...((club?.module_rink_booking !== false || isFreeClub) ? [
       { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
       { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
     ] : []),
-    ...(club?.module_selection !== false ? [
+    ...((club?.module_selection !== false || isFreeClub) ? [
       { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
     ] : []),
-    ...(club?.module_competitions !== false ? [
+    ...((club?.module_competitions !== false || isFreeClub) ? [
       { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
     ] : []),
     ...(club?.competition_registration_enabled ? [
       { name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks },
     ] : []),
-    ...(club?.module_leagues !== false ? [
+    ...((club?.module_leagues !== false || isFreeClub) ? [
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
       { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
     ] : []),
     { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
     { name: 'Score Prediction', href: createPageUrl('ScorePrediction') + `?clubId=${clubId}`, icon: Target },
-    ...(club?.module_messaging ? [
+    ...((club?.module_messaging || isFreeClub) ? [
       { name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare },
     ] : []),
   ];
@@ -188,7 +211,7 @@ export default function Layout({ children, currentPageName }) {
             {needsClub && clubId && (
               <nav className="hidden md:flex items-center gap-2">
                 {/* Club Home — hidden in kiosk mode */}
-                {!isKioskSession && club?.module_homepage && (
+                {!isKioskSession && (club?.module_homepage || isFreeClub) && (
                   <Link
                     to={createPageUrl('ClubHome') + `?clubId=${clubId}`}
                     className={cn(
@@ -203,7 +226,7 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 )}
                 {/* Rink Booking Dropdown */}
-                {club?.module_rink_booking !== false && (
+                {(club?.module_rink_booking !== false || isFreeClub) && (
                   isKioskSession ? (
                     // Kiosk: show only Book a Rink and My Bookings as plain links (no dropdown)
                     <>
@@ -260,7 +283,7 @@ export default function Layout({ children, currentPageName }) {
                 )}
 
                 {/* Selection — hidden in kiosk mode */}
-                {!isKioskSession && club?.module_selection !== false && (
+                {!isKioskSession && (club?.module_selection !== false || isFreeClub) && (
                   <Link
                     to={createPageUrl('Selection') + `?clubId=${clubId}`}
                     className={cn(
@@ -276,7 +299,7 @@ export default function Layout({ children, currentPageName }) {
                 )}
 
                 {/* Competitions Dropdown — hidden in kiosk mode */}
-                {!isKioskSession && club?.module_competitions !== false && (
+                {!isKioskSession && (club?.module_competitions !== false || isFreeClub) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
@@ -313,7 +336,7 @@ export default function Layout({ children, currentPageName }) {
                 )}
 
                 {/* My Teams — hidden in kiosk mode */}
-                {!isKioskSession && club?.module_leagues !== false && (
+                {!isKioskSession && (club?.module_leagues !== false || isFreeClub) && (
                   <Link
                     to={createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`}
                     className={cn(
@@ -351,7 +374,7 @@ export default function Layout({ children, currentPageName }) {
                           Score Prediction
                         </Link>
                       </DropdownMenuItem>
-                      {club?.module_messaging && (
+                      {(club?.module_messaging || isFreeClub) && (
                         <DropdownMenuItem asChild>
                           <Link to={createPageUrl('ClubMessaging') + `?clubId=${clubId}`} className="cursor-pointer">
                             <MessagesSquare className="w-4 h-4 mr-2" />
@@ -390,7 +413,7 @@ export default function Layout({ children, currentPageName }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      {club?.module_leagues !== false && (
+                      {(club?.module_leagues !== false || isFreeClub) && (
                         <DropdownMenuItem asChild>
                           <Link to={createPageUrl('LeagueAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
                             <Table2 className="w-4 h-4 mr-2" />
@@ -422,7 +445,7 @@ export default function Layout({ children, currentPageName }) {
                           Open Competitions
                         </Link>
                       </DropdownMenuItem>
-                      {club?.module_function_rooms && (
+                      {(club?.module_function_rooms || isFreeClub) && (
                         <DropdownMenuItem asChild>
                           <Link to={createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
                             <Building2 className="w-4 h-4 mr-2" />
@@ -654,7 +677,7 @@ export default function Layout({ children, currentPageName }) {
                     <Trophy className="w-5 h-5" />
                     Open Competitions
                   </Link>
-                  {club?.module_function_rooms && (
+                  {(club?.module_function_rooms || isFreeClub) && (
                     <Link
                       to={createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`}
                       onClick={() => setMobileMenuOpen(false)}
@@ -714,7 +737,11 @@ export default function Layout({ children, currentPageName }) {
       </header>
 
       {/* Main Content */}
-      <main className="min-h-0 pb-safe">{children}</main>
+      <main className="min-h-0 pb-safe">
+        {isModuleLocked ? (
+          <ModuleLockedNotice moduleKey={lockedModule.key} moduleName={lockedModule.name} description={lockedModule.desc} clubId={clubId} />
+        ) : children}
+      </main>
       
       {/* Floating Feedback Button */}
       <FloatingFeedbackButton />

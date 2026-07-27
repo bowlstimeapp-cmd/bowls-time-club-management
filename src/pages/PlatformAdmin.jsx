@@ -75,6 +75,7 @@ export default function PlatformAdmin() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [convertClubOpen, setConvertClubOpen] = useState(false);
   const [resetClub, setResetClub] = useState(null);
   const [resetting, setResetting] = useState(false);
   const [manageAdminsDialogOpen, setManageAdminsDialogOpen] = useState(false);
@@ -567,6 +568,9 @@ export default function PlatformAdmin() {
                                 <Badge variant={club.is_active !== false ? "default" : "secondary"} className="flex-shrink-0">
                                   {club.is_active !== false ? 'Active' : 'Inactive'}
                                 </Badge>
+                                {club.club_tier === 'free' && (
+                                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">Free Club</Badge>
+                                )}
                               </div>
                               <p className="text-xs text-gray-500 truncate">{club.rink_count} rinks • {club.primary_admin_email}</p>
                             </div>
@@ -700,9 +704,13 @@ export default function PlatformAdmin() {
                           {feedbacks.filter(f => feedbackStatusFilter === 'all' || f.status === feedbackStatusFilter || (!f.status && feedbackStatusFilter === 'new_feedback')).map(feedback => (
                             <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedFeedback(feedback); setFeedbackResponse(feedback.admin_response || ''); }}>
                               <td className="py-3 px-2">
-                                <Badge variant={feedback.category === 'bug' ? 'destructive' : feedback.category === 'feature' ? 'default' : 'secondary'}>
-                                  {feedback.category}
-                                </Badge>
+                                {feedback.category === 'paid_enquiry' ? (
+                                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">Paid Enquiry</Badge>
+                                ) : (
+                                  <Badge variant={feedback.category === 'bug' ? 'destructive' : feedback.category === 'feature' ? 'default' : 'secondary'}>
+                                    {feedback.category}
+                                  </Badge>
+                                )}
                               </td>
                               <td className="py-3 px-2 font-medium">{feedback.title}</td>
                               <td className="py-3 px-2 text-sm">
@@ -1055,6 +1063,16 @@ export default function PlatformAdmin() {
                 </div>
               )}
               <DialogFooter className="flex-col sm:flex-row gap-2">
+                {editingClub?.club_tier === 'free' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50 sm:mr-auto"
+                    onClick={() => setConvertClubOpen(true)}
+                  >
+                    Convert to Standard Club
+                  </Button>
+                )}
                 {editingClub && (
                   <Button
                     type="button"
@@ -1096,6 +1114,50 @@ export default function PlatformAdmin() {
           </DialogContent>
         </Dialog>
 
+        {/* Convert to Standard Club Confirmation */}
+        <Dialog open={convertClubOpen} onOpenChange={setConvertClubOpen}>
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle>Convert to Standard Club</DialogTitle>
+            </DialogHeader>
+            <div className="py-2 space-y-3">
+              <p className="text-gray-700">
+                This will upgrade <strong>{editingClub?.name}</strong> from the free tier to the standard tier, enabling all default modules (Rink Booking, Selection, Competitions, Leagues).
+              </p>
+              <p className="text-sm text-gray-500">This action enables full access to all standard features.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConvertClubOpen(false)}>Cancel</Button>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  updateClubMutation.mutate({
+                    id: editingClub.id,
+                    data: {
+                      club_tier: 'standard',
+                      module_rink_booking: true,
+                      module_selection: true,
+                      module_competitions: true,
+                      module_leagues: true,
+                      module_sms_notifications: false,
+                      module_homepage: false,
+                      module_function_rooms: false,
+                      module_custom_branding: false,
+                      module_accolades: false,
+                      module_messaging: false,
+                    },
+                  });
+                  setConvertClubOpen(false);
+                }}
+                disabled={updateClubMutation.isPending}
+              >
+                {updateClubMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Convert to Standard
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Feedback Detail Modal */}
         <Dialog open={!!selectedFeedback} onOpenChange={() => { setSelectedFeedback(null); setFeedbackResponse(''); }}>
           <DialogContent className="max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
@@ -1108,9 +1170,13 @@ export default function PlatformAdmin() {
             {selectedFeedback && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={selectedFeedback.category === 'bug' ? 'destructive' : selectedFeedback.category === 'feature' ? 'default' : 'secondary'}>
-                    {selectedFeedback.category}
-                  </Badge>
+                  {selectedFeedback.category === 'paid_enquiry' ? (
+                    <Badge className="bg-purple-100 text-purple-800 border-purple-200">Paid Enquiry</Badge>
+                  ) : (
+                    <Badge variant={selectedFeedback.category === 'bug' ? 'destructive' : selectedFeedback.category === 'feature' ? 'default' : 'secondary'}>
+                      {selectedFeedback.category}
+                    </Badge>
+                  )}
                   <span className="text-xs text-gray-400">{new Date(selectedFeedback.created_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div>
@@ -1126,6 +1192,18 @@ export default function PlatformAdmin() {
                   <p className="text-gray-900">{selectedFeedback.user_name}</p>
                   <p className="text-sm text-gray-500">{selectedFeedback.user_email}</p>
                 </div>
+                {selectedFeedback.related_club_id && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Related Club</p>
+                    <p className="text-gray-900">{clubs.find(c => c.id === selectedFeedback.related_club_id)?.name || selectedFeedback.related_club_id}</p>
+                  </div>
+                )}
+                {selectedFeedback.related_module && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Related Module</p>
+                    <p className="text-gray-900">{selectedFeedback.related_module}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</p>
                   <Select
