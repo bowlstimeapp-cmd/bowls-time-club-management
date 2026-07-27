@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Lock, Check } from 'lucide-react';
+import { Loader2, Lock, Check, CheckCircle } from 'lucide-react';
 import { toast } from "sonner";
 
 const MODULE_LIST = [
@@ -27,6 +27,7 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
   const [openingTime, setOpeningTime] = useState('10:00');
   const [closingTime, setClosingTime] = useState('21:00');
   const [submitting, setSubmitting] = useState(false);
+  const [createdClub, setCreatedClub] = useState(null);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -42,26 +43,46 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
         closing_time: closingTime,
       });
       if (res.data?.error) throw new Error(res.data.error);
-      toast.success('Club created successfully!');
-      onClose();
-      setName('');
-      setRinkCount(6);
-      setOpeningTime('10:00');
-      setClosingTime('21:00');
-      if (onCreated && res.data?.club) onCreated(res.data.club);
+      setCreatedClub(res.data.club);
     } catch (err) {
-      toast.error(err.message || 'Failed to create club');
+      const msg = err.response?.data?.error || err.message || 'Failed to create club';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleClose = () => {
+    setCreatedClub(null);
+    setName('');
+    setRinkCount(6);
+    setOpeningTime('10:00');
+    setClosingTime('21:00');
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle>Create Your Club</DialogTitle>
+          <DialogTitle>{createdClub ? 'Club Created!' : 'Create Your Club'}</DialogTitle>
         </DialogHeader>
+        {createdClub ? (
+          <div className="py-6 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">{createdClub.name} has been created!</h3>
+            <p className="text-sm text-gray-500 mb-6">Your free-tier club is ready. Rink Booking is enabled — you can start booking rinks right away.</p>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 w-full"
+              onClick={() => { handleClose(); onCreated?.(createdClub); }}
+            >
+              Go to Club
+            </Button>
+          </div>
+        ) : (
+        <>
         <div className="space-y-4">
           <div>
             <Label>Club Name *</Label>
@@ -119,7 +140,7 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="outline" onClick={handleClose} disabled={submitting}>Cancel</Button>
           <Button
             className="bg-emerald-600 hover:bg-emerald-700"
             onClick={handleSubmit}
@@ -129,6 +150,8 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
             Create Club
           </Button>
         </DialogFooter>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );

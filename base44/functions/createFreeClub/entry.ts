@@ -14,11 +14,15 @@ export default async function(req: Request): Promise<Response> {
     }
 
     // Verify the user has NO existing club memberships (self-serve free trial only for new users)
-    const existingMemberships = await base44.asServiceRole.entities.ClubMembership.filter({
-      user_email: user.email,
-    });
-    if (existingMemberships.length > 0) {
-      return Response.json({ error: 'You are already a member of a club. Free club creation is only available for users with no existing memberships.' }, { status: 403 });
+    // Platform admins can bypass this check to create demo/trial clubs
+    const isPlatformAdmin = user.role === 'admin';
+    if (!isPlatformAdmin) {
+      const existingMemberships = await base44.asServiceRole.entities.ClubMembership.filter({
+        user_email: user.email,
+      });
+      if (existingMemberships.length > 0) {
+        return Response.json({ error: 'You are already a member of a club. Free club creation is only available for users with no existing memberships.' }, { status: 403 });
+      }
     }
 
     // Generate slug from name with collision retry
