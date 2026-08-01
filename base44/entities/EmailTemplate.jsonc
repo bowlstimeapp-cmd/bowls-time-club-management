@@ -1,0 +1,48 @@
+{
+  "name": "EmailTemplate",
+  "type": "object",
+  "properties": {
+    "template_key": {
+      "type": "string",
+      "default": "prospect_outreach",
+      "description": "Unique key identifying the template (e.g. prospect_outreach)"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Email subject line (supports merge tags)"
+    },
+    "body": {
+      "type": "string",
+      "description": "Email body text (supports merge tags)"
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "Email of the admin who last saved the template"
+    }
+  },
+  "required": [
+    "template_key"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

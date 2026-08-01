@@ -30,6 +30,10 @@
       "type": "string",
       "description": "Name of the contact person"
     },
+    "confidence": {
+      "type": "string",
+      "description": "Lead confidence level (e.g. High, Medium, Low)"
+    },
     "source": {
       "type": "string",
       "description": "Where this lead came from",
@@ -40,6 +44,7 @@
       "enum": [
         "not_contacted",
         "contacted",
+        "email_sent",
         "follow_up",
         "not_interested",
         "interested",

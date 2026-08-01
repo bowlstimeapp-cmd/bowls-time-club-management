@@ -19,7 +19,7 @@ import {
   ShieldAlert, Search, Plus, Pencil, Trash2, ArrowLeft, Users,
   Phone, Mail, Globe, MapPin, CheckCircle, XCircle, Clock,
   Star, PhoneCall, RefreshCw, Loader2, Download, Upload, Filter,
-  Send, FileText
+  Send, FileText, MailCheck
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link } from 'react-router-dom';
@@ -28,6 +28,7 @@ import { createPageUrl } from '@/utils';
 const STATUS_CONFIG = {
   not_contacted: { label: 'Not Contacted', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: Clock },
   contacted: { label: 'Contacted', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: PhoneCall },
+  email_sent: { label: 'Email Sent', color: 'bg-cyan-100 text-cyan-700 border-cyan-200', icon: MailCheck },
   follow_up: { label: 'Follow Up', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: RefreshCw },
   interested: { label: 'Interested', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Star },
   not_interested: { label: 'Not Interested', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
@@ -36,9 +37,11 @@ const STATUS_CONFIG = {
 
 const EMPTY_FORM = {
   club_name: '', address: '', county: '', email: '', phone: '',
-  website: '', contact_name: '', source: 'play-bowls.com',
+  website: '', contact_name: '', confidence: '', source: 'play-bowls.com',
   contact_status: 'not_contacted', notes: '', last_contacted_date: ''
 };
+
+const VALID_STATUS_KEYS = ['not_contacted', 'contacted', 'email_sent', 'follow_up', 'interested', 'not_interested', 'signed_up'];
 
 const DEFAULT_TEMPLATE = {
   subject: 'Introducing BowlsTime – Club Management Made Easy',
@@ -73,18 +76,29 @@ export default function ProspectCRM() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailTarget, setEmailTarget] = useState(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [emailTemplate, setEmailTemplate] = useState(() => {
-    try {
-      const saved = localStorage.getItem('prospectEmailTemplate');
-      return saved ? JSON.parse(saved) : DEFAULT_TEMPLATE;
-    } catch { return DEFAULT_TEMPLATE; }
-  });
+  const [emailTemplate, setEmailTemplate] = useState(DEFAULT_TEMPLATE);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailPreview, setEmailPreview] = useState({ subject: '', body: '' });
+  const [emailRecipient, setEmailRecipient] = useState('');
   const queryClient = useQueryClient();
 
   useEffect(() => {
     base44.auth.me().then(setUser);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      setTemplateLoading(true);
+      try {
+        const existing = await base44.entities.EmailTemplate.filter({ template_key: 'prospect_outreach' });
+        if (existing[0]) {
+          setEmailTemplate({ subject: existing[0].subject || DEFAULT_TEMPLATE.subject, body: existing[0].body || DEFAULT_TEMPLATE.body });
+        }
+      } catch { /* fall back to default */ }
+      setTemplateLoading(false);
+    })();
   }, []);
 
   const { data: prospects = [], isLoading } = useQuery({
@@ -110,7 +124,7 @@ export default function ProspectCRM() {
   const quickStatusMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.ProspectClub.update(id, {
       contact_status: status,
-      last_contacted_date: ['contacted', 'follow_up', 'interested', 'not_interested'].includes(status)
+      last_contacted_date: ['contacted', 'email_sent', 'follow_up', 'interested', 'not_interested'].includes(status)
         ? new Date().toISOString().split('T')[0] : undefined
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['prospects'] }),
@@ -161,31 +175,57 @@ export default function ProspectCRM() {
 
   const openEmail = (p) => {
     setEmailTarget(p);
+    setEmailRecipient(p.email || '');
     setEmailPreview(fillTemplate(emailTemplate, p));
     setEmailDialogOpen(true);
   };
 
   const handleSendEmail = async () => {
-    if (!emailTarget?.email) { toast.error('This club has no email address'); return; }
+    if (!emailRecipient.trim()) { toast.error('Please enter a recipient email address'); return; }
+    if (!emailTarget?.id) { toast.error('No prospect selected'); return; }
     setSendingEmail(true);
     try {
-      await base44.integrations.Core.SendEmail({
-        to: emailTarget.email,
+      await base44.functions.invoke('sendProspectEmail', {
+        prospectId: emailTarget.id,
+        to: emailRecipient.trim(),
         subject: emailPreview.subject,
-        body: emailPreview.body.replace(/\n/g, '<br/>'),
-        from_name: 'BowlsTime',
-      });
-      await base44.entities.ProspectClub.update(emailTarget.id, {
-        contact_status: emailTarget.contact_status === 'not_contacted' ? 'contacted' : emailTarget.contact_status,
-        last_contacted_date: new Date().toISOString().split('T')[0],
+        body: emailPreview.body,
       });
       queryClient.invalidateQueries({ queryKey: ['prospects'] });
-      toast.success(`Email sent to ${emailTarget.email}`);
+      toast.success(`Email sent to ${emailRecipient.trim()}`);
       setEmailDialogOpen(false);
     } catch (e) {
-      toast.error('Failed to send email: ' + e.message);
+      const msg = e?.response?.data?.error || e?.message || 'Unknown error';
+      toast.error('Failed to send email: ' + msg);
     }
     setSendingEmail(false);
+  };
+
+  const handleSaveTemplate = async () => {
+    setTemplateSaving(true);
+    try {
+      const user = await base44.auth.me();
+      const existing = await base44.entities.EmailTemplate.filter({ template_key: 'prospect_outreach' });
+      if (existing[0]) {
+        await base44.entities.EmailTemplate.update(existing[0].id, {
+          subject: emailTemplate.subject,
+          body: emailTemplate.body,
+          updated_by: user?.email || '',
+        });
+      } else {
+        await base44.entities.EmailTemplate.create({
+          template_key: 'prospect_outreach',
+          subject: emailTemplate.subject,
+          body: emailTemplate.body,
+          updated_by: user?.email || '',
+        });
+      }
+      toast.success('Template saved');
+      setTemplateDialogOpen(false);
+    } catch (e) {
+      toast.error('Failed to save template: ' + e.message);
+    }
+    setTemplateSaving(false);
   };
 
   const handleSave = () => {
@@ -227,6 +267,8 @@ export default function ProspectCRM() {
         const vals = line.split(',');
         const obj = {};
         headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim().replace(/^"|"$/g, ''); });
+        const csvStatusRaw = (obj.status || '').toLowerCase().trim().replace(/\s+/g, '_');
+        const csvStatus = VALID_STATUS_KEYS.includes(csvStatusRaw) ? csvStatusRaw : 'not_contacted';
         return {
           club_name: obj.club_name || obj.name || obj.club || '',
           address: obj.address || '',
@@ -235,8 +277,9 @@ export default function ProspectCRM() {
           phone: obj.phone || obj.telephone || '',
           website: obj.website || obj.url || '',
           contact_name: obj.contact_name || obj.contact || '',
+          confidence: obj.confidence || '',
           source: obj.source || 'CSV Import',
-          contact_status: 'not_contacted',
+          contact_status: csvStatus,
           notes: obj.notes || '',
         };
       }).filter(r => r.club_name);
@@ -252,10 +295,10 @@ export default function ProspectCRM() {
   };
 
   const exportCsv = () => {
-    const headers = ['Club Name', 'County', 'Address', 'Email', 'Phone', 'Website', 'Contact Name', 'Status', 'Last Contacted', 'Notes'];
+    const headers = ['Club Name', 'County', 'Address', 'Email', 'Phone', 'Website', 'Contact Name', 'Confidence', 'Status', 'Last Contacted', 'Notes'];
     const rows = prospects.map(p => [
       p.club_name, p.county, p.address, p.email, p.phone, p.website,
-      p.contact_name, p.contact_status, p.last_contacted_date, p.notes
+      p.contact_name, p.confidence, p.contact_status, p.last_contacted_date, p.notes
     ].map(v => `"${(v || '').replace(/"/g, '""')}"`));
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -359,6 +402,7 @@ export default function ProspectCRM() {
                       <tr>
                         <th className="text-left py-3 px-4 font-medium text-gray-500">Club</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden sm:table-cell">County</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-500 hidden md:table-cell">Confidence</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden md:table-cell">Contact</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden lg:table-cell">Last Contacted</th>
@@ -378,6 +422,15 @@ export default function ProspectCRM() {
                             </td>
                             <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">
                               {p.county && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" />{p.county}</span>}
+                            </td>
+                            <td className="py-3 px-4 hidden md:table-cell">
+                              {p.confidence ? (
+                                <Badge variant="outline" className={
+                                  p.confidence.toLowerCase() === 'high' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  p.confidence.toLowerCase() === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  p.confidence.toLowerCase() === 'low' ? 'bg-gray-50 text-gray-600 border-gray-200' : ''
+                                }>{p.confidence}</Badge>
+                              ) : <span className="text-gray-300">—</span>}
                             </td>
                             <td className="py-3 px-4 text-gray-600 hidden md:table-cell">{p.contact_name}</td>
                             <td className="py-3 px-4">
@@ -431,7 +484,11 @@ export default function ProspectCRM() {
       <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Email Template</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Email Template
+              {templateLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+            </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-500 -mt-2">
             Use <code className="bg-gray-100 px-1 rounded">{'{{club_name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{contact_name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{county}}'}</code> as placeholders — they'll be replaced when sending.
@@ -448,11 +505,8 @@ export default function ProspectCRM() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailTemplate(DEFAULT_TEMPLATE)}>Reset to Default</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => {
-              localStorage.setItem('prospectEmailTemplate', JSON.stringify(emailTemplate));
-              toast.success('Template saved');
-              setTemplateDialogOpen(false);
-            }}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleSaveTemplate} disabled={templateSaving}>
+              {templateSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Save Template
             </Button>
           </DialogFooter>
@@ -469,9 +523,9 @@ export default function ProspectCRM() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-700">
-              <Mail className="w-4 h-4 shrink-0" />
-              <span>To: <strong>{emailTarget?.email}</strong></span>
+            <div>
+              <Label>To</Label>
+              <Input type="email" value={emailRecipient} onChange={e => setEmailRecipient(e.target.value)} placeholder="recipient@example.com" />
             </div>
             <div>
               <Label>Subject</Label>
@@ -481,7 +535,7 @@ export default function ProspectCRM() {
               <Label>Body</Label>
               <Textarea value={emailPreview.body} onChange={e => setEmailPreview({ ...emailPreview, body: e.target.value })} rows={14} className="text-sm" />
             </div>
-            <p className="text-xs text-gray-400">Sending this email will automatically mark the club's status as "Contacted" and update the last contacted date.</p>
+            <p className="text-xs text-gray-400">Sending this email will automatically mark the club's status as "Email Sent" and update the last contacted date.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>Cancel</Button>
@@ -511,6 +565,10 @@ export default function ProspectCRM() {
             <div>
               <Label>Contact Name</Label>
               <Input value={formData.contact_name} onChange={e => setFormData({ ...formData, contact_name: e.target.value })} placeholder="John Smith" />
+            </div>
+            <div>
+              <Label>Confidence</Label>
+              <Input value={formData.confidence} onChange={e => setFormData({ ...formData, confidence: e.target.value })} placeholder="High / Medium / Low" />
             </div>
             <div className="col-span-2">
               <Label>Address</Label>
