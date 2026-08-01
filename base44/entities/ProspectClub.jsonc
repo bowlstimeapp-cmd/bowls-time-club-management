@@ -66,6 +66,19 @@
       "type": "string",
       "description": "Final recommended email to use for outreach"
     },
+    "all_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "All email addresses found for this club (from PlayBowls, website, etc.)"
+    },
+    "enriched": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this club has had contact info fetched from its website/PlayBowls"
+    },
     "confidence": {
       "type": "string",
       "description": "Lead confidence level (e.g. High, Medium, Low)"

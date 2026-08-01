@@ -105,6 +105,9 @@ export default function ProspectCRM() {
   const [emailPreview, setEmailPreview] = useState({ subject: '', body: '' });
   const [emailRecipient, setEmailRecipient] = useState('');
   const [emailCc, setEmailCc] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -123,6 +126,8 @@ export default function ProspectCRM() {
       setTemplateLoading(false);
     })();
   }, []);
+
+  useEffect(() => { setVisibleCount(50); }, [search, statusFilter]);
 
   const { data: prospects = [], isLoading } = useQuery({
     queryKey: ['prospects'],
@@ -173,6 +178,8 @@ export default function ProspectCRM() {
     return matchSearch && matchStatus;
   }), [prospects, search, statusFilter]);
 
+  const visibleProspects = filtered.slice(0, visibleCount);
+
   if (user && user.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -199,8 +206,12 @@ export default function ProspectCRM() {
 
   const openEmail = (p) => {
     setEmailTarget(p);
-    const bestEmail = p.final_recommended_email || p.primary_email || p.email || '';
-    setEmailRecipient(bestEmail);
+    const allEmails = [
+      ...(p.all_emails || []),
+      p.email, p.primary_email, p.where_to_find_us_email,
+      p.website_email, p.directory_email, p.final_recommended_email
+    ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+    setEmailRecipient(allEmails.join('; '));
     setEmailCc('');
     setEmailPreview(fillTemplate(emailTemplate, p));
     setEmailDialogOpen(true);
@@ -280,6 +291,30 @@ export default function ProspectCRM() {
       toast.error('Could not fetch clubs automatically. Please add them manually or import via CSV.');
     }
     setScraping(false);
+  };
+
+  const handleEnrichContacts = async () => {
+    setEnriching(true);
+    const needsEnrichment = prospects.filter(p => !p.enriched);
+    setEnrichProgress({ processed: 0, total: needsEnrichment.length });
+    if (needsEnrichment.length === 0) {
+      toast.info('All clubs have already been enriched');
+      setEnriching(false);
+      return;
+    }
+    for (let i = 0; i < needsEnrichment.length; i += 5) {
+      const batch = needsEnrichment.slice(i, i + 5).map(p => p.id);
+      try {
+        await base44.functions.invoke('enrichProspectContacts', { clubIds: batch });
+        setEnrichProgress({ processed: Math.min(i + 5, needsEnrichment.length), total: needsEnrichment.length });
+        queryClient.invalidateQueries({ queryKey: ['prospects'] });
+      } catch (e) {
+        toast.error('Enrichment error: ' + (e?.message || 'Unknown error'));
+        break;
+      }
+    }
+    setEnriching(false);
+    toast.success('Contact enrichment complete');
   };
 
   const handleCsvImport = async (e) => {
@@ -373,6 +408,10 @@ export default function ProspectCRM() {
               <p className="text-gray-600">Track outreach to potential clubs</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={handleEnrichContacts} disabled={enriching}>
+                {enriching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
+                {enriching ? `Enriching ${enrichProgress.processed}/${enrichProgress.total}` : 'Enrich Contacts'}
+              </Button>
               <Button variant="outline" size="sm" onClick={handleScrape} disabled={scraping}>
                 {scraping ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Globe className="w-4 h-4 mr-2" />}
                 Fetch from play-bowls.com
@@ -436,7 +475,7 @@ export default function ProspectCRM() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Clubs ({filtered.length})</CardTitle>
+              <CardTitle className="text-base">Clubs ({filtered.length}) {visibleCount < filtered.length && <span className="text-sm font-normal text-gray-400">— showing first {visibleCount}</span>}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
@@ -463,13 +502,22 @@ export default function ProspectCRM() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map(p => {
+                      {visibleProspects.map(p => {
                         const cfg = STATUS_CONFIG[p.contact_status] || STATUS_CONFIG.not_contacted;
                         return (
                           <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-4">
                               <p className="font-medium text-gray-900">{p.club_name}</p>
-                              {(p.email || p.final_recommended_email || p.primary_email) && <a href={`mailto:${p.email || p.final_recommended_email || p.primary_email}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"><Mail className="w-3 h-3" />{p.email || p.final_recommended_email || p.primary_email}</a>}
+                              {(() => {
+                                const displayEmail = p.all_emails?.length ? p.all_emails[0] : (p.email || p.final_recommended_email || p.primary_email);
+                                const emailCount = p.all_emails?.length ? p.all_emails.length : 0;
+                                return displayEmail ? (
+                                  <a href={`mailto:${displayEmail}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5">
+                                    <Mail className="w-3 h-3" />{displayEmail}
+                                    {emailCount > 1 && <span className="text-gray-400">(+{emailCount - 1} more)</span>}
+                                  </a>
+                                ) : null;
+                              })()}
                               {p.phone && <a href={`tel:${p.phone}`} className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{p.phone}</a>}
                             </td>
                             <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">
@@ -507,8 +555,8 @@ export default function ProspectCRM() {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-1">
                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                   title={(p.email || p.final_recommended_email || p.primary_email) ? 'Send email' : 'No email address'}
-                                   onClick={() => openEmail(p)} disabled={!p.email && !p.final_recommended_email && !p.primary_email}>
+                                   title={(p.all_emails?.length || p.email || p.final_recommended_email || p.primary_email) ? 'Send email' : 'No email address'}
+                                   onClick={() => openEmail(p)} disabled={!p.all_emails?.length && !p.email && !p.final_recommended_email && !p.primary_email}>
                                    <Send className="w-3.5 h-3.5" />
                                  </Button>
                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}>
@@ -525,6 +573,13 @@ export default function ProspectCRM() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {visibleCount < filtered.length && (
+                <div className="text-center py-4 border-t">
+                  <Button variant="outline" onClick={() => setVisibleCount(c => c + 50)}>
+                    Load More ({filtered.length - visibleCount} remaining)
+                  </Button>
                 </div>
               )}
             </CardContent>
