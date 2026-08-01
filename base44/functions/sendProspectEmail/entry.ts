@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { secrets } from 'base44:runtime';
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -12,16 +13,16 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Parse all recipients (To + CC), split by ; or ,
-    const recipients = [
-      ...to.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean),
-      ...(cc ? cc.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean) : []),
-    ];
-    if (recipients.length === 0) {
+    // Parse To recipients (split by ; or ,)
+    const toRecipients = to.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean);
+    if (toRecipients.length === 0) {
       return Response.json({ error: 'No valid recipients' }, { status: 400 });
     }
 
-    const emailBody = `
+    // Parse CC recipients (split by ; or ,)
+    const ccRecipients = cc ? cc.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean) : [];
+
+    const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -53,12 +54,27 @@ export default async function (req: Request): Promise<Response> {
 </html>
     `.trim();
 
-    // Send a single email with all recipients on the same chain
-    await base44.asServiceRole.integrations.Core.SendEmail({
-      to: recipients.join(', '),
-      subject,
-      body: emailBody,
+    // Send via Resend — to + cc on a single email chain
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${secrets.get('Resend_API')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'BowlsTime <contact@bowls-time.com>',
+        to: toRecipients,
+        ...(ccRecipients.length > 0 ? { cc: ccRecipients } : {}),
+        subject,
+        html: emailHtml,
+      }),
     });
+
+    if (!resendRes.ok) {
+      const errText = await resendRes.text();
+      console.error('Resend API error:', errText);
+      return Response.json({ error: `Resend error: ${errText}` }, { status: 500 });
+    }
 
     const today = new Date().toISOString().split('T')[0];
     await base44.asServiceRole.entities.ProspectClub.update(prospectId, {
