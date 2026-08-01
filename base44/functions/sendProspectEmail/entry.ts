@@ -7,9 +7,18 @@ export default async function (req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { prospectId, to, subject, body } = await req.json();
+    const { prospectId, to, cc, subject, body } = await req.json();
     if (!prospectId || !to || !subject || !body) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Parse all recipients (To + CC), split by ; or ,
+    const recipients = [
+      ...to.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean),
+      ...(cc ? cc.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean) : []),
+    ];
+    if (recipients.length === 0) {
+      return Response.json({ error: 'No valid recipients' }, { status: 400 });
     }
 
     const emailBody = `
@@ -44,11 +53,14 @@ export default async function (req: Request): Promise<Response> {
 </html>
     `.trim();
 
-    await base44.asServiceRole.integrations.Core.SendEmail({
-      to,
-      subject,
-      body: emailBody,
-    });
+    // Send to each recipient (To + CC)
+    for (const recipient of recipients) {
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        to: recipient,
+        subject,
+        body: emailBody,
+      });
+    }
 
     const today = new Date().toISOString().split('T')[0];
     await base44.asServiceRole.entities.ProspectClub.update(prospectId, {

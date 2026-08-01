@@ -10,13 +10,21 @@
       "type": "string",
       "description": "Club address"
     },
+    "town": {
+      "type": "string",
+      "description": "Town or city"
+    },
     "county": {
       "type": "string",
       "description": "County or region"
     },
+    "postcode": {
+      "type": "string",
+      "description": "Postcode"
+    },
     "email": {
       "type": "string",
-      "description": "Contact email"
+      "description": "Main contact email"
     },
     "phone": {
       "type": "string",
@@ -26,13 +34,63 @@
       "type": "string",
       "description": "Club website URL"
     },
+    "play_bowls_url": {
+      "type": "string",
+      "description": "Play Bowls directory URL"
+    },
     "contact_name": {
       "type": "string",
       "description": "Name of the contact person"
     },
+    "primary_email": {
+      "type": "string",
+      "description": "Primary email address"
+    },
+    "where_to_find_us_email": {
+      "type": "string",
+      "description": "Where to Find Us email"
+    },
+    "website_email": {
+      "type": "string",
+      "description": "Email found on the club website"
+    },
+    "directory_email": {
+      "type": "string",
+      "description": "Email from directory listing"
+    },
+    "directory_source_url": {
+      "type": "string",
+      "description": "URL of the directory source"
+    },
+    "final_recommended_email": {
+      "type": "string",
+      "description": "Final recommended email to use for outreach"
+    },
     "confidence": {
       "type": "string",
       "description": "Lead confidence level (e.g. High, Medium, Low)"
+    },
+    "validation_status": {
+      "type": "string",
+      "description": "Email validation status"
+    },
+    "validation_notes": {
+      "type": "string",
+      "description": "Notes from email validation"
+    },
+    "data_source": {
+      "type": "string",
+      "description": "Source of the data (e.g. play-bowls.com, manual, scraper)"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the prospect data was last updated"
+    },
+    "last_validated": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the email was last validated"
     },
     "source": {
       "type": "string",

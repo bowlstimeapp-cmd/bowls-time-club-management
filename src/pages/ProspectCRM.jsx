@@ -36,12 +36,34 @@ const STATUS_CONFIG = {
 };
 
 const EMPTY_FORM = {
-  club_name: '', address: '', county: '', email: '', phone: '',
-  website: '', contact_name: '', confidence: '', source: 'play-bowls.com',
-  contact_status: 'not_contacted', notes: '', last_contacted_date: ''
+  club_name: '', address: '', town: '', county: '', postcode: '', email: '', phone: '',
+  website: '', play_bowls_url: '', directory_source_url: '',
+  contact_name: '', confidence: '',
+  primary_email: '', where_to_find_us_email: '', website_email: '', directory_email: '', final_recommended_email: '',
+  validation_status: '', validation_notes: '', data_source: '', last_updated: '', last_validated: '',
+  source: 'play-bowls.com', contact_status: 'not_contacted', notes: '', last_contacted_date: ''
 };
 
 const VALID_STATUS_KEYS = ['not_contacted', 'contacted', 'email_sent', 'follow_up', 'interested', 'not_interested', 'signed_up'];
+
+const parseCsvLine = (line) => {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current); current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
+};
 
 const DEFAULT_TEMPLATE = {
   subject: 'Introducing BowlsTime – Club Management Made Easy',
@@ -82,6 +104,7 @@ export default function ProspectCRM() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailPreview, setEmailPreview] = useState({ subject: '', body: '' });
   const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailCc, setEmailCc] = useState('');
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -169,13 +192,16 @@ export default function ProspectCRM() {
     const replace = (str) => str
       .replace(/{{club_name}}/g, prospect.club_name || '')
       .replace(/{{contact_name}}/g, prospect.contact_name || 'Club Secretary')
-      .replace(/{{county}}/g, prospect.county || '');
+      .replace(/{{county}}/g, prospect.county || '')
+      .replace(/{{town}}/g, prospect.town || '');
     return { subject: replace(template.subject), body: replace(template.body) };
   };
 
   const openEmail = (p) => {
     setEmailTarget(p);
-    setEmailRecipient(p.email || '');
+    const bestEmail = p.final_recommended_email || p.primary_email || p.email || '';
+    setEmailRecipient(bestEmail);
+    setEmailCc('');
     setEmailPreview(fillTemplate(emailTemplate, p));
     setEmailDialogOpen(true);
   };
@@ -188,11 +214,12 @@ export default function ProspectCRM() {
       await base44.functions.invoke('sendProspectEmail', {
         prospectId: emailTarget.id,
         to: emailRecipient.trim(),
+        cc: emailCc.trim(),
         subject: emailPreview.subject,
         body: emailPreview.body,
       });
       queryClient.invalidateQueries({ queryKey: ['prospects'] });
-      toast.success(`Email sent to ${emailRecipient.trim()}`);
+      toast.success(`Email sent${emailCc.trim() ? ' (with CC)' : ''}`);
       setEmailDialogOpen(false);
     } catch (e) {
       const msg = e?.response?.data?.error || e?.message || 'Unknown error';
@@ -262,22 +289,36 @@ export default function ProspectCRM() {
     try {
       const text = await file.text();
       const lines = text.split('\n').filter(Boolean);
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, ''));
+      const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, ''));
       const records = lines.slice(1).map(line => {
-        const vals = line.split(',');
+        const vals = parseCsvLine(line);
         const obj = {};
-        headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim().replace(/^"|"$/g, ''); });
-        const csvStatusRaw = (obj.status || '').toLowerCase().trim().replace(/\s+/g, '_');
+        headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+        const csvStatusRaw = (obj.status || obj.contact_status || '').toLowerCase().trim().replace(/\s+/g, '_');
         const csvStatus = VALID_STATUS_KEYS.includes(csvStatusRaw) ? csvStatusRaw : 'not_contacted';
         return {
           club_name: obj.club_name || obj.name || obj.club || '',
           address: obj.address || '',
+          town: obj.town || '',
           county: obj.county || obj.region || '',
-          email: obj.email || '',
+          postcode: obj.postcode || '',
+          email: obj.email || obj.contact_email || '',
           phone: obj.phone || obj.telephone || '',
           website: obj.website || obj.url || '',
+          play_bowls_url: obj.play_bowls_url || '',
+          directory_source_url: obj.directory_source_url || '',
           contact_name: obj.contact_name || obj.contact || '',
-          confidence: obj.confidence || '',
+          confidence: obj.confidence || obj.confidence_score || '',
+          primary_email: obj.primary_email || '',
+          where_to_find_us_email: obj.where_to_find_us_email || '',
+          website_email: obj.website_email || '',
+          directory_email: obj.directory_email || '',
+          final_recommended_email: obj.final_recommended_email || '',
+          validation_status: obj.validation_status || '',
+          validation_notes: obj.validation_notes || '',
+          data_source: obj.data_source || '',
+          last_updated: obj.last_updated || '',
+          last_validated: obj.last_validated || '',
           source: obj.source || 'CSV Import',
           contact_status: csvStatus,
           notes: obj.notes || '',
@@ -295,11 +336,22 @@ export default function ProspectCRM() {
   };
 
   const exportCsv = () => {
-    const headers = ['Club Name', 'County', 'Address', 'Email', 'Phone', 'Website', 'Contact Name', 'Confidence', 'Status', 'Last Contacted', 'Notes'];
+    const headers = [
+      'Club Name', 'County', 'Town', 'Address', 'Postcode',
+      'Website', 'Play Bowls URL', 'Directory Source URL',
+      'Contact Name', 'Confidence Score',
+      'Contact Email', 'Primary Email', 'Where to Find Us Email', 'Website Email', 'Directory Email', 'Final Recommended Email',
+      'Phone', 'Validation Status', 'Validation Notes', 'Data Source', 'Last Updated', 'Last Validated',
+      'Status', 'Last Contacted', 'Source', 'Notes'
+    ];
     const rows = prospects.map(p => [
-      p.club_name, p.county, p.address, p.email, p.phone, p.website,
-      p.contact_name, p.confidence, p.contact_status, p.last_contacted_date, p.notes
-    ].map(v => `"${(v || '').replace(/"/g, '""')}"`));
+      p.club_name, p.county, p.town, p.address, p.postcode,
+      p.website, p.play_bowls_url, p.directory_source_url,
+      p.contact_name, p.confidence,
+      p.email, p.primary_email, p.where_to_find_us_email, p.website_email, p.directory_email, p.final_recommended_email,
+      p.phone, p.validation_status, p.validation_notes, p.data_source, p.last_updated, p.last_validated,
+      p.contact_status, p.last_contacted_date, p.source, p.notes
+    ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`));
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -417,7 +469,7 @@ export default function ProspectCRM() {
                           <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-4">
                               <p className="font-medium text-gray-900">{p.club_name}</p>
-                              {p.email && <a href={`mailto:${p.email}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"><Mail className="w-3 h-3" />{p.email}</a>}
+                              {(p.email || p.final_recommended_email || p.primary_email) && <a href={`mailto:${p.email || p.final_recommended_email || p.primary_email}`} className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"><Mail className="w-3 h-3" />{p.email || p.final_recommended_email || p.primary_email}</a>}
                               {p.phone && <a href={`tel:${p.phone}`} className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{p.phone}</a>}
                             </td>
                             <td className="py-3 px-4 text-gray-600 hidden sm:table-cell">
@@ -455,8 +507,8 @@ export default function ProspectCRM() {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-1">
                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                                   title={p.email ? `Send email to ${p.email}` : 'No email address'}
-                                   onClick={() => openEmail(p)} disabled={!p.email}>
+                                   title={(p.email || p.final_recommended_email || p.primary_email) ? 'Send email' : 'No email address'}
+                                   onClick={() => openEmail(p)} disabled={!p.email && !p.final_recommended_email && !p.primary_email}>
                                    <Send className="w-3.5 h-3.5" />
                                  </Button>
                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}>
@@ -528,6 +580,11 @@ export default function ProspectCRM() {
               <Input type="email" value={emailRecipient} onChange={e => setEmailRecipient(e.target.value)} placeholder="recipient@example.com" />
             </div>
             <div>
+              <Label>CC</Label>
+              <Input type="text" value={emailCc} onChange={e => setEmailCc(e.target.value)} placeholder="cc1@example.com; cc2@example.com" />
+              <p className="text-xs text-gray-400 mt-1">Separate multiple addresses with ; or ,</p>
+            </div>
+            <div>
               <Label>Subject</Label>
               <Input value={emailPreview.subject} onChange={e => setEmailPreview({ ...emailPreview, subject: e.target.value })} />
             </div>
@@ -549,65 +606,157 @@ export default function ProspectCRM() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProspect ? 'Edit Prospect' : 'Add Prospect Club'}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="col-span-2">
-              <Label>Club Name *</Label>
-              <Input value={formData.club_name} onChange={e => setFormData({ ...formData, club_name: e.target.value })} placeholder="e.g., Springfield Bowls Club" />
-            </div>
+          <div className="space-y-6 py-2">
+            {/* Club Details */}
             <div>
-              <Label>County / Region</Label>
-              <Input value={formData.county} onChange={e => setFormData({ ...formData, county: e.target.value })} placeholder="Hampshire" />
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Club Details</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label>Club Name *</Label>
+                  <Input value={formData.club_name} onChange={e => setFormData({ ...formData, club_name: e.target.value })} placeholder="e.g., Springfield Bowls Club" />
+                </div>
+                <div>
+                  <Label>County / Region</Label>
+                  <Input value={formData.county} onChange={e => setFormData({ ...formData, county: e.target.value })} placeholder="Hampshire" />
+                </div>
+                <div>
+                  <Label>Town</Label>
+                  <Input value={formData.town} onChange={e => setFormData({ ...formData, town: e.target.value })} placeholder="Springfield" />
+                </div>
+                <div className="col-span-2">
+                  <Label>Address</Label>
+                  <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="123 Green Lane..." />
+                </div>
+                <div>
+                  <Label>Postcode</Label>
+                  <Input value={formData.postcode} onChange={e => setFormData({ ...formData, postcode: e.target.value })} placeholder="SO22 5AA" />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="07700 900000" />
+                </div>
+              </div>
             </div>
+            {/* Website & Directories */}
             <div>
-              <Label>Contact Name</Label>
-              <Input value={formData.contact_name} onChange={e => setFormData({ ...formData, contact_name: e.target.value })} placeholder="John Smith" />
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Website & Directories</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label>Website</Label>
+                  <Input value={formData.website} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://..." />
+                </div>
+                <div className="col-span-2">
+                  <Label>Play Bowls URL</Label>
+                  <Input value={formData.play_bowls_url} onChange={e => setFormData({ ...formData, play_bowls_url: e.target.value })} placeholder="https://play-bowls.com/..." />
+                </div>
+                <div className="col-span-2">
+                  <Label>Directory Source URL</Label>
+                  <Input value={formData.directory_source_url} onChange={e => setFormData({ ...formData, directory_source_url: e.target.value })} placeholder="https://..." />
+                </div>
+              </div>
             </div>
+            {/* Contact */}
             <div>
-              <Label>Confidence</Label>
-              <Input value={formData.confidence} onChange={e => setFormData({ ...formData, confidence: e.target.value })} placeholder="High / Medium / Low" />
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Contact Name</Label>
+                  <Input value={formData.contact_name} onChange={e => setFormData({ ...formData, contact_name: e.target.value })} placeholder="John Smith" />
+                </div>
+                <div>
+                  <Label>Confidence Score</Label>
+                  <Input value={formData.confidence} onChange={e => setFormData({ ...formData, confidence: e.target.value })} placeholder="High / Medium / Low" />
+                </div>
+              </div>
             </div>
-            <div className="col-span-2">
-              <Label>Address</Label>
-              <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="123 Green Lane..." />
-            </div>
+            {/* Email Addresses */}
             <div>
-              <Label>Email</Label>
-              <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="club@example.com" />
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Email Addresses</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Contact Email</Label>
+                  <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="club@example.com" />
+                </div>
+                <div>
+                  <Label>Primary Email</Label>
+                  <Input type="email" value={formData.primary_email} onChange={e => setFormData({ ...formData, primary_email: e.target.value })} placeholder="primary@example.com" />
+                </div>
+                <div>
+                  <Label>Where to Find Us Email</Label>
+                  <Input type="email" value={formData.where_to_find_us_email} onChange={e => setFormData({ ...formData, where_to_find_us_email: e.target.value })} placeholder="" />
+                </div>
+                <div>
+                  <Label>Website Email</Label>
+                  <Input type="email" value={formData.website_email} onChange={e => setFormData({ ...formData, website_email: e.target.value })} placeholder="" />
+                </div>
+                <div>
+                  <Label>Directory Email</Label>
+                  <Input type="email" value={formData.directory_email} onChange={e => setFormData({ ...formData, directory_email: e.target.value })} placeholder="" />
+                </div>
+                <div>
+                  <Label>Final Recommended Email</Label>
+                  <Input type="email" value={formData.final_recommended_email} onChange={e => setFormData({ ...formData, final_recommended_email: e.target.value })} placeholder="" />
+                </div>
+              </div>
             </div>
+            {/* Validation */}
             <div>
-              <Label>Phone</Label>
-              <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="07700 900000" />
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Validation</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Validation Status</Label>
+                  <Input value={formData.validation_status} onChange={e => setFormData({ ...formData, validation_status: e.target.value })} placeholder="Valid / Invalid / Unknown" />
+                </div>
+                <div>
+                  <Label>Data Source</Label>
+                  <Input value={formData.data_source} onChange={e => setFormData({ ...formData, data_source: e.target.value })} placeholder="play-bowls.com, manual, etc." />
+                </div>
+                <div>
+                  <Label>Last Updated</Label>
+                  <Input type="date" value={formData.last_updated} onChange={e => setFormData({ ...formData, last_updated: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Last Validated</Label>
+                  <Input type="date" value={formData.last_validated} onChange={e => setFormData({ ...formData, last_validated: e.target.value })} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Validation Notes</Label>
+                  <Textarea value={formData.validation_notes} onChange={e => setFormData({ ...formData, validation_notes: e.target.value })} placeholder="Notes from email validation..." rows={2} />
+                </div>
+              </div>
             </div>
-            <div className="col-span-2">
-              <Label>Website</Label>
-              <Input value={formData.website} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="https://..." />
-            </div>
+            {/* CRM Status */}
             <div>
-              <Label>Status</Label>
-              <Select value={formData.contact_status} onValueChange={v => setFormData({ ...formData, contact_status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                    <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Last Contacted</Label>
-              <Input type="date" value={formData.last_contacted_date} onChange={e => setFormData({ ...formData, last_contacted_date: e.target.value })} />
-            </div>
-            <div className="col-span-2">
-              <Label>Notes</Label>
-              <Textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Any relevant notes..." rows={3} />
-            </div>
-            <div className="col-span-2">
-              <Label>Source</Label>
-              <Input value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })} placeholder="play-bowls.com" />
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">CRM Status</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Status</Label>
+                  <Select value={formData.contact_status} onValueChange={v => setFormData({ ...formData, contact_status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                        <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Last Contacted</Label>
+                  <Input type="date" value={formData.last_contacted_date} onChange={e => setFormData({ ...formData, last_contacted_date: e.target.value })} />
+                </div>
+                <div className="col-span-2">
+                  <Label>Source</Label>
+                  <Input value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })} placeholder="play-bowls.com" />
+                </div>
+                <div className="col-span-2">
+                  <Label>Notes</Label>
+                  <Textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Any relevant notes..." rows={3} />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
