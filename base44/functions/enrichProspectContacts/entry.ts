@@ -107,9 +107,16 @@ function extractContactName(html: string): string | null {
     /(?:president|chairman|captain|treasurer)\s*[:\-,\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/i,
   ];
 
+  const blocklist = ['customer support', 'webmaster', 'info', 'admin', 'administrator', 'contact us',
+    'general enquiries', 'membership secretary', 'club secretary', 'club manager', 'site admin',
+    'website manager', 'technical support', 'customer service', 'office manager'];
+
   for (const pattern of patterns) {
     const match = cleaned.match(pattern);
-    if (match) return match[1].trim();
+    if (match) {
+      const name = match[1].trim();
+      if (!blocklist.includes(name.toLowerCase())) return name;
+    }
   }
 
   return null;
