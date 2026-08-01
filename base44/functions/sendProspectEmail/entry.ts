@@ -53,14 +53,12 @@ export default async function (req: Request): Promise<Response> {
 </html>
     `.trim();
 
-    // Send to each recipient (To + CC)
-    for (const recipient of recipients) {
-      await base44.asServiceRole.integrations.Core.SendEmail({
-        to: recipient,
-        subject,
-        body: emailBody,
-      });
-    }
+    // Send a single email with all recipients on the same chain
+    await base44.asServiceRole.integrations.Core.SendEmail({
+      to: recipients.join(', '),
+      subject,
+      body: emailBody,
+    });
 
     const today = new Date().toISOString().split('T')[0];
     await base44.asServiceRole.entities.ProspectClub.update(prospectId, {
