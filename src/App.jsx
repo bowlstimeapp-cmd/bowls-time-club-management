@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { base44 } from '@/api/base44Client';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -53,6 +54,10 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
+      // Log a visit to the login page (unauthenticated visitor redirected to Base44 login)
+      try {
+        base44.analytics.track({ eventName: 'login_page_visit', properties: { path: window.location.pathname } });
+      } catch (e) { /* analytics is best-effort */ }
       navigateToLogin();
       return null;
     }
