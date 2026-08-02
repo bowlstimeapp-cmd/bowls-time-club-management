@@ -77,6 +77,8 @@ BowlsTime helps clubs manage:
 - League and competition management
 - Member communications
 
+You can see all the features here: <a href="https://www.bowls-time.com/features">View all features</a>
+
 I'd love to arrange a quick call or demo to show you how BowlsTime could benefit {{club_name}}. 
 
 Would you be available for a 20-minute chat? Feel free to reply to this email or call me on [Your Phone Number].
@@ -600,6 +602,9 @@ export default function ProspectCRM() {
           <p className="text-sm text-gray-500 -mt-2">
             Use <code className="bg-gray-100 px-1 rounded">{'{{club_name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{contact_name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{county}}'}</code> as placeholders — they'll be replaced when sending.
           </p>
+          <p className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg p-3 -mt-1">
+            <strong>HTML supported:</strong> You can use HTML tags like <code className="bg-blue-100 px-1 rounded">{'<a href="https://...">Link text</a>'}</code> for clickable links. Links are tracked via Resend for click analytics. Line breaks are preserved automatically for plain text.
+          </p>
           <div className="space-y-4 py-2">
             <div>
               <Label>Subject</Label>
@@ -646,6 +651,7 @@ export default function ProspectCRM() {
             <div>
               <Label>Body</Label>
               <Textarea value={emailPreview.body} onChange={e => setEmailPreview({ ...emailPreview, body: e.target.value })} rows={14} className="text-sm" />
+              <p className="text-xs text-blue-600 mt-1">HTML tags (e.g. <code className="bg-blue-50 px-1 rounded">&lt;a href="..."&gt;link&lt;/a&gt;</code>) are supported — links are tracked via Resend.</p>
             </div>
             <p className="text-xs text-gray-400">Sending this email will automatically mark the club's status as "Email Sent" and update the last contacted date.</p>
           </div>

@@ -13,6 +13,12 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Convert \n to <br/> but preserve HTML tags (so links like <a href="..."> stay intact for click tracking)
+    const nl2brSafe = (str: string) =>
+      str.split(/(<[^>]+>)/g).map(part =>
+        part.startsWith('<') && part.endsWith('>') ? part : part.replace(/\n/g, '<br/>')
+      ).join('');
+
     // Parse To recipients (split by ; or ,)
     const toRecipients = to.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean);
     if (toRecipients.length === 0) {
@@ -38,7 +44,7 @@ export default async function (req: Request): Promise<Response> {
           </tr>
           <tr>
             <td style="padding: 32px;">
-              ${body.replace(/\n/g, '<br/>')}
+              ${nl2brSafe(body)}
             </td>
           </tr>
           <tr>
