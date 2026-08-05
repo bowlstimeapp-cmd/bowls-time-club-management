@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Users, 
   UserPlus, 
+  GitMerge,
   Clock, 
   CheckCircle,
   XCircle,
@@ -39,6 +40,7 @@ import { createPageUrl } from '@/utils';
 import MemberDetailModal from '@/components/member/MemberDetailModal';
 import AddMemberModal from '@/components/member/AddMemberModal';
 import BulkUploadModal from '@/components/member/BulkUploadModal';
+import MergeMembersDialog from '@/components/member/MergeMembersDialog';
 
 // Role pill config
 const roleMeta = {
@@ -55,7 +57,7 @@ const membershipDotColor = {
   'Social Member':        'bg-purple-400',
 };
 
-function MemberCard({ member, onSelect, onRemove, isSelf, payment }) {
+function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge }) {
   const role = member.role || 'member';
   const roleBadge = roleMeta[role] || roleMeta.member;
   const initials = (member.user_name || member.user_email || '?')
@@ -67,11 +69,23 @@ function MemberCard({ member, onSelect, onRemove, isSelf, payment }) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.18 }}
-      className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
-      onClick={() => onSelect(member)}
+      className={`group relative bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${isSelected ? 'border-emerald-400 ring-2 ring-emerald-400' : 'border-slate-100'}`}
+      onClick={() => {
+        if (isMergeMode) {
+          onToggleMerge(member);
+        } else {
+          onSelect(member);
+        }
+      }}
     >
       {/* Coloured top stripe */}
       <div className="h-1.5 w-full" style={{ background: '#049468' }} />
+      {/* Merge selection indicator */}
+      {isMergeMode && isSelected && (
+        <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow">
+          <CheckCircle className="w-4 h-4 text-white" />
+        </div>
+      )}
 
       <div className="p-5">
         {/* Avatar + role */}
@@ -180,6 +194,9 @@ export default function ClubAdmin() {
     away_rinks: 0
   });
   const [memberSort, setMemberSort] = useState('first_name');
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSelection, setMergeSelection] = useState([]);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -351,6 +368,38 @@ export default function ClubAdmin() {
     toast.success(`Deleted ${memberships.length} members`);
     setDeletingAll(false);
     setDeleteAllConfirm(false);
+  };
+
+  const handleToggleMergeSelect = (member) => {
+    setMergeSelection(prev => {
+      const exists = prev.find(m => m.id === member.id);
+      if (exists) {
+        return prev.filter(m => m.id !== member.id);
+      }
+      if (prev.length >= 2) return prev;
+      const next = [...prev, member];
+      if (next.length === 2) {
+        setMergeDialogOpen(true);
+      }
+      return next;
+    });
+  };
+
+  const handleStartMerge = () => {
+    setMergeMode(true);
+    setMergeSelection([]);
+  };
+
+  const handleCancelMerge = () => {
+    setMergeMode(false);
+    setMergeSelection([]);
+  };
+
+  const handleMergeComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
+    setMergeMode(false);
+    setMergeSelection([]);
+    setMergeDialogOpen(false);
   };
 
   const { data: latestPayments = [] } = useQuery({
@@ -525,6 +574,10 @@ export default function ClubAdmin() {
               <Download className="w-4 h-4 mr-2" />
               Export Members
             </Button>
+            <Button variant="outline" onClick={handleStartMerge} className="border-slate-200 text-slate-600">
+              <GitMerge className="w-4 h-4 mr-2" />
+              Merge Members
+            </Button>
             {isPlatformAdmin && (
               <Button
                 variant="outline"
@@ -680,6 +733,19 @@ export default function ClubAdmin() {
                     </p>
                   </div>
 
+                  {mergeMode && (
+                    <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GitMerge className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                        <p className="text-sm text-amber-800">
+                          {mergeSelection.length === 0 && 'Click a member to select them for merging (first selected will be merged into the second).'}
+                          {mergeSelection.length === 1 && 'Now click a second member to merge into.'}
+                          {mergeSelection.length === 2 && 'Two members selected. Merge dialog is open.'}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleCancelMerge}>Cancel Merge</Button>
+                    </div>
+                  )}
                   {filteredApprovedMembers.length === 0 ? (
                     <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center">
                       <Users className="w-10 h-10 mx-auto mb-3 text-slate-200" />
@@ -695,6 +761,9 @@ export default function ClubAdmin() {
                             onRemove={(id) => deleteMembershipMutation.mutate(id)}
                             isSelf={member.user_email === user?.email}
                             payment={paymentByEmail[member.user_email]}
+                            isMergeMode={mergeMode}
+                            isSelected={mergeSelection.some(m => m.id === member.id)}
+                            onToggleMerge={handleToggleMergeSelect}
                           />
                         </motion.div>
                       ))}
@@ -851,6 +920,17 @@ export default function ClubAdmin() {
           clubId={clubId}
           membershipTypes={membershipTypeNames}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] })}
+        />
+        <MergeMembersDialog
+          open={mergeDialogOpen}
+          onClose={() => {
+            setMergeDialogOpen(false);
+            setMergeSelection([]);
+          }}
+          sourceMember={mergeSelection[0]}
+          targetMember={mergeSelection[1]}
+          clubId={clubId}
+          onMerged={handleMergeComplete}
         />
 
         {/* Delete All Members Confirmation */}
