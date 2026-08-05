@@ -16,7 +16,8 @@ import {
   Loader2,
   ArrowRight,
   Search,
-  Mail
+  Mail,
+  LogOut
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -59,6 +60,7 @@ export default function ClubSelector() {
 
   const [requestSentModal, setRequestSentModal] = useState(false);
   const [createClubOpen, setCreateClubOpen] = useState(false);
+  const [leaveClubConfirm, setLeaveClubConfirm] = useState(null);
 
   const requestMutation = useMutation({
     mutationFn: (clubId) => base44.functions.invoke('requestToJoinClub', {
@@ -81,6 +83,23 @@ export default function ClubSelector() {
         error?.data?.error ||
         error?.message ||
         'Failed to submit join request. Please try again.';
+      toast.error(message);
+    },
+  });
+
+  const leaveClubMutation = useMutation({
+    mutationFn: (clubId) => base44.functions.invoke('leaveClub', { clubId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myMemberships'] });
+      setLeaveClubConfirm(null);
+      toast.success('You have left the club');
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.error ||
+        error?.data?.error ||
+        error?.message ||
+        'Failed to leave club. Please try again.';
       toast.error(message);
     },
   });
@@ -246,10 +265,21 @@ export default function ClubSelector() {
                           </Button>
                         )}
                         {isApproved ? (
-                          <Button onClick={() => handleEnterClub(club.id)} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                            Enter Club
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </Button>
+                          <>
+                            <Button onClick={() => handleEnterClub(club.id)} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                              Enter Club
+                              <ArrowRight className="w-4 h-4 ml-2" />
+                            </Button>
+                            <Button
+                              onClick={() => setLeaveClubConfirm(club)}
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              <LogOut className="w-4 h-4 mr-2" />
+                              Leave Club
+                            </Button>
+                          </>
                         ) : isPending ? (
                           <Button disabled className="w-full" variant="outline">
                             <Clock className="w-4 h-4 mr-2" />
@@ -347,6 +377,27 @@ export default function ClubSelector() {
           >
             Got it
           </button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Club Confirmation */}
+      <Dialog open={!!leaveClubConfirm} onOpenChange={() => setLeaveClubConfirm(null)}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg">Leave {leaveClubConfirm?.name}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-500 text-sm mt-2 mb-4">
+            You will no longer be a member of this club. You can request to rejoin at any time.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setLeaveClubConfirm(null)} disabled={leaveClubMutation.isPending}>
+              Cancel
+            </Button>
+            <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={() => leaveClubMutation.mutate(leaveClubConfirm.id)} disabled={leaveClubMutation.isPending}>
+              {leaveClubMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Leave Club
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
