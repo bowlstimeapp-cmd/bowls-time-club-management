@@ -61,23 +61,27 @@ export default function ClubSelector() {
   const [createClubOpen, setCreateClubOpen] = useState(false);
 
   const requestMutation = useMutation({
-    mutationFn: (clubId) => base44.entities.ClubMembership.create({
-      club_id: clubId,
-      user_email: user.email,
-      user_name: `${user.first_name} ${user.surname}`,
-      first_name: user.first_name || '',
-      surname: user.surname || '',
-      title: user.title || null,
-      phone: user.phone || null,
-      gender: user.gender || null,
-      emergency_contact_name: user.emergency_contact_name || null,
-      emergency_contact_phone: user.emergency_contact_phone || null,
-      role: 'member',
-      status: 'pending'
+    mutationFn: (clubId) => base44.functions.invoke('requestToJoinClub', {
+      clubId,
+      profile: {
+        title: user.title || null,
+        phone: user.phone || null,
+        gender: user.gender || null,
+        emergency_contact_name: user.emergency_contact_name || null,
+        emergency_contact_phone: user.emergency_contact_phone || null,
+      },
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myMemberships'] });
       setRequestSentModal(true);
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.error ||
+        error?.data?.error ||
+        error?.message ||
+        'Failed to submit join request. Please try again.';
+      toast.error(message);
     },
   });
 
