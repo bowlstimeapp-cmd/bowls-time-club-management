@@ -271,7 +271,7 @@ export default function ClubAdmin() {
   });
 
   const deleteMembershipMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'ClubMembership', action: 'delete', clubId, id }),
+    mutationFn: (id) => base44.functions.invoke('removeMember', { membershipId: id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member removed');
