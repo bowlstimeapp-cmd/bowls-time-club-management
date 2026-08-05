@@ -49,7 +49,7 @@ export default function ManageClubAdminsDialog({ open, onClose, club, isPlatform
 
   const updateRoleMutation = useMutation({
     mutationFn: ({ membershipId, newRole }) => 
-      base44.entities.ClubMembership.update(membershipId, { role: newRole }),
+      base44.functions.invoke('changeMemberRole', { membershipId, newRole }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubAdmins'] });
       queryClient.invalidateQueries({ queryKey: ['allClubMembers'] });
@@ -60,7 +60,7 @@ export default function ManageClubAdminsDialog({ open, onClose, club, isPlatform
 
   const addAdminMutation = useMutation({
     mutationFn: async (data) => {
-      return await base44.entities.ClubMembership.create(data);
+      return await base44.functions.invoke('updateMembership', { action: 'admin_create_member', clubId: data.club_id, memberData: data });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubAdmins'] });
@@ -73,7 +73,7 @@ export default function ManageClubAdminsDialog({ open, onClose, club, isPlatform
   });
 
   const removeAdminMutation = useMutation({
-    mutationFn: (membershipId) => base44.entities.ClubMembership.delete(membershipId),
+    mutationFn: (membershipId) => base44.functions.invoke('removeMember', { membershipId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubAdmins'] });
       queryClient.invalidateQueries({ queryKey: ['clubMembers'] });

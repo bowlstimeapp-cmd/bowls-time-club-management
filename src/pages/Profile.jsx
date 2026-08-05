@@ -213,7 +213,7 @@ export default function Profile() {
   }, [membership]);
 
   const updateMembershipMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ClubMembership.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateMembership', { action: 'self_update', clubId: membership?.club_id, membershipId: id, updates: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myMembership'] });
       toast.success('Notification preferences updated');
@@ -281,7 +281,7 @@ export default function Profile() {
         emergency_contact_name: emergencyContactName.trim() || null,
         emergency_contact_phone: emergencyContactPhone.trim() || null,
       };
-      await base44.entities.ClubMembership.update(membership.id, memberUpdates);
+      await base44.functions.invoke('updateMembership', { action: 'self_update', clubId: membership.club_id, membershipId: membership.id, updates: memberUpdates });
       queryClient.invalidateQueries({ queryKey: ['myMembership'] });
     }
     toast.success('Profile updated successfully!');

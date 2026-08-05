@@ -141,7 +141,7 @@ export default function BulkUploadModal({ open, onClose, clubId, membershipTypes
           if (member.emergency_contact_phone) memberData.emergency_contact_phone = member.emergency_contact_phone;
           if (member.date_of_birth) memberData.date_of_birth = member.date_of_birth;
 
-          await base44.entities.ClubMembership.create(memberData);
+          await base44.functions.invoke('updateMembership', { action: 'admin_create_member', clubId, memberData });
           successCount++;
         } catch (err) {
           errors.push(`${member.email}: ${err.message || 'Failed to create'}`);
