@@ -463,7 +463,8 @@ export default function ClubAdmin() {
     const member = memberships.find(m => m.id === memberId);
     // Route role changes through change_role action; everything else through admin_update
     if (oldRole !== undefined && updates.role && updates.role !== oldRole) {
-      await updateMembershipMutation.mutateAsync({ action: 'change_role', membershipId: memberId, updates: { role: updates.role } });
+      await base44.functions.invoke('changeMemberRole', { membershipId: memberId, newRole: updates.role });
+      queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       const { role: _role, ...restUpdates } = updates;
       if (Object.keys(restUpdates).length > 0) {
         await updateMembershipMutation.mutateAsync({ action: 'admin_update', membershipId: memberId, updates: restUpdates });
