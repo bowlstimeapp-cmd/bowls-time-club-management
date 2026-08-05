@@ -454,7 +454,8 @@ export default function ClubAdmin() {
   };
 
   const handleReject = async (membership) => {
-    await updateMembershipMutation.mutateAsync({ action: 'reject', membershipId: membership.id });
+    await base44.functions.invoke('rejectMembership', { membershipId: membership.id });
+    queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
     toast.success(`${membership.user_name || membership.user_email} rejected`);
   };
 
