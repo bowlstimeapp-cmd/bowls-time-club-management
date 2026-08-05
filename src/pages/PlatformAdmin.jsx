@@ -164,21 +164,9 @@ export default function PlatformAdmin() {
 
   const createClubMutation = useMutation({
     mutationFn: async (clubData) => {
-      const { admin_first_name, admin_surname, ...clubFields } = clubData;
-      const club = await base44.entities.Club.create(clubFields);
-      const adminName = admin_first_name && admin_surname 
-        ? `${admin_first_name} ${admin_surname}` 
-        : clubData.primary_admin_email;
-      await base44.entities.ClubMembership.create({
-        club_id: club.id,
-        user_email: clubData.primary_admin_email,
-        user_name: adminName,
-        first_name: admin_first_name || '',
-        surname: admin_surname || '',
-        role: 'admin',
-        status: 'approved'
-      });
-      return club;
+      const res = await base44.functions.invoke('createClub', clubData);
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data.club;
     },
     onSuccess: async (club) => {
       queryClient.invalidateQueries({ queryKey: ['allClubs'] });
