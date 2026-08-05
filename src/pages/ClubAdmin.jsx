@@ -257,7 +257,7 @@ export default function ClubAdmin() {
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: (data) => base44.functions.invoke('updateClubData', { entity: 'ClubMembership', action: 'create', clubId, data }),
+    mutationFn: (data) => base44.functions.invoke('updateMembership', { action: 'admin_create_member', clubId, memberData: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member added successfully');
@@ -363,11 +363,21 @@ export default function ClubAdmin() {
   const handleDeleteAllMembers = async () => {
     setDeletingAll(true);
     const ids = memberships.map(m => m.id);
-    await base44.functions.invoke('updateClubData', { entity: 'ClubMembership', action: 'bulk_delete', clubId, ids });
-    queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
-    toast.success(`Deleted ${memberships.length} members`);
-    setDeletingAll(false);
-    setDeleteAllConfirm(false);
+    try {
+      const res = await base44.functions.invoke('bulkRemoveMembers', { clubId, membershipIds: ids });
+      queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
+      const result = res?.data ?? {};
+      const deleted = result.deleted ?? 0;
+      const skipped = result.skipped ?? 0;
+      const failed = result.failed ?? 0;
+      toast.success(`Deleted ${deleted} member${deleted === 1 ? '' : 's'}${skipped || failed ? ` (${skipped} skipped, ${failed} failed)` : ''}`);
+    } catch (e) {
+      const errMsg = e?.response?.data?.error || e?.message || 'Failed to delete members';
+      toast.error(errMsg);
+    } finally {
+      setDeletingAll(false);
+      setDeleteAllConfirm(false);
+    }
   };
 
   const handleToggleMergeSelect = (member) => {
