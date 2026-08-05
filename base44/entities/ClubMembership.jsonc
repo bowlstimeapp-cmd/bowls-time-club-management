@@ -122,19 +122,20 @@
     "user_email"
   ],
   "rls": {
-    "create": {},
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.user_email": "{{user.email}}"
-        }
-      ]
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
     },
-    "delete": {}
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
   }
 }
