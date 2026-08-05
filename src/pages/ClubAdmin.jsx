@@ -447,7 +447,8 @@ export default function ClubAdmin() {
   }
 
   const handleApprove = async (membership) => {
-    await updateMembershipMutation.mutateAsync({ action: 'approve', membershipId: membership.id });
+    await base44.functions.invoke('approveMembership', { membershipId: membership.id });
+    queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
     base44.functions.invoke('membershipEmails', { type: 'approved', membershipId: membership.id }).catch(() => {});
     toast.success(`${membership.user_name || membership.user_email} approved`);
   };
