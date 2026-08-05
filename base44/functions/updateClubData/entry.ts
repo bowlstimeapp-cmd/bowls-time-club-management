@@ -239,28 +239,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── CLUB MEMBERSHIP ──────────────────────────────────────────────────────
-    if (entity === 'ClubMembership') {
-      if (action === 'create') {
-        if (!data) return Response.json({ error: 'Missing data' }, { status: 400 });
-        const created = await base44.asServiceRole.entities.ClubMembership.create({ ...data, club_id: clubId });
-        return Response.json({ success: true, id: created.id, record: created });
-      }
-      if (action === 'delete') {
-        if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
-        const record = await verifyBelongsToClub(base44, 'ClubMembership', id, clubId);
-        if (!record) return Response.json({ error: 'Membership not found or does not belong to this club' }, { status: 404 });
-        await base44.asServiceRole.entities.ClubMembership.delete(id);
-        return Response.json({ success: true });
-      }
-      if (action === 'bulk_delete') {
-        if (!ids || !Array.isArray(ids)) return Response.json({ error: 'Missing ids array' }, { status: 400 });
-        // Verify all belong to this club before deleting
-        await Promise.all(ids.map(mid => base44.asServiceRole.entities.ClubMembership.delete(mid)));
-        return Response.json({ success: true, deleted: ids.length });
-      }
-    }
-
     // ── AUDIT LOG ────────────────────────────────────────────────────────────
     if (entity === 'AuditLog') {
       if (action === 'create') {

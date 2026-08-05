@@ -16,7 +16,7 @@ async function getClubMembership(base44, userEmail, clubId) {
 // ---------------------------------------------------------------------------
 
 /**
- * Secure backend function for ALL ClubMembership writes (create, update, delete).
+ * Secure backend function for ClubMembership writes (create, update).
  *
  * ClubMembership.role (admin/selector/...) is a club-scoped role that Base44 RLS
  * cannot check (RLS can only see the global Users.role). So every write that
@@ -27,9 +27,6 @@ async function getClubMembership(base44, userEmail, clubId) {
  * one of the actions below.
  *
  * Actions:
- *   request_join        — (any authenticated user) create a PENDING membership
- *                          for yourself at a club. Forces user_email/role/status
- *                          server-side so it can't be used to self-approve.
  *   self_update          — (the member themselves) update your OWN membership's
  *                          safe profile fields only. role/status/club_id/etc
  *                          are not in the allowed field list, so this can never
@@ -37,11 +34,8 @@ async function getClubMembership(base44, userEmail, clubId) {
  *   admin_create_member  — (club admin / platform admin) create an approved
  *                          membership for someone else at your club (used for
  *                          "add admin" and CSV bulk import).
- *   remove               — (club admin / platform admin) delete a membership
- *                          at your club.
  *   approve              — set status = 'approved'
  *   reject               — set status = 'rejected'
- *   change_role          — set ClubMembership.role
  *   set_status           — set member_status (active/left)
  *   admin_update         — update profile fields on behalf of a member
  */
@@ -64,35 +58,6 @@ Deno.serve(async (req) => {
     // No club-admin check — the safety comes from forcing the target
     // record to be the caller's own, and from the field whitelist.
     // ---------------------------------------------------------------
-    if (action === 'request_join') {
-      const existing = await base44.asServiceRole.entities.ClubMembership.filter({
-        club_id: clubId,
-        user_email: user.email,
-      });
-      if (existing.length > 0) {
-        return Response.json({ error: 'A membership already exists for this club' }, { status: 400 });
-      }
-
-      const profile = body.profile || {};
-      const safeCreateFields = [
-        'title', 'phone', 'gender', 'emergency_contact_name', 'emergency_contact_phone',
-      ];
-      const createData = { club_id: clubId, user_email: user.email };
-      for (const field of safeCreateFields) {
-        if (field in profile) createData[field] = profile[field];
-      }
-      createData.first_name = user.first_name || '';
-      createData.surname = user.surname || '';
-      createData.user_name = `${user.first_name || ''} ${user.surname || ''}`.trim();
-      // Forced, non-negotiable — this is what stops request_join from being
-      // used as a backdoor into admin/approved status.
-      createData.role = 'member';
-      createData.status = 'pending';
-
-      const created = await base44.asServiceRole.entities.ClubMembership.create(createData);
-      return Response.json({ success: true, membership: created });
-    }
-
     if (action === 'self_update') {
       const { membershipId, updates } = body;
       if (!membershipId) return Response.json({ error: 'Missing membershipId' }, { status: 400 });
@@ -166,28 +131,8 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, membership: created });
     }
 
-    if (action === 'remove') {
-      const { membershipId } = body;
-      if (!membershipId) return Response.json({ error: 'Missing membershipId' }, { status: 400 });
-
-      const memberships = await base44.asServiceRole.entities.ClubMembership.filter({ id: membershipId });
-      const membership = memberships[0];
-      if (!membership) return Response.json({ error: 'Membership not found' }, { status: 404 });
-      if (membership.club_id !== clubId) {
-        return Response.json({ error: 'Forbidden: membership does not belong to this club' }, { status: 403 });
-      }
-
-      const clubs = await base44.asServiceRole.entities.Club.filter({ id: clubId });
-      if (clubs[0]?.primary_admin_email && clubs[0].primary_admin_email === membership.user_email) {
-        return Response.json({ error: 'Cannot remove the primary admin' }, { status: 400 });
-      }
-
-      await base44.asServiceRole.entities.ClubMembership.delete(membershipId);
-      return Response.json({ success: true });
-    }
-
     // ---------------------------------------------------------------
-    // Existing update actions (approve/reject/change_role/set_status/admin_update)
+    // Existing update actions (approve/reject/set_status/admin_update)
     // ---------------------------------------------------------------
     const { membershipId, updates } = body;
     if (!membershipId) {
@@ -212,14 +157,6 @@ Deno.serve(async (req) => {
       case 'reject':
         updateData = { status: 'rejected' };
         break;
-      case 'change_role': {
-        const allowedRoles = ['admin', 'steward', 'secretary', 'selector', 'live_scorer', 'member'];
-        if (!updates?.role || !allowedRoles.includes(updates.role)) {
-          return Response.json({ error: 'Invalid role' }, { status: 400 });
-        }
-        updateData = { role: updates.role };
-        break;
-      }
       case 'set_status': {
         const allowedStatuses = ['active', 'left'];
         if (!updates?.member_status || !allowedStatuses.includes(updates.member_status)) {
