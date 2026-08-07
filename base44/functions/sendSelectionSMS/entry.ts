@@ -1,6 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { format } from 'npm:date-fns@3.6.0';
 
+// Auth helpers (inlined — no local imports in Deno Deploy; see clubAuth/entry.ts)
+function isPlatformAdmin(user) {
+  return user?.role === 'admin';
+}
+
+async function hasClubRole(base44, userEmail, clubId, roles) {
+  const results = await base44.asServiceRole.entities.ClubMembership.filter({
+    club_id: clubId,
+    user_email: userEmail,
+    status: 'approved',
+  });
+  const membership = results[0];
+  if (!membership) return false;
+  return roles.includes(membership.role);
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -12,6 +28,13 @@ Deno.serve(async (req) => {
     }
 
     const clubId = data.club_id;
+
+    // Authorization: caller must be a platform admin or hold admin/selector role
+    // at this club (matching updateTeamSelection's publish permission).
+    const user = await base44.auth.me().catch(() => null);
+    if (!user || !(isPlatformAdmin(user) || await hasClubRole(base44, user.email, clubId, ['admin', 'selector']))) {
+      return Response.json({ error: 'Forbidden: requires admin or selector role' }, { status: 403 });
+    }
 
     // Get club details
     const clubs = await base44.asServiceRole.entities.Club.filter({ id: clubId });
