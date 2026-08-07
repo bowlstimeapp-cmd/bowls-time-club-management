@@ -197,10 +197,17 @@ export default function PlatformAdmin() {
   });
 
   const deleteClubMutation = useMutation({
-    mutationFn: (id) => base44.entities.Club.delete(id),
+    mutationFn: async (id) => {
+      const res = await base44.functions.invoke('deleteClub', { clubId: id });
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allClubs'] });
       toast.success('Club deleted');
+    },
+    onError: (err) => {
+      toast.error('Failed to delete club: ' + (err.message || 'Unknown error'));
     },
   });
 
