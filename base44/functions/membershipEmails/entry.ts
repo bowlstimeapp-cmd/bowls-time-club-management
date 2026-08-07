@@ -1,8 +1,25 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// Auth helpers (inlined — no local imports in Deno Deploy; see clubAuth/entry.ts)
+function isPlatformAdmin(user) {
+  return user?.role === 'admin';
+}
+
+async function hasClubRole(base44, userEmail, clubId, roles) {
+  const results = await base44.asServiceRole.entities.ClubMembership.filter({
+    club_id: clubId,
+    user_email: userEmail,
+    status: 'approved',
+  });
+  const membership = results[0];
+  if (!membership) return false;
+  return roles.includes(membership.role);
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me().catch(() => null);
     const body = await req.json();
     // Support being called directly (frontend) or via entity automation
     const type = body.type || body.args?.type || 'new_request';
@@ -17,6 +34,22 @@ Deno.serve(async (req) => {
     const membership = memberships[0];
     if (!membership) {
       return Response.json({ error: 'Membership not found' }, { status: 404 });
+    }
+
+    // Authorization (club_id is derived from the membership record — source of truth):
+    //  - 'new_request': caller must be the requesting user (or platform admin)
+    //  - 'approved': caller must be a club admin (or platform admin) for this club
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (type === 'new_request') {
+      if (!isPlatformAdmin(user) && membership.user_email !== user.email) {
+        return Response.json({ error: 'Forbidden: only the requesting user can trigger a new-request email' }, { status: 403 });
+      }
+    } else if (type === 'approved') {
+      if (!isPlatformAdmin(user) && !await hasClubRole(base44, user.email, membership.club_id, ['admin'])) {
+        return Response.json({ error: 'Forbidden: requires club admin role' }, { status: 403 });
+      }
     }
 
     // Fetch the club

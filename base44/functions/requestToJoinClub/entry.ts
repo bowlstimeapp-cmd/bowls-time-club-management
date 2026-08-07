@@ -88,6 +88,20 @@ export default async function(req) {
     }
 
     const created = await base44.asServiceRole.entities.ClubMembership.create(createData);
+
+    // Notify club admins about the new request. This replaces the ClubMembership-create
+    // automation (which had no user JWT). Called via the user-scoped client so the JWT
+    // is forwarded and membershipEmails can verify the caller is the requesting user.
+    try {
+      await base44.functions.invoke('membershipEmails', {
+        type: 'new_request',
+        membershipId: created.id,
+      });
+    } catch (e) {
+      // Email is best-effort — don't fail the join request if it errors
+      console.error('Failed to send new-request email:', e?.message || e);
+    }
+
     return Response.json({ success: true, membership: created });
   } catch (error) {
     return Response.json({ error: error.message || 'Failed to submit join request' }, { status: 500 });
