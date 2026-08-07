@@ -103,11 +103,9 @@
     "booker_email"
   ],
   "rls": {
-    "read": {},
-    "create": {
-      "created_by": "{{user.email}}"
-    },
-    "update": {},
-    "delete": {}
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
   }
 }
