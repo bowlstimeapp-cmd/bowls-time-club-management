@@ -196,7 +196,10 @@ export default function SelectionEditor() {
 
   const { data: existingBookings = [] } = useQuery({
     queryKey: ['bookings', clubId, matchDate],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: matchDate }),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId, date: matchDate });
+      return res.data.bookings || [];
+    },
     enabled: !!clubId && !!matchDate,
   });
 

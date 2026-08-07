@@ -105,7 +105,8 @@ export default function MemberDashboard() {
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['myUpcomingBookings', clubId, user?.email],
     queryFn: async () => {
-      const all = await base44.entities.Booking.filter({ club_id: clubId, booker_email: user.email });
+      const res = await base44.functions.invoke('listBookings', { clubId, booker_email: user.email });
+      const all = res.data.bookings || [];
       return all
         .filter(b => b.date >= todayStr && b.status !== 'cancelled' && b.status !== 'rejected')
         .sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time))

@@ -86,7 +86,10 @@ export default function AdminBookings() {
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['clubBookings', clubId],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId }, '-created_date'),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId });
+      return res.data.bookings || [];
+    },
     enabled: !!clubId,
   });
 

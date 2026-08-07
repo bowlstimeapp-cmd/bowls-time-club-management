@@ -189,10 +189,8 @@ export default function Selection() {
       // Cancel any associated rink bookings first
       const sel = selections.find(s => s.id === selectionId);
       if (sel && sel.match_date && sel.selected_rinks?.length > 0 && sel.match_start_time) {
-        const bookingsOnDay = await base44.entities.Booking.filter({
-          club_id: clubId,
-          date: sel.match_date,
-        });
+        const bookingsRes = await base44.functions.invoke('listBookings', { clubId, date: sel.match_date });
+        const bookingsOnDay = bookingsRes.data.bookings || [];
         const duration = 2;
         const [startH] = sel.match_start_time.split(':').map(Number);
         const [endH] = (sel.match_end_time || sel.match_start_time).split(':').map(Number);

@@ -116,9 +116,12 @@ export default function RinkDisplayTV() {
     : `Tomorrow — ${format(addDays(new Date(), 1), 'EEEE d MMMM yyyy')}`;
 
   const { data: bookings = [], refetch } = useQuery({
-    queryKey: ['tv-bookings', clubId, displayDate],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: displayDate }),
-    enabled: !!clubId,
+    queryKey: ['tv-bookings', clubId, displayDate, user?.email],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId, date: displayDate });
+      return res.data.bookings || [];
+    },
+    enabled: !!clubId && !!user,
     refetchInterval: 30000,
   });
 

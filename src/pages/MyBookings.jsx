@@ -136,10 +136,10 @@ export default function MyBookings() {
 
   const { data: allBookings = [], isLoading } = useQuery({
     queryKey: ['myBookings', clubId, user?.email],
-    queryFn: () => base44.entities.Booking.filter({ 
-      club_id: clubId, 
-      booker_email: user.email 
-    }, '-date'),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId, booker_email: user.email });
+      return (res.data.bookings || []).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    },
     enabled: !!user?.email && !!clubId,
   });
 

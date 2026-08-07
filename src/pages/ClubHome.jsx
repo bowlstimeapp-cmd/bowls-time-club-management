@@ -113,9 +113,10 @@ export default function ClubHome() {
 
   const { data: todaysBookings = [] } = useQuery({
     queryKey: ['todaysBookings', clubId],
-    queryFn: () => {
+    queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      return base44.entities.Booking.filter({ club_id: clubId, date: today });
+      const res = await base44.functions.invoke('listBookings', { clubId, date: today });
+      return res.data.bookings || [];
     },
     enabled: !!clubId,
   });

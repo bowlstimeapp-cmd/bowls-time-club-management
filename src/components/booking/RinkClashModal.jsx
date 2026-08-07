@@ -152,10 +152,16 @@ export default function RinkClashModal({
       const [startHour] = moveTime.split(':').map(Number);
       const endTime = `${String(startHour + duration).padStart(2, '0')}:00`;
 
-      await base44.entities.Booking.update(clash.existingBooking.id, {
-        rink_number: parseInt(moveRink),
-        start_time: moveTime,
-        end_time: endTime,
+      await base44.functions.invoke('updateClubData', {
+        entity: 'Booking',
+        action: 'update',
+        clubId: club?.id,
+        id: clash.existingBooking.id,
+        data: {
+          rink_number: parseInt(moveRink),
+          start_time: moveTime,
+          end_time: endTime,
+        },
       });
 
       handleResolve(index, 'moved', { newRink: parseInt(moveRink), newTime: moveTime });

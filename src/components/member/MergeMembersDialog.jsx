@@ -25,10 +25,10 @@ export default function MergeMembersDialog({ open, onClose, sourceMember, target
     setLoadingCounts(true);
     try {
       const [srcB, srcS, srcE, tgtB, tgtS, tgtE] = await Promise.all([
-        base44.entities.Booking.filter({ booker_email: sourceMember.user_email, club_id: clubId }),
+        base44.functions.invoke('listBookings', { clubId, booker_email: sourceMember.user_email }).then(r => r.data.bookings || []),
         base44.entities.TeamSelection.filter({ selector_email: sourceMember.user_email, club_id: clubId }),
         base44.entities.CompetitionEntry.filter({ user_email: sourceMember.user_email, club_id: clubId }),
-        base44.entities.Booking.filter({ booker_email: targetMember.user_email, club_id: clubId }),
+        base44.functions.invoke('listBookings', { clubId, booker_email: targetMember.user_email }).then(r => r.data.bookings || []),
         base44.entities.TeamSelection.filter({ selector_email: targetMember.user_email, club_id: clubId }),
         base44.entities.CompetitionEntry.filter({ user_email: targetMember.user_email, club_id: clubId }),
       ]);

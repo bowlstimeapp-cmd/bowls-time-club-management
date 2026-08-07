@@ -36,7 +36,10 @@ export default function AdminApprovalSection({ clubId, membership, members = [] 
 
   const { data: pendingBookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['adminPendingBookings', clubId],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, status: 'pending' }),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId, status: 'pending' });
+      return res.data.bookings || [];
+    },
     enabled: !!clubId && isClubAdmin,
   });
 

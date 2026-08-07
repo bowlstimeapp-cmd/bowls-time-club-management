@@ -115,7 +115,10 @@ export default function AdminDashboard() {
   // All bookings
   const { data: allBookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['adminDashBookings', clubId],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId }),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId });
+      return res.data.bookings || [];
+    },
     enabled: !!clubId && isClubAdmin,
   });
 

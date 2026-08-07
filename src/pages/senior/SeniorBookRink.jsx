@@ -72,7 +72,10 @@ export default function SeniorBookRink() {
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['bookings', clubId, dateString],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: dateString }),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId, date: dateString });
+      return res.data.bookings || [];
+    },
     enabled: !!clubId && step >= 3,
   });
 

@@ -242,10 +242,11 @@ export default function LeagueAdmin() {
       await Promise.all(bookingIds.map(bid => clubData('Booking', 'update', { id: bid, data: { status: 'cancelled' } })));
       // Also cancel ALL bookings for this league by booker_name
       if (leagueToDelete) {
-        const leagueBookings = await base44.entities.Booking.filter({ 
-          club_id: clubId, 
+        const leagueBookingsRes = await base44.functions.invoke('listBookingsForScheduling', { 
+          clubId, 
           booker_name: `League - ${leagueToDelete.name}` 
         });
+        const leagueBookings = leagueBookingsRes.data.bookings || [];
         const extraIds = leagueBookings.map(b => b.id).filter(bid => !bookingIds.includes(bid));
         await Promise.all(extraIds.map(bid => clubData('Booking', 'update', { id: bid, data: { status: 'cancelled' } })));
       }
@@ -667,11 +668,8 @@ export default function LeagueAdmin() {
 
     // Fetch all existing bookings for the dates involved
     const uniqueDates = [...new Set(leagueFixtures.map(f => f.match_date))];
-    let allExistingBookings = [];
-    for (const date of uniqueDates) {
-      const dayBookings = await base44.entities.Booking.filter({ club_id: clubId, date });
-      allExistingBookings = [...allExistingBookings, ...dayBookings];
-    }
+    const schedulingRes = await base44.functions.invoke('listBookingsForScheduling', { clubId, dates: uniqueDates });
+    let allExistingBookings = schedulingRes.data.bookings || [];
 
     const rinkCount = club?.rink_count || 6;
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);

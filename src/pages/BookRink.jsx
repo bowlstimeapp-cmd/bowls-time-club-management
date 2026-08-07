@@ -250,7 +250,10 @@ useEffect(() => {
 
   const { data: bookingsFromDB = [], isLoading } = useQuery({
     queryKey: ['bookings', clubId, dateString],
-    queryFn: () => base44.entities.Booking.filter({ club_id: clubId, date: dateString }),
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listBookings', { clubId, date: dateString });
+      return res.data.bookings || [];
+    },
     enabled: !!clubId,
   });
 
@@ -457,11 +460,8 @@ useEffect(() => {
   const handleJoinRollup = async (booking) => {
     if (!user || joiningRollup) return;
     setJoiningRollup(true);
-    const name = user.first_name && user.surname 
-      ? `${user.first_name} ${user.surname}` 
-      : (user.full_name || user.email);
-    const updatedMembers = [...(booking.rollup_members || []), { email: user.email, name }];
-    await base44.entities.Booking.update(booking.id, { rollup_members: updatedMembers });
+    const joinRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'join_rollup', clubId, id: booking.id });
+    const updatedMembers = joinRes.data.rollup_members || booking.rollup_members || [];
 
     // Notify the original booker
     if (booking.booker_email && booking.booker_email !== user.email) {

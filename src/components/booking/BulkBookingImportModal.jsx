@@ -218,6 +218,7 @@ export default function BulkBookingImportModal({ open, onClose, clubId, onSucces
       let errorCount = 0;
       const errors = [];
       const total = allBookings.length;
+      const validBookings = [];
 
       for (let i = 0; i < allBookings.length; i++) {
         // Rate limiting: pause after every RATE_LIMIT_BATCH bookings
@@ -238,7 +239,7 @@ export default function BulkBookingImportModal({ open, onClose, clubId, onSucces
           const competitionType = COMPETITION_TYPES.includes(row.competition_type)
             ? row.competition_type : 'Club';
 
-          await base44.entities.Booking.create({
+          validBookings.push({
             club_id: clubId,
             rink_number: rinkNum,
             date: row.date,
@@ -255,6 +256,17 @@ export default function BulkBookingImportModal({ open, onClose, clubId, onSucces
         } catch (err) {
           errors.push(`Row ${i + 1} (${row.date} Rink ${row.rink_number}): ${err.message || 'Failed'}`);
           errorCount++;
+        }
+      }
+
+      // Bulk create all validated bookings via backend function (Booking RLS is closed)
+      if (validBookings.length > 0) {
+        try {
+          await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'bulk_create', clubId, data: validBookings });
+        } catch (err) {
+          errors.push(`Bulk create failed: ${err.message || 'Failed'}`);
+          successCount = 0;
+          errorCount = validBookings.length;
         }
       }
 
