@@ -8,17 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { 
-  Building2, 
-  Users, 
-  Clock, 
+import {
+  Building2,
+  Users,
+  Clock,
   CheckCircle,
   Loader2,
   ArrowRight,
   Search,
   Mail,
-  LogOut
-} from 'lucide-react';
+  LogOut } from
+'lucide-react';
 import { toast } from "sonner";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -49,13 +49,13 @@ export default function ClubSelector() {
 
   const { data: clubs = [], isLoading: clubsLoading } = useQuery({
     queryKey: ['clubs'],
-    queryFn: () => base44.entities.Club.filter({ is_active: true }),
+    queryFn: () => base44.entities.Club.filter({ is_active: true })
   });
 
   const { data: memberships = [], isLoading: membershipsLoading } = useQuery({
     queryKey: ['myMemberships', user?.email],
     queryFn: () => base44.entities.ClubMembership.filter({ user_email: user.email }),
-    enabled: !!user?.email,
+    enabled: !!user?.email
   });
 
   const [requestSentModal, setRequestSentModal] = useState(false);
@@ -70,8 +70,8 @@ export default function ClubSelector() {
         phone: user.phone || null,
         gender: user.gender || null,
         emergency_contact_name: user.emergency_contact_name || null,
-        emergency_contact_phone: user.emergency_contact_phone || null,
-      },
+        emergency_contact_phone: user.emergency_contact_phone || null
+      }
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myMemberships'] });
@@ -79,12 +79,12 @@ export default function ClubSelector() {
     },
     onError: (error) => {
       const message =
-        error?.response?.data?.error ||
-        error?.data?.error ||
-        error?.message ||
-        'Failed to submit join request. Please try again.';
+      error?.response?.data?.error ||
+      error?.data?.error ||
+      error?.message ||
+      'Failed to submit join request. Please try again.';
       toast.error(message);
-    },
+    }
   });
 
   const leaveClubMutation = useMutation({
@@ -96,16 +96,16 @@ export default function ClubSelector() {
     },
     onError: (error) => {
       const message =
-        error?.response?.data?.error ||
-        error?.data?.error ||
-        error?.message ||
-        'Failed to leave club. Please try again.';
+      error?.response?.data?.error ||
+      error?.data?.error ||
+      error?.message ||
+      'Failed to leave club. Please try again.';
       toast.error(message);
-    },
+    }
   });
 
   const getMembershipStatus = (clubId) => {
-    return memberships.find(m => m.club_id === clubId);
+    return memberships.find((m) => m.club_id === clubId);
   };
 
   const handleJoinRequest = (clubId) => {
@@ -119,27 +119,27 @@ export default function ClubSelector() {
   };
 
   const handleEnterClub = (clubId) => {
-    const club = clubs.find(c => c.id === clubId);
+    const club = clubs.find((c) => c.id === clubId);
     navigate(createPageUrl(getLandingPage(club)) + `?clubId=${clubId}`);
   };
 
   // Check for approved memberships and redirect if only one —
   // but skip this behaviour if the user is deliberately switching clubs
-  const approvedMemberships = memberships.filter(m => m.status === 'approved');
-  
+  const approvedMemberships = memberships.filter((m) => m.status === 'approved');
+
   useEffect(() => {
     if (!isSwitchingClubs && !membershipsLoading && approvedMemberships.length === 1) {
-      const club = clubs.find(c => c.id === approvedMemberships[0].club_id);
+      const club = clubs.find((c) => c.id === approvedMemberships[0].club_id);
       navigate(createPageUrl(getLandingPage(club)) + `?clubId=${approvedMemberships[0].club_id}`);
     }
   }, [approvedMemberships, membershipsLoading, navigate, isSwitchingClubs, clubs]);
 
   const isLoading = clubsLoading || membershipsLoading;
-  
+
   // Filter clubs by search query, then sort alphabetically
-  const filteredClubs = clubs
-    .filter(club => club.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const filteredClubs = clubs.
+  filter((club) => club.name.toLowerCase().includes(searchQuery.toLowerCase())).
+  sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
@@ -147,60 +147,60 @@ export default function ClubSelector() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
-        >
+          className="text-center mb-10">
+          
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
             Select Your Club
           </h1>
-          <p className="text-gray-600 max-w-md mx-auto mb-6">
-            Choose the lawn bowls club you belong to, or request to join a new club
+          <p className="text-gray-600 max-w-md mx-auto mb-6">Choose the lawn bowls club you belong to, or request to join a new club, or create your own.
+
           </p>
           
           {/* Search Input */}
-          {clubs.length > 0 && (
-            <div className="max-w-md mx-auto">
+          {clubs.length > 0 &&
+          <div className="max-w-md mx-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
-                  placeholder="Search clubs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+                placeholder="Search clubs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10" />
+              
               </div>
             </div>
-          )}
+          }
         </motion.div>
 
-        {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-xl" />
-            ))}
-          </div>
-        ) : clubs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
+        {isLoading ?
+        <div className="grid gap-4 sm:grid-cols-2">
+            {[...Array(4)].map((_, i) =>
+          <Skeleton key={i} className="h-48 rounded-xl" />
+          )}
+          </div> :
+        clubs.length === 0 ?
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12">
+          
             <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Clubs Available</h3>
             <p className="text-gray-500">Please contact the platform administrator.</p>
-          </motion.div>
-        ) : filteredClubs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
+          </motion.div> :
+        filteredClubs.length === 0 ?
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12">
+          
             <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No clubs found</h3>
             <p className="text-gray-500">Try a different search term</p>
-          </motion.div>
-        ) : (() => {
-          const myClubs = filteredClubs.filter(c => getMembershipStatus(c.id)?.status === 'approved');
-          const otherClubs = filteredClubs.filter(c => getMembershipStatus(c.id)?.status !== 'approved');
+          </motion.div> :
+        (() => {
+          const myClubs = filteredClubs.filter((c) => getMembershipStatus(c.id)?.status === 'approved');
+          const otherClubs = filteredClubs.filter((c) => getMembershipStatus(c.id)?.status !== 'approved');
 
           const renderClubCard = (club, index) => {
             const membership = getMembershipStatus(club.id);
@@ -213,104 +213,104 @@ export default function ClubSelector() {
                 key={club.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
+                transition={{ delay: index * 0.05 }}>
+                
                 <Card className="h-full hover:shadow-lg transition-all duration-300 overflow-hidden">
                   <CardContent className="p-0">
                     <div className="h-3 bg-gradient-to-r from-emerald-500 to-emerald-600" />
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          {club.logo_url ? (
-                            <img src={club.logo_url} alt={club.name} className="w-12 h-12 rounded-lg object-contain bg-white border" />
-                          ) : (
-                            <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                          {club.logo_url ?
+                          <img src={club.logo_url} alt={club.name} className="w-12 h-12 rounded-lg object-contain bg-white border" /> :
+
+                          <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                               <Building2 className="w-6 h-6 text-emerald-600" />
                             </div>
-                          )}
+                          }
                           <div>
                             <h3 className="font-semibold text-gray-900">{club.name}</h3>
                             <p className="text-sm text-gray-500">{club.rink_count} rinks</p>
                           </div>
                         </div>
                         <div className="flex gap-1 flex-wrap justify-end">
-                          {club.club_tier === 'free' && (
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">Free Club</Badge>
-                          )}
-                          {isAdmin && (
-                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Admin</Badge>
-                          )}
+                          {club.club_tier === 'free' &&
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">Free Club</Badge>
+                          }
+                          {isAdmin &&
+                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Admin</Badge>
+                          }
                         </div>
                       </div>
 
-                      {club.description && (
-                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{club.description}</p>
-                      )}
+                      {club.description &&
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{club.description}</p>
+                      }
 
                       <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                         <span className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
-                          {club.opening_time?.slice(0,5)} - {club.closing_time?.slice(0,5)}
+                          {club.opening_time?.slice(0, 5)} - {club.closing_time?.slice(0, 5)}
                         </span>
                       </div>
 
                       <div className="space-y-2">
-                        {user?.role === 'admin' && (
-                          <Button
-                            onClick={() => navigate(createPageUrl('PlatformAdmin') + `?manageAdmins=${club.id}`)}
-                            variant="outline" size="sm" className="w-full"
-                          >
+                        {user?.role === 'admin' &&
+                        <Button
+                          onClick={() => navigate(createPageUrl('PlatformAdmin') + `?manageAdmins=${club.id}`)}
+                          variant="outline" size="sm" className="w-full">
+                          
                             <Users className="w-4 h-4 mr-2" />
                             Manage Admins
                           </Button>
-                        )}
-                        {isApproved ? (
-                          <>
+                        }
+                        {isApproved ?
+                        <>
                             <Button onClick={() => handleEnterClub(club.id)} className="w-full bg-emerald-600 hover:bg-emerald-700">
                               Enter Club
                               <ArrowRight className="w-4 h-4 ml-2" />
                             </Button>
                             <Button
-                              onClick={() => setLeaveClubConfirm(club)}
-                              variant="outline"
-                              size="sm"
-                              className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                            >
+                            onClick={() => setLeaveClubConfirm(club)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-red-600 border-red-200 hover:bg-red-50">
+                            
                               <LogOut className="w-4 h-4 mr-2" />
                               Leave Club
                             </Button>
-                          </>
-                        ) : isPending ? (
-                          <Button disabled className="w-full" variant="outline">
+                          </> :
+                        isPending ?
+                        <Button disabled className="w-full" variant="outline">
                             <Clock className="w-4 h-4 mr-2" />
                             Awaiting Approval
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleJoinRequest(club.id)}
-                            disabled={requestMutation.isPending}
-                            className="w-full" variant="outline"
-                          >
-                            {requestMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Users className="w-4 h-4 mr-2" />
-                            )}
+                          </Button> :
+
+                        <Button
+                          onClick={() => handleJoinRequest(club.id)}
+                          disabled={requestMutation.isPending}
+                          className="w-full" variant="outline">
+                          
+                            {requestMutation.isPending ?
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" /> :
+
+                          <Users className="w-4 h-4 mr-2" />
+                          }
                             Request to Join
                           </Button>
-                        )}
+                        }
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
-            );
+              </motion.div>);
+
           };
 
           return (
             <div className="space-y-8">
-              {!membershipsLoading && (
-                <Card className="border-emerald-200 bg-emerald-50">
+              {!membershipsLoading &&
+              <Card className="border-emerald-200 bg-emerald-50">
                   <CardContent className="p-6 text-center">
                     <Building2 className="w-10 h-10 mx-auto mb-3 text-emerald-600" />
                     <h3 className="font-semibold text-gray-900 mb-1">Start your own club</h3>
@@ -320,9 +320,9 @@ export default function ClubSelector() {
                     </Button>
                   </CardContent>
                 </Card>
-              )}
-              {myClubs.length > 0 && (
-                <div>
+              }
+              {myClubs.length > 0 &&
+              <div>
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle className="w-5 h-5 text-emerald-600" />
                     <h2 className="text-base font-semibold text-gray-800">Your Clubs</h2>
@@ -334,26 +334,26 @@ export default function ClubSelector() {
                     </AnimatePresence>
                   </div>
                 </div>
-              )}
+              }
 
-              {otherClubs.length > 0 && (
-                <div>
-                  {myClubs.length > 0 && (
-                    <div className="flex items-center gap-2 mb-3">
+              {otherClubs.length > 0 &&
+              <div>
+                  {myClubs.length > 0 &&
+                <div className="flex items-center gap-2 mb-3">
                       <Building2 className="w-5 h-5 text-gray-400" />
                       <h2 className="text-base font-semibold text-gray-800">Other Clubs</h2>
                       <span className="text-sm text-gray-400">— request to join</span>
                     </div>
-                  )}
+                }
                   <div className="grid gap-4 sm:grid-cols-2">
                     <AnimatePresence>
                       {otherClubs.map((club, i) => renderClubCard(club, i))}
                     </AnimatePresence>
                   </div>
                 </div>
-              )}
-            </div>
-          );
+              }
+            </div>);
+
         })()}
       </div>
 
@@ -373,8 +373,8 @@ export default function ClubSelector() {
           </p>
           <button
             onClick={() => setRequestSentModal(false)}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-sm transition-colors"
-          >
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+            
             Got it
           </button>
         </DialogContent>
@@ -409,8 +409,8 @@ export default function ClubSelector() {
           queryClient.invalidateQueries({ queryKey: ['myMemberships'] });
           queryClient.invalidateQueries({ queryKey: ['clubs'] });
           navigate(createPageUrl('BookRink') + `?clubId=${club.id}`);
-        }}
-      />
-    </div>
-  );
+        }} />
+      
+    </div>);
+
 }
