@@ -737,7 +737,7 @@ export default function ProspectCRM() {
                 </div>
               </div>
               {templatePreviewMode ? (
-                <EmailPreview html={fillTemplate(emailTemplate, SAMPLE_PROSPECT).body} />
+                <EmailPreview html={emailTemplate.body} onChange={(newHtml) => setEmailTemplate({ ...emailTemplate, body: newHtml })} />
               ) : (
                 <Textarea value={emailTemplate.body} onChange={e => setEmailTemplate({ ...emailTemplate, body: e.target.value })} rows={14} className="font-mono text-sm" />
               )}
@@ -789,7 +789,7 @@ export default function ProspectCRM() {
                 </div>
               </div>
               {sendPreviewMode ? (
-                <EmailPreview html={emailPreview.body} />
+                <EmailPreview html={emailPreview.body} onChange={(newHtml) => setEmailPreview({ ...emailPreview, body: newHtml })} />
               ) : (
                 <>
                   <Textarea value={emailPreview.body} onChange={e => setEmailPreview({ ...emailPreview, body: e.target.value })} rows={14} className="text-sm" />
