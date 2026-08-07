@@ -60,6 +60,29 @@ export default async function(req) {
       );
     }
 
+    // Spam protection: if the most recent rejected request was within the last
+    // 24 hours, block resubmission.
+    const rejected = existing.filter((m) => m.status === 'rejected');
+    if (rejected.length > 0) {
+      const mostRecent = rejected.sort((a, b) => {
+        const aDate = new Date(a.updated_date || a.created_date);
+        const bDate = new Date(b.updated_date || b.created_date);
+        return bDate - aDate;
+      })[0];
+      const rejectDate = new Date(mostRecent.updated_date || mostRecent.created_date);
+      const hoursSince = (Date.now() - rejectDate.getTime()) / (1000 * 60 * 60);
+      if (hoursSince < 24) {
+        const retryDate = new Date(rejectDate.getTime() + 24 * 60 * 60 * 1000);
+        const retryFormatted = retryDate.toLocaleString('en-GB', {
+         weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+        });
+        return Response.json(
+          { error: `Your previous request was rejected. You can try again after ${retryFormatted}, or contact the club directly.` },
+          { status: 400 }
+        );
+      }
+    }
+
     // -----------------------------------------------------------------
     // 5. Build the new membership record. user_email / role / status are
     // forced server-side — the frontend cannot influence them.
@@ -89,14 +112,57 @@ export default async function(req) {
 
     const created = await base44.asServiceRole.entities.ClubMembership.create(createData);
 
-    // Notify club admins about the new request. This replaces the ClubMembership-create
-    // automation (which had no user JWT). Called via the user-scoped client so the JWT
-    // is forwarded and membershipEmails can verify the caller is the requesting user.
+    // Notify club admins about the new request directly (sends email via
+    // asServiceRole.integrations.Core.SendEmail — best-effort, does not fail
+    // the join request if sending errors).
     try {
-      await base44.functions.invoke('membershipEmails', {
-        type: 'new_request',
-        membershipId: created.id,
-      });
+      const clubs = await base44.asServiceRole.entities.Club.filter({ id: clubId });
+      const club = clubs[0];
+
+      if (club) {
+        const memberName = created.user_name || created.user_email;
+        const memberEmail = created.user_email;
+        const clubName = club.name;
+
+        const requestDate = new Date(created.created_date);
+        const formattedDate = requestDate.toLocaleDateString('en-GB', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        });
+        const formattedTime = requestDate.toLocaleTimeString('en-GB', {
+          hour: '2-digit', minute: '2-digit',
+        });
+
+        // Look up all approved admin memberships for this club
+        const adminMemberships = await base44.asServiceRole.entities.ClubMembership.filter({
+          club_id: clubId,
+          role: 'admin',
+          status: 'approved',
+        });
+
+        const adminEmails = adminMemberships.map(m => m.user_email).filter(Boolean);
+        // Include primary_admin_email as fallback if not already in the list
+        if (club.primary_admin_email && !adminEmails.includes(club.primary_admin_email)) {
+          adminEmails.push(club.primary_admin_email);
+        }
+
+        for (const adminEmail of adminEmails) {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            to: adminEmail,
+            subject: `New membership request — ${memberName}`,
+            body: `
+<p>Hello,</p>
+<p>A new membership request has been received for <strong>${clubName}</strong>.</p>
+<table style="border-collapse:collapse;margin:16px 0;">
+  <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:14px;">Member name</td><td style="padding:4px 0;font-size:14px;font-weight:600;">${memberName}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:14px;">Email address</td><td style="padding:4px 0;font-size:14px;">${memberEmail}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:14px;">Requested on</td><td style="padding:4px 0;font-size:14px;">${formattedDate} at ${formattedTime}</td></tr>
+</table>
+<p>Please log in to the BowlsTime admin panel to approve or reject this request.</p>
+<p style="color:#6b7280;font-size:13px;">— BowlsTime</p>
+            `.trim(),
+          });
+        }
+      }
     } catch (e) {
       // Email is best-effort — don't fail the join request if it errors
       console.error('Failed to send new-request email:', e?.message || e);
