@@ -13,15 +13,16 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Club name is required' }, { status: 400 });
     }
 
-    // Verify the user has NO existing club memberships (self-serve free trial only for new users)
-    // Platform admins can bypass this check to create demo/trial clubs
+    // Rate-limit free club creation to once per non-platform-admin user
+    // Platform admins can bypass this to create demo/trial clubs
     const isPlatformAdmin = user.role === 'admin';
     if (!isPlatformAdmin) {
-      const existingMemberships = await base44.asServiceRole.entities.ClubMembership.filter({
-        user_email: user.email,
+      const existingFreeClubs = await base44.asServiceRole.entities.Club.filter({
+        primary_admin_email: user.email,
+        club_tier: 'free',
       });
-      if (existingMemberships.length > 0) {
-        return Response.json({ error: 'You are already a member of a club. Free club creation is only available for users with no existing memberships.' }, { status: 403 });
+      if (existingFreeClubs.length > 0) {
+        return Response.json({ error: 'You have already created a free club. Free club creation is limited to one per user.' }, { status: 403 });
       }
     }
 
