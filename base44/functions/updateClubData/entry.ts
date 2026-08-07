@@ -56,8 +56,39 @@ Deno.serve(async (req) => {
       if (record.booker_email !== user.email) {
         return Response.json({ error: 'Forbidden: can only cancel your own bookings' }, { status: 403 });
       }
-      await base44.asServiceRole.entities.Booking.update(id, { status: 'cancelled' });
+      await base44.asServiceRole.entities.Booking.delete(id);
       return Response.json({ success: true });
+    }
+
+    // ── BOOKING (join/leave roll-up — any approved member of the club) ───
+    if (entity === 'Booking' && (action === 'join_rollup' || action === 'leave_rollup')) {
+      if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+      const membership = await getClubMembership(base44, user.email, clubId);
+      if (!membership && !isPlatformAdmin(user)) {
+        return Response.json({ error: 'Forbidden: must be an approved member of this club' }, { status: 403 });
+      }
+      const record = await verifyBelongsToClub(base44, 'Booking', id, clubId);
+      if (!record) return Response.json({ error: 'Booking not found or does not belong to this club' }, { status: 404 });
+      if (record.competition_type !== 'Roll-up' && record.competition_type !== 'Private Roll-up') {
+        return Response.json({ error: 'Can only join/leave Roll-up bookings' }, { status: 400 });
+      }
+      const existingMembers = record.rollup_members || [];
+      const memberName = user.first_name && user.surname
+        ? `${user.first_name} ${user.surname}`
+        : (user.full_name || user.email);
+      if (action === 'join_rollup') {
+        if (existingMembers.some(m => m.email === user.email)) {
+          return Response.json({ success: true, rollup_members: existingMembers });
+        }
+        const updatedMembers = [...existingMembers, { email: user.email, name: memberName }];
+        await base44.asServiceRole.entities.Booking.update(id, { rollup_members: updatedMembers });
+        return Response.json({ success: true, rollup_members: updatedMembers });
+      } else {
+        // leave_rollup — remove only the caller's own entry
+        const updatedMembers = existingMembers.filter(m => m.email !== user.email);
+        await base44.asServiceRole.entities.Booking.update(id, { rollup_members: updatedMembers });
+        return Response.json({ success: true, rollup_members: updatedMembers });
+      }
     }
 
     // ── LEAGUE TEAM (captain-level update — own team only) ───────────────────
@@ -110,8 +141,15 @@ Deno.serve(async (req) => {
       }
       if (action === 'bulk_delete') {
         if (!ids || !Array.isArray(ids)) return Response.json({ error: 'Missing ids array' }, { status: 400 });
-        await Promise.all(ids.map(bid => base44.asServiceRole.entities.Booking.delete(bid)));
-        return Response.json({ success: true, deleted: ids.length });
+        const deletedIds = [];
+        for (const bid of ids) {
+          const record = await verifyBelongsToClub(base44, 'Booking', bid, clubId);
+          if (record) {
+            await base44.asServiceRole.entities.Booking.delete(bid);
+            deletedIds.push(bid);
+          }
+        }
+        return Response.json({ success: true, deleted: deletedIds.length });
       }
       if (action === 'bulk_create') {
         if (!data || !Array.isArray(data)) return Response.json({ error: 'Missing data array' }, { status: 400 });
