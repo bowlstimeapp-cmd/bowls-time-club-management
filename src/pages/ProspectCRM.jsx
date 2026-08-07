@@ -19,11 +19,12 @@ import {
   ShieldAlert, Search, Plus, Pencil, Trash2, ArrowLeft, Users,
   Phone, Mail, Globe, MapPin, CheckCircle, XCircle, Clock,
   Star, PhoneCall, RefreshCw, Loader2, Download, Upload, Filter,
-  Send, FileText, MailCheck
+  Send, FileText, MailCheck, Eye
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import EmailPreview from '@/components/prospect/EmailPreview';
 
 const STATUS_CONFIG = {
   not_contacted: { label: 'Not Contacted', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: Clock },
@@ -66,27 +67,138 @@ const parseCsvLine = (line) => {
 };
 
 const DEFAULT_TEMPLATE = {
-  subject: 'Introducing BowlsTime – Club Management Made Easy',
-  body: `Dear {{contact_name}},
+  subject: 'Introducing BowlsTime – Modern Club Management for {{club_name}}',
+  body: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:-apple-system,Helvetica,Arial,sans-serif;line-height:1.6;color:#1f2937;margin:0;padding:0;background-color:#f1f5f2">
+<div style="max-width:640px;margin:0 auto;padding:24px 16px">
 
-I hope this email finds you well. My name is [Your Name] and I'm reaching out to introduce BowlsTime, a platform designed specifically for lawn bowls clubs like {{club_name}}.
+<div style="text-align:left;margin-bottom:20px">
+<img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6995ed6ffddbd0f64bc9d1e8/61b3b45da_BTZoomed.png" alt="BowlsTime" width="150" style="display:block;border:0;height:auto" />
+</div>
 
-BowlsTime helps clubs manage:
-- Rink bookings and availability
-- Team selections and match notifications
-- League and competition management
-- Member communications
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg,#059669 0%,#10b981 50%,#0d9488 100%);border-radius:12px 12px 0 0">
+<tbody><tr>
+<td style="padding:40px 36px;text-align:center">
+<h1 style="color:#ffffff;margin:0 0 10px;font-size:26px;line-height:1.3">Club Management Made Easy for {{club_name}}</h1>
+<p style="color:#ffffff;margin:0;font-size:16px">The modern, all-in-one platform built specifically for bowls clubs.</p>
+</td>
+</tr></tbody>
+</table>
 
-You can see all the features here: <a href="https://www.bowls-time.com/features">View all features</a>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
+<tbody><tr>
+<td style="padding:36px">
 
-I'd love to arrange a quick call or demo to show you how BowlsTime could benefit {{club_name}}. 
+<p style="font-size:16px;margin:0 0 18px">Good Afternoon {{contact_name}},</p>
 
-Would you be available for a 20-minute chat? Feel free to reply to this email or call me on [Your Phone Number].
+<p style="font-size:15px;margin:0 0 18px;color:#334155">
+I wanted to introduce BowlsTime to {{club_name}} in case you have not come across it before — a modern, bowls-specific system for club admin, communication, fixtures and member information.
+</p>
 
-Kind regards,
-[Your Name]
-BowlsTime`
+<p style="font-size:15px;margin:0 0 24px;color:#334155">
+BowlsTime gives your club a clear, low-risk way to modernise how you manage rink bookings, team selections, leagues and member communication — all in one place, designed specifically for bowls.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px">
+<tbody><tr>
+<td style="text-align:center">
+<a href="https://www.bowls-time.com" style="display:inline-block;background:linear-gradient(135deg,#059669 0%,#10b981 50%,#0d9488 100%);color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 28px;border-radius:8px">Find Out More →</a>
+</td>
+</tr></tbody>
+</table>
+
+<h2 style="font-size:18px;color:#111827;margin:0 0 4px">Simple, per-member pricing</h2>
+<p style="font-size:14px;color:#64748b;margin:0 0 18px">Everything included — no modules, no upgrade tiers.</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 32px">
+<tbody><tr>
+<td width="100%" valign="top" style="background:linear-gradient(160deg,#10b981 0%,#059669 100%);border-radius:14px;padding:26px 20px;text-align:center">
+<span style="display:inline-block;background:rgba(255,255,255,0.2);color:#ffffff;font-size:12px;font-weight:bold;padding:4px 12px;border-radius:999px;margin-bottom:10px">BowlsTime</span>
+<div style="font-size:30px;font-weight:800;color:#ffffff;line-height:1">£2<span style="font-size:13px;font-weight:500;opacity:0.85">/member/year</span></div>
+<p style="font-size:12px;color:#ffffff;opacity:0.92;margin:10px 0 0">All features included. No optional modules, no surprise fees.</p>
+</td>
+</tr></tbody>
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f9fafb;border-radius:12px;margin:0 0 32px">
+<tbody><tr>
+<td style="padding:26px 28px;text-align:center">
+<p style="font-size:16px;font-weight:600;color:#111827;margin:0 0 8px;line-height:1.5">“BowlsTime has transformed how our club manages everything — from rink bookings to team selections, it is all in one place.”</p>
+<span style="font-size:13px;color:#64748b">Club Secretary, existing BowlsTime club</span>
+</td>
+</tr></tbody>
+</table>
+
+<h2 style="font-size:18px;color:#111827;margin:0 0 18px">Why clubs choose BowlsTime</h2>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 32px">
+<tbody>
+<tr>
+<td width="28" valign="top" style="padding:0 12px 18px 0"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background-color:#10b981;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;line-height:22px">✓</span></td>
+<td valign="top" style="padding:0 0 18px"><b style="font-size:14px;color:#111827">A real mobile app</b><br><span style="font-size:13px;color:#64748b">Dedicated iOS and Android apps for your members, with instant push notifications for fixtures and team changes.</span></td>
+</tr>
+<tr>
+<td width="28" valign="top" style="padding:0 12px 18px 0"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background-color:#10b981;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;line-height:22px">✓</span></td>
+<td valign="top" style="padding:0 0 18px"><b style="font-size:14px;color:#111827">Built and supported in-house</b><br><span style="font-size:13px;color:#64748b">Designed, built and supported by our UK team — no outsourced support desk.</span></td>
+</tr>
+<tr>
+<td width="28" valign="top" style="padding:0 12px 18px 0"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background-color:#10b981;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;line-height:22px">✓</span></td>
+<td valign="top" style="padding:0 0 18px"><b style="font-size:14px;color:#111827">Everything included</b><br><span style="font-size:13px;color:#64748b">One simple price. Rink booking, team selection, leagues, competitions, member directory — all included.</span></td>
+</tr>
+<tr>
+<td width="28" valign="top" style="padding:0 12px 18px 0"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background-color:#10b981;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;line-height:22px">✓</span></td>
+<td valign="top" style="padding:0 0 18px"><b style="font-size:14px;color:#111827">Easy migration support</b><br><span style="font-size:13px;color:#64748b">Import your members and fixtures with a simple CSV upload — no starting from scratch.</span></td>
+</tr>
+<tr>
+<td width="28" valign="top" style="padding:0 12px 18px 0"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background-color:#10b981;color:#ffffff;font-size:13px;font-weight:bold;text-align:center;line-height:22px">✓</span></td>
+<td valign="top" style="padding:0 0 18px"><b style="font-size:14px;color:#111827">Modern member communication</b><br><span style="font-size:13px;color:#64748b">Email and push notifications, with targeted messages for teams and groups.</span></td>
+</tr>
+</tbody>
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);border-radius:10px;margin:0 0 32px">
+<tbody><tr>
+<td style="padding:20px;text-align:center">
+<p style="color:#ffffff;margin:0;font-size:16px;font-weight:bold">Ready to see BowlsTime in action?</p>
+<p style="color:#ffffff;margin:4px 0 0;font-size:13px">Book a free demo and we will get you set up.</p>
+</td>
+</tr></tbody>
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+<tbody><tr>
+<td style="text-align:center;padding:0 0 8px">
+<a href="https://www.bowls-time.com" style="display:inline-block;background:linear-gradient(135deg,#059669 0%,#10b981 50%,#0d9488 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 34px;border-radius:8px">Book Your Free Demo →</a>
+</td>
+</tr></tbody>
+</table>
+<p style="text-align:center;font-size:12px;color:#64748b;margin:8px 0 0">Or just reply to this email and I will get something in the diary.</p>
+
+</td>
+</tr></tbody>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" style="font-size:14px;line-height:1.4;color:#0b2b22;padding-top:2px;margin-top:28px;width:100%">
+<tbody><tr>
+<td style="padding:0 14px 0 0;vertical-align:middle">
+<img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6995ed6ffddbd0f64bc9d1e8/61b3b45da_BTZoomed.png" alt="BowlsTime" width="120" style="display:block;border:0;outline:none;height:auto" />
+</td>
+<td style="border-left:2px solid #10b981;padding:0 0 0 14px;vertical-align:middle">
+<div style="font-size:16px;font-weight:700">BowlsTime</div>
+<div>Club Management Platform</div>
+<div><span style="font-weight:700">W:</span> <a href="https://www.bowls-time.com" style="color:#0b2b22">www.bowls-time.com</a></div>
+<div style="margin-top:8px;font-size:12px;color:#3e5d53">Book rinks. Track leagues. Grow the game.</div>
+</td>
+</tr></tbody>
+</table>
+
+</div>
+</body>
+</html>`
 };
+
+const SAMPLE_PROSPECT = { club_name: 'Springfield Bowls Club', contact_name: 'Club Secretary', county: 'Hampshire', town: 'Springfield' };
 
 export default function ProspectCRM() {
   const [user, setUser] = useState(null);
@@ -108,6 +220,8 @@ export default function ProspectCRM() {
   const [emailRecipient, setEmailRecipient] = useState('');
   const [emailCc, setEmailCc] = useState('');
   const [visibleCount, setVisibleCount] = useState(50);
+  const [templatePreviewMode, setTemplatePreviewMode] = useState(false);
+  const [sendPreviewMode, setSendPreviewMode] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
   const queryClient = useQueryClient();
@@ -590,7 +704,7 @@ export default function ProspectCRM() {
       </div>
 
       {/* Email Template Dialog */}
-      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+      <Dialog open={templateDialogOpen} onOpenChange={(open) => { setTemplateDialogOpen(open); if (!open) setTemplatePreviewMode(false); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -611,8 +725,22 @@ export default function ProspectCRM() {
               <Input value={emailTemplate.subject} onChange={e => setEmailTemplate({ ...emailTemplate, subject: e.target.value })} />
             </div>
             <div>
-              <Label>Body</Label>
-              <Textarea value={emailTemplate.body} onChange={e => setEmailTemplate({ ...emailTemplate, body: e.target.value })} rows={14} className="font-mono text-sm" />
+              <div className="flex items-center justify-between mb-2">
+                <Label>Body</Label>
+                <div className="flex items-center gap-1">
+                  <Button variant={templatePreviewMode ? 'ghost' : 'secondary'} size="sm" onClick={() => setTemplatePreviewMode(false)}>
+                    <FileText className="w-3.5 h-3.5 mr-1" />Edit
+                  </Button>
+                  <Button variant={templatePreviewMode ? 'secondary' : 'ghost'} size="sm" onClick={() => setTemplatePreviewMode(true)}>
+                    <Eye className="w-3.5 h-3.5 mr-1" />Preview
+                  </Button>
+                </div>
+              </div>
+              {templatePreviewMode ? (
+                <EmailPreview html={fillTemplate(emailTemplate, SAMPLE_PROSPECT).body} />
+              ) : (
+                <Textarea value={emailTemplate.body} onChange={e => setEmailTemplate({ ...emailTemplate, body: e.target.value })} rows={14} className="font-mono text-sm" />
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -626,7 +754,7 @@ export default function ProspectCRM() {
       </Dialog>
 
       {/* Send Email Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+      <Dialog open={emailDialogOpen} onOpenChange={(open) => { setEmailDialogOpen(open); if (!open) setSendPreviewMode(false); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -649,9 +777,25 @@ export default function ProspectCRM() {
               <Input value={emailPreview.subject} onChange={e => setEmailPreview({ ...emailPreview, subject: e.target.value })} />
             </div>
             <div>
-              <Label>Body</Label>
-              <Textarea value={emailPreview.body} onChange={e => setEmailPreview({ ...emailPreview, body: e.target.value })} rows={14} className="text-sm" />
-              <p className="text-xs text-blue-600 mt-1">HTML tags (e.g. <code className="bg-blue-50 px-1 rounded">&lt;a href="..."&gt;link&lt;/a&gt;</code>) are supported — links are tracked via Resend.</p>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Body</Label>
+                <div className="flex items-center gap-1">
+                  <Button variant={sendPreviewMode ? 'ghost' : 'secondary'} size="sm" onClick={() => setSendPreviewMode(false)}>
+                    <FileText className="w-3.5 h-3.5 mr-1" />Edit
+                  </Button>
+                  <Button variant={sendPreviewMode ? 'secondary' : 'ghost'} size="sm" onClick={() => setSendPreviewMode(true)}>
+                    <Eye className="w-3.5 h-3.5 mr-1" />Preview
+                  </Button>
+                </div>
+              </div>
+              {sendPreviewMode ? (
+                <EmailPreview html={emailPreview.body} />
+              ) : (
+                <>
+                  <Textarea value={emailPreview.body} onChange={e => setEmailPreview({ ...emailPreview, body: e.target.value })} rows={14} className="text-sm" />
+                  <p className="text-xs text-blue-600 mt-1">HTML tags (e.g. <code className="bg-blue-50 px-1 rounded">&lt;a href="..."&gt;link&lt;/a&gt;</code>) are supported — links are tracked via Resend.</p>
+                </>
+              )}
             </div>
             <p className="text-xs text-gray-400">Sending this email will automatically mark the club's status as "Email Sent" and update the last contacted date.</p>
           </div>

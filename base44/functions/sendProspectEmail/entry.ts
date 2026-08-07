@@ -28,7 +28,16 @@ export default async function (req: Request): Promise<Response> {
     // Parse CC recipients (split by ; or ,)
     const ccRecipients = cc ? cc.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean) : [];
 
-    const emailHtml = `
+    const trimmedBody = (body || '').trim();
+    const isFullHtml = /^<!DOCTYPE html/i.test(trimmedBody) || /^<html/i.test(trimmedBody);
+
+    let emailHtml;
+    if (isFullHtml) {
+      // Body is a complete HTML email document — send as-is (no wrapper, no nl2br)
+      emailHtml = trimmedBody;
+    } else {
+      // Plain text / HTML fragment — wrap in the standard shell
+      emailHtml = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -58,7 +67,8 @@ export default async function (req: Request): Promise<Response> {
   </table>
 </body>
 </html>
-    `.trim();
+      `.trim();
+    }
 
     // Send via Resend — to + cc on a single email chain
     const resendRes = await fetch('https://api.resend.com/emails', {
