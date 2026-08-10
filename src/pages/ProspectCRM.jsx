@@ -19,7 +19,7 @@ import {
   ShieldAlert, Search, Plus, Pencil, Trash2, ArrowLeft, Users,
   Phone, Mail, Globe, MapPin, CheckCircle, XCircle, Clock,
   Star, PhoneCall, RefreshCw, Loader2, Download, Upload, Filter,
-  Send, FileText, MailCheck, Eye
+  Send, FileText, MailCheck, Eye, History
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link } from 'react-router-dom';
@@ -236,6 +236,8 @@ export default function ProspectCRM() {
   const [refreshingStatusId, setRefreshingStatusId] = useState(null);
   const [refreshingAllStatuses, setRefreshingAllStatuses] = useState(false);
   const [allStatusProgress, setAllStatusProgress] = useState({ processed: 0, total: 0 });
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState(null);
   const [enriching, setEnriching] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
   const queryClient = useQueryClient();
@@ -327,6 +329,19 @@ export default function ProspectCRM() {
     } else {
       toast.success(`Refreshed all ${success} email statuses`);
     }
+  };
+
+  const handleBackfillEmailStatus = async () => {
+    setBackfilling(true);
+    try {
+      const result = await base44.functions.invoke('backfillProspectEmailStatus', {});
+      queryClient.invalidateQueries({ queryKey: ['prospects'] });
+      setBackfillResult(result);
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.message || 'Unknown error';
+      toast.error('Backfill failed: ' + msg);
+    }
+    setBackfilling(false);
   };
 
   // Stats — must be before any conditional return
@@ -596,6 +611,10 @@ export default function ProspectCRM() {
               <Button variant="outline" size="sm" onClick={handleRefreshAllStatuses} disabled={refreshingAllStatuses}>
                 {refreshingAllStatuses ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                 {refreshingAllStatuses ? `Refreshing ${allStatusProgress.processed}/${allStatusProgress.total}` : 'Refresh Statuses'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBackfillEmailStatus} disabled={backfilling}>
+                {backfilling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <History className="w-4 h-4 mr-2" />}
+                {backfilling ? 'Backfilling...' : 'Backfill Statuses'}
               </Button>
               <Button variant="outline" size="sm" onClick={exportCsv}>
                 <Download className="w-4 h-4 mr-2" />Export CSV
@@ -1048,6 +1067,41 @@ export default function ProspectCRM() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Backfill Result Dialog */}
+      {backfillResult && (
+        <Dialog open={!!backfillResult} onOpenChange={() => setBackfillResult(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Email Status Backfill Complete</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg border p-4">
+                  <p className="text-3xl font-bold text-gray-900">{backfillResult.totalResendEntries}</p>
+                  <p className="text-xs text-gray-500 mt-1">Resend entries found</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-3xl font-bold text-emerald-600">{backfillResult.prospectsUpdated}</p>
+                  <p className="text-xs text-gray-500 mt-1">Prospects updated</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-3xl font-bold text-blue-600">{backfillResult.matched}</p>
+                  <p className="text-xs text-gray-500 mt-1">Entries matched</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-3xl font-bold text-gray-400">{backfillResult.unmatched}</p>
+                  <p className="text-xs text-gray-500 mt-1">Entries unmatched</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 text-center">Fetched across {backfillResult.pagesFetched} page(s) from Resend's send history</p>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setBackfillResult(null)}>Done</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
