@@ -690,7 +690,7 @@ export default function ProspectCRM() {
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden md:table-cell">Confidence</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden md:table-cell">Contact</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 hidden lg:table-cell">Email Status</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-500">Email Status</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden lg:table-cell">Last Contacted</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-500 hidden xl:table-cell">Notes</th>
                         <th className="py-3 px-4" />
@@ -741,7 +741,7 @@ export default function ProspectCRM() {
                                 </SelectContent>
                               </Select>
                             </td>
-                            <td className="py-3 px-4 hidden lg:table-cell">
+                            <td className="py-3 px-4">
                               {p.email_status ? (
                                 <>
                                   <Badge variant="outline" className={`text-[10px] py-0 h-5 ${EMAIL_STATUS_STYLES[p.email_status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
