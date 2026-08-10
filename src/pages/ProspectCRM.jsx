@@ -59,6 +59,8 @@ const EMPTY_FORM = {
 
 const VALID_STATUS_KEYS = ['not_contacted', 'contacted', 'email_sent', 'follow_up', 'interested', 'not_interested', 'signed_up'];
 
+const isValidEmail = (e) => /^[^\s]+@[^\s]+\.[^\s]+$/.test(e) && !e.startsWith('.');
+
 const parseCsvLine = (line) => {
   const result = [];
   let current = '';
@@ -455,6 +457,7 @@ export default function ProspectCRM() {
         p.email, p.primary_email, p.where_to_find_us_email,
         p.website_email, p.directory_email, p.final_recommended_email
       ].filter(Boolean).map(e => e.trim())
+       .filter(isValidEmail)
        .filter((v, i, a) => a.map(x => x.toLowerCase()).indexOf(v.toLowerCase()) === i);
       const uniqueEmails = allEmails.filter(e => !sentEmails.has(e.toLowerCase()));
       uniqueEmails.forEach(e => sentEmails.add(e.toLowerCase()));

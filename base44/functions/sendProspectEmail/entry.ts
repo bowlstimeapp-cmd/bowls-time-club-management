@@ -22,8 +22,10 @@ export default async function (req: Request): Promise<Response> {
         part.startsWith('<') && part.endsWith('>') ? part : part.replace(/\n/g, '<br/>')
       ).join('');
 
-    // Parse To recipients (split by ; or ,)
-    const toRecipients = to.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean);
+    // Parse To recipients (split by ; or ,) — filter out invalid emails (embedded spaces, leading dots, etc.)
+    const emailRegex = /^[^\s]+@[^\s]+\.[^\s]+$/;
+    const toRecipients = to.split(/[;,]/).map((e: string) => e.trim()).filter(Boolean)
+      .filter((e: string) => emailRegex.test(e) && !e.startsWith('.'));
     if (toRecipients.length === 0) {
       return Response.json({ error: 'No valid recipients' }, { status: 400 });
     }
