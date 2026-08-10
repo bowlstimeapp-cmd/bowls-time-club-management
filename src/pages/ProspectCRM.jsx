@@ -45,6 +45,7 @@ const EMAIL_STATUS_STYLES = {
   bounced: 'bg-red-100 text-red-700 border-red-200',
   complained: 'bg-red-100 text-red-700 border-red-200',
   delivery_delayed: 'bg-amber-100 text-amber-700 border-amber-200',
+  failed: 'bg-red-100 text-red-700 border-red-200',
 };
 
 const EMPTY_FORM = {
@@ -243,7 +244,7 @@ export default function ProspectCRM() {
   const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
   const [bulkSending, setBulkSending] = useState(false);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState({ sent: 0, skipped: 0, failed: 0, total: 0, batch: 0, totalBatches: 0, waiting: false, waitSeconds: 0 });
+  const [bulkProgress, setBulkProgress] = useState({ sent: 0, skipped: 0, failed: 0, total: 0, batch: 0, totalBatches: 0, waiting: false, waitSeconds: 0, failures: [] });
   const bulkCancelRef = useRef(false);
   const queryClient = useQueryClient();
 
@@ -466,10 +467,11 @@ export default function ProspectCRM() {
 
     setBulkSending(true);
     bulkCancelRef.current = false;
-    setBulkProgress({ sent: 0, skipped, failed: 0, total: targets.length, batch: 0, totalBatches, waiting: false, waitSeconds: 0 });
+    setBulkProgress({ sent: 0, skipped, failed: 0, total: targets.length, batch: 0, totalBatches, waiting: false, waitSeconds: 0, failures: [] });
 
     let sent = 0;
     let failed = 0;
+    const failures = [];
 
     for (let i = 0; i < targets.length; i += BATCH_SIZE) {
       if (bulkCancelRef.current) break;
@@ -491,8 +493,10 @@ export default function ProspectCRM() {
           sent++;
         } catch (e) {
           failed++;
+          const reason = e?.message || e?.error || String(e) || 'Unknown error';
+          failures.push({ club: target.prospect.club_name, email: target.email, reason });
         }
-        setBulkProgress(prev => ({ ...prev, sent, failed }));
+        setBulkProgress(prev => ({ ...prev, sent, failed, failures }));
       }
 
       queryClient.invalidateQueries({ queryKey: ['prospects'] });
@@ -1285,6 +1289,22 @@ export default function ProspectCRM() {
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Sending batch {bulkProgress.batch}...
+              </div>
+            )}
+            {bulkProgress.failures.length > 0 && (
+              <div className="rounded-lg border border-red-200 max-h-40 overflow-y-auto">
+                <div className="px-3 py-2 bg-red-50 border-b border-red-200 sticky top-0">
+                  <p className="text-xs font-semibold text-red-700">Failed emails ({bulkProgress.failures.length})</p>
+                </div>
+                <div className="divide-y divide-red-100">
+                  {bulkProgress.failures.map((f, idx) => (
+                    <div key={idx} className="px-3 py-2 text-xs">
+                      <p className="font-medium text-gray-900">{f.club}</p>
+                      <p className="text-gray-500">To: {f.email}</p>
+                      <p className="text-red-600 mt-0.5">Reason: {f.reason}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

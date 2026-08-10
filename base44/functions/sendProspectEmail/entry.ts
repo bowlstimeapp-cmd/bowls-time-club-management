@@ -2,13 +2,16 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 
 export default async function (req: Request): Promise<Response> {
+  let prospectId: string | undefined;
+  let base44: any;
   try {
-    const base44 = createClientFromRequest(req);
+    base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { prospectId, to, cc, subject, body } = await req.json();
+    const { prospectId: pid, to, cc, subject, body } = await req.json();
+    prospectId = pid;
     if (!prospectId || !to || !subject || !body) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -89,6 +92,11 @@ export default async function (req: Request): Promise<Response> {
     if (!resendRes.ok) {
       const errText = await resendRes.text();
       console.error('Resend API error:', errText);
+      try {
+        if (prospectId) {
+          await base44.asServiceRole.entities.ProspectClub.update(prospectId, { email_status: 'failed' });
+        }
+      } catch (e) { console.error('Failed to update prospect status:', e); }
       return Response.json({ error: `Resend error: ${errText}` }, { status: 500 });
     }
 
@@ -105,6 +113,11 @@ export default async function (req: Request): Promise<Response> {
     return Response.json({ success: true });
   } catch (error) {
     console.error('sendProspectEmail error:', error);
+    if (prospectId && base44) {
+      try {
+        await base44.asServiceRole.entities.ProspectClub.update(prospectId, { email_status: 'failed' });
+      } catch (e) { console.error('Failed to update prospect status:', e); }
+    }
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
