@@ -447,13 +447,17 @@ export default function ProspectCRM() {
   const startBulkSend = async () => {
     setBulkConfirmOpen(false);
     const notContacted = prospects.filter(p => p.contact_status === 'not_contacted');
+    const sentEmails = new Set();
     const targets = notContacted.map(p => {
       const allEmails = [
         ...(p.all_emails || []),
         p.email, p.primary_email, p.where_to_find_us_email,
         p.website_email, p.directory_email, p.final_recommended_email
-      ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
-      return { prospect: p, email: allEmails.join('; ') };
+      ].filter(Boolean).map(e => e.trim())
+       .filter((v, i, a) => a.map(x => x.toLowerCase()).indexOf(v.toLowerCase()) === i);
+      const uniqueEmails = allEmails.filter(e => !sentEmails.has(e.toLowerCase()));
+      uniqueEmails.forEach(e => sentEmails.add(e.toLowerCase()));
+      return { prospect: p, email: uniqueEmails.join('; ') };
     }).filter(t => t.email);
 
     const skipped = notContacted.length - targets.length;
@@ -507,7 +511,7 @@ export default function ProspectCRM() {
     setBulkSending(false);
     queryClient.invalidateQueries({ queryKey: ['prospects'] });
     if (sent > 0) {
-      toast.success(`Bulk send complete: ${sent} sent, ${failed} failed, ${skipped} skipped (no email)`);
+      toast.success(`Bulk send complete: ${sent} sent, ${failed} failed, ${skipped} skipped (no email or duplicate)`);
     } else {
       toast.info(`Bulk send stopped: ${sent} sent, ${failed} failed, ${skipped} skipped`);
     }
@@ -1231,7 +1235,7 @@ export default function ProspectCRM() {
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3">
               <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
               <p className="text-xs text-amber-800">
-                Emails are sent in batches of 20 with a 30-second pause between each batch. Keep this tab open while sending is in progress. Prospects without an email address will be skipped automatically.
+                Emails are sent in batches of 20 with a 30-second pause between each batch. Keep this tab open while sending is in progress. Prospects without an email address — or whose emails have already been queued for another prospect — will be skipped automatically to prevent duplicates.
               </p>
             </div>
           </div>
