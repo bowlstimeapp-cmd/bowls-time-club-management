@@ -416,7 +416,8 @@ export default function ProspectCRM() {
       ...(p.all_emails || []),
       p.email, p.primary_email, p.where_to_find_us_email,
       p.website_email, p.directory_email, p.final_recommended_email
-    ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+    ].filter(Boolean).map(e => e.trim()).filter(isValidEmail)
+     .filter((v, i, a) => a.map(x => x.toLowerCase()).indexOf(v.toLowerCase()) === i);
     setEmailRecipient(allEmails.join('; '));
     setEmailCc('');
     setEmailPreview(fillTemplate(emailTemplate, p));
@@ -439,7 +440,7 @@ export default function ProspectCRM() {
       toast.success(`Email sent${emailCc.trim() ? ' (with CC)' : ''}`);
       setEmailDialogOpen(false);
     } catch (e) {
-      const msg = e?.response?.data?.error || e?.message || 'Unknown error';
+      const msg = e?.response?.data?.error || e?.error || e?.message || String(e) || 'Unknown error';
       toast.error('Failed to send email: ' + msg);
     }
     setSendingEmail(false);
