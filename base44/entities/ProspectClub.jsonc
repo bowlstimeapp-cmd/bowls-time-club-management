@@ -132,6 +132,19 @@
       "type": "string",
       "format": "date",
       "description": "Date last contacted"
+    },
+    "resend_email_id": {
+      "type": "string",
+      "description": "The id returned by Resend on send \u2014 used to fetch delivery status"
+    },
+    "email_status": {
+      "type": "string",
+      "description": "Resend's last_event value (e.g. delivered, opened, clicked, bounced, complained)"
+    },
+    "email_status_checked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the email status was last refreshed from Resend"
     }
   },
   "required": [

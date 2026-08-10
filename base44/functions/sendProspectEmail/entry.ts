@@ -92,10 +92,14 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: `Resend error: ${errText}` }, { status: 500 });
     }
 
+    const resendData = await resendRes.json();
+    const resendEmailId = resendData?.id || null;
+
     const today = new Date().toISOString().split('T')[0];
     await base44.asServiceRole.entities.ProspectClub.update(prospectId, {
       contact_status: 'email_sent',
       last_contacted_date: today,
+      ...(resendEmailId ? { resend_email_id: resendEmailId } : {}),
     });
 
     return Response.json({ success: true });

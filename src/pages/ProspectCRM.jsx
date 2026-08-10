@@ -36,6 +36,17 @@ const STATUS_CONFIG = {
   signed_up: { label: 'Signed Up', color: 'bg-purple-100 text-purple-700 border-purple-200', icon: CheckCircle },
 };
 
+const EMAIL_STATUS_STYLES = {
+  queued: 'bg-gray-100 text-gray-600 border-gray-200',
+  sent: 'bg-gray-100 text-gray-600 border-gray-200',
+  delivered: 'bg-blue-100 text-blue-700 border-blue-200',
+  opened: 'bg-green-100 text-green-700 border-green-200',
+  clicked: 'bg-purple-100 text-purple-700 border-purple-200',
+  bounced: 'bg-red-100 text-red-700 border-red-200',
+  complained: 'bg-red-100 text-red-700 border-red-200',
+  delivery_delayed: 'bg-amber-100 text-amber-700 border-amber-200',
+};
+
 const EMPTY_FORM = {
   club_name: '', address: '', town: '', county: '', postcode: '', email: '', phone: '',
   website: '', play_bowls_url: '', directory_source_url: '',
@@ -222,6 +233,7 @@ export default function ProspectCRM() {
   const [visibleCount, setVisibleCount] = useState(50);
   const [templatePreviewMode, setTemplatePreviewMode] = useState(false);
   const [sendPreviewMode, setSendPreviewMode] = useState(false);
+  const [refreshingStatusId, setRefreshingStatusId] = useState(null);
   const [enriching, setEnriching] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
   const queryClient = useQueryClient();
@@ -273,6 +285,19 @@ export default function ProspectCRM() {
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['prospects'] }),
   });
+
+  const handleRefreshStatus = async (prospectId) => {
+    setRefreshingStatusId(prospectId);
+    try {
+      const result = await base44.functions.invoke('refreshProspectEmailStatus', { prospectId });
+      queryClient.invalidateQueries({ queryKey: ['prospects'] });
+      toast.success(`Status: ${result.email_status || 'updated'}`);
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.message || 'Unknown error';
+      toast.error('Failed to refresh status: ' + msg);
+    }
+    setRefreshingStatusId(null);
+  };
 
   // Stats — must be before any conditional return
   const stats = useMemo(() => {
@@ -661,6 +686,14 @@ export default function ProspectCRM() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {p.email_status && (
+                                <Badge variant="outline" className={`mt-1 text-[10px] py-0 h-5 ${EMAIL_STATUS_STYLES[p.email_status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                                  {p.email_status}
+                                </Badge>
+                              )}
+                              {p.email_status_checked_at && (
+                                <p className="text-[10px] text-gray-400 mt-0.5">{new Date(p.email_status_checked_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-gray-500 text-xs hidden lg:table-cell">
                               {p.last_contacted_date ? new Date(p.last_contacted_date).toLocaleDateString('en-GB') : '—'}
@@ -670,6 +703,14 @@ export default function ProspectCRM() {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-1">
+                                 {p.resend_email_id && (
+                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                     title="Refresh email status"
+                                     onClick={() => handleRefreshStatus(p.id)}
+                                     disabled={refreshingStatusId === p.id}>
+                                     {refreshingStatusId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                   </Button>
+                                 )}
                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                                    title={(p.all_emails?.length || p.email || p.final_recommended_email || p.primary_email) ? 'Send email' : 'No email address'}
                                    onClick={() => openEmail(p)} disabled={!p.all_emails?.length && !p.email && !p.final_recommended_email && !p.primary_email}>
