@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -241,6 +241,10 @@ export default function ProspectCRM() {
   const [backfillResult, setBackfillResult] = useState(null);
   const [enriching, setEnriching] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ sent: 0, skipped: 0, failed: 0, total: 0, batch: 0, totalBatches: 0, waiting: false, waitSeconds: 0 });
+  const bulkCancelRef = useRef(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -438,6 +442,77 @@ export default function ProspectCRM() {
     setSendingEmail(false);
   };
 
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const startBulkSend = async () => {
+    setBulkConfirmOpen(false);
+    const notContacted = prospects.filter(p => p.contact_status === 'not_contacted');
+    const targets = notContacted.map(p => {
+      const allEmails = [
+        ...(p.all_emails || []),
+        p.email, p.primary_email, p.where_to_find_us_email,
+        p.website_email, p.directory_email, p.final_recommended_email
+      ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+      return { prospect: p, email: allEmails.join('; ') };
+    }).filter(t => t.email);
+
+    const skipped = notContacted.length - targets.length;
+    const BATCH_SIZE = 20;
+    const totalBatches = Math.ceil(targets.length / BATCH_SIZE);
+
+    setBulkSending(true);
+    bulkCancelRef.current = false;
+    setBulkProgress({ sent: 0, skipped, failed: 0, total: targets.length, batch: 0, totalBatches, waiting: false, waitSeconds: 0 });
+
+    let sent = 0;
+    let failed = 0;
+
+    for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+      if (bulkCancelRef.current) break;
+      const batch = targets.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      setBulkProgress(prev => ({ ...prev, batch: batchNum, waiting: false }));
+
+      for (const target of batch) {
+        if (bulkCancelRef.current) break;
+        const filled = fillTemplate(emailTemplate, target.prospect);
+        try {
+          await base44.functions.invoke('sendProspectEmail', {
+            prospectId: target.prospect.id,
+            to: target.email,
+            cc: '',
+            subject: filled.subject,
+            body: filled.body,
+          });
+          sent++;
+        } catch (e) {
+          failed++;
+        }
+        setBulkProgress(prev => ({ ...prev, sent, failed }));
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['prospects'] });
+
+      if (i + BATCH_SIZE < targets.length && !bulkCancelRef.current) {
+        setBulkProgress(prev => ({ ...prev, waiting: true, waitSeconds: 30 }));
+        for (let s = 30; s > 0; s--) {
+          if (bulkCancelRef.current) break;
+          setBulkProgress(prev => ({ ...prev, waitSeconds: s }));
+          await sleep(1000);
+        }
+        setBulkProgress(prev => ({ ...prev, waiting: false, waitSeconds: 0 }));
+      }
+    }
+
+    setBulkSending(false);
+    queryClient.invalidateQueries({ queryKey: ['prospects'] });
+    if (sent > 0) {
+      toast.success(`Bulk send complete: ${sent} sent, ${failed} failed, ${skipped} skipped (no email)`);
+    } else {
+      toast.info(`Bulk send stopped: ${sent} sent, ${failed} failed, ${skipped} skipped`);
+    }
+  };
+
   const handleSaveTemplate = async () => {
     setTemplateSaving(true);
     try {
@@ -631,6 +706,10 @@ export default function ProspectCRM() {
               </Button>
               <Button variant="outline" size="sm" onClick={exportCsv}>
                 <Download className="w-4 h-4 mr-2" />Export CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setBulkConfirmOpen(true)} disabled={bulkSending || (stats['not_contacted'] || 0) === 0}>
+                {bulkSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                {bulkSending ? `Sending ${bulkProgress.sent}/${bulkProgress.total}` : 'Send to Not Contacted'}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}>
                 <FileText className="w-4 h-4 mr-2" />Email Template
@@ -1128,6 +1207,90 @@ export default function ProspectCRM() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Bulk Send Confirmation Dialog */}
+      <Dialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Template Email to All "Not Contacted" Prospects</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-gray-600">
+              This will send the saved email template to all prospects with "Not Contacted" status, using the same workflow as the individual send button.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-2xl font-bold text-gray-900">{stats['not_contacted'] || 0}</p>
+                <p className="text-xs text-gray-500 mt-1">Not Contacted prospects</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-2xl font-bold text-emerald-600">{Math.ceil((stats['not_contacted'] || 0) / 20)}</p>
+                <p className="text-xs text-gray-500 mt-1">Batches (20 per batch)</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3">
+              <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-800">
+                Emails are sent in batches of 20 with a 30-second pause between each batch. Keep this tab open while sending is in progress. Prospects without an email address will be skipped automatically.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={startBulkSend} className="bg-emerald-600 hover:bg-emerald-700">
+              <Send className="w-4 h-4 mr-2" />Start Bulk Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Send Progress Dialog */}
+      <Dialog open={bulkSending} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Bulk Send in Progress</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-2xl font-bold text-emerald-600">{bulkProgress.sent}</p>
+                <p className="text-xs text-gray-500 mt-1">Sent</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-2xl font-bold text-red-500">{bulkProgress.failed}</p>
+                <p className="text-xs text-gray-500 mt-1">Failed</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-2xl font-bold text-gray-400">{bulkProgress.skipped}</p>
+                <p className="text-xs text-gray-500 mt-1">Skipped</p>
+              </div>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="bg-emerald-600 h-2.5 rounded-full transition-all" style={{ width: `${bulkProgress.total > 0 ? Math.round(((bulkProgress.sent + bulkProgress.failed) / bulkProgress.total) * 100) : 0}%` }} />
+            </div>
+            <p className="text-center text-sm text-gray-600">
+              {bulkProgress.sent + bulkProgress.failed} of {bulkProgress.total} processed
+              {bulkProgress.totalBatches > 0 && ` · Batch ${bulkProgress.batch} of ${bulkProgress.totalBatches}`}
+            </p>
+            {bulkProgress.waiting ? (
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <Clock className="w-5 h-5 text-blue-600 animate-pulse" />
+                <span className="text-sm text-blue-800">Waiting {bulkProgress.waitSeconds}s before next batch...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sending batch {bulkProgress.batch}...
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => { bulkCancelRef.current = true; }}>
+              Stop Sending
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
