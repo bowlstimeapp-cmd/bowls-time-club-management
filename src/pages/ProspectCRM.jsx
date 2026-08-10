@@ -215,6 +215,7 @@ export default function ProspectCRM() {
   const [user, setUser] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [emailStatusFilter, setEmailStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProspect, setEditingProspect] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -259,7 +260,7 @@ export default function ProspectCRM() {
     })();
   }, []);
 
-  useEffect(() => { setVisibleCount(50); }, [search, statusFilter]);
+  useEffect(() => { setVisibleCount(50); }, [search, statusFilter, emailStatusFilter]);
 
   const { data: prospects = [], isLoading } = useQuery({
     queryKey: ['prospects'],
@@ -354,6 +355,16 @@ export default function ProspectCRM() {
     return { total, ...byStatus };
   }, [prospects]);
 
+  const emailStatusStats = useMemo(() => {
+    const counts = {};
+    let none = 0;
+    for (const p of prospects) {
+      if (!p.email_status) none++;
+      else counts[p.email_status] = (counts[p.email_status] || 0) + 1;
+    }
+    return { none, ...counts };
+  }, [prospects]);
+
   const filtered = useMemo(() => prospects.filter(p => {
     const matchSearch = !search ||
       p.club_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -361,8 +372,10 @@ export default function ProspectCRM() {
       p.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
       p.email?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || p.contact_status === statusFilter;
-    return matchSearch && matchStatus;
-  }), [prospects, search, statusFilter]);
+    const matchEmailStatus = emailStatusFilter === 'all' ||
+      (emailStatusFilter === 'none' ? !p.email_status : p.email_status === emailStatusFilter);
+    return matchSearch && matchStatus && matchEmailStatus;
+  }), [prospects, search, statusFilter, emailStatusFilter]);
 
   const visibleProspects = filtered.slice(0, visibleCount);
 
@@ -660,6 +673,19 @@ export default function ProspectCRM() {
               <SelectItem value="all">All Statuses ({prospects.length})</SelectItem>
               {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                 <SelectItem key={key} value={key}>{cfg.label} ({stats[key] || 0})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={emailStatusFilter} onValueChange={setEmailStatusFilter}>
+            <SelectTrigger className="w-56">
+              <Mail className="w-4 h-4 mr-2 text-gray-400" />
+              <SelectValue placeholder="Filter by email status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Email Statuses ({prospects.length})</SelectItem>
+              <SelectItem value="none">No Email Sent ({emailStatusStats.none})</SelectItem>
+              {Object.keys(EMAIL_STATUS_STYLES).filter(s => emailStatusStats[s]).map(s => (
+                <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')} ({emailStatusStats[s]})</SelectItem>
               ))}
             </SelectContent>
           </Select>
