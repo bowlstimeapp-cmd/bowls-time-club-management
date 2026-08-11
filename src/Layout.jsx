@@ -213,10 +213,10 @@ export default function Layout({ children, currentPageName }) {
               href="https://www.bowls-time.com/helpcentre"
               target="_blank"
               rel="noopener noreferrer"
-              className="sm:hidden flex items-center gap-1 text-gray-600 hover:text-emerald-600 transition-colors ml-1"
+              className="sm:hidden flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-full shadow-md transition-all hover:scale-105 ml-1"
             >
-              <LifeBuoy className="w-5 h-5" />
-              <span className="text-sm font-medium">Help</span>
+              <LifeBuoy className="w-4 h-4" />
+              <span className="text-sm font-medium">Help Centre</span>
             </a>
 
             {/* Desktop Navigation */}
