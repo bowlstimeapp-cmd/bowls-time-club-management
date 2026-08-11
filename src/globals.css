@@ -13,21 +13,18 @@ css
 /* Ensure smooth scrolling */
 html {
   scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Prevent body scroll when modals open */
 body {
   overflow-x: hidden;
+  overflow-x: clip; /* clip doesn't force overflow-y: auto, fixing position: sticky on iOS */
 }
 
-/* Better touch targets on mobile */
+/* Better touch targets on mobile — only buttons, not links or role=button */
 @media (max-width: 640px) {
-  button, 
-  [role="button"],
-  a {
+  button {
     min-height: 44px;
-    min-width: 44px;
   }
 }
 

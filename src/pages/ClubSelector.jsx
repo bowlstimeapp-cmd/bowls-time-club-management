@@ -145,9 +145,9 @@ export default function ClubSelector() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10">
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center mb-10">
           
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
             Select Your Club
