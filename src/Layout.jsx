@@ -32,7 +32,8 @@ import {
   MessagesSquare,
   BookOpen,
   Target,
-  LayoutDashboard
+  LayoutDashboard,
+  LifeBuoy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -206,6 +207,17 @@ export default function Layout({ children, currentPageName }) {
                 </span>
               </div>
             </Link>
+
+            {/* Help Centre — mobile only, next to logo */}
+            <a
+              href="https://www.bowls-time.com/helpcentre"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sm:hidden flex items-center gap-1 text-gray-600 hover:text-emerald-600 transition-colors ml-1"
+            >
+              <LifeBuoy className="w-5 h-5" />
+              <span className="text-sm font-medium">Help</span>
+            </a>
 
             {/* Desktop Navigation */}
             {needsClub && clubId && (
