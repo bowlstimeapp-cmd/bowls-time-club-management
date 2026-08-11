@@ -387,15 +387,15 @@ export default function ClubSelector() {
             <DialogTitle className="text-center text-lg">Leave {leaveClubConfirm?.name}?</DialogTitle>
           </DialogHeader>
           <p className="text-gray-500 text-sm mt-2 mb-4">
-            You will no longer be a member of this club. You can request to rejoin at any time.
+            Are you sure you want to leave {leaveClubConfirm?.name}? You will no longer be a member of this club, but you can request to rejoin at any time.
           </p>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setLeaveClubConfirm(null)} disabled={leaveClubMutation.isPending}>
-              Cancel
+              No
             </Button>
             <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={() => leaveClubMutation.mutate(leaveClubConfirm.id)} disabled={leaveClubMutation.isPending}>
               {leaveClubMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Leave Club
+              Yes
             </Button>
           </div>
         </DialogContent>
