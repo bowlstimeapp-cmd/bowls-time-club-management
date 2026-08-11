@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Lightbulb, ShieldCheck, BookOpen } from 'lucide-react';
+import { Lightbulb, ShieldCheck, BookOpen, LifeBuoy } from 'lucide-react';
 import RoadmapDoc from './docs/RoadmapDoc';
 import FeatureGuideDoc from './docs/FeatureGuideDoc';
 import PrivacyNoticeDoc from './docs/PrivacyNoticeDoc';
+import AdminHelpGuideDoc from './docs/AdminHelpGuideDoc';
 
 const TABS = [
   { id: 'roadmap', label: 'Feature Roadmap', icon: <Lightbulb className="w-4 h-4" /> },
   { id: 'guide', label: 'Feature Guide', icon: <BookOpen className="w-4 h-4" /> },
+  { id: 'admin-help', label: 'Admin Help Guides', icon: <LifeBuoy className="w-4 h-4" /> },
   { id: 'privacy', label: 'Privacy Notice', icon: <ShieldCheck className="w-4 h-4" /> },
 ];
 
@@ -30,6 +32,7 @@ export default function PlatformDocuments() {
 
       {activeDoc === 'roadmap' && <RoadmapDoc />}
       {activeDoc === 'guide' && <FeatureGuideDoc />}
+      {activeDoc === 'admin-help' && <AdminHelpGuideDoc />}
       {activeDoc === 'privacy' && <PrivacyNoticeDoc />}
     </div>
   );
