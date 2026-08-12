@@ -3,8 +3,9 @@ import {
   LogIn, Calendar, CalendarCheck, ClipboardList, Users, Trophy,
   BarChart2, Newspaper, Bell, HelpCircle, AlertTriangle, Phone,
   ChevronDown, ChevronUp, CheckCircle, Info, Lightbulb, Search, X,
-  Star, BookOpen,
+  Star, BookOpen, ShieldCheck,
 } from 'lucide-react';
+import AdminHelpGuideDoc from '@/components/admin/docs/AdminHelpGuideDoc';
 
 // ─── Reusable building blocks ──────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ const NAV = [
   { id: 'faq',             label: 'FAQs',                  icon: HelpCircle },
   { id: 'troubleshooting', label: 'Troubleshooting',       icon: AlertTriangle },
   { id: 'contact',         label: 'Contact & Support',     icon: Phone },
+  { id: 'admin-guides',    label: 'Admin Guides',          icon: ShieldCheck },
 ];
 
 // ─── Main page ──────────────────────────────────────────────────────────────
@@ -154,6 +156,13 @@ export default function HelpCentre() {
               Use Ctrl+F / Cmd+F on your keyboard to search this page, or scroll through the sections below.
             </p>
           )}
+          <button
+            onClick={() => scrollTo('admin-guides')}
+            className="mt-4 inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            Jump to Admin Guides
+          </button>
         </div>
       </div>
 
@@ -203,6 +212,10 @@ export default function HelpCentre() {
 
           {/* Content */}
           <main className="flex-1 space-y-8 min-w-0">
+
+            {/* ADMIN GUIDES */}
+            <SectionAnchor id="admin-guides" />
+            <AdminHelpGuideDoc />
 
             {/* WELCOME */}
             <SectionAnchor id="welcome" />

@@ -209,15 +209,13 @@ export default function Layout({ children, currentPageName }) {
             </Link>
 
             {/* Help Centre — mobile only, next to logo */}
-            <a
-              href="https://www.bowls-time.com/helpcentre"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={createPageUrl('HelpCentre')}
               className="sm:hidden flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-full shadow-md transition-all hover:scale-105 ml-1"
             >
               <LifeBuoy className="w-4 h-4" />
               <span className="text-sm font-medium">Help Centre</span>
-            </a>
+            </Link>
 
             {/* Desktop Navigation */}
             {needsClub && clubId && (
