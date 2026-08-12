@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { LifeBuoy, ChevronDown, ChevronUp } from 'lucide-react';
+import React from 'react';
+import { ShieldCheck } from 'lucide-react';
 
 const SECTIONS = [
   {
-    id: 'club-settings',
+    id: 'admin-club-settings',
     icon: '⚙️',
     title: 'Club Settings',
     intro: 'Everything you need to configure your club — from rink numbers and opening times to modules, branding, kiosk mode, and member management.',
@@ -160,7 +158,7 @@ const SECTIONS = [
     ],
   },
   {
-    id: 'selection',
+    id: 'admin-selection',
     icon: '📋',
     title: 'Match Selection (Club Admin & Selector)',
     intro: 'How to create, publish, and manage team selections for matches. This guide covers both the Club Admin and Selector roles.',
@@ -266,7 +264,7 @@ const SECTIONS = [
     ],
   },
   {
-    id: 'leagues',
+    id: 'admin-leagues',
     icon: '🏆',
     title: 'League Management (Club Admin)',
     intro: 'How to set up internal club leagues, generate fixtures, manage teams, enter scores, and print league tables.',
@@ -300,7 +298,7 @@ const SECTIONS = [
           'Choose how points are awarded: **Points per Set**, **Game Win**, **Standard Win**, or **Highest Shots**.',
           'Enter the points value for each (for example, 2 points per set win, or 3 points for a game win).',
           'If your league uses sets scoring, toggle **Sets Scoring** and enter the number of ends per set (for example, 8 ends).',
-          'Click **Save Changes**.',
+          'Olick **Save Changes**.',
         ],
         tip: 'Scoring rules must be set before fixtures are generated. If you change scoring rules mid-season, previously entered results are not recalculated automatically.',
       },
@@ -411,9 +409,9 @@ const SECTIONS = [
     ],
   },
   {
-    id: 'competitions',
+    id: 'admin-competitions',
     icon: '🎖️',
-    title: 'Competition Entries & Competition Draws (Club Admin)',
+    title: 'Competition Entries & Draws (Club Admin)',
     intro: 'How to create competitions that members can enter, manage entries, and build knockout or round-robin competition draws.',
     steps: [
       {
@@ -570,103 +568,4 @@ const SECTIONS = [
   },
 ];
 
-function AdminGuideSection({ section, isOpen, onToggle }) {
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-      >
-        <div className="flex items-center gap-2 flex-1 text-left">
-          <span className="text-lg">{section.icon}</span>
-          <span className="font-semibold text-gray-800 text-sm">{section.title}</span>
-          <Badge variant="secondary" className="ml-1">{section.steps.length} guides</Badge>
-        </div>
-        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-      </button>
-      {isOpen && (
-        <div className="px-4 py-4 bg-white">
-          <p className="text-sm text-gray-500 mb-4 italic">{section.intro}</p>
-          <div className="space-y-6">
-            {section.steps.map((step, i) => (
-              <div key={i} className="border-l-2 border-emerald-100 pl-4">
-                <h4 className="font-semibold text-gray-900 text-sm mb-2">{i + 1}. {step.heading}</h4>
-                <ol className="space-y-1.5">
-                  {step.instructions.map((instruction, j) => (
-                    <li key={j} className="text-sm text-gray-600 flex gap-2.5">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-semibold flex items-center justify-center mt-0.5">
-                        {j + 1}
-                      </span>
-                      <span
-                        className="leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: instruction.replace(/\*\*(.*?)\*\*/g, '<strong class="font-medium text-gray-900">$1</strong>') }}
-                      />
-                    </li>
-                  ))}
-                </ol>
-                {step.tip && (
-                  <div className="mt-3 flex gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                    <span className="text-amber-600 font-semibold text-sm">💡 Tip:</span>
-                    <span
-                      className="text-sm text-amber-700 leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: step.tip.replace(/\*\*(.*?)\*\*/g, '<strong class="font-medium text-amber-900">$1</strong>') }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function AdminHelpGuideDoc() {
-  const [openSection, setOpenSection] = useState('club-settings');
-
-  const toggleSection = (id) => {
-    setOpenSection(openSection === id ? null : id);
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <LifeBuoy className="w-5 h-5 text-blue-600" />
-          Admin Help Guides
-        </CardTitle>
-        <p className="text-sm text-gray-500 mt-1">
-          Step-by-step guidance for Club Admins and Selectors — covering Club Settings, Match Selection, League Management, and Competition Entries & Draws.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2 mb-2">
-          {SECTIONS.map(s => (
-            <button
-              key={s.id}
-              onClick={() => setOpenSection(s.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border"
-              style={
-                openSection === s.id
-                  ? { backgroundColor: '#eff6ff', color: '#2563eb', borderColor: '#bfdbfe' }
-                  : { backgroundColor: '#fff', color: '#6b7280', borderColor: '#e5e7eb' }
-              }
-            >
-              <span>{s.icon}</span>
-              {s.title}
-            </button>
-          ))}
-        </div>
-        {SECTIONS.map(section => (
-          <AdminGuideSection
-            key={section.id}
-            section={section}
-            isOpen={openSection === section.id}
-            onToggle={() => toggleSection(section.id)}
-          />
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
+export { SECTIONS };
