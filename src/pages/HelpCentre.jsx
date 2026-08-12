@@ -213,10 +213,6 @@ export default function HelpCentre() {
           {/* Content */}
           <main className="flex-1 space-y-8 min-w-0">
 
-            {/* ADMIN GUIDES */}
-            <SectionAnchor id="admin-guides" />
-            <AdminHelpGuideDoc />
-
             {/* WELCOME */}
             <SectionAnchor id="welcome" />
             <SectionCard icon={Star} title="Welcome to the BowlsTime App" color="emerald">
@@ -761,6 +757,10 @@ export default function HelpCentre() {
                 <Note>If you are unsure who to contact, your club administrator is always the best first point of contact for club-related questions.</Note>
               </div>
             </SectionCard>
+
+            {/* ADMIN GUIDES */}
+            <SectionAnchor id="admin-guides" />
+            <AdminHelpGuideDoc />
 
             {/* Footer */}
             <div className="text-center py-6 text-xs text-gray-400">
