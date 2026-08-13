@@ -30,6 +30,7 @@ import KioskLogin from '@/components/kiosk/KioskLogin';
 import KioskSessionWrapper from '@/components/kiosk/KioskSessionWrapper';
 import { useKiosk } from '@/lib/KioskContext';
 import LeagueResultModal from '@/components/leagues/LeagueResultModal';
+import NewClubWelcomeModal from '@/components/club/NewClubWelcomeModal';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -52,6 +53,10 @@ export default function BookRink() {
   const [copyMode, setCopyMode] = useState(false);
   const { kioskMember, setKioskMember } = useKiosk();
   const [resultPrompt, setResultPrompt] = useState(null); // { fixture, league, homeTeam, awayTeam, userTeamId }
+
+  // New club welcome modal state
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [tourDeferred, setTourDeferred] = useState(false);
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started
@@ -76,6 +81,18 @@ export default function BookRink() {
     const loadUser = async () => {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
+
+      // Check for new club welcome modal first — if showing, defer the tour
+      if (clubId) {
+        const welcomeState = localStorage.getItem('bowlstime_welcome_' + clubId);
+        const closedThisSession = sessionStorage.getItem('bowlstime_welcome_closed_' + clubId);
+        if (closedThisSession !== 'true' && welcomeState !== 'dismissed' && (welcomeState === 'new' || welcomeState === 'pinned')) {
+          setShowWelcome(true);
+          setTourDeferred(true);
+          return;
+        }
+      }
+
       // Check for paused tour first (resume prompt)
       const pausedStep = getTourPausedStep();
       if (pausedStep !== null && !(await hasTourBeenDismissed(currentUser))) {
@@ -617,6 +634,52 @@ useEffect(() => {
     setTourModal2Open(false);
     setSelectedSlots([]);
     setTourStep(12); // advance to "navigate to My Bookings"
+  };
+
+  // Start a deferred tour (after welcome modal is closed without clicking "Take the Tour")
+  const startDeferredTour = async () => {
+    if (!user) return;
+    const pausedStep = getTourPausedStep();
+    if (pausedStep !== null && !(await hasTourBeenDismissed(user))) {
+      setShowResumeTour(true);
+      return;
+    }
+    if (isTourEnabled() && !(await hasTourBeenDismissed(user))) {
+      setTourStep(0);
+    }
+  };
+
+  // New club welcome modal handlers
+  const handleWelcomeClose = () => {
+    if (clubId) sessionStorage.setItem('bowlstime_welcome_closed_' + clubId, 'true');
+    setShowWelcome(false);
+    if (tourDeferred) { setTourDeferred(false); startDeferredTour(); }
+  };
+
+  const handleWelcomePin = () => {
+    if (clubId) localStorage.setItem('bowlstime_welcome_' + clubId, 'pinned');
+    setShowWelcome(false);
+    if (tourDeferred) { setTourDeferred(false); startDeferredTour(); }
+  };
+
+  const handleWelcomeUnpin = () => {
+    if (clubId) localStorage.setItem('bowlstime_welcome_' + clubId, 'dismissed');
+    setShowWelcome(false);
+    if (tourDeferred) { setTourDeferred(false); startDeferredTour(); }
+  };
+
+  const handleWelcomeTakeTour = async () => {
+    if (clubId) sessionStorage.setItem('bowlstime_welcome_closed_' + clubId, 'true');
+    setTourDeferred(false);
+    setShowWelcome(false);
+    await base44.auth.updateMe({ tour_completed: false });
+    setTourBooking(null);
+    setTourBookings2([]);
+    setTourModalOpen(false);
+    setTourModal2Open(false);
+    setSelectedSlots([]);
+    setSelectedDate(TOUR_DATE);
+    setTourStep(0);
   };
 
   const handleBulkBooking = async (bulkData) => {
@@ -1183,6 +1246,16 @@ useEffect(() => {
             submitterName={kioskMember ? kioskMember.name : undefined}
           />
         )}
+
+        {/* New Club Welcome Modal */}
+        <NewClubWelcomeModal
+          open={showWelcome}
+          clubId={clubId}
+          onTakeTour={handleWelcomeTakeTour}
+          onClose={handleWelcomeClose}
+          onPin={handleWelcomePin}
+          onUnpin={handleWelcomeUnpin}
+        />
 
         {/* New User Tour */}
         {tourStep >= 0 && (
