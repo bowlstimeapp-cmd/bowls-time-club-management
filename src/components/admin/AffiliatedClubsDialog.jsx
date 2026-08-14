@@ -55,6 +55,7 @@ export default function AffiliatedClubsDialog({ club, allClubs = [], open, onOpe
       });
       if (res.data?.error) throw new Error(res.data.error);
       queryClient.invalidateQueries({ queryKey: ['allClubs'] });
+      queryClient.removeQueries({ queryKey: ['bookings'] });
       toast.success(`Removed affiliation with ${otherClub.name}`);
     } catch (err) {
       toast.error('Failed to remove affiliation: ' + err.message);
