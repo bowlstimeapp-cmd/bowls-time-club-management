@@ -25,10 +25,43 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: not an approved member of this club' }, { status: 403 });
     }
 
-    // Fetch club to check auto_approve_bookings
+    // Fetch club to check auto_approve_bookings and affiliated_club_ids
     const clubs = await base44.asServiceRole.entities.Club.filter({ id: club_id });
     const club = clubs[0];
     if (!club) return Response.json({ error: 'Club not found' }, { status: 404 });
+
+    const affiliatedIds = Array.isArray(club.affiliated_club_ids) ? club.affiliated_club_ids : [];
+
+    // ── Clash detection across own club AND all affiliated clubs ──────────
+    // A booking conflicts if it's on the same rink + date and the time ranges
+    // overlap (and is not cancelled/rejected). This prevents double-booking a
+    // shared physical rink that two affiliated clubs use.
+    const clashCheckIds = [club_id, ...affiliatedIds];
+    let conflictClubName = null;
+    for (const cid of clashCheckIds) {
+      const existing = await base44.asServiceRole.entities.Booking.filter({
+        club_id: cid,
+        rink_number,
+        date,
+      });
+      const overlap = existing.find(b => {
+        if (b.status === 'cancelled' || b.status === 'rejected') return false;
+        // Time overlap: newStart < existingEnd AND newEnd > existingStart
+        return start_time < b.end_time && end_time > b.start_time;
+      });
+      if (overlap) {
+        if (cid !== club_id) {
+          try {
+            const ac = await base44.asServiceRole.entities.Club.filter({ id: cid });
+            conflictClubName = ac[0]?.name || null;
+          } catch { conflictClubName = null; }
+        }
+        const msg = conflictClubName
+          ? `This rink is already booked by ${conflictClubName} at this time`
+          : 'This rink is already booked at this time';
+        return Response.json({ error: msg }, { status: 409 });
+      }
+    }
 
     // Determine booker identity — always the authenticated user (or the name they provided for display)
     // IMPORTANT: booker_email is ALWAYS forced to the authenticated user — it cannot be spoofed

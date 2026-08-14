@@ -375,6 +375,14 @@
       ],
       "default": "standard",
       "description": "Club subscription tier \u2014 'free' clubs have all modules locked until upgraded to 'standard'"
+    },
+    "affiliated_club_ids": {
+      "type": "array",
+      "default": [],
+      "description": "Ids of other clubs whose rink bookings should be visible on this club's diary and included in this club's clash detection",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

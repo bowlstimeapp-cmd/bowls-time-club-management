@@ -289,7 +289,8 @@ export default function TimeSlotGrid({
                   const available = isSlotAvailable(rink, slot.start);
                   const isPast = isSlotInPast(slot.start);
                   const isOwnBooking = booking?.booker_email === currentUserEmail;
-                  const canDrag = !!booking && (isOwnBooking || isAdmin) && !isPast && (copyMode ? isAdmin : true);
+                  const isAffiliatedBooking = !!booking?.affiliated_club_id;
+                  const canDrag = !!booking && !isAffiliatedBooking && (isOwnBooking || isAdmin) && !isPast && (copyMode ? isAdmin : true);
                   const StatusIcon = booking ? statusIcons[booking.status] : null;
                   const selected = isSlotSelected(rink, slotIndex);
                   const canSelect = available && (selectedSlots.length === 0 || canSelectSlot(rink, slotIndex) || selectedSlots[0].rink !== rink);
@@ -420,6 +421,11 @@ export default function TimeSlotGrid({
                                       {isOwnBooking ? 'You' : booking?.booker_name}
                                     </span>
                                   </div>
+                                  {isAffiliatedBooking && (
+                                    <span className="text-[9px] font-medium bg-blue-600/90 text-white rounded px-1 py-0.5 w-fit leading-tight truncate" title={booking?.club_name}>
+                                      {booking?.club_name}
+                                    </span>
+                                  )}
 
                                   {/* League fixture info */}
                                   {leagueInfo ? (

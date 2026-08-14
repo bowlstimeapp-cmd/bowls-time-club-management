@@ -43,7 +43,8 @@ import {
   Mail,
   MoreVertical,
   ChevronDown,
-  FileText
+  FileText,
+  Link2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ManageClubAdminsDialog from '@/components/admin/ManageClubAdminsDialog';
+import AffiliatedClubsDialog from '@/components/admin/AffiliatedClubsDialog';
 import MarketingPDFGenerator from '@/components/admin/MarketingPDFGenerator';
 import PlatformSettings from '@/components/admin/PlatformSettings';
 import PlatformDocuments from '@/components/admin/PlatformDocuments';
@@ -80,6 +82,8 @@ export default function PlatformAdmin() {
   const [resetting, setResetting] = useState(false);
   const [manageAdminsDialogOpen, setManageAdminsDialogOpen] = useState(false);
   const [managingAdminsClub, setManagingAdminsClub] = useState(null);
+  const [affiliationDialogOpen, setAffiliationDialogOpen] = useState(false);
+  const [affiliationClub, setAffiliationClub] = useState(null);
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [competitionForm, setCompetitionForm] = useState({
@@ -572,6 +576,9 @@ export default function PlatformAdmin() {
                           </div>
                           {/* Desktop actions */}
                           <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                            <Button variant="outline" size="sm" onClick={() => { setAffiliationClub(club); setAffiliationDialogOpen(true); }}>
+                              <Link2 className="w-4 h-4 mr-1" />Affiliations
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => { setManagingAdminsClub(club); setManageAdminsDialogOpen(true); }}>
                               <ShieldCheck className="w-4 h-4 mr-1" />Admins
                             </Button>
@@ -589,6 +596,9 @@ export default function PlatformAdmin() {
                                 <Button variant="outline" size="sm"><MoreVertical className="w-4 h-4" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => { setAffiliationClub(club); setAffiliationDialogOpen(true); }}>
+                                  <Link2 className="w-4 h-4 mr-2" />Affiliations
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => { setManagingAdminsClub(club); setManageAdminsDialogOpen(true); }}>
                                   <ShieldCheck className="w-4 h-4 mr-2" />Admins
                                 </DropdownMenuItem>
@@ -904,6 +914,13 @@ export default function PlatformAdmin() {
           onClose={() => { setManageAdminsDialogOpen(false); setManagingAdminsClub(null); }}
           club={managingAdminsClub}
           isPlatformAdmin={true}
+        />
+
+        <AffiliatedClubsDialog
+          open={affiliationDialogOpen}
+          onOpenChange={(open) => { setAffiliationDialogOpen(open); if (!open) setAffiliationClub(null); }}
+          club={affiliationClub}
+          allClubs={clubs}
         />
 
         {/* Create/Edit Club Dialog */}

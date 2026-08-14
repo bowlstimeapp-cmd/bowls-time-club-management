@@ -34,30 +34,66 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build filter — use exact match filters when possible
-    const filter = { club_id: clubId };
-    if (date) filter.date = date;
-    if (status) filter.status = status;
-    if (booker_email) filter.booker_email = booker_email;
+    // Fetch the club to get its affiliated_club_ids (shared-rink visibility)
+    const clubs = await base44.asServiceRole.entities.Club.filter({ id: clubId });
+    const club = clubs[0];
+    if (!club) return Response.json({ error: 'Club not found' }, { status: 404 });
 
-    let bookings;
+    const affiliatedIds = Array.isArray(club.affiliated_club_ids) ? club.affiliated_club_ids : [];
 
-    if (date_from || date_to) {
-      // Date range query — fetch all club bookings and filter by range
-      bookings = await base44.asServiceRole.entities.Booking.filter({ club_id: clubId });
-      if (date_from) bookings = bookings.filter(b => b.date >= date_from);
-      if (date_to) bookings = bookings.filter(b => b.date <= date_to);
-      if (status) bookings = bookings.filter(b => b.status === status);
-      if (booker_email) bookings = bookings.filter(b => b.booker_email === booker_email);
-      if (date) bookings = bookings.filter(b => b.date === date);
-    } else {
-      bookings = await base44.asServiceRole.entities.Booking.filter(filter);
+    // Build a club-name map for tagging (own club + all affiliated clubs)
+    const clubNames = new Map();
+    clubNames.set(clubId, club.name || 'Unknown');
+    for (const aid of affiliatedIds) {
+      if (!clubNames.has(aid)) {
+        try {
+          const ac = await base44.asServiceRole.entities.Club.filter({ id: aid });
+          if (ac[0]) clubNames.set(aid, ac[0].name || 'Unknown');
+        } catch { /* ignore lookup failures */ }
+      }
+    }
+
+    // All club IDs to fetch bookings for: own club + affiliated clubs
+    const allClubIds = [clubId, ...affiliatedIds];
+
+    // Fetch bookings for a single club applying the same filters
+    const fetchClubBookings = async (cid) => {
+      const filter = { club_id: cid };
+      if (date) filter.date = date;
+      if (status) filter.status = status;
+      if (booker_email) filter.booker_email = booker_email;
+
+      if (date_from || date_to) {
+        let result = await base44.asServiceRole.entities.Booking.filter({ club_id: cid });
+        if (date_from) result = result.filter(b => b.date >= date_from);
+        if (date_to) result = result.filter(b => b.date <= date_to);
+        if (status) result = result.filter(b => b.status === status);
+        if (booker_email) result = result.filter(b => b.booker_email === booker_email);
+        if (date) result = result.filter(b => b.date === date);
+        return result;
+      }
+
+      return await base44.asServiceRole.entities.Booking.filter(filter);
+    };
+
+    // Fetch and merge bookings from own + affiliated clubs, tagging each with owning club name
+    let allBookings = [];
+    for (const cid of allClubIds) {
+      const cidBookings = await fetchClubBookings(cid);
+      const isAffiliated = cid !== clubId;
+      for (const b of cidBookings) {
+        allBookings.push({
+          ...b,
+          club_name: clubNames.get(cid) || 'Unknown',
+          affiliated_club_id: isAffiliated ? cid : null,
+        });
+      }
     }
 
     // Sort by created_date descending (newest first) for consistent ordering
-    bookings.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+    allBookings.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
 
-    return Response.json({ bookings });
+    return Response.json({ bookings: allBookings });
   } catch (error) {
     console.error('listBookings error:', error);
     return Response.json({ error: error.message }, { status: 500 });
