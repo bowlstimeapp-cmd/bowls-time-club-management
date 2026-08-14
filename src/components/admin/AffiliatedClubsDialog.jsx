@@ -34,6 +34,8 @@ export default function AffiliatedClubsDialog({ club, allClubs = [], open, onOpe
       });
       if (res.data?.error) throw new Error(res.data.error);
       queryClient.invalidateQueries({ queryKey: ['allClubs'] });
+      // Clear cached bookings so both clubs fetch fresh data (including the new affiliated bookings)
+      queryClient.removeQueries({ queryKey: ['bookings'] });
       toast.success(`${otherClub.name} is now affiliated with ${club.name}`);
       setSearch('');
     } catch (err) {
