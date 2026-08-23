@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, Loader2, Check, Users, UserPlus, Square, CheckSquare } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2, Check, Users, UserPlus, UserMinus, Square, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -82,6 +82,7 @@ export default function TimeSlotGrid({
   onMultiSlotSelect,
   onBookingClick,
   onJoinRollup,
+  onLeaveRollup,
   joinLoading,
   isAdmin = false,
   onMoveBooking,
@@ -304,6 +305,9 @@ export default function TimeSlotGrid({
                     booking?.rollup_members?.some(m => m.email === currentUserEmail)
                   );
                   const canJoinRollup = isRollup && openRollupsEnabled && !rollupFull && !alreadyInRollup && currentUserEmail;
+                  const canLeaveRollup = isRollup && currentUserEmail &&
+                    booking?.rollup_members?.some(m => m.email === currentUserEmail) &&
+                    booking?.booker_email !== currentUserEmail;
 
                   // League info
                   const leagueInfo = getLeagueInfo(booking);
@@ -474,7 +478,19 @@ export default function TimeSlotGrid({
                                       Join
                                     </button>
                                   )}
-                                  {alreadyInRollup && isRollup && (
+                                  {canLeaveRollup ? (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onLeaveRollup && onLeaveRollup(booking);
+                                      }}
+                                      disabled={joinLoading}
+                                      className="mt-1 text-[10px] font-semibold bg-red-600 text-white rounded px-1.5 py-0.5 hover:bg-red-700 flex items-center gap-0.5 w-fit"
+                                    >
+                                      {joinLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <UserMinus className="w-2.5 h-2.5" />}
+                                      Leave
+                                    </button>
+                                  ) : alreadyInRollup && isRollup && (
                                     <span className="text-[10px] text-emerald-700 font-medium mt-auto">✓ Joined</span>
                                   )}
                                 </>

@@ -503,6 +503,21 @@ useEffect(() => {
     setJoiningRollup(false);
   };
 
+  const handleLeaveRollup = async (booking) => {
+    if (!user || joiningRollup) return;
+    setJoiningRollup(true);
+    try {
+      const leaveRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'leave_rollup', clubId, id: booking.id });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      toast.success("You've left the roll-up");
+      setSelectedBooking(prev => prev ? { ...prev, rollup_members: leaveRes.data.rollup_members } : prev);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || 'Failed to leave roll-up');
+    } finally {
+      setJoiningRollup(false);
+    }
+  };
+
   const handleConfirmBooking = async (notes, competitionType, competitionOther, rollupMembers = [], bookingFormat = '') => {
     if (!user || selectedSlots.length === 0 || !clubId) return;
 
@@ -1072,6 +1087,7 @@ useEffect(() => {
                     setBookingDetailOpen(true);
                   }}
                   onJoinRollup={handleJoinRollup}
+                  onLeaveRollup={handleLeaveRollup}
                   joinLoading={joiningRollup}
                   isAdmin={isAdmin}
                   onMoveBooking={handleMoveBooking}
