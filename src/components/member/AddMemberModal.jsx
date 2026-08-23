@@ -82,6 +82,7 @@ export default function AddMemberModal({
       membership_groups: form.selectedGroups,
       status: 'approved'
     });
+    setForm(EMPTY_FORM);
   };
 
   const handleClose = () => {
