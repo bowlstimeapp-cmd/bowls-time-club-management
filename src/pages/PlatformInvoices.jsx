@@ -168,7 +168,7 @@ export default function PlatformInvoices() {
                     <TableHead>Amount</TableHead>
                     <TableHead>Period</TableHead>
                     <TableHead>Issued</TableHead>
-                    <TableHead className="hidden">Test</TableHead>
+                    
                     <TableHead className="min-w-[260px]">Status</TableHead>
                     <TableHead className="w-[60px]">Actions</TableHead>
                   </TableRow>
