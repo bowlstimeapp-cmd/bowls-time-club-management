@@ -66,6 +66,7 @@ function SmallStat({ icon: Icon, label, value, accent, sub }) {
 
 function ChartCard({ title, data, dataKey, color, type, note }) {
   const total = data.reduce((sum, d) => sum + (d[dataKey] || 0), 0);
+  const showDots = data.length <= 2;
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2"><CardTitle className="text-base font-semibold">{title}</CardTitle></CardHeader>
@@ -83,7 +84,7 @@ function ChartCard({ title, data, dataKey, color, type, note }) {
                   <XAxis dataKey="label" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={showDots ? { r: 3 } : false} />
                 </LineChart>
               ) : (
                 <BarChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
@@ -151,6 +152,18 @@ export default function ClubAnalyticsDashboard() {
     () => visibleSeries.map(s => ({ ...s, label: formatPeriod(s.period, granularity) })),
     [visibleSeries, granularity]
   );
+
+  // Cumulative total members over time (computed from the full series so the
+  // running total stays correct when the visible range is filtered)
+  const totalMembersChartData = useMemo(() => {
+    if (!analytics?.series || analytics.series.length === 0) return [];
+    const totalMembersEver = analytics.summary?.total_members_ever ?? 0;
+    const sumNewFull = analytics.series.reduce((s, b) => s + (b.new_members || 0), 0);
+    let running = Math.max(0, totalMembersEver - sumNewFull);
+    const fullCumulative = analytics.series.map(b => { running += (b.new_members || 0); return { period: b.period, total: running }; });
+    const visiblePeriods = new Set(visibleSeries.map(v => v.period));
+    return fullCumulative.filter(b => visiblePeriods.has(b.period)).map(b => ({ ...b, label: formatPeriod(b.period, granularity) }));
+  }, [analytics, visibleSeries, granularity]);
 
   // Login tracking note — if earliest login is after club creation, tracking started later
   const loginNote = useMemo(() => {
@@ -294,6 +307,7 @@ export default function ClubAnalyticsDashboard() {
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ChartCard title="Total Members" data={totalMembersChartData} dataKey="total" color="#0891b2" type="line" />
               <ChartCard title="Member Growth" data={chartData} dataKey="new_members" color="#10b981" type="line" />
               <ChartCard title="Bookings" data={chartData} dataKey="bookings" color="#3b82f6" type="bar" />
               <ChartCard title="Emails Sent" data={chartData} dataKey="emails_sent" color="#f59e0b" type="bar" />
