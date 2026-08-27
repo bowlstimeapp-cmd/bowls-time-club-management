@@ -1,0 +1,30 @@
+{
+  "name": "ClubLoginEvent",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club the user logged into"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who logged in"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Calendar date of the login (YYYY-MM-DD), used for per-user per-club per-day deduplication"
+    }
+  },
+  "required": [
+    "club_id",
+    "user_email",
+    "event_date"
+  ],
+  "rls": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

@@ -6,7 +6,7 @@ import { pagesConfig } from '@/pages.config';
 
 export default function NavigationTracker() {
     const location = useLocation();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
 
     // Store the last visited clubId so pages like Feedback can show the correct nav
     useEffect(() => {
@@ -46,6 +46,20 @@ export default function NavigationTracker() {
             });
         }
     }, [location, isAuthenticated, Pages, mainPageKey]);
+
+    // Track club logins once per user per club per calendar day (fire and forget, fail silently)
+    useEffect(() => {
+        if (!isAuthenticated || !user?.email) return;
+        const params = new URLSearchParams(location.search);
+        const clubId = params.get('clubId') || localStorage.getItem('lastClubId');
+        if (!clubId) return;
+        const today = new Date().toISOString().slice(0, 10);
+        const key = `loginLogged_${clubId}_${today}`;
+        if (localStorage.getItem(key)) return;
+        base44.functions.invoke('logClubLogin', { club_id: clubId, user_email: user.email })
+            .then(() => localStorage.setItem(key, '1'))
+            .catch(() => { /* silently fail - logging shouldn't break the app */ });
+    }, [isAuthenticated, user, location]);
 
     return null;
 }
