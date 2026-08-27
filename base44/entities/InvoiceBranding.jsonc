@@ -1,0 +1,36 @@
+{
+  "name": "InvoiceBranding",
+  "type": "object",
+  "properties": {
+    "business_name": {
+      "type": "string",
+      "default": "Bowls Time",
+      "description": "Business name shown on invoices"
+    },
+    "business_address": {
+      "type": "string",
+      "description": "Multiline business address (address, email, phone, company no.)"
+    }
+  },
+  "required": [
+    "business_name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableHeader,
@@ -12,7 +13,7 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
-import { Receipt, ShieldCheck } from 'lucide-react';
+import { Receipt, ShieldCheck, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const statusMeta = {
@@ -114,6 +115,7 @@ export default function BowlsTimeInvoices() {
                   <TableHead>Invoice Period</TableHead>
                   <TableHead>Date Issued</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>View Invoice</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,6 +129,11 @@ export default function BowlsTimeInvoices() {
                       <TableCell>{fmtDate(inv.date_issued)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={s.className}>{s.label}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/InvoiceView?invoiceId=${inv.id}`}>
+                          <Button size="sm" variant="outline"><Eye className="w-3.5 h-3.5 mr-1" />View</Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   );

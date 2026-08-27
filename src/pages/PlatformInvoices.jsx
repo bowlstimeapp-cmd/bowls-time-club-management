@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { Receipt, ShieldAlert, Loader2, Check, Trash2 } from 'lucide-react';
+import { Receipt, ShieldAlert, Loader2, Check, Trash2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -195,6 +195,7 @@ export default function PlatformInvoices() {
                     <TableHead>Issued</TableHead>
                     
                     <TableHead className="min-w-[340px]">Status</TableHead>
+                    <TableHead>View Invoice</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -227,6 +228,11 @@ export default function PlatformInvoices() {
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/InvoiceView?invoiceId=${inv.id}`}>
+                            <Button size="sm" variant="outline"><Eye className="w-3.5 h-3.5 mr-1" />View</Button>
+                          </Link>
                         </TableCell>
                       </TableRow>);
 

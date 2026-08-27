@@ -8,11 +8,11 @@
     },
     "invoice_number": {
       "type": "string",
-      "description": "Display Invoice ID"
+      "description": "Display Invoice ID (INV-0001 incremental)"
     },
     "amount": {
       "type": "number",
-      "description": "Invoice amount in pounds (2 decimal places, e.g. 45.67)"
+      "description": "Invoice total amount in pounds (member_count x rate)"
     },
     "period_start": {
       "type": "string",
@@ -27,17 +27,45 @@
     "date_issued": {
       "type": "string",
       "format": "date",
-      "description": "Date the invoice was issued"
+      "description": "Date the invoice was issued (invoice date)"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date payment is due (date_issued + 20 days)"
+    },
+    "payment_terms": {
+      "type": "string",
+      "default": "20 days",
+      "description": "Payment terms"
+    },
+    "member_count": {
+      "type": "number",
+      "description": "Number of active members in the club when invoiced"
+    },
+    "rate": {
+      "type": "number",
+      "default": 2,
+      "description": "Rate per member in pounds"
+    },
+    "description": {
+      "type": "string",
+      "default": "Bowls Time Subscription",
+      "description": "Line item description"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Client company name (club name)"
     },
     "status": {
       "type": "string",
       "default": "issued",
-      "description": "Invoice payment status (free text \u2014 platform admins can set any value)"
+      "description": "Invoice payment status (free text)"
     },
     "is_test": {
       "type": "boolean",
       "default": false,
-      "description": "True for invoices created via the manual test-generation button; false for real monthly invoices"
+      "description": "True for invoices created via the manual test-generation button"
     }
   },
   "required": [

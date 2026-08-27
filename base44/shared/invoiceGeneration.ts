@@ -4,7 +4,7 @@
 // "Total active members" matches the Club Analytics dashboard definition:
 // ClubMembership records with member_status === 'active' for the club.
 //
-// Invoice amount = (active_members * 2) / 12, rounded to 2 decimal places.
+// Invoice amount = active_members * rate (rate = £2.00), rounded to 2 decimal places.
 
 async function fetchAll(base44, entityName, query) {
   const limit = 5000;
@@ -47,6 +47,14 @@ export async function generateInvoicesCore(base44, isTest) {
 
   const clubs = await fetchAll(base44, 'Club', { is_active: true, is_paid_club: true });
 
+  // Find the max INV-XXXX invoice number to increment from
+  const allInvoices = await fetchAll(base44, 'Invoice', {});
+  let maxNum = 0;
+  for (const inv of allInvoices) {
+    const match = /^INV-(\d+)$/.exec(inv.invoice_number || '');
+    if (match) { const n = parseInt(match[1], 10); if (n > maxNum) maxNum = n; }
+  }
+
   let clubsProcessed = 0;
   let invoicesCreated = 0;
   let invoicesSkipped = 0;
@@ -64,7 +72,8 @@ export async function generateInvoicesCore(base44, isTest) {
       continue;
     }
 
-    const amount = Math.round((memberCount * 2 / 12) * 100) / 100;
+    const rate = 2;
+    const amount = Math.round((memberCount * rate) * 100) / 100;
 
     // Idempotency: skip if an invoice already exists for this club + period + is_test
     const existing = await base44.asServiceRole.entities.Invoice.filter({ club_id: club.id, period_start, is_test: !!isTest });
@@ -74,9 +83,12 @@ export async function generateInvoicesCore(base44, isTest) {
       continue;
     }
 
-    const prefix = isTest ? 'TEST-' : 'INV-';
-    const slug = club.slug || club.id;
-    const invoice_number = `${prefix}${slug}-${yyyymm}`;
+    const invoice_number = `INV-${String(++maxNum).padStart(4, '0')}`;
+
+    // Due date = invoice date + 20 days
+    const [iy, im, idd] = date_issued.split('-').map(Number);
+    const due = new Date(iy, im - 1, idd + 20);
+    const due_date = `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}`;
 
     await base44.asServiceRole.entities.Invoice.create({
       club_id: club.id,
@@ -85,6 +97,12 @@ export async function generateInvoicesCore(base44, isTest) {
       period_start,
       period_end,
       date_issued,
+      due_date,
+      payment_terms: '20 days',
+      member_count: memberCount,
+      rate,
+      description: 'Bowls Time Subscription',
+      client_name: club.name,
       status: 'issued',
       is_test: !!isTest,
     });
