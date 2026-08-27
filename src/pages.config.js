@@ -52,6 +52,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import BookRink from './pages/BookRink';
 import BowlsTimeInvoices from './pages/BowlsTimeInvoices';
 import ClubAdmin from './pages/ClubAdmin';
+import ClubAnalyticsDashboard from './pages/ClubAnalyticsDashboard';
 import ClubHome from './pages/ClubHome';
 import ClubOfficers from './pages/ClubOfficers';
 import ClubHomepageAdmin from './pages/ClubHomepageAdmin';
@@ -94,6 +95,7 @@ export const PAGES = {
     "BookRink": BookRink,
     "BowlsTimeInvoices": BowlsTimeInvoices,
     "ClubAdmin": ClubAdmin,
+    "ClubAnalyticsDashboard": ClubAnalyticsDashboard,
     "ClubHome": ClubHome,
     "ClubHomepageAdmin": ClubHomepageAdmin,
     "ClubSelector": ClubSelector,

@@ -44,7 +44,8 @@ import {
   MoreVertical,
   ChevronDown,
   FileText,
-  Link2
+  Link2,
+  BarChart3
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -436,6 +437,11 @@ export default function PlatformAdmin() {
                   <BookOpen className="w-4 h-4 mr-2" />User Guides
                 </Button>
               </Link>
+              <Link to={createPageUrl('ClubAnalyticsDashboard')}>
+                <Button variant="outline" className="border-cyan-600 text-cyan-600 hover:bg-cyan-50">
+                  <BarChart3 className="w-4 h-4 mr-2" />Club Analytics
+                </Button>
+              </Link>
             </div>
             {/* Mobile: dropdown for secondary actions */}
             <div className="sm:hidden">
@@ -449,6 +455,7 @@ export default function PlatformAdmin() {
                   <DropdownMenuItem asChild><Link to={createPageUrl('ProspectCRM')} className="cursor-pointer"><Users className="w-4 h-4 mr-2" />Prospect CRM</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to={createPageUrl('PlatformUsers')} className="cursor-pointer"><UsersRound className="w-4 h-4 mr-2" />All Users</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to={createPageUrl('UserGuides')} className="cursor-pointer"><BookOpen className="w-4 h-4 mr-2" />User Guides</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link to={createPageUrl('ClubAnalyticsDashboard')} className="cursor-pointer"><BarChart3 className="w-4 h-4 mr-2" />Club Analytics</Link></DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
