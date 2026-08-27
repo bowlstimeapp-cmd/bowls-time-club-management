@@ -1,6 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { cn } from '@/lib/utils';
+import { isAno } from '@/lib/tournamentAno';
 
 export default function PlayerTeamBuilder({ players, teamSize, getMemberName, teams, onChange }) {
   const assignedEmails = new Set(teams.flat());
@@ -35,7 +37,12 @@ export default function PlayerTeamBuilder({ players, teamSize, getMemberName, te
                 key={email}
                 type="button"
                 onClick={() => addPlayer(email)}
-                className="text-xs px-2 py-1 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 text-blue-800 transition-colors"
+                className={cn(
+                  "text-xs px-2 py-1 border rounded transition-colors",
+                  isAno(email)
+                    ? "bg-amber-50 border-amber-300 hover:bg-amber-100 text-amber-800 font-medium"
+                    : "bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-800"
+                )}
               >
                 + {getMemberName(email)}
               </button>
@@ -62,7 +69,10 @@ export default function PlayerTeamBuilder({ players, teamSize, getMemberName, te
               </div>
               <div className="flex flex-wrap gap-1">
                 {team.map(email => (
-                  <div key={email} className="flex items-center gap-1 text-xs bg-white border border-gray-200 rounded px-2 py-0.5">
+                  <div key={email} className={cn(
+                    "flex items-center gap-1 text-xs border rounded px-2 py-0.5",
+                    isAno(email) ? "bg-amber-50 border-amber-300 text-amber-800 font-medium" : "bg-white border-gray-200"
+                  )}>
                     <span>{getMemberName(email)}</span>
                     <button
                       type="button"

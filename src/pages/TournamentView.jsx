@@ -10,6 +10,7 @@ import { generateTournamentDrawPdf } from '@/lib/tournamentDrawPdf';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import TournamentBracket from '@/components/tournament/TournamentBracket';
+import { isAno } from '@/lib/tournamentAno';
 import { toast } from "sonner";
 
 export default function TournamentView() {
@@ -64,6 +65,7 @@ export default function TournamentView() {
   const getMemberName = (entry) => {
     if (!entry) return '';
     return entry.split('|').map(email => {
+      if (isAno(email)) return 'ANO';
       const member = members.find(m => m.user_email === email);
       return member?.user_name || email;
     }).join(' / ');

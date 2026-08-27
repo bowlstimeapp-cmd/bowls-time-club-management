@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
-import { CheckCircle, Clock, Edit2, Calendar, Upload, Eye, Loader2 } from 'lucide-react';
+import { isAno } from '@/lib/tournamentAno';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { CheckCircle, Clock, Edit2, Calendar, Upload, Eye, Loader2, UserPlus } from 'lucide-react';
 import ScorecardImageModal from './ScorecardImageModal';
 
 const getRoundName = (roundIndex, totalRounds) => {
@@ -35,16 +37,72 @@ export default function TournamentBracket({
   const [uploadingMatch, setUploadingMatch] = useState(null);
   const [viewingImage, setViewingImage] = useState(null);
   const [walkoverMatch, setWalkoverMatch] = useState(null);
+  const [replacingAno, setReplacingAno] = useState(null); // { roundIndex, matchIndex, side, anoInstance }
+  const [replaceSearch, setReplaceSearch] = useState('');
 
   if (!bracket || !bracket.rounds) return null;
 
-  // Get contact details for a pipe-separated entry (supports singles & teams)
+  // Get contact details for a pipe-separated entry (supports singles & teams, skips ANO)
   const getContactsForEntry = (entry) => {
     if (!entry) return [];
-    return entry.split('|').map(email => {
+    return entry.split('|').filter(email => !isAno(email)).map(email => {
       const m = members.find(mem => mem.user_email === email);
       return { name: m?.user_name || email, email, phone: m?.phone || null };
     });
+  };
+
+  // Render an entry's parts; ANO parts are clickable (admin) to trigger replacement
+  const renderEntryParts = (entry, roundIndex, matchIndex, side) => {
+    if (!entry) return <span className="truncate text-xs text-gray-400">TBD</span>;
+    const parts = entry.split('|');
+    return (
+      <span className="flex items-center gap-0.5 flex-wrap min-w-0">
+        {parts.map((part, i) => {
+          return (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="text-gray-300 px-0.5">/</span>}
+              {isAno(part) ? (
+                <span
+                  className={cn(
+                    "px-1 rounded text-[10px] font-medium border text-amber-700 bg-amber-100 border-amber-300",
+                    isAdmin && "cursor-pointer hover:bg-amber-200"
+                  )}
+                  onClick={isAdmin ? (e) => { e.stopPropagation(); setReplacingAno({ roundIndex, matchIndex, side, anoInstance: part }); } : undefined}
+                >
+                  ANO
+                </span>
+              ) : (
+                <span className="truncate text-xs">{getMemberName(part)}</span>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </span>
+    );
+  };
+
+  // Replace a single ANO instance in an entry with a real member, propagating across the bracket
+  const handleReplaceAno = (newEmail) => {
+    if (!replacingAno) return;
+    const { roundIndex, matchIndex, side, anoInstance } = replacingAno;
+    const entry = bracket.rounds[roundIndex]?.[matchIndex]?.[side];
+    if (!entry) { setReplacingAno(null); return; }
+    const parts = entry.split('|');
+    const idx = parts.indexOf(anoInstance);
+    if (idx === -1) { setReplacingAno(null); return; }
+    parts[idx] = newEmail;
+    const newEntry = parts.join('|');
+    const newRounds = bracket.rounds.map(r => r.map(m => {
+      const updated = { ...m };
+      if (m.player1 === entry) updated.player1 = newEntry;
+      if (m.player2 === entry) updated.player2 = newEntry;
+      if (m.winner === entry) updated.winner = newEntry;
+      return updated;
+    }));
+    onUpdateBracket({ ...bracket, rounds: newRounds });
+    setReplacingAno(null);
+    setReplaceSearch('');
+    toast.success('ANO replaced');
   };
 
   // Should we show contact tooltip for a given side of a given match?
@@ -293,7 +351,7 @@ export default function TournamentBracket({
                                 !scoringMode && editable && match.player1 && "cursor-pointer hover:bg-emerald-50"
                               )}
                             >
-                              <span className="truncate text-xs">{match.player1 ? getMemberName(match.player1) : 'TBD'}</span>
+                              {renderEntryParts(match.player1, roundIndex, matchIndex, 'player1')}
                               {!editing && (isPending || isAccepted) && match.player1_score != null && (
                                 <span className="font-bold text-gray-700 flex-shrink-0 ml-1">{match.player1_score}</span>
                               )}
@@ -335,7 +393,7 @@ export default function TournamentBracket({
                                 !scoringMode && editable && match.player2 && "cursor-pointer hover:bg-emerald-50"
                               )}
                             >
-                              <span className="truncate text-xs">{match.player2 ? getMemberName(match.player2) : 'TBD'}</span>
+                              {renderEntryParts(match.player2, roundIndex, matchIndex, 'player2')}
                               {!editing && (isPending || isAccepted) && match.player2_score != null && (
                                 <span className="font-bold text-gray-700 flex-shrink-0 ml-1">{match.player2_score}</span>
                               )}
@@ -461,6 +519,52 @@ export default function TournamentBracket({
       </CardContent>
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
       <ScorecardImageModal imageUrl={viewingImage?.url} title={viewingImage?.title} onClose={() => setViewingImage(null)} />
+
+      {/* ANO replacement dialog */}
+      <Dialog open={!!replacingAno} onOpenChange={(open) => { if (!open) { setReplacingAno(null); setReplaceSearch(''); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserPlus className="w-4 h-4 text-amber-500" /> Replace ANO</DialogTitle>
+            <DialogDescription>Select a member to fill this placeholder slot in the draw.</DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Search members..."
+            value={replaceSearch}
+            onChange={(e) => setReplaceSearch(e.target.value)}
+            className="text-sm"
+            autoFocus
+          />
+          <div className="max-h-64 overflow-y-auto space-y-1">
+            {(() => {
+              if (!replacingAno) return null;
+              const entry = bracket.rounds[replacingAno.roundIndex]?.[replacingAno.matchIndex]?.[replacingAno.side] || '';
+              const entryEmails = entry.split('|').filter(e => !isAno(e));
+              const filtered = members.filter(m => {
+                if (entryEmails.includes(m.user_email)) return false;
+                if (!replaceSearch) return true;
+                const name = m.user_name || m.user_email || '';
+                return name.toLowerCase().includes(replaceSearch.toLowerCase());
+              });
+              if (filtered.length === 0) {
+                return <p className="text-sm text-gray-400 text-center py-6">No members available</p>;
+              }
+              return filtered.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleReplaceAno(m.user_email)}
+                  className="w-full text-left p-2 hover:bg-emerald-50 rounded text-sm flex items-center gap-2"
+                >
+                  <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-medium text-emerald-700">
+                    {(m.user_name || m.user_email || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="truncate">{m.user_name || m.user_email}</span>
+                </button>
+              ));
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

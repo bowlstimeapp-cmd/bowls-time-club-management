@@ -24,6 +24,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import TournamentBracket from '@/components/tournament/TournamentBracket';
 import PlayerTeamBuilder from '@/components/tournament/PlayerTeamBuilder';
+import { isAno, createAnoInstance } from '@/lib/tournamentAno';
 
 const FORMAT_SIZES = { singles: 1, pairs: 2, triples: 3, fours: 4 };
 
@@ -164,7 +165,18 @@ export default function TournamentEditor() {
     }
   };
 
+  const addAno = () => {
+    if (selectedPlayers.length >= 32) { toast.error('Maximum 32 entries allowed'); return; }
+    setSelectedPlayers(prev => [...prev, createAnoInstance()]);
+  };
+
+  const removeAno = (anoInstance) => {
+    setSelectedPlayers(prev => prev.filter(e => e !== anoInstance));
+    setPlayerTeams(prev => prev.map(t => t.filter(e => e !== anoInstance)).filter(t => t.length > 0));
+  };
+
   const resolveName = (email) => {
+    if (isAno(email)) return 'ANO';
     const m = members.find(mem => mem.user_email === email);
     if (!m) return email;
     if (m.user_name) return m.user_name;
@@ -439,6 +451,24 @@ export default function TournamentEditor() {
                         className="mb-2 text-sm"
                       />
                       <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                        {compFormat !== 'singles' && (
+                          <>
+                            <div className="flex items-center gap-2 p-2 hover:bg-amber-50 rounded cursor-pointer border-b border-amber-100" onClick={addAno}>
+                              <div className="w-4 h-4 flex-shrink-0 rounded border-2 border-amber-400 bg-amber-100 flex items-center justify-center text-amber-600 text-xs font-bold">+</div>
+                              <span className="text-sm font-medium text-amber-700">ANO <span className="text-xs font-normal text-amber-500">(add name later — tap to add another)</span></span>
+                            </div>
+                            {selectedPlayers.filter(isAno).length > 0 && (
+                              <div className="flex flex-wrap gap-1 pb-2 border-b">
+                                {selectedPlayers.filter(isAno).map((ano, i) => (
+                                  <span key={ano} className="text-xs px-2 py-1 bg-amber-100 border border-amber-300 rounded text-amber-800 flex items-center gap-1">
+                                    ANO #{i + 1}
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); removeAno(ano); }} className="text-amber-500 hover:text-amber-700 font-bold">✕</button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
                         {members.filter(m => {
                           if (!playerSearch) return true;
                           const name = m.user_name || m.user_email || '';
