@@ -34,7 +34,8 @@ import {
   Target,
   LayoutDashboard,
   LifeBuoy,
-  Award
+  Award,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -481,6 +482,12 @@ export default function Layout({ children, currentPageName }) {
                         <Link to={createPageUrl('Clubsettings') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Settings className="w-4 h-4 mr-2" />
                           Club Admin
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('BowlsTimeInvoices') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Receipt className="w-4 h-4 mr-2" />
+                          Bowls Time Invoices
                         </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>

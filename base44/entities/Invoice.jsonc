@@ -1,0 +1,57 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club this invoice belongs to"
+    },
+    "invoice_number": {
+      "type": "string",
+      "description": "Display Invoice ID"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Invoice amount"
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Start of the billing period"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "End of the billing period"
+    },
+    "date_issued": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the invoice was issued"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "issued",
+        "paid",
+        "overdue",
+        "cancelled"
+      ],
+      "default": "issued",
+      "description": "Invoice payment status"
+    }
+  },
+  "required": [
+    "club_id",
+    "invoice_number",
+    "amount",
+    "period_start",
+    "period_end",
+    "date_issued"
+  ],
+  "rls": {
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
