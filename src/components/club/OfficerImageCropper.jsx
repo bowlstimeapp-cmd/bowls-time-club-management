@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, RotateCcw, X } from 'lucide-react';
+import { Loader2, RotateCcw } from 'lucide-react';
 
 const VIEW_W = 240;
 const VIEW_H = 300; // 4:5 portrait
@@ -113,15 +113,14 @@ export default function OfficerImageCropper({ imageFile, onCropComplete, onCance
     }, 'image/jpeg', 0.9);
   };
 
-  return createPortal((
-    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-5 w-full max-w-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg">Crop Photo</h3>
-          <button onClick={onCancel} className="p-1 rounded hover:bg-gray-100">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent
+        className="max-w-sm p-5 block"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogTitle className="text-lg font-semibold leading-none mb-4">Crop Photo</DialogTitle>
+        <DialogDescription className="sr-only">Drag the image to pan, use the slider to zoom, then save.</DialogDescription>
 
         {loading || !img ? (
           <div className="h-[300px] flex items-center justify-center">
@@ -168,7 +167,7 @@ export default function OfficerImageCropper({ imageFile, onCropComplete, onCance
           <Button variant="outline" size="sm" onClick={onCancel} className="flex-1">Cancel</Button>
           <Button size="sm" onClick={handleSave} disabled={loading || !img} className="flex-1 bg-emerald-600 hover:bg-emerald-700">Save Crop</Button>
         </div>
-      </div>
-    </div>
-  ), document.body);
+      </DialogContent>
+    </Dialog>
+  );
 }
