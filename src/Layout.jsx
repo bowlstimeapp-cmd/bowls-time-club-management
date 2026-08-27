@@ -33,7 +33,8 @@ import {
   BookOpen,
   Target,
   LayoutDashboard,
-  LifeBuoy
+  LifeBuoy,
+  Award
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -173,6 +174,7 @@ export default function Layout({ children, currentPageName }) {
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
       { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
     ] : []),
+    { name: 'Club Officers', href: createPageUrl('ClubOfficers') + `?clubId=${clubId}`, icon: Award },
     { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
     { name: 'Score Prediction', href: createPageUrl('ScorePrediction') + `?clubId=${clubId}`, icon: Target },
     ...((club?.module_messaging || isFreeClub) ? [
@@ -372,6 +374,12 @@ export default function Layout({ children, currentPageName }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('ClubOfficers') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Award className="w-4 h-4 mr-2" />
+                          Club Officers
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('MemberDirectory') + `?clubId=${clubId}`} className="cursor-pointer">
                           <BookOpen className="w-4 h-4 mr-2" />

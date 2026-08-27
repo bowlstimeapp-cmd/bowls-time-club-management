@@ -1,0 +1,36 @@
+{
+  "name": "ClubOfficer",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club this officer card belongs to"
+    },
+    "role_title": {
+      "type": "string",
+      "description": "Officer role title, e.g. President, Treasurer, Secretary"
+    },
+    "member_email": {
+      "type": "string",
+      "description": "The user_email of the ClubMembership record this officer maps to (nullable for vacant positions)"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Uploaded photo of the officer"
+    },
+    "display_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Controls card ordering (lower appears first)"
+    }
+  },
+  "required": [
+    "club_id",
+    "role_title"
+  ],
+  "rls": {
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

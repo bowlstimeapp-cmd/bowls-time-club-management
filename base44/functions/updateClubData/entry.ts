@@ -286,6 +286,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── CLUB OFFICER ────────────────────────────────────────────────────────
+    if (entity === 'ClubOfficer') {
+      if (action === 'create') {
+        if (!data || !data.role_title) return Response.json({ error: 'Missing data or role_title' }, { status: 400 });
+        const created = await base44.asServiceRole.entities.ClubOfficer.create({ ...data, club_id: clubId });
+        return Response.json({ success: true, id: created.id, record: created });
+      }
+      if (action === 'update') {
+        if (!id || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
+        const record = await verifyBelongsToClub(base44, 'ClubOfficer', id, clubId);
+        if (!record) return Response.json({ error: 'Officer not found or does not belong to this club' }, { status: 404 });
+        await base44.asServiceRole.entities.ClubOfficer.update(id, data);
+        return Response.json({ success: true });
+      }
+      if (action === 'delete') {
+        if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+        const record = await verifyBelongsToClub(base44, 'ClubOfficer', id, clubId);
+        if (!record) return Response.json({ error: 'Officer not found or does not belong to this club' }, { status: 404 });
+        await base44.asServiceRole.entities.ClubOfficer.delete(id);
+        return Response.json({ success: true });
+      }
+      if (action === 'reorder') {
+        if (!data || !Array.isArray(data) || data.length === 0) return Response.json({ error: 'Missing data reorder array' }, { status: 400 });
+        // data is an array of { id, display_order }
+        for (const item of data) {
+          if (!item.id) continue;
+          const record = await verifyBelongsToClub(base44, 'ClubOfficer', item.id, clubId);
+          if (record) {
+            await base44.asServiceRole.entities.ClubOfficer.update(item.id, { display_order: item.display_order });
+          }
+        }
+        return Response.json({ success: true });
+      }
+    }
+
     return Response.json({ error: `Unknown entity/action: ${entity}/${action}` }, { status: 400 });
 
   } catch (error) {

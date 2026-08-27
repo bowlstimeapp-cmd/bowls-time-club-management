@@ -52,6 +52,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import BookRink from './pages/BookRink';
 import ClubAdmin from './pages/ClubAdmin';
 import ClubHome from './pages/ClubHome';
+import ClubOfficers from './pages/ClubOfficers';
 import ClubHomepageAdmin from './pages/ClubHomepageAdmin';
 import ClubSelector from './pages/ClubSelector';
 import ClubSettings from './pages/ClubSettings';
@@ -96,6 +97,7 @@ export const PAGES = {
     "ClubSelector": ClubSelector,
     "ClubSettings": ClubSettings,
     "ClubTournaments": ClubTournaments,
+    "ClubOfficers": ClubOfficers,
     "Feedback": Feedback,
     "FunctionRoomAdmin": FunctionRoomAdmin,
     "LeagueAdmin": LeagueAdmin,
