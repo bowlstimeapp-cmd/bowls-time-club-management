@@ -4,12 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { Receipt, ShieldAlert, Loader2, Check, Trash2 } from 'lucide-react';
+import { Receipt, ShieldAlert, Loader2, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -36,7 +35,6 @@ const fmtCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'currenc
 export default function PlatformInvoices() {
   const [user, setUser] = useState(null);
   const [clubFilter, setClubFilter] = useState('all');
-  const [statusEdits, setStatusEdits] = useState({});
   const queryClient = useQueryClient();
 
   useEffect(() => {base44.auth.me().then(setUser).catch(() => {});}, []);
@@ -52,19 +50,6 @@ export default function PlatformInvoices() {
   });
 
   const clubMap = useMemo(() => new Map(clubs.map((c) => [c.id, c.name])), [clubs]);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ invoice_id, status }) => {
-      const res = await base44.functions.invoke('updateInvoiceStatus', { invoice_id, status });
-      if (res.data?.error) throw new Error(res.data.error);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allInvoices'] });
-      toast.success('Invoice status updated');
-    },
-    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error'))
-  });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -110,12 +95,6 @@ export default function PlatformInvoices() {
   const filteredInvoices = clubFilter === 'all' ? invoices : invoices.filter((inv) => inv.club_id === clubFilter);
   const totalAmount = filteredInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
-  const handleSave = (invoice) => {
-    const newStatus = (statusEdits[invoice.id] ?? invoice.status ?? '').trim();
-    if (!newStatus) {toast.error('Status cannot be empty');return;}
-    updateStatusMutation.mutate({ invoice_id: invoice.id, status: newStatus });
-  };
-
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -123,7 +102,7 @@ export default function PlatformInvoices() {
           <Receipt className="w-6 h-6 text-emerald-600" />
           <h1 className="text-3xl font-bold text-slate-900">All Invoices</h1>
         </div>
-        <p className="text-gray-500 mb-6">Aggregated view of invoices across all clubs. Update invoice status with free text.</p>
+        <p className="text-gray-500 mb-6">Aggregated view of invoices across all clubs.</p>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -168,16 +147,13 @@ export default function PlatformInvoices() {
                     <TableHead>Amount</TableHead>
                     <TableHead>Period</TableHead>
                     <TableHead>Issued</TableHead>
-                    
-                    <TableHead className="min-w-[260px]">Status</TableHead>
-                    <TableHead className="w-[60px]">Actions</TableHead>
+                    <TableHead>Test</TableHead>
+                    <TableHead className="w-[60px]">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredInvoices.map((inv) => {
                   const s = statusMeta[inv.status] || { label: inv.status || '—', className: 'bg-slate-100 text-slate-600 border-slate-200' };
-                  const editingValue = statusEdits[inv.id] ?? inv.status ?? '';
-                  const isDirty = editingValue.trim() !== (inv.status || '').trim();
                   return (
                     <TableRow key={inv.id}>
                         <TableCell className="font-medium text-slate-900 whitespace-nowrap">{inv.invoice_number}</TableCell>
@@ -186,21 +162,6 @@ export default function PlatformInvoices() {
                         <TableCell className="whitespace-nowrap">{`${fmtDate(inv.period_start)} – ${fmtDate(inv.period_end)}`}</TableCell>
                         <TableCell className="whitespace-nowrap">{fmtDate(inv.date_issued)}</TableCell>
                         <TableCell>{inv.is_test ? <Badge className="bg-amber-100 text-amber-700 border-amber-200">Test</Badge> : <span className="text-gray-400 text-xs">No</span>}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={`${s.className} whitespace-nowrap hidden sm:inline-flex`}>{s.label}</Badge>
-                            <Input
-                            value={editingValue}
-                            onChange={(e) => setStatusEdits((prev) => ({ ...prev, [inv.id]: e.target.value }))}
-                            onKeyDown={(e) => {if (e.key === 'Enter' && isDirty) handleSave(inv);}}
-                            className="h-8 w-28"
-                            placeholder="Set status..." />
-                          
-                            <Button size="sm" variant="outline" disabled={!isDirty || updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id} onClick={() => handleSave(inv)}>
-                              {updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            </Button>
-                          </div>
-                        </TableCell>
                         <TableCell>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(inv)}>
                             <Trash2 className="w-4 h-4" />
