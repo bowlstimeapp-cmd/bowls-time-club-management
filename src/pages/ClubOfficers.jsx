@@ -170,7 +170,7 @@ export default function ClubOfficers() {
                 <Card key={officer.id} className="relative overflow-hidden rounded-xl shadow-sm border-slate-200 group">
                   <div className="flex">
                     {/* Left image ~35% */}
-                    <div className="w-1/3 flex-shrink-0 bg-slate-100 min-h-[180px]">
+                    <div className="w-1/3 flex-shrink-0 bg-slate-100 h-56 sm:h-64">
                       {officer.image_url ? (
                         <img src={officer.image_url} alt={officer.role_title} className="w-full h-full object-cover" />
                       ) : (
