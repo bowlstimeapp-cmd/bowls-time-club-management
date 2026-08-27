@@ -20,17 +20,17 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialogTitle } from
+'@/components/ui/alert-dialog';
 
 const statusMeta = {
   issued: { label: 'Issued', className: 'bg-blue-100 text-blue-700 border-blue-200' },
   paid: { label: 'Paid', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   overdue: { label: 'Overdue', className: 'bg-red-100 text-red-700 border-red-200' },
-  cancelled: { label: 'Cancelled', className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  cancelled: { label: 'Cancelled', className: 'bg-slate-100 text-slate-600 border-slate-200' }
 };
 
-const fmtDate = (d) => (d ? format(parseISO(d), 'd MMM yyyy') : '—');
+const fmtDate = (d) => d ? format(parseISO(d), 'd MMM yyyy') : '—';
 const fmtCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
 
 export default function PlatformInvoices() {
@@ -39,19 +39,19 @@ export default function PlatformInvoices() {
   const [statusEdits, setStatusEdits] = useState({});
   const queryClient = useQueryClient();
 
-  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
+  useEffect(() => {base44.auth.me().then(setUser).catch(() => {});}, []);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['allInvoices'],
-    queryFn: () => base44.entities.Invoice.list('-date_issued', 500),
+    queryFn: () => base44.entities.Invoice.list('-date_issued', 500)
   });
 
   const { data: clubs = [] } = useQuery({
     queryKey: ['allClubsForInvoices'],
-    queryFn: () => base44.entities.Club.list(),
+    queryFn: () => base44.entities.Club.list()
   });
 
-  const clubMap = useMemo(() => new Map(clubs.map(c => [c.id, c.name])), [clubs]);
+  const clubMap = useMemo(() => new Map(clubs.map((c) => [c.id, c.name])), [clubs]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ invoice_id, status }) => {
@@ -63,7 +63,7 @@ export default function PlatformInvoices() {
       queryClient.invalidateQueries({ queryKey: ['allInvoices'] });
       toast.success('Invoice status updated');
     },
-    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error')),
+    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error'))
   });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -79,7 +79,7 @@ export default function PlatformInvoices() {
       toast.success('Invoice deleted');
       setDeleteTarget(null);
     },
-    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error')),
+    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error'))
   });
 
   if (user && user.role !== 'admin') {
@@ -95,24 +95,24 @@ export default function PlatformInvoices() {
             <Button className="bg-emerald-600 hover:bg-emerald-700">Go to Platform Admin</Button>
           </Link>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+      </div>);
+
   }
 
-  const filteredInvoices = clubFilter === 'all' ? invoices : invoices.filter(inv => inv.club_id === clubFilter);
+  const filteredInvoices = clubFilter === 'all' ? invoices : invoices.filter((inv) => inv.club_id === clubFilter);
   const totalAmount = filteredInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
   const handleSave = (invoice) => {
     const newStatus = (statusEdits[invoice.id] ?? invoice.status ?? '').trim();
-    if (!newStatus) { toast.error('Status cannot be empty'); return; }
+    if (!newStatus) {toast.error('Status cannot be empty');return;}
     updateStatusMutation.mutate({ invoice_id: invoice.id, status: newStatus });
   };
 
@@ -132,9 +132,9 @@ export default function PlatformInvoices() {
               <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clubs</SelectItem>
-                {clubs.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
+                {clubs.map((c) =>
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -151,15 +151,15 @@ export default function PlatformInvoices() {
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          {isLoading ? (
-            <div className="p-6 space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          ) : filteredInvoices.length === 0 ? (
-            <div className="text-center py-20">
+          {isLoading ?
+          <div className="p-6 space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div> :
+          filteredInvoices.length === 0 ?
+          <div className="text-center py-20">
               <Receipt className="w-12 h-12 mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500">No invoices found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+            </div> :
+
+          <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -168,18 +168,18 @@ export default function PlatformInvoices() {
                     <TableHead>Amount</TableHead>
                     <TableHead>Period</TableHead>
                     <TableHead>Issued</TableHead>
-                    <TableHead>Test</TableHead>
+                    <TableHead className="hidden">Test</TableHead>
                     <TableHead className="min-w-[260px]">Status</TableHead>
                     <TableHead className="w-[60px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredInvoices.map((inv) => {
-                    const s = statusMeta[inv.status] || { label: inv.status || '—', className: 'bg-slate-100 text-slate-600 border-slate-200' };
-                    const editingValue = statusEdits[inv.id] ?? inv.status ?? '';
-                    const isDirty = editingValue.trim() !== (inv.status || '').trim();
-                    return (
-                      <TableRow key={inv.id}>
+                  const s = statusMeta[inv.status] || { label: inv.status || '—', className: 'bg-slate-100 text-slate-600 border-slate-200' };
+                  const editingValue = statusEdits[inv.id] ?? inv.status ?? '';
+                  const isDirty = editingValue.trim() !== (inv.status || '').trim();
+                  return (
+                    <TableRow key={inv.id}>
                         <TableCell className="font-medium text-slate-900 whitespace-nowrap">{inv.invoice_number}</TableCell>
                         <TableCell className="whitespace-nowrap">{clubMap.get(inv.club_id) || inv.club_id || '—'}</TableCell>
                         <TableCell>{fmtCurrency(inv.amount)}</TableCell>
@@ -190,13 +190,13 @@ export default function PlatformInvoices() {
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={`${s.className} whitespace-nowrap hidden sm:inline-flex`}>{s.label}</Badge>
                             <Input
-                              value={editingValue}
-                              onChange={(e) => setStatusEdits(prev => ({ ...prev, [inv.id]: e.target.value }))}
-                              onKeyDown={(e) => { if (e.key === 'Enter' && isDirty) handleSave(inv); }}
-                              className="h-8 w-28"
-                              placeholder="Set status..."
-                            />
-                            <Button size="sm" variant="outline" disabled={!isDirty || (updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id)} onClick={() => handleSave(inv)}>
+                            value={editingValue}
+                            onChange={(e) => setStatusEdits((prev) => ({ ...prev, [inv.id]: e.target.value }))}
+                            onKeyDown={(e) => {if (e.key === 'Enter' && isDirty) handleSave(inv);}}
+                            className="h-8 w-28"
+                            placeholder="Set status..." />
+                          
+                            <Button size="sm" variant="outline" disabled={!isDirty || updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id} onClick={() => handleSave(inv)}>
                               {updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                             </Button>
                           </div>
@@ -206,16 +206,16 @@ export default function PlatformInvoices() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      </TableRow>);
+
+                })}
                 </TableBody>
               </Table>
             </div>
-          )}
+          }
         </div>
 
-        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => {if (!open) setDeleteTarget(null);}}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete invoice?</AlertDialogTitle>
@@ -228,8 +228,8 @@ export default function PlatformInvoices() {
               <AlertDialogAction
                 disabled={deleteMutation.isPending}
                 onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
+                className="bg-red-600 hover:bg-red-700 text-white">
+                
                 {deleteMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                 Delete invoice
               </AlertDialogAction>
@@ -237,6 +237,6 @@ export default function PlatformInvoices() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
-  );
+    </div>);
+
 }
