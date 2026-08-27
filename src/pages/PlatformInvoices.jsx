@@ -9,9 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { Receipt, ShieldAlert, Loader2, Check } from 'lucide-react';
+import { Receipt, ShieldAlert, Loader2, Check, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const statusMeta = {
   issued: { label: 'Issued', className: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -52,6 +62,22 @@ export default function PlatformInvoices() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allInvoices'] });
       toast.success('Invoice status updated');
+    },
+    onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error')),
+  });
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (invoice_id) => {
+      const res = await base44.functions.invoke('deleteInvoice', { invoice_id });
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allInvoices'] });
+      toast.success('Invoice deleted');
+      setDeleteTarget(null);
     },
     onError: (err) => toast.error('Failed: ' + (err.message || 'Unknown error')),
   });
@@ -144,6 +170,7 @@ export default function PlatformInvoices() {
                     <TableHead>Issued</TableHead>
                     <TableHead>Test</TableHead>
                     <TableHead className="min-w-[260px]">Status</TableHead>
+                    <TableHead className="w-[60px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,6 +201,11 @@ export default function PlatformInvoices() {
                             </Button>
                           </div>
                         </TableCell>
+                        <TableCell>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(inv)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -182,6 +214,28 @@ export default function PlatformInvoices() {
             </div>
           )}
         </div>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete invoice?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete invoice <span className="font-semibold text-slate-900">{deleteTarget?.invoice_number}</span>. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Delete invoice
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
