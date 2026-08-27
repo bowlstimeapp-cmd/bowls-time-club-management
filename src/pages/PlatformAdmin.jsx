@@ -85,6 +85,8 @@ export default function PlatformAdmin() {
   const [managingAdminsClub, setManagingAdminsClub] = useState(null);
   const [affiliationDialogOpen, setAffiliationDialogOpen] = useState(false);
   const [affiliationClub, setAffiliationClub] = useState(null);
+  const [invoiceTestOpen, setInvoiceTestOpen] = useState(false);
+  const [invoiceTestLoading, setInvoiceTestLoading] = useState(false);
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [competitionForm, setCompetitionForm] = useState({
@@ -111,6 +113,7 @@ export default function PlatformAdmin() {
     admin_first_name: '',
     admin_surname: '',
     is_active: true,
+    is_paid_club: false,
     module_rink_booking: true,
     module_selection: true,
     module_competitions: true,
@@ -298,7 +301,7 @@ export default function PlatformAdmin() {
       name: '', slug: '', description: '', season: 'indoor', rink_count: 6,
       opening_time: '10:00', closing_time: '21:00', session_duration: 2,
       primary_admin_email: '', admin_first_name: '', admin_surname: '',
-      is_active: true, module_rink_booking: true, module_selection: true,
+      is_active: true, is_paid_club: false, module_rink_booking: true, module_selection: true,
       module_competitions: true, module_leagues: true, module_sms_notifications: false,
       module_homepage: false, module_function_rooms: false, module_custom_branding: false, module_messaging: false
     });
@@ -313,6 +316,7 @@ export default function PlatformAdmin() {
       opening_time: club.opening_time || '10:00', closing_time: club.closing_time || '21:00',
       session_duration: club.session_duration || 2, primary_admin_email: club.primary_admin_email,
       admin_first_name: '', admin_surname: '', is_active: club.is_active !== false,
+      is_paid_club: club.is_paid_club === true,
       module_rink_booking: club.module_rink_booking !== false,
       module_selection: club.module_selection !== false,
       module_competitions: club.module_competitions !== false,
@@ -442,6 +446,9 @@ export default function PlatformAdmin() {
                   <BarChart3 className="w-4 h-4 mr-2" />Club Analytics
                 </Button>
               </Link>
+              <Button variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50" onClick={() => setInvoiceTestOpen(true)}>
+                <FileText className="w-4 h-4 mr-2" />Generate Invoices (Test)
+              </Button>
             </div>
             {/* Mobile: dropdown for secondary actions */}
             <div className="sm:hidden">
@@ -456,6 +463,7 @@ export default function PlatformAdmin() {
                   <DropdownMenuItem asChild><Link to={createPageUrl('PlatformUsers')} className="cursor-pointer"><UsersRound className="w-4 h-4 mr-2" />All Users</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to={createPageUrl('UserGuides')} className="cursor-pointer"><BookOpen className="w-4 h-4 mr-2" />User Guides</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to={createPageUrl('ClubAnalyticsDashboard')} className="cursor-pointer"><BarChart3 className="w-4 h-4 mr-2" />Club Analytics</Link></DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setInvoiceTestOpen(true)} className="cursor-pointer"><FileText className="w-4 h-4 mr-2" />Generate Invoices (Test)</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -574,6 +582,9 @@ export default function PlatformAdmin() {
                                 <Badge variant={club.is_active !== false ? "default" : "secondary"} className="flex-shrink-0">
                                   {club.is_active !== false ? 'Active' : 'Inactive'}
                                 </Badge>
+                                {club.is_paid_club && (
+                                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 flex-shrink-0">Paid</Badge>
+                                )}
                                 {club.club_tier === 'free' && (
                                   <Badge className="bg-blue-100 text-blue-800 border-blue-200">Free Club</Badge>
                                 )}
@@ -993,6 +1004,10 @@ export default function PlatformAdmin() {
                   <Label>Club Active</Label>
                   <Switch checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} />
                 </div>
+                <div className="col-span-2 flex items-center justify-between">
+                  <Label>Paid Club</Label>
+                  <Switch checked={formData.is_paid_club} onCheckedChange={(checked) => setFormData({ ...formData, is_paid_club: checked })} />
+                </div>
                 <div className="col-span-2 pt-4 border-t">
                   <Label className="text-base font-medium mb-3 block">Enabled Modules</Label>
                   <div className="space-y-3">
@@ -1172,6 +1187,44 @@ export default function PlatformAdmin() {
               >
                 {updateClubMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Convert to Standard
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Generate Test Invoices Dialog */}
+        <Dialog open={invoiceTestOpen} onOpenChange={setInvoiceTestOpen}>
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle>Generate Test Invoices</DialogTitle>
+            </DialogHeader>
+            <div className="py-2 space-y-3">
+              <p className="text-gray-700">
+                This will create <strong>TEST invoices</strong> (clearly marked, safe to delete) for every club with <strong>Paid Club</strong> and <strong>Club Active</strong> both enabled, based on today's member counts.
+              </p>
+              <p className="text-sm text-gray-500">Each invoice amount = (active members × £2) ÷ 12, rounded to 2 decimal places. Re-running for the same month will not create duplicates.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInvoiceTestOpen(false)} disabled={invoiceTestLoading}>Cancel</Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700"
+                disabled={invoiceTestLoading}
+                onClick={async () => {
+                  setInvoiceTestLoading(true);
+                  try {
+                    const res = await base44.functions.invoke('generateInvoicesTest', {});
+                    const s = res.data;
+                    if (s?.error) throw new Error(s.error);
+                    toast.success(`Created ${s.invoicesCreated} test invoice${s.invoicesCreated !== 1 ? 's' : ''} across ${s.clubsProcessed} club${s.clubsProcessed !== 1 ? 's' : ''}${s.invoicesSkipped ? `, skipped ${s.invoicesSkipped}` : ''}.`);
+                    setInvoiceTestOpen(false);
+                  } catch (err) {
+                    toast.error('Failed: ' + (err.response?.data?.error || err.message));
+                  }
+                  setInvoiceTestLoading(false);
+                }}
+              >
+                {invoiceTestLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
+                {invoiceTestLoading ? 'Generating...' : 'Generate Test Invoices'}
               </Button>
             </DialogFooter>
           </DialogContent>

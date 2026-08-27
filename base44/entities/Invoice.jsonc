@@ -12,7 +12,7 @@
     },
     "amount": {
       "type": "number",
-      "description": "Invoice amount"
+      "description": "Invoice amount in pounds (2 decimal places, e.g. 45.67)"
     },
     "period_start": {
       "type": "string",
@@ -39,6 +39,11 @@
       ],
       "default": "issued",
       "description": "Invoice payment status"
+    },
+    "is_test": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for invoices created via the manual test-generation button; false for real monthly invoices"
     }
   },
   "required": [

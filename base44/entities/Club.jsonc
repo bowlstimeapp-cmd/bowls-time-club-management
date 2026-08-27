@@ -76,6 +76,11 @@
       "default": true,
       "description": "Whether the club is active"
     },
+    "is_paid_club": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this club is on a paid plan (triggers monthly invoice generation)"
+    },
     "auto_approve_bookings": {
       "type": "boolean",
       "default": false,
