@@ -36,6 +36,7 @@ const fmtCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'currenc
 export default function PlatformInvoices() {
   const [user, setUser] = useState(null);
   const [clubFilter, setClubFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState('all');
   const [statusEdits, setStatusEdits] = useState({});
   const queryClient = useQueryClient();
 
@@ -52,6 +53,10 @@ export default function PlatformInvoices() {
   });
 
   const clubMap = useMemo(() => new Map(clubs.map((c) => [c.id, c.name])), [clubs]);
+  const availableMonths = useMemo(() => {
+    const months = new Set(invoices.map((inv) => inv.date_issued?.slice(0, 7)).filter(Boolean));
+    return Array.from(months).sort().reverse();
+  }, [invoices]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ invoice_id, status }) => {
@@ -107,8 +112,14 @@ export default function PlatformInvoices() {
 
   }
 
-  const filteredInvoices = clubFilter === 'all' ? invoices : invoices.filter((inv) => inv.club_id === clubFilter);
-  const totalAmount = filteredInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  const filteredInvoices = invoices.filter((inv) => {
+    if (clubFilter !== 'all' && inv.club_id !== clubFilter) return false;
+    if (monthFilter !== 'all' && inv.date_issued?.slice(0, 7) !== monthFilter) return false;
+    return true;
+  });
+  const paidInvoices = filteredInvoices.filter((inv) => (inv.status || '').toLowerCase().includes('paid'));
+  const pendingInvoices = filteredInvoices.filter((inv) => !(inv.status || '').toLowerCase().includes('paid'));
+  const totalIncome = paidInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
   const handleSave = (invoice) => {
     const newStatus = (statusEdits[invoice.id] ?? invoice.status ?? '').trim();
@@ -125,27 +136,41 @@ export default function PlatformInvoices() {
         </div>
         <p className="text-gray-500 mb-6">Aggregated view of invoices across all clubs. Update invoice status with free text.</p>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-600">Filter by Club:</span>
-            <Select value={clubFilter} onValueChange={setClubFilter}>
-              <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Clubs</SelectItem>
-                {clubs.map((c) =>
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex gap-4">
-            <div className="bg-white rounded-lg border px-4 py-2">
-              <p className="text-xs text-gray-500">Invoices</p>
-              <p className="text-lg font-bold text-slate-900">{filteredInvoices.length}</p>
+        <div className="mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="bg-white rounded-lg border px-4 py-3">
+              <p className="text-xs text-gray-500">Invoices Pending</p>
+              <p className="text-2xl font-bold text-amber-700">{pendingInvoices.length}</p>
             </div>
-            <div className="bg-white rounded-lg border px-4 py-2">
-              <p className="text-xs text-gray-500">Total amount</p>
-              <p className="text-lg font-bold text-slate-900">{fmtCurrency(totalAmount)}</p>
+            <div className="bg-white rounded-lg border px-4 py-3">
+              <p className="text-xs text-gray-500">Invoices Paid</p>
+              <p className="text-2xl font-bold text-emerald-700">{paidInvoices.length}</p>
+            </div>
+            <div className="bg-white rounded-lg border px-4 py-3">
+              <p className="text-xs text-gray-500">Total Income (Paid)</p>
+              <p className="text-2xl font-bold text-slate-900">{fmtCurrency(totalIncome)}</p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Club:</span>
+              <Select value={clubFilter} onValueChange={setClubFilter}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Clubs</SelectItem>
+                  {clubs.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Month:</span>
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {availableMonths.map((m) => <SelectItem key={m} value={m}>{format(parseISO(m + '-01'), 'MMMM yyyy')}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -169,8 +194,7 @@ export default function PlatformInvoices() {
                     <TableHead>Period</TableHead>
                     <TableHead>Issued</TableHead>
                     
-                    <TableHead className="min-w-[260px]">Status</TableHead>
-                    <TableHead className="w-[60px]">Actions</TableHead>
+                    <TableHead className="min-w-[340px]">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -199,12 +223,10 @@ export default function PlatformInvoices() {
                             <Button size="sm" variant="outline" disabled={!isDirty || updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id} onClick={() => handleSave(inv)}>
                               {updateStatusMutation.isPending && updateStatusMutation.variables?.invoice_id === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                             </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(inv)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(inv)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </TableCell>
                       </TableRow>);
 
