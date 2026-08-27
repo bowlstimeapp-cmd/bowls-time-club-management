@@ -429,7 +429,7 @@ export default function TournamentEditor() {
                       <Label>Competition Format</Label>
                       <select
                         value={compFormat}
-                        onChange={(e) => { setCompFormat(e.target.value); setBracket(null); setPlayerTeams([]); }}
+                        onChange={(e) => { const fmt = e.target.value; setCompFormat(fmt); setBracket(null); setPlayerTeams([]); if (fmt === 'singles') setSelectedPlayers(prev => prev.filter(p => !isAno(p))); }}
                         className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                       >
                         <option value="singles">Singles</option>
