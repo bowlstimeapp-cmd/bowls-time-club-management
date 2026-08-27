@@ -31,14 +31,8 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "issued",
-        "paid",
-        "overdue",
-        "cancelled"
-      ],
       "default": "issued",
-      "description": "Invoice payment status"
+      "description": "Invoice payment status (free text \u2014 platform admins can set any value)"
     },
     "is_test": {
       "type": "boolean",

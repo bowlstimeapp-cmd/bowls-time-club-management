@@ -45,7 +45,8 @@ import {
   ChevronDown,
   FileText,
   Link2,
-  BarChart3
+  BarChart3,
+  Receipt
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -449,6 +450,11 @@ export default function PlatformAdmin() {
               <Button variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50" onClick={() => setInvoiceTestOpen(true)}>
                 <FileText className="w-4 h-4 mr-2" />Generate Invoices (Test)
               </Button>
+              <Link to={createPageUrl('PlatformInvoices')}>
+                <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                  <Receipt className="w-4 h-4 mr-2" />Invoices
+                </Button>
+              </Link>
             </div>
             {/* Mobile: dropdown for secondary actions */}
             <div className="sm:hidden">
@@ -464,6 +470,7 @@ export default function PlatformAdmin() {
                   <DropdownMenuItem asChild><Link to={createPageUrl('UserGuides')} className="cursor-pointer"><BookOpen className="w-4 h-4 mr-2" />User Guides</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link to={createPageUrl('ClubAnalyticsDashboard')} className="cursor-pointer"><BarChart3 className="w-4 h-4 mr-2" />Club Analytics</Link></DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setInvoiceTestOpen(true)} className="cursor-pointer"><FileText className="w-4 h-4 mr-2" />Generate Invoices (Test)</DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link to={createPageUrl('PlatformInvoices')} className="cursor-pointer"><Receipt className="w-4 h-4 mr-2" />Invoices</Link></DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

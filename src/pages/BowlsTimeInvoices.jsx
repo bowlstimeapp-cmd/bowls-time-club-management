@@ -118,7 +118,7 @@ export default function BowlsTimeInvoices() {
               </TableHeader>
               <TableBody>
                 {invoices.map((inv) => {
-                  const s = statusMeta[inv.status] || statusMeta.issued;
+                  const s = statusMeta[inv.status] || { label: inv.status || 'Issued', className: 'bg-slate-100 text-slate-600 border-slate-200' };
                   return (
                     <TableRow key={inv.id}>
                       <TableCell className="font-medium text-slate-900">{inv.invoice_number}</TableCell>
