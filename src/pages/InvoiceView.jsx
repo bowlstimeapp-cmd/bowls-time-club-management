@@ -58,7 +58,7 @@ export default function InvoiceView() {
     }
   }, [invoice]);
 
-  const net = Number(memberCount) * Number(rate);
+  const net = (Number(memberCount) * Number(rate)) / 12;
 
   const saveMutation = useMutation({
     mutationFn: async () => {

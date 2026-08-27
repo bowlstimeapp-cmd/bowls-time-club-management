@@ -4,7 +4,7 @@
 // "Total active members" matches the Club Analytics dashboard definition:
 // ClubMembership records with member_status === 'active' for the club.
 //
-// Invoice amount = active_members * rate (rate = £2.00), rounded to 2 decimal places.
+// Invoice amount = active_members * rate / 12 (monthly, rate = £2.00), rounded to 2 decimal places.
 
 async function fetchAll(base44, entityName, query) {
   const limit = 5000;
@@ -73,7 +73,7 @@ export async function generateInvoicesCore(base44, isTest) {
     }
 
     const rate = 2;
-    const amount = Math.round((memberCount * rate) * 100) / 100;
+    const amount = Math.round((memberCount * rate / 12) * 100) / 100;
 
     // Idempotency: skip if an invoice already exists for this club + period + is_test
     const existing = await base44.asServiceRole.entities.Invoice.filter({ club_id: club.id, period_start, is_test: !!isTest });

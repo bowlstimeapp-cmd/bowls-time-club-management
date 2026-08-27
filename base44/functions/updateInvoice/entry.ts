@@ -23,7 +23,7 @@ export default async function(req) {
     if (member_count !== undefined || rate !== undefined) {
       const mc = Number(member_count ?? 0);
       const r = Number(rate ?? 0);
-      update.amount = Math.round((mc * r) * 100) / 100;
+      update.amount = Math.round((mc * r / 12) * 100) / 100;
     }
 
     const updated = await base44.asServiceRole.entities.Invoice.update(invoice_id, update);
