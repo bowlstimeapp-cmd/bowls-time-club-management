@@ -2,6 +2,16 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 function isPlatformAdmin(user) { return user?.role === 'admin'; }
 
+// Normalize legacy DD/MM/YYYY dates to ISO YYYY-MM-DD; pass through ISO and date-times.
+function normalizeDate(d) {
+  if (!d) return null;
+  const s = String(d);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return s.slice(0, 10);
+}
+
 function periodKey(dateStr, granularity) {
   if (!dateStr) return null;
   const s = String(dateStr);
@@ -89,26 +99,28 @@ Deno.serve(async (req) => {
     for (const m of members) {
       if (m.member_status === 'active') totalActive++;
       if (m.status && statusBreakdown[m.status] !== undefined) statusBreakdown[m.status]++;
-      const d = m.membership_start_date || m.created_date;
+      const d = normalizeDate(m.membership_start_date || m.created_date);
       const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).new_members++;
-      trackEarliest(d); trackEarliest(m.created_date);
+      trackEarliest(d);
     }
 
     // --- Booking (by date) ---
     const bookings = await fetchAll(base44, 'Booking', { club_id });
     for (const b of bookings) {
-      const bk = periodKey(b.date, granularity);
+      const d = normalizeDate(b.date);
+      const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).bookings++;
-      trackEarliest(b.date); trackEarliest(b.created_date);
+      trackEarliest(d);
     }
 
     // --- EmailLog (by created_date) ---
     const emails = await fetchAll(base44, 'EmailLog', { club_id });
     for (const e of emails) {
-      const bk = periodKey(e.created_date, granularity);
+      const d = normalizeDate(e.created_date);
+      const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).emails_sent++;
-      trackEarliest(e.created_date);
+      trackEarliest(d);
     }
 
     // --- ClubLoginEvent (distinct user_email per bucket by event_date) ---
@@ -116,32 +128,35 @@ Deno.serve(async (req) => {
     const allLoginEmails = new Set();
     for (const l of loginEvents) {
       allLoginEmails.add(l.user_email);
-      const bk = periodKey(l.event_date, granularity);
+      const d = normalizeDate(l.event_date);
+      const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk)._logins.add(l.user_email);
-      trackEarliest(l.event_date); trackEarliest(l.created_date);
+      trackEarliest(d);
     }
 
     // --- ClubMessage (by created_date) ---
     const messages = await fetchAll(base44, 'ClubMessage', { club_id });
     for (const msg of messages) {
-      const bk = periodKey(msg.created_date, granularity);
+      const d = normalizeDate(msg.created_date);
+      const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).messages++;
-      trackEarliest(msg.created_date);
+      trackEarliest(d);
     }
 
     // --- AuditLog (admin actions, by created_date) ---
     const auditLogs = await fetchAll(base44, 'AuditLog', { club_id });
     for (const a of auditLogs) {
-      const bk = periodKey(a.created_date, granularity);
+      const d = normalizeDate(a.created_date);
+      const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).admin_actions++;
-      trackEarliest(a.created_date);
+      trackEarliest(d);
     }
 
     // --- CompetitionEntry (by entry_date / created_date) ---
     const compEntries = await fetchAll(base44, 'CompetitionEntry', { club_id });
     let compEntriesThisMonth = 0;
     for (const c of compEntries) {
-      const d = c.entry_date || c.created_date;
+      const d = normalizeDate(c.entry_date || c.created_date);
       const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).competition_entries++;
       if (periodKey(d, 'month') === thisMonthKey) compEntriesThisMonth++;
@@ -152,10 +167,11 @@ Deno.serve(async (req) => {
     const leagueTeams = await fetchAll(base44, 'LeagueTeam', { club_id });
     let leagueTeamsThisMonth = 0;
     for (const t of leagueTeams) {
-      const bk = periodKey(t.created_date, granularity);
+      const d = normalizeDate(t.created_date);
+      const bk = periodKey(d, granularity);
       if (bk && seriesMap.has(bk)) seriesMap.get(bk).league_teams++;
-      if (periodKey(t.created_date, 'month') === thisMonthKey) leagueTeamsThisMonth++;
-      trackEarliest(t.created_date);
+      if (periodKey(d, 'month') === thisMonthKey) leagueTeamsThisMonth++;
+      trackEarliest(d);
     }
 
     // --- SmsUsage (already monthly; month_key YYYY-MM) ---
