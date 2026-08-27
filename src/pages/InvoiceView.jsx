@@ -103,7 +103,7 @@ export default function InvoiceView() {
           <div className="flex justify-between items-start mb-8">
             <div className="flex-1">
               {edit ? <Input value={bName} onChange={(e) => setBName(e.target.value)} className="text-2xl font-bold border-0 px-0 h-auto focus-visible:ring-0" /> : <h2 className="text-2xl font-bold">{bName}</h2>}
-              {edit ? <Textarea value={bAddress} onChange={(e) => setBAddress(e.target.value)} className="mt-1 text-sm text-slate-600 border-0 px-0 min-h-[60px] focus-visible:ring-0 resize-none" /> : <p className="mt-1 text-sm text-slate-600 whitespace-pre-line">{bAddress}</p>}
+              {edit ? <Textarea value={bAddress} onChange={(e) => setBAddress(e.target.value)} className="mt-1 text-sm text-slate-600 border-0 px-0 min-h-[80px] focus-visible:ring-0 resize-none" /> : <p className="mt-1 text-sm text-slate-600 whitespace-pre-line">{bAddress}</p>}
             </div>
             <div className="text-right">
               <h1 className="text-3xl font-bold tracking-wide text-slate-900">INVOICE</h1>
