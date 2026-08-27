@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Loader2, RotateCcw, X } from 'lucide-react';
@@ -112,7 +113,7 @@ export default function OfficerImageCropper({ imageFile, onCropComplete, onCance
     }, 'image/jpeg', 0.9);
   };
 
-  return (
+  return createPortal((
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-4">
@@ -169,5 +170,5 @@ export default function OfficerImageCropper({ imageFile, onCropComplete, onCance
         </div>
       </div>
     </div>
-  );
+  ), document.body);
 }
