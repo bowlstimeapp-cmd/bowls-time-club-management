@@ -16,15 +16,16 @@ export default function LiveMatchBanner({ clubId }) {
     queryFn: async () => {
       if (!clubId) return [];
       
-      // Get all published selections for today
+      // Get all published selections, sorted by match date (newest first) so today's matches are included
       const allSelections = await base44.entities.TeamSelection.filter({
         club_id: clubId,
         status: 'published'
-      });
+      }, '-match_date');
       
-      // Filter to matches happening today
+      // Filter to matches happening today (excluding archived)
       return allSelections.filter(selection => {
         if (!selection.match_date) return false;
+        if (selection.is_archived) return false;
         return isToday(parseISO(selection.match_date));
       });
     },
