@@ -388,6 +388,14 @@
       "items": {
         "type": "string"
       }
+    },
+    "onboarding_completed_items": {
+      "type": "array",
+      "default": [],
+      "description": "Checklist item keys that have been completed during club onboarding (e.g. [\"tour\", \"members\"])",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

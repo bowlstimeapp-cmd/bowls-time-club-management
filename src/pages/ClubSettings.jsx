@@ -24,6 +24,7 @@ import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal'
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { markOnboardingComplete } from '@/lib/onboardingChecklist';
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
@@ -196,6 +197,7 @@ export default function ClubSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club', clubId] });
       toast.success('Settings saved successfully');
+      markOnboardingComplete(clubId, 'settings');
     },
     onError: (err) => {
       console.error('Save error:', err);

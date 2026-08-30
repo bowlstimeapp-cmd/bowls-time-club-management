@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
+import { markOnboardingComplete } from '@/lib/onboardingChecklist';
 
 // Tour date: 1st Jan 2999
 export const TOUR_DATE = new Date(2999, 0, 1);
@@ -23,6 +24,11 @@ export async function dismissTour() {
   await base44.auth.updateMe({ tour_completed: true });
   localStorage.removeItem(TOUR_STEP_KEY);
   localStorage.removeItem(TOUR_PAUSED_KEY);
+  // Fire-and-forget: mark the tour onboarding item as complete for the current club
+  const clubId = new URLSearchParams(window.location.search).get('clubId');
+  if (clubId) {
+    markOnboardingComplete(clubId, 'tour');
+  }
 }
 
 export function pauseTour(step) {

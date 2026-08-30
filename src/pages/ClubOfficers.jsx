@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Phone, Mail, Award, Plus, Pencil, Trash2, ChevronUp, ChevronDown, User, Shield } from 'lucide-react';
 import OfficerEditorDialog from '@/components/officers/OfficerEditorDialog';
+import { markOnboardingComplete } from '@/lib/onboardingChecklist';
 
 function getMemberName(m) {
   const parts = [m.title, m.first_name, m.surname].filter(Boolean);
@@ -81,6 +82,7 @@ export default function ClubOfficers() {
         await base44.functions.invoke('updateClubData', { entity: 'ClubOfficer', action: 'update', clubId, id: editingOfficer.id, data });
       } else {
         await base44.functions.invoke('updateClubData', { entity: 'ClubOfficer', action: 'create', clubId, data: { ...data, display_order: officers.length } });
+        markOnboardingComplete(clubId, 'officers');
       }
       queryClient.invalidateQueries({ queryKey: ['clubOfficers', clubId] });
       setEditorOpen(false);

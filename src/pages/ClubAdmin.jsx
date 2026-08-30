@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { markOnboardingComplete } from '@/lib/onboardingChecklist';
 import MemberDetailModal from '@/components/member/MemberDetailModal';
 import AddMemberModal from '@/components/member/AddMemberModal';
 import BulkUploadModal from '@/components/member/BulkUploadModal';
@@ -262,6 +263,9 @@ export default function ClubAdmin() {
       queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
       toast.success('Member added successfully');
       setAddMemberOpen(false);
+      if (memberships.some(m => m.status === 'approved' && m.member_status !== 'left')) {
+        markOnboardingComplete(clubId, 'members');
+      }
     },
   });
 
@@ -461,6 +465,9 @@ export default function ClubAdmin() {
     queryClient.invalidateQueries({ queryKey: ['clubMemberships'] });
     base44.functions.invoke('membershipEmails', { type: 'approved', membershipId: membership.id }).catch(() => {});
     toast.success(`${membership.user_name || membership.user_email} approved`);
+    if (memberships.some(m => m.status === 'approved' && m.member_status !== 'left')) {
+      markOnboardingComplete(clubId, 'members');
+    }
   };
 
   const handleReject = async (membership) => {
