@@ -30,7 +30,8 @@ import KioskLogin from '@/components/kiosk/KioskLogin';
 import KioskSessionWrapper from '@/components/kiosk/KioskSessionWrapper';
 import { useKiosk } from '@/lib/KioskContext';
 import LeagueResultModal from '@/components/leagues/LeagueResultModal';
-import NewClubWelcomeModal from '@/components/club/NewClubWelcomeModal';
+import OnboardingModal from '@/components/club/NewClubWelcomeModal';
+import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -54,9 +55,8 @@ export default function BookRink() {
   const { kioskMember, setKioskMember } = useKiosk();
   const [resultPrompt, setResultPrompt] = useState(null); // { fixture, league, homeTeam, awayTeam, userTeamId }
 
-  // New club welcome modal state
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [tourDeferred, setTourDeferred] = useState(false);
+  // Onboarding modal state
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Tour state
   const [tourStep, setTourStep] = useState(-1); // -1 = not started
@@ -82,15 +82,24 @@ export default function BookRink() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      // Check for new club welcome modal first — if showing, defer the tour
+      // Check onboarding checklist for club admins — if incomplete, show the onboarding modal
       if (clubId) {
-        const welcomeState = localStorage.getItem('bowlstime_welcome_' + clubId);
-        const closedThisSession = sessionStorage.getItem('bowlstime_welcome_closed_' + clubId);
-        if (closedThisSession !== 'true' && welcomeState !== 'dismissed' && (welcomeState === 'new' || welcomeState === 'pinned')) {
-          setShowWelcome(true);
-          setTourDeferred(true);
-          return;
-        }
+        try {
+          const memberships = await base44.entities.ClubMembership.filter({ club_id: clubId, user_email: currentUser.email });
+          const userMembership = memberships[0];
+          const isAdmin = userMembership?.role === 'admin' && userMembership?.status === 'approved';
+          if (isAdmin) {
+            const clubs = await base44.entities.Club.filter({ id: clubId });
+            const clubData = clubs[0];
+            const completedItems = clubData?.onboarding_completed_items || [];
+            const allComplete = ONBOARDING_ITEMS.every(item => completedItems.includes(item.key));
+            const sessionDismissed = sessionStorage.getItem('bowlstime_onboarding_dismissed_session_' + clubId) === 'true';
+            if (!allComplete && !sessionDismissed) {
+              setShowOnboarding(true);
+              return;
+            }
+          }
+        } catch (e) { /* if check fails, proceed with tour as normal */ }
       }
 
       // Check for paused tour first (resume prompt)
@@ -664,29 +673,20 @@ useEffect(() => {
     }
   };
 
-  // New club welcome modal handlers
-  const handleWelcomeClose = () => {
-    if (clubId) sessionStorage.setItem('bowlstime_welcome_closed_' + clubId, 'true');
-    setShowWelcome(false);
-    if (tourDeferred) { setTourDeferred(false); startDeferredTour(); }
+  // Onboarding modal handlers
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+    startDeferredTour();
   };
 
-  const handleWelcomePin = () => {
-    if (clubId) localStorage.setItem('bowlstime_welcome_' + clubId, 'pinned');
-    setShowWelcome(false);
-    if (tourDeferred) { setTourDeferred(false); startDeferredTour(); }
+  const handleOnboardingDismissSession = () => {
+    if (clubId) sessionStorage.setItem('bowlstime_onboarding_dismissed_session_' + clubId, 'true');
+    setShowOnboarding(false);
+    startDeferredTour();
   };
 
-  const handleWelcomeUnpin = () => {
-    if (clubId) localStorage.setItem('bowlstime_welcome_' + clubId, 'dismissed');
-    setShowWelcome(false);
-    if (tourDeferred) { setTourDeferred(false); startDeferredTour(); }
-  };
-
-  const handleWelcomeTakeTour = async () => {
-    if (clubId) sessionStorage.setItem('bowlstime_welcome_closed_' + clubId, 'true');
-    setTourDeferred(false);
-    setShowWelcome(false);
+  const handleOnboardingTakeTour = async () => {
+    setShowOnboarding(false);
     await base44.auth.updateMe({ tour_completed: false });
     setTourBooking(null);
     setTourBookings2([]);
@@ -1263,14 +1263,14 @@ useEffect(() => {
           />
         )}
 
-        {/* New Club Welcome Modal */}
-        <NewClubWelcomeModal
-          open={showWelcome}
+        {/* Onboarding Modal */}
+        <OnboardingModal
+          open={showOnboarding}
           clubId={clubId}
-          onTakeTour={handleWelcomeTakeTour}
-          onClose={handleWelcomeClose}
-          onPin={handleWelcomePin}
-          onUnpin={handleWelcomeUnpin}
+          completedItems={club?.onboarding_completed_items || []}
+          onClose={handleOnboardingClose}
+          onDismissSession={handleOnboardingDismissSession}
+          onTakeTour={handleOnboardingTakeTour}
         />
 
         {/* New User Tour */}

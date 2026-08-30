@@ -35,7 +35,8 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Award,
-  Receipt
+  Receipt,
+  Rocket
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -43,6 +44,7 @@ import LiveMatchBanner from '@/components/LiveMatchBanner';
 import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
 import { useKiosk } from '@/lib/KioskContext';
 import ModuleLockedNotice from '@/components/club/ModuleLockedNotice';
+import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
 
 const MODULE_PAGE_MAP = {
   BookRink: { key: 'module_rink_booking', name: 'Rink Booking', desc: 'Book rinks, manage sessions, and track availability across your club facilities.' },
@@ -147,6 +149,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const onboardingRemaining = isClubAdmin && club ? ONBOARDING_ITEMS.filter(item => !(club.onboarding_completed_items || []).includes(item.key)).length : 0;
   const isFreeClub = club?.club_tier === 'free';
   const lockedModule = isFreeClub && needsClub && clubId ? MODULE_PAGE_MAP[currentPageName] : null;
   const isModuleLocked = lockedModule && club?.[lockedModule.key] === false;
@@ -375,6 +378,19 @@ export default function Layout({ children, currentPageName }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      {isClubAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('OnboardingChecklist') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <Rocket className="w-4 h-4 mr-2" />
+                            Getting Started
+                            {onboardingRemaining > 0 && (
+                              <span className="ml-auto bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full px-2 py-0.5">
+                                {onboardingRemaining}
+                              </span>
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('ClubOfficers') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Award className="w-4 h-4 mr-2" />

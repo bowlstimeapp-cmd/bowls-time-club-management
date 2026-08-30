@@ -3,66 +3,103 @@ import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from '@/utils';
-import { Pin, PinOff, PlayCircle, Settings, Users, LifeBuoy } from 'lucide-react';
+import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
+import { PlayCircle, Settings, Users, Shield, LifeBuoy, CheckCircle2, ArrowRight } from 'lucide-react';
 
-export default function NewClubWelcomeModal({ open, clubId, onTakeTour, onClose, onPin, onUnpin }) {
+const ICON_MAP = {
+  PlayCircle,
+  Settings,
+  Users,
+  Shield,
+  LifeBuoy,
+};
+
+export default function OnboardingModal({ open, clubId, completedItems = [], onClose, onDismissSession, onTakeTour }) {
   if (!open) return null;
 
+  const completedSet = new Set(completedItems);
+  const completedCount = ONBOARDING_ITEMS.filter(item => completedSet.has(item.key)).length;
+
+  const getItemLink = (item) => {
+    if (!item.page) return null;
+    if (item.page === 'HelpCentre') return createPageUrl('HelpCentre');
+    return createPageUrl(item.page) + `?clubId=${clubId}`;
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg mx-4 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl pr-6">Welcome to your new club within Bowls Time!</DialogTitle>
+          <DialogTitle className="text-xl pr-6">Get your club set up</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <p className="text-sm text-gray-600 leading-relaxed">
-            We recommend learning about the rink booking by following the Bowls Time tour, taking a look at customising Club Settings, and adding other club members so they can take a look around too.
-          </p>
-
-          <div className="space-y-2">
-            <Button
-              onClick={() => { onTakeTour(); }}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 justify-start"
-            >
-              <PlayCircle className="w-4 h-4 mr-2" />
-              Take the Bowls Time Tour
-            </Button>
-
-            <Link to={createPageUrl('ClubSettings') + `?clubId=${clubId}`} onClick={onClose}>
-              <Button variant="outline" className="w-full justify-start">
-                <Settings className="w-4 h-4 mr-2" />
-                Customise Club Settings
-              </Button>
-            </Link>
-
-            <Link to={createPageUrl('ClubAdmin') + `?clubId=${clubId}`} onClick={onClose}>
-              <Button variant="outline" className="w-full justify-start">
-                <Users className="w-4 h-4 mr-2" />
-                Add Club Members
-              </Button>
-            </Link>
-
-            <Link to={createPageUrl('HelpCentre')} onClick={onClose}>
-              <Button variant="outline" className="w-full justify-start">
-                <LifeBuoy className="w-4 h-4 mr-2" />
-                Help Centre — User Guides &amp; Admin Guides
-              </Button>
-            </Link>
+          {/* Progress indicator */}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-gray-600">
+              {completedCount} of {ONBOARDING_ITEMS.length} complete
+            </p>
+            <div className="flex-1 max-w-[120px] h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 transition-all"
+                style={{ width: `${(completedCount / ONBOARDING_ITEMS.length) * 100}%` }}
+              />
+            </div>
           </div>
 
-          <p className="text-xs text-gray-500">
-            User guides and admin guides are also available from the Help Centre at any time.
-          </p>
+          {/* Checklist */}
+          <div className="space-y-2">
+            {ONBOARDING_ITEMS.map((item) => {
+              const Icon = ICON_MAP[item.icon];
+              const isComplete = completedSet.has(item.key);
+              const link = getItemLink(item);
+
+              return (
+                <div
+                  key={item.key}
+                  className={`flex items-center gap-3 rounded-lg border p-3 ${isComplete ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}
+                >
+                  {isComplete ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <Icon className="w-5 h-5 text-gray-400 shrink-0" />
+                  )}
+                  <span className={`text-sm font-medium flex-1 ${isComplete ? 'text-gray-500' : 'text-gray-900'}`}>
+                    {item.label}
+                  </span>
+                  {item.key === 'tour' ? (
+                    <Button size="sm" variant="outline" onClick={onTakeTour}>
+                      <PlayCircle className="w-3.5 h-3.5 mr-1" />
+                      Take Tour
+                    </Button>
+                  ) : link ? (
+                    <Link to={link} onClick={onClose}>
+                      <Button size="sm" variant="outline">
+                        <ArrowRight className="w-3.5 h-3.5 mr-1" />
+                        Go
+                      </Button>
+                    </Link>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* View Full Checklist */}
+          <Link to={createPageUrl('OnboardingChecklist') + `?clubId=${clubId}`} onClick={onClose}>
+            <Button variant="link" className="w-full text-sm text-gray-500 p-0">
+              View Full Checklist
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </Link>
         </div>
 
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" onClick={onPin} className="flex-1">
-            <Pin className="w-4 h-4 mr-2" />
-            Pin this message
+        {/* Footer */}
+        <div className="flex gap-2 pt-2 border-t">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Remind me next time
           </Button>
-          <Button variant="outline" onClick={onUnpin} className="flex-1">
-            <PinOff className="w-4 h-4 mr-2" />
-            Unpin
+          <Button variant="ghost" onClick={onDismissSession} className="flex-1 text-gray-500">
+            Don't show again this session
           </Button>
         </div>
       </DialogContent>

@@ -76,7 +76,7 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
             <p className="text-sm text-gray-500 mb-6">Your free-tier club is ready. Rink Booking is enabled — you can start booking rinks right away.</p>
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 w-full"
-              onClick={() => { localStorage.setItem('bowlstime_welcome_' + createdClub.id, 'new'); handleClose(); onCreated?.(createdClub); }}
+              onClick={() => { handleClose(); onCreated?.(createdClub); }}
             >
               Go to Club
             </Button>
