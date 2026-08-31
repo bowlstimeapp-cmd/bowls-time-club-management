@@ -14,6 +14,7 @@ import {
 import { 
   Calendar, 
   CalendarCheck, 
+  CalendarDays, 
   ShieldCheck, 
   User, 
   LogOut,
@@ -58,6 +59,7 @@ const MODULE_PAGE_MAP = {
   CompetitionRegistration: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
   LeagueAdmin: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
   LeagueView: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
+  ClubFixtures: { key: 'module_leagues', name: 'Fixtures', desc: 'Manage club fixtures with automatic rink booking and draft selection creation.' },
   ClubHome: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
   ClubHomepageAdmin: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
   FunctionRoomAdmin: { key: 'module_function_rooms', name: 'Function Room Bookings', desc: 'Manage function room bookings, enquiries, and availability for your club facilities.' },
@@ -177,6 +179,7 @@ export default function Layout({ children, currentPageName }) {
     ...((club?.module_leagues !== false || isFreeClub) ? [
       { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
       { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
+      { name: 'Fixtures', href: createPageUrl('ClubFixtures') + `?clubId=${clubId}`, icon: CalendarDays },
     ] : []),
     { name: 'Club Officers', href: createPageUrl('ClubOfficers') + `?clubId=${clubId}`, icon: Award },
     { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
@@ -453,6 +456,14 @@ export default function Layout({ children, currentPageName }) {
                           <Link to={createPageUrl('LeagueAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
                             <Table2 className="w-4 h-4 mr-2" />
                             Leagues
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {(club?.module_leagues !== false || isFreeClub) && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('ClubFixtures') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <CalendarDays className="w-4 h-4 mr-2" />
+                            Fixtures
                           </Link>
                         </DropdownMenuItem>
                       )}

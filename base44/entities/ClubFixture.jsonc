@@ -1,0 +1,49 @@
+{
+  "name": "ClubFixture",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "competition_id": {
+      "type": "string",
+      "description": "Reference to the Competition entity"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fixture date"
+    },
+    "time": {
+      "type": "string",
+      "description": "Match start time (HH:MM)"
+    },
+    "venue": {
+      "type": "string",
+      "enum": [
+        "Home",
+        "Away",
+        "Home & Away"
+      ],
+      "description": "Fixture venue"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional fixture notes"
+    }
+  },
+  "required": [
+    "club_id",
+    "competition_id",
+    "date",
+    "time",
+    "venue"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
