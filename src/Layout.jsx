@@ -301,20 +301,38 @@ export default function Layout({ children, currentPageName }) {
                   )
                 )}
 
-                {/* Selection — hidden in kiosk mode */}
+                {/* Selection Dropdown — hidden in kiosk mode */}
                 {!isKioskSession && (club?.module_selection !== false || isFreeClub) && (
-                  <Link
-                    to={createPageUrl('Selection') + `?clubId=${clubId}`}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                      isActive(createPageUrl('Selection'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    )}
-                  >
-                    <ClipboardList className="w-4 h-4" />
-                    Selection
-                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className={cn(
+                        "flex items-center gap-1 text-sm font-medium",
+                        (isActive(createPageUrl('Selection')) || isActive(createPageUrl('ClubFixtures')))
+                          ? "text-emerald-700"
+                          : "text-gray-600 hover:text-gray-900"
+                      )}>
+                        <ClipboardList className="w-4 h-4" />
+                        Selection
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('Selection') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <ClipboardList className="w-4 h-4 mr-2" />
+                          Match Selection
+                        </Link>
+                      </DropdownMenuItem>
+                      {(club?.module_leagues !== false || isFreeClub) && (
+                        <DropdownMenuItem asChild>
+                          <Link to={createPageUrl('ClubFixtures') + `?clubId=${clubId}`} className="cursor-pointer">
+                            <CalendarDays className="w-4 h-4 mr-2" />
+                            Club Fixtures
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
                 {/* Competitions Dropdown — hidden in kiosk mode */}
