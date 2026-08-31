@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -72,7 +72,26 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
             <Select value={formData.competition_id} onValueChange={(v) => setFormData({ ...formData, competition_id: v })}>
               <SelectTrigger><SelectValue placeholder="Select competition" /></SelectTrigger>
               <SelectContent>
-                {competitions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {(() => {
+                  const clubComps = competitions.filter(c => c.club_id);
+                  const platformComps = competitions.filter(c => !c.club_id);
+                  return (
+                    <>
+                      {clubComps.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Club Competitions</SelectLabel>
+                          {clubComps.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectGroup>
+                      )}
+                      {platformComps.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Platform Competitions</SelectLabel>
+                          {platformComps.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectGroup>
+                      )}
+                    </>
+                  );
+                })()}
               </SelectContent>
             </Select>
           </div>

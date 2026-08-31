@@ -46,8 +46,16 @@ export default function ClubFixtures() {
     enabled: !!clubId,
   });
 
+  const { data: platformCompetitions = [] } = useQuery({
+    queryKey: ['platformCompetitions'],
+    queryFn: async () => base44.entities.Competition.filter({ club_id: null }, 'name', 200),
+    enabled: !!clubId,
+  });
+
+  const allCompetitions = useMemo(() => [...competitions, ...platformCompetitions], [competitions, platformCompetitions]);
+
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
-  const competitionMap = useMemo(() => { const map = {}; competitions.forEach(c => { map[c.id] = c; }); return map; }, [competitions]);
+  const competitionMap = useMemo(() => { const map = {}; allCompetitions.forEach(c => { map[c.id] = c; }); return map; }, [allCompetitions]);
 
   const handleDelete = async (fixture) => {
     if (!window.confirm('Delete this fixture? Linked selections and bookings will NOT be deleted.')) return;
@@ -138,7 +146,7 @@ export default function ClubFixtures() {
         open={showFormModal}
         onClose={() => setShowFormModal(false)}
         fixture={editingFixture}
-        competitions={competitions}
+        competitions={allCompetitions}
         clubId={clubId}
         onSaved={() => queryClient.invalidateQueries(['clubFixtures', clubId])}
       />
