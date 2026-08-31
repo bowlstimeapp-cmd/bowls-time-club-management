@@ -33,6 +33,7 @@ import MemberDashboard from './pages/MemberDashboard';
 import PlatformInvoices from './pages/PlatformInvoices';
 import InvoiceView from './pages/InvoiceView';
 import ClubFixtures from './pages/ClubFixtures';
+import CompetitionAvailability from './pages/CompetitionAvailability';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -99,6 +100,7 @@ const AuthenticatedApp = () => {
       <Route path="/PlatformInvoices" element={<LayoutWrapper currentPageName="PlatformInvoices"><PlatformInvoices /></LayoutWrapper>} />
             <Route path="/InvoiceView" element={<LayoutWrapper currentPageName="InvoiceView"><InvoiceView /></LayoutWrapper>} />
       <Route path="/ClubFixtures" element={<LayoutWrapper currentPageName="ClubFixtures"><ClubFixtures /></LayoutWrapper>} />
+      <Route path="/CompetitionAvailability" element={<LayoutWrapper currentPageName="CompetitionAvailability"><CompetitionAvailability /></LayoutWrapper>} />
       {/* Senior Experience Mode routes — no layout wrapper, they have their own SeniorLayout */}
       <Route path="/SeniorHome" element={<SeniorHome />} />
       <Route path="/SeniorBookRink" element={<SeniorBookRink />} />

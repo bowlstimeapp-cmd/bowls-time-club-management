@@ -5,7 +5,7 @@ import { Users } from 'lucide-react';
 import { parseISO, isWithinInterval } from 'date-fns';
 import SearchableMemberSelect from '@/components/selection/SearchableMemberSelect';
 
-export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0, locationTag = null }) {
+export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0, locationTag = null, interestedEmails }) {
   const positions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
   
   const rinks = [];
@@ -83,6 +83,7 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
                     getMemberName={getMemberName}
                     getMemberNameByEmail={getMemberNameByEmail}
                     placeholder="Select member"
+                    interestedEmails={interestedEmails}
                   />
                 </div>
               );

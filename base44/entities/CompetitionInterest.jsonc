@@ -1,0 +1,47 @@
+{
+  "name": "CompetitionInterest",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "The member this record belongs to"
+    },
+    "member_name": {
+      "type": "string",
+      "description": "Member's display name at time of submission"
+    },
+    "competition_ids": {
+      "type": "array",
+      "default": [],
+      "description": "IDs of Competition records this member wants to be considered for",
+      "items": {
+        "type": "string"
+      }
+    },
+    "submitted_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When they last submitted"
+    }
+  },
+  "required": [
+    "club_id",
+    "user_email"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, User, ChevronDown } from 'lucide-react';
+import { Search, User, ChevronDown, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
  *   onValueChange: (email | null) => void
  *   placeholder: string
  *   clearLabel: string (default "— None —")
+ *   interestedEmails: Set of emails who ticked the current competition
  */
 export default function MemberSearchSelect({
   members = [],
@@ -20,6 +21,7 @@ export default function MemberSearchSelect({
   onValueChange,
   placeholder = "Select member",
   clearLabel = "— None —",
+  interestedEmails,
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -51,6 +53,9 @@ export default function MemberSearchSelect({
           <span className={cn("truncate", !value && "text-gray-400")}>
             {displayName || placeholder}
           </span>
+          {value && interestedEmails?.has(value) && (
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0" />
+          )}
           <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0 ml-1" />
         </Button>
       </PopoverTrigger>
@@ -87,6 +92,9 @@ export default function MemberSearchSelect({
             >
               <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
               <span className="truncate">{getMemberName(member)}</span>
+              {interestedEmails?.has(member.user_email) && (
+                <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />
+              )}
             </button>
           ))}
         </div>

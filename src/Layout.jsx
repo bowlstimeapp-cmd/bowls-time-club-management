@@ -37,7 +37,8 @@ import {
   LifeBuoy,
   Award,
   Receipt,
-  Rocket
+  Rocket,
+  Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -60,6 +61,7 @@ const MODULE_PAGE_MAP = {
   LeagueAdmin: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
   LeagueView: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
   ClubFixtures: { key: 'module_leagues', name: 'Fixtures', desc: 'Manage club fixtures with automatic rink booking and draft selection creation.' },
+  CompetitionAvailability: { key: 'module_selection', name: 'Competition Availability', desc: 'Indicate which competitions you want to be considered for.' },
   ClubHome: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
   ClubHomepageAdmin: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
   FunctionRoomAdmin: { key: 'module_function_rooms', name: 'Function Room Bookings', desc: 'Manage function room bookings, enquiries, and availability for your club facilities.' },
@@ -169,6 +171,7 @@ export default function Layout({ children, currentPageName }) {
     ] : []),
     ...((club?.module_selection !== false || isFreeClub) ? [
       { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
+      { name: 'Competition Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
     ] : []),
     ...((club?.module_competitions !== false || isFreeClub) ? [
       { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
@@ -321,6 +324,12 @@ export default function Layout({ children, currentPageName }) {
                         <Link to={createPageUrl('Selection') + `?clubId=${clubId}`} className="cursor-pointer">
                           <ClipboardList className="w-4 h-4 mr-2" />
                           Match Selection
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Star className="w-4 h-4 mr-2" />
+                          Competition Availability
                         </Link>
                       </DropdownMenuItem>
                       {(club?.module_leagues !== false || isFreeClub) && (

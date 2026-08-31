@@ -12,7 +12,7 @@ const TOP_CLUB_OUTDOOR_EVENTS = [
   { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
 ];
 
-export default function TopClubOutdoorSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [] }) {
+export default function TopClubOutdoorSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], interestedEmails }) {
   const getPositionKey = (eventId, position) => `${eventId}_${position}`;
   const getMemberName = (member) => member?.user_name || member?.user_email || 'Unknown';
   const getMemberNameByEmail = (email) => {
@@ -63,6 +63,7 @@ export default function TopClubOutdoorSelectionGrid({ members, selections, selec
                       getMemberName={getMemberName}
                       getMemberNameByEmail={getMemberNameByEmail}
                       placeholder="Select"
+                      interestedEmails={interestedEmails}
                     />
                   </div>
                 );

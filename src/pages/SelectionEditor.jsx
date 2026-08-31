@@ -189,6 +189,12 @@ export default function SelectionEditor() {
     },
   });
 
+  const { data: competitionInterests = [] } = useQuery({
+    queryKey: ['competitionInterests', clubId],
+    queryFn: () => base44.entities.CompetitionInterest.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
   const allCompetitions = [...platformCompetitions, ...clubCompetitions];
   
   // Filter competitions by club's season (indoor/outdoor)
@@ -737,6 +743,16 @@ if (club?.email_member_notifications) {
 
   // Filter members based on competition gender and age_group restrictions
   const activeCompetition = competitions.find(c => c.name === competition);
+
+  const interestedEmails = useMemo(() => {
+    if (!activeCompetition || !competitionInterests.length) return new Set();
+    const compId = activeCompetition.id;
+    return new Set(
+      competitionInterests
+        .filter(ci => (ci.competition_ids || []).includes(compId))
+        .map(ci => ci.user_email)
+    );
+  }, [activeCompetition, competitionInterests]);
   const filteredMembers = React.useMemo(() => {
     // Always exclude social-only members from selection
     const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
@@ -980,6 +996,7 @@ if (club?.email_member_notifications) {
                           value={homeCaptainEmail || null}
                           onValueChange={(v) => setHomeCaptainEmail(v || '')}
                           placeholder="Select home captain"
+                          interestedEmails={interestedEmails}
                         />
                       </div>
                     )}
@@ -991,6 +1008,7 @@ if (club?.email_member_notifications) {
                           value={awayCaptainEmail || null}
                           onValueChange={(v) => setAwayCaptainEmail(v || '')}
                           placeholder="Select away captain"
+                          interestedEmails={interestedEmails}
                         />
                       </div>
                     )}
@@ -1210,6 +1228,7 @@ if (club?.email_member_notifications) {
                   onSelectionChange={handleSelectionChange}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
+                  interestedEmails={interestedEmails}
                 />
               ) : isTopClub ? (
                 <TopClubSelectionGrid
@@ -1219,6 +1238,7 @@ if (club?.email_member_notifications) {
                   onSelectionChange={handleSelectionChange}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
+                  interestedEmails={interestedEmails}
                 />
               ) : isTopClubOutdoor ? (
                 <TopClubOutdoorSelectionGrid
@@ -1228,6 +1248,7 @@ if (club?.email_member_notifications) {
                   onSelectionChange={handleSelectionChange}
                   matchDate={matchDate}
                   unavailabilities={unavailabilities}
+                  interestedEmails={interestedEmails}
                 />
               ) : isFriendly ? (
                 canShowFriendlyGrid ? (
@@ -1242,6 +1263,7 @@ if (club?.email_member_notifications) {
                     homeRinks={effectiveHomeRinks}
                     awayRinks={0}
                     locationTag={friendlyLocation}
+                    interestedEmails={interestedEmails}
                   />
                 ) : (
                   <Card>
@@ -1261,6 +1283,7 @@ if (club?.email_member_notifications) {
                   playersPerRink={effectivePlayersPerRink}
                   homeRinks={effectiveHomeRinks}
                   awayRinks={effectiveAwayRinks}
+                  interestedEmails={interestedEmails}
                 />
               )
             ) : (

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, User, ChevronDown } from 'lucide-react';
+import { Search, User, ChevronDown, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function SearchableMemberSelect({
@@ -14,7 +14,8 @@ export default function SearchableMemberSelect({
   isUnavailableOnDateFn,
   getMemberName,
   getMemberNameByEmail,
-  placeholder = "Select member"
+  placeholder = "Select member",
+  interestedEmails
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -40,6 +41,9 @@ export default function SearchableMemberSelect({
           <span className={cn("truncate", !value && "text-gray-400")}>
             {value ? getMemberNameByEmail(value) : placeholder}
           </span>
+          {value && interestedEmails?.has(value) && (
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0" />
+          )}
           <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0 ml-1" />
         </Button>
       </PopoverTrigger>
@@ -88,6 +92,9 @@ export default function SearchableMemberSelect({
                   {getMemberName(member)}
                   {!available && <span className="text-xs text-gray-400 ml-1">(selected)</span>}
                 </span>
+                {interestedEmails?.has(member.user_email) && (
+                  <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0 ml-1" />
+                )}
               </button>
             );
           })}

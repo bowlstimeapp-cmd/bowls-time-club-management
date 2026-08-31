@@ -13,7 +13,7 @@ const FANTASTIC5S_RINKS = [
   { number: 4, label: 'Triples',  positions: ['Lead', '2', 'Skip'] },
 ];
 
-export default function Fantastic5sSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [] }) {
+export default function Fantastic5sSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], interestedEmails }) {
   const getPositionKey = (rinkNum, position) => `rink${rinkNum}_${position}`;
 
   const getMemberName = (member) => member?.user_name || member?.user_email || 'Unknown';
@@ -77,6 +77,7 @@ export default function Fantastic5sSelectionGrid({ members, selections, selected
                     getMemberName={getMemberName}
                     getMemberNameByEmail={getMemberNameByEmail}
                     placeholder="Select member"
+                    interestedEmails={interestedEmails}
                   />
                 </div>
               );
