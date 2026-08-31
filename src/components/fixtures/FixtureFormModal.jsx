@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function FixtureFormModal({ open, onClose, fixture, competitions, clubId, onSaved }) {
-  const [formData, setFormData] = useState({ competition_id: '', date: '', time: '', finish_time: '', venue: 'Home', notes: '' });
+  const [formData, setFormData] = useState({ competition_id: '', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -20,11 +20,12 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
         date: fixture.date || '',
         time: fixture.time || '',
         finish_time: fixture.finish_time || '',
+        opponent: fixture.opponent || '',
         venue: fixture.venue || 'Home',
         notes: fixture.notes || '',
       });
     } else {
-      setFormData({ competition_id: '', date: '', time: '', finish_time: '', venue: 'Home', notes: '' });
+      setFormData({ competition_id: '', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '' });
     }
   }, [fixture, open]);
 
@@ -95,6 +96,10 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
                 })()}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label>Opponent (optional)</Label>
+            <Input value={formData.opponent} onChange={(e) => setFormData({ ...formData, opponent: e.target.value })} placeholder="e.g. Bramley BC" />
           </div>
           <div>
             <Label>Date</Label>

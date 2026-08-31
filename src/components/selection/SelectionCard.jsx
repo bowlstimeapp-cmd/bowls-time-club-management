@@ -158,6 +158,7 @@ export default function SelectionCard({
                 {format(parseISO(selection.match_date), 'd MMM yyyy')}
               </span>
               {selection.match_name && <span className="text-sm text-gray-500 truncate">{selection.match_name}</span>}
+              {selection.opponent && <span className="text-sm text-gray-500 truncate">vs {selection.opponent}</span>}
               <Badge className={`border text-xs ${competitionColors[selection.competition]}`}>
                 {selection.competition}
               </Badge>
@@ -196,6 +197,7 @@ export default function SelectionCard({
                 {format(parseISO(selection.match_date), 'd MMMM yyyy')}
               </span>
               {selection.match_name && <span className="text-sm text-gray-600">· {selection.match_name}</span>}
+              {selection.opponent && <span className="text-sm text-gray-600">· vs {selection.opponent}</span>}
             </div>
             <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
               <span className="flex items-center gap-1"><Trophy className="w-3 h-3" />{selection.competition}</span>
@@ -233,6 +235,9 @@ export default function SelectionCard({
         </div>
         {selection.match_name && (
           <p className="text-base text-gray-600 font-medium">{selection.match_name}</p>
+        )}
+        {selection.opponent && (
+          <p className="text-base text-gray-600 font-medium">vs {selection.opponent}</p>
         )}
         <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected</p>
       </div>
@@ -275,6 +280,7 @@ return (
                   {format(parseISO(selection.match_date), 'd MMMM yyyy')}
                 </span>
                 {selection.match_name && <span className="font-medium">{selection.match_name}</span>}
+                {selection.opponent && <span className="font-medium">vs {selection.opponent}</span>}
                 {selection.competition === 'Fantastic 5s' && selection.friendly_location && (
                   <Badge variant="outline" className={selection.friendly_location === 'Home' ? 'bg-blue-50 text-blue-700 border-blue-200 text-xs' : 'bg-orange-50 text-orange-700 border-orange-200 text-xs'}>
                     {selection.friendly_location === 'Home' ? 'HOME' : 'AWAY'}

@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     }
 
     // Only allow editable fields
-    const allowedFields = ['competition_id', 'date', 'time', 'finish_time', 'venue', 'notes'];
+    const allowedFields = ['competition_id', 'date', 'time', 'finish_time', 'opponent', 'venue', 'notes'];
     const safeUpdates = {};
     for (const field of allowedFields) {
       if (field in updates) safeUpdates[field] = updates[field];

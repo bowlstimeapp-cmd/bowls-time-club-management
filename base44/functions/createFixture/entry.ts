@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { club_id, competition_id, date, time, finish_time, venue, notes } = await req.json();
+    const { club_id, competition_id, date, time, finish_time, opponent, venue, notes } = await req.json();
 
     if (!club_id || !competition_id || !date || !time || !venue) {
       return Response.json({ error: 'Missing required fields: club_id, competition_id, date, time, venue' }, { status: 400 });
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     // Create the fixture
     const fixture = await base44.asServiceRole.entities.ClubFixture.create({
-      club_id, competition_id, date, time, finish_time: finish_time || '', venue, notes: notes || '',
+      club_id, competition_id, date, time, finish_time: finish_time || '', opponent: opponent || '', venue, notes: notes || '',
     });
 
     // Try to match Competition.name against the TeamSelection competition enum
@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
           match_date: date,
           match_start_time: time,
           match_end_time: finish_time || '',
+          opponent: opponent || '',
           home_rinks: competition.home_rinks || 2,
           status: 'draft',
           selector_email: user.email,

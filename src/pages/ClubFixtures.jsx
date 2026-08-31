@@ -96,6 +96,7 @@ export default function ClubFixtures() {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Competition</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Opponent</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Time</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Venue</th>
@@ -109,6 +110,7 @@ export default function ClubFixtures() {
                 return (
                   <tr key={fixture.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{comp?.name || '—'}</td>
+                    <td className="px-4 py-3 text-sm">{fixture.opponent || '—'}</td>
                     <td className="px-4 py-3 text-sm">{format(parseISO(fixture.date), 'EEE d MMM yyyy')}</td>
                     <td className="px-4 py-3 text-sm">{fixture.time}{fixture.finish_time ? ` – ${fixture.finish_time}` : ''}</td>
                     <td className="px-4 py-3 text-sm">

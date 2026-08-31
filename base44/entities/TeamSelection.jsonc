@@ -25,6 +25,10 @@
       "type": "string",
       "description": "Optional name/description for this match"
     },
+    "opponent": {
+      "type": "string",
+      "description": "Opponent club or team name (populated from fixture)"
+    },
     "selections": {
       "type": "object",
       "description": "JSON object mapping positions to member emails"
