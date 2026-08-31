@@ -870,6 +870,7 @@ if (club?.email_member_notifications) {
           <h1 className="text-3xl font-bold text-gray-900">
             {selectionId ? 'Edit Selection' : 'New Selection'}
           </h1>
+          <h2>A star against a player's name shows they have selected this competition as something they wish to be selected for</h2>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
