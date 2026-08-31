@@ -11,18 +11,18 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { 
-  Save, 
-  Send, 
+  SelectValue } from
+"@/components/ui/select";
+import {
+  Save,
+  Send,
   ArrowLeft,
   Loader2,
   ShieldAlert,
   Home,
   CalendarPlus,
-  Printer
-} from 'lucide-react';
+  Printer } from
+'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -50,22 +50,22 @@ const buildFormattedTeamList = (selectionsObj, membersArr) => {
     const rinkNum = parseInt(match[1]);
     const position = match[2];
     if (!rinkMap[rinkNum]) rinkMap[rinkNum] = {};
-    const member = membersArr.find(m => m.user_email === email);
-    rinkMap[rinkNum][position] = member?.first_name && member?.surname
-      ? `${member.first_name} ${member.surname}`
-      : member?.user_name || email;
+    const member = membersArr.find((m) => m.user_email === email);
+    rinkMap[rinkNum][position] = member?.first_name && member?.surname ?
+    `${member.first_name} ${member.surname}` :
+    member?.user_name || email;
   }
-  return Object.keys(rinkMap)
-    .sort((a, b) => parseInt(a) - parseInt(b))
-    .map(rinkNum => {
-      const positions = rinkMap[rinkNum];
-      const lines = [`Rink ${rinkNum}`];
-      for (const pos of positionOrder) {
-        if (positions[pos] !== undefined) lines.push(`${pos}: ${positions[pos]}`);
-      }
-      return lines.join('\n');
-    })
-    .join('\n\n');
+  return Object.keys(rinkMap).
+  sort((a, b) => parseInt(a) - parseInt(b)).
+  map((rinkNum) => {
+    const positions = rinkMap[rinkNum];
+    const lines = [`Rink ${rinkNum}`];
+    for (const pos of positionOrder) {
+      if (positions[pos] !== undefined) lines.push(`${pos}: ${positions[pos]}`);
+    }
+    return lines.join('\n');
+  }).
+  join('\n\n');
 };
 
 export default function SelectionEditor() {
@@ -74,7 +74,7 @@ export default function SelectionEditor() {
   const selectionId = searchParams.get('selectionId');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const [user, setUser] = useState(null);
   const [competition, setCompetition] = useState('');
   const [matchDate, setMatchDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -115,13 +115,13 @@ export default function SelectionEditor() {
   const { data: membership } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
     queryFn: async () => {
-      const memberships = await base44.entities.ClubMembership.filter({ 
-        club_id: clubId, 
-        user_email: user.email 
+      const memberships = await base44.entities.ClubMembership.filter({
+        club_id: clubId,
+        user_email: user.email
       });
       return memberships[0];
     },
-    enabled: !!clubId && !!user?.email,
+    enabled: !!clubId && !!user?.email
   });
 
   const { data: existingSelection } = useQuery({
@@ -130,7 +130,7 @@ export default function SelectionEditor() {
       const selections = await base44.entities.TeamSelection.filter({ id: selectionId });
       return selections[0];
     },
-    enabled: !!selectionId,
+    enabled: !!selectionId
   });
 
   useEffect(() => {
@@ -159,11 +159,11 @@ export default function SelectionEditor() {
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
-    queryFn: () => base44.entities.ClubMembership.filter({ 
-      club_id: clubId, 
-      status: 'approved' 
+    queryFn: () => base44.entities.ClubMembership.filter({
+      club_id: clubId,
+      status: 'approved'
     }),
-    enabled: !!clubId,
+    enabled: !!clubId
   });
 
   const { data: club } = useQuery({
@@ -172,33 +172,33 @@ export default function SelectionEditor() {
       const clubs = await base44.entities.Club.filter({ id: clubId });
       return clubs[0];
     },
-    enabled: !!clubId,
+    enabled: !!clubId
   });
 
   const { data: clubCompetitions = [] } = useQuery({
     queryKey: ['competitions', clubId],
     queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
-    enabled: !!clubId,
+    enabled: !!clubId
   });
 
   const { data: platformCompetitions = [] } = useQuery({
     queryKey: ['platformCompetitions'],
     queryFn: async () => {
       const allComps = await base44.entities.Competition.list();
-      return allComps.filter(c => !c.club_id);
-    },
+      return allComps.filter((c) => !c.club_id);
+    }
   });
 
   const { data: competitionInterests = [] } = useQuery({
     queryKey: ['competitionInterests', clubId],
     queryFn: () => base44.entities.CompetitionInterest.filter({ club_id: clubId }),
-    enabled: !!clubId,
+    enabled: !!clubId
   });
 
   const allCompetitions = [...platformCompetitions, ...clubCompetitions];
-  
+
   // Filter competitions by club's season (indoor/outdoor)
-  const competitions = allCompetitions.filter(comp => comp.season === club?.season);
+  const competitions = allCompetitions.filter((comp) => comp.season === club?.season);
 
   const { data: existingBookings = [] } = useQuery({
     queryKey: ['bookings', clubId, matchDate],
@@ -206,32 +206,32 @@ export default function SelectionEditor() {
       const res = await base44.functions.invoke('listBookings', { clubId, date: matchDate });
       return res.data.bookings || [];
     },
-    enabled: !!clubId && !!matchDate,
+    enabled: !!clubId && !!matchDate
   });
 
   const createBookingMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('createBooking', { ...data, clubId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    },
+    }
   });
 
   const { data: unavailabilities = [] } = useQuery({
     queryKey: ['allUnavailabilities'],
-    queryFn: () => base44.entities.UserUnavailability.list(),
+    queryFn: () => base44.entities.UserUnavailability.list()
   });
 
   const { data: existingAvailabilities = [] } = useQuery({
     queryKey: ['selectionAvailabilities', selectionId],
     queryFn: () => base44.entities.MemberAvailability.filter({ selection_id: selectionId }),
-    enabled: !!selectionId,
+    enabled: !!selectionId
   });
 
   const deleteAvailabilityMutation = useMutation({
     mutationFn: (id) => base44.entities.MemberAvailability.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selectionAvailabilities'] });
-    },
+    }
   });
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
@@ -240,7 +240,7 @@ export default function SelectionEditor() {
     mutationFn: (data) => base44.functions.invoke('updateTeamSelection', { action: 'create', clubId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selections'] });
-    },
+    }
   });
 
   const updateMutation = useMutation({
@@ -248,7 +248,7 @@ export default function SelectionEditor() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selections'] });
       queryClient.invalidateQueries({ queryKey: ['selection', selectionId] });
-    },
+    }
   });
 
   const generateTimeSlots = () => {
@@ -257,7 +257,7 @@ export default function SelectionEditor() {
     const [openHour] = (club.opening_time || '10:00').split(':').map(Number);
     const [closeHour] = (club.closing_time || '21:00').split(':').map(Number);
     const duration = club.session_duration || 2;
-    
+
     for (let hour = openHour; hour + duration <= closeHour; hour += duration) {
       slots.push(`${String(hour).padStart(2, '0')}:00`);
     }
@@ -267,21 +267,21 @@ export default function SelectionEditor() {
   const sendSelectionEmails = async (savedSelectionId) => {
     // Get all selected player emails
     const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
-    
+
     // Build team list for email
     const teamList = buildFormattedTeamList(selections, members);
 
     const matchUrl = `https://app.bowls-time.com${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
-    
-// Email notifications
-if (club?.email_member_notifications) {
-  const emailMembers = members.filter(m => 
-    selectedPlayerEmails.includes(m.user_email) && 
-    m.email_notifications !== false
-  );
 
-  for (const member of emailMembers) {
-    const emailBody = `
+    // Email notifications
+    if (club?.email_member_notifications) {
+      const emailMembers = members.filter((m) =>
+      selectedPlayerEmails.includes(m.user_email) &&
+      m.email_notifications !== false
+      );
+
+      for (const member of emailMembers) {
+        const emailBody = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -382,44 +382,44 @@ if (club?.email_member_notifications) {
 </html>
     `.trim();
 
-    const subject = `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`;
-    try {
-      await base44.integrations.Core.SendEmail({
-        to: member.user_email,
-        subject,
-        body: emailBody
-      });
-    } catch (emailErr) {
-      console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
-      continue;
-    }
-    // Also send a push notification
-    try {
-      await base44.functions.invoke('sendPushNotification', {
-        userEmail: member.user_email,
-        title: `Match Selection — ${competition}`,
-        message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-        url: matchUrl,
-      });
-    } catch { /* push is best-effort */ }
-    await base44.entities.EmailLog.create({
-      club_id: clubId,
-      club_name: club?.name || '',
-      to_email: member.user_email,
-      to_name: member.user_name || member.first_name || '',
-      subject,
-      type: 'selection',
-      related_id: savedSelectionId,
-      related_label: `${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-      sent_by: user?.email || ''
-    });
-  }
+        const subject = `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`;
+        try {
+          await base44.integrations.Core.SendEmail({
+            to: member.user_email,
+            subject,
+            body: emailBody
+          });
+        } catch (emailErr) {
+          console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
+          continue;
+        }
+        // Also send a push notification
+        try {
+          await base44.functions.invoke('sendPushNotification', {
+            userEmail: member.user_email,
+            title: `Match Selection — ${competition}`,
+            message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+            url: matchUrl
+          });
+        } catch {/* push is best-effort */}
+        await base44.entities.EmailLog.create({
+          club_id: clubId,
+          club_name: club?.name || '',
+          to_email: member.user_email,
+          to_name: member.user_name || member.first_name || '',
+          subject,
+          type: 'selection',
+          related_id: savedSelectionId,
+          related_label: `${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+          sent_by: user?.email || ''
+        });
+      }
 
-  if (emailMembers.length > 0) {
-    toast.success(`Emails sent to ${emailMembers.length} players`);
-  }
-}
-    
+      if (emailMembers.length > 0) {
+        toast.success(`Emails sent to ${emailMembers.length} players`);
+      }
+    }
+
     // SMS notifications
     if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
       const smsResults = await sendSmsToMembers(selectedPlayerEmails);
@@ -429,13 +429,13 @@ if (club?.email_member_notifications) {
   };
 
   const buildFullPlayerList = (emailList, smsResults) => {
-    return emailList.map(email => {
-      const member = members.find(m => m.user_email === email);
-      const name = member?.first_name && member?.surname
-        ? `${member.first_name} ${member.surname}`
-        : member?.user_name || email;
+    return emailList.map((email) => {
+      const member = members.find((m) => m.user_email === email);
+      const name = member?.first_name && member?.surname ?
+      `${member.first_name} ${member.surname}` :
+      member?.user_name || email;
       // If SMS was attempted, find the result
-      const smsResult = smsResults?.find(r => r.email === email);
+      const smsResult = smsResults?.find((r) => r.email === email);
       if (smsResult) return smsResult;
       // SMS not attempted — figure out why
       let smsSentStatus = null;
@@ -453,7 +453,7 @@ if (club?.email_member_notifications) {
 
     // Categorise all selected members
     for (const email of selectedPlayerEmails) {
-      const member = members.find(m => m.user_email === email);
+      const member = members.find((m) => m.user_email === email);
       if (!member) continue;
       const name = member.first_name && member.surname ? `${member.first_name} ${member.surname}` : member.user_name || email;
 
@@ -506,7 +506,7 @@ if (club?.email_member_notifications) {
       match_name: matchName,
       selections,
       home_rinks: competition === 'Friendly' ? friendlyNumRinks : homeRinks,
-      selected_rinks: selectedRinks.map(r => String(r)),
+      selected_rinks: selectedRinks.map((r) => String(r)),
       match_start_time: matchStartTime,
       match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
@@ -516,11 +516,11 @@ if (club?.email_member_notifications) {
       ...(competition === 'Friendly' ? {
         friendly_location: friendlyLocation,
         friendly_num_rinks: friendlyNumRinks,
-        friendly_players_per_rink: friendlyPlayersPerRink,
+        friendly_players_per_rink: friendlyPlayersPerRink
       } : {}),
       ...(competition === 'Fantastic 5s' || competition === 'Top Club (Outdoor)' ? {
-        friendly_location: fantastic5sVenue,
-      } : {}),
+        friendly_location: fantastic5sVenue
+      } : {})
     };
 
     if (selectionId) {
@@ -529,7 +529,7 @@ if (club?.email_member_notifications) {
       if (publish && !isRepublish) {
         // Create notifications for selected players
         const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
-        const notificationsToCreate = selectedPlayerEmails.map(email => ({
+        const notificationsToCreate = selectedPlayerEmails.map((email) => ({
           user_email: email,
           type: 'team_selection',
           title: 'Selected for Match',
@@ -547,10 +547,10 @@ if (club?.email_member_notifications) {
         // Only notify newly added players
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
         const originalPlayerEmails = [...new Set(Object.values(originalSelections).filter(Boolean))];
-        const newlyAddedEmails = currentPlayerEmails.filter(email => !originalPlayerEmails.includes(email));
-        
+        const newlyAddedEmails = currentPlayerEmails.filter((email) => !originalPlayerEmails.includes(email));
+
         if (newlyAddedEmails.length > 0) {
-          const notificationsToCreate = newlyAddedEmails.map(email => ({
+          const notificationsToCreate = newlyAddedEmails.map((email) => ({
             user_email: email,
             type: 'team_selection',
             title: 'Selected for Match',
@@ -560,7 +560,7 @@ if (club?.email_member_notifications) {
             related_id: selectionId
           }));
           await base44.entities.Notification.bulkCreate(notificationsToCreate);
-          
+
           // SMS notifications for newly added players
           if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
             const smsResults = await sendSmsToMembers(newlyAddedEmails);
@@ -569,7 +569,7 @@ if (club?.email_member_notifications) {
             return;
           }
         }
-        
+
         // Show modal with all current players, no SMS sent
         const allSelected = [...new Set(Object.values(selections).filter(Boolean))];
         setSmsResultsModal(buildFullPlayerList(allSelected, null));
@@ -581,7 +581,7 @@ if (club?.email_member_notifications) {
         toast.success('Selection published!');
         // Create notifications for selected players
         const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
-        const notificationsToCreate = selectedPlayerEmails.map(email => ({
+        const notificationsToCreate = selectedPlayerEmails.map((email) => ({
           user_email: email,
           type: 'team_selection',
           title: 'Selected for Match',
@@ -610,7 +610,7 @@ if (club?.email_member_notifications) {
     const duration = club?.session_duration || 2;
     const [startHour] = matchStartTime.split(':').map(Number);
     const [endHour] = matchEndTime.split(':').map(Number);
-    
+
     const bookerName = `${competition}${matchName ? ` vs ${matchName}` : ''}`;
     const rinkCount = club?.rink_count || 6;
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
@@ -632,10 +632,10 @@ if (club?.email_member_notifications) {
       const slotEndStr = `${String(startH + duration).padStart(2, '0')}:00`;
 
       const existingBooking = existingBookings.find(
-        b => b.rink_number === rinkNum &&
-             b.start_time === slotStart &&
-             b.status !== 'cancelled' &&
-             b.status !== 'rejected'
+        (b) => b.rink_number === rinkNum &&
+        b.start_time === slotStart &&
+        b.status !== 'cancelled' &&
+        b.status !== 'rejected'
       );
 
       const proposed = {
@@ -649,20 +649,20 @@ if (club?.email_member_notifications) {
         booker_name: bookerName,
         booker_email: user.email,
         notes: `${competition}${matchName ? ` vs ${matchName}` : ''}`,
-        admin_notes: '__selection__',
+        admin_notes: '__selection__'
       };
 
       if (existingBooking) {
         // Find a suggested free rink at the same time
         const usedRinksAtTime = new Set([
-          ...existingBookings
-            .filter(b => b.start_time === slotStart && b.status !== 'cancelled' && b.status !== 'rejected')
-            .map(b => b.rink_number),
-          ...proposedSlots
-            .filter(s => s.startTime === slotStart && s.rink !== rinkNum)
-            .map(s => s.rink)
-        ]);
-        const suggestedRink = allRinks.find(r => !usedRinksAtTime.has(r)) || null;
+        ...existingBookings.
+        filter((b) => b.start_time === slotStart && b.status !== 'cancelled' && b.status !== 'rejected').
+        map((b) => b.rink_number),
+        ...proposedSlots.
+        filter((s) => s.startTime === slotStart && s.rink !== rinkNum).
+        map((s) => s.rink)]
+        );
+        const suggestedRink = allRinks.find((r) => !usedRinksAtTime.has(r)) || null;
 
         clashes.push({ proposedBooking: proposed, existingBooking, suggestedRink });
       } else {
@@ -671,7 +671,7 @@ if (club?.email_member_notifications) {
     }
 
     if (clashes.length === 0) {
-      await Promise.all(nonClashingBookings.map(b => createBookingMutation.mutateAsync(b)));
+      await Promise.all(nonClashingBookings.map((b) => createBookingMutation.mutateAsync(b)));
       toast.success(`${nonClashingBookings.length} booking(s) created for the match`);
     } else {
       setClashData({ clashes, nonClashingBookings });
@@ -685,7 +685,7 @@ if (club?.email_member_notifications) {
       setClashModalOpen(false);
       return;
     }
-    await Promise.all(bookingsToCreate.map(b => createBookingMutation.mutateAsync(b)));
+    await Promise.all(bookingsToCreate.map((b) => createBookingMutation.mutateAsync(b)));
     queryClient.invalidateQueries({ queryKey: ['bookings', clubId, matchDate] });
     toast.success(`${bookingsToCreate.length} booking(s) created`);
     setClashModalOpen(false);
@@ -693,16 +693,16 @@ if (club?.email_member_notifications) {
 
   const handleSelectionChange = (position, memberEmail) => {
     const previousEmail = selections[position];
-    
+
     // If removing a player, delete their availability record
     if (previousEmail && !memberEmail) {
-      const availabilityRecord = existingAvailabilities.find(a => a.user_email === previousEmail);
+      const availabilityRecord = existingAvailabilities.find((a) => a.user_email === previousEmail);
       if (availabilityRecord) {
         deleteAvailabilityMutation.mutate(availabilityRecord.id);
       }
     }
-    
-    setSelections(prev => ({
+
+    setSelections((prev) => ({
       ...prev,
       [position]: memberEmail
     }));
@@ -715,7 +715,7 @@ if (club?.email_member_notifications) {
       setSelectedRinks([]);
       setHomeRinks(friendlyNumRinks);
     } else {
-      const comp = competitions.find(c => c.name === compName);
+      const comp = competitions.find((c) => c.name === compName);
       if (comp) {
         setHomeRinks(comp.home_rinks);
         setSelectedRinks([]);
@@ -732,7 +732,7 @@ if (club?.email_member_notifications) {
   const toggleRinkSelection = (rinkNum) => {
     if (selectedRinks.includes(rinkNum)) {
       if (selectedRinks.length > 1) {
-        setSelectedRinks(selectedRinks.filter(r => r !== rinkNum));
+        setSelectedRinks(selectedRinks.filter((r) => r !== rinkNum));
       }
     } else if (selectedRinks.length < homeRinks) {
       setSelectedRinks([...selectedRinks, rinkNum].sort((a, b) => a - b));
@@ -742,15 +742,15 @@ if (club?.email_member_notifications) {
   const selectedEmails = Object.values(selections).filter(Boolean);
 
   // Filter members based on competition gender and age_group restrictions
-  const activeCompetition = competitions.find(c => c.name === competition);
+  const activeCompetition = competitions.find((c) => c.name === competition);
 
   const interestedEmails = useMemo(() => {
     if (!activeCompetition || !competitionInterests.length) return new Set();
     const compId = activeCompetition.id;
     return new Set(
-      competitionInterests
-        .filter(ci => (ci.competition_ids || []).includes(compId))
-        .map(ci => ci.user_email)
+      competitionInterests.
+      filter((ci) => (ci.competition_ids || []).includes(compId)).
+      map((ci) => ci.user_email)
     );
   }, [activeCompetition, competitionInterests]);
   const filteredMembers = React.useMemo(() => {
@@ -761,15 +761,15 @@ if (club?.email_member_notifications) {
 
     // Gender filter
     if (activeCompetition.gender === 'men') {
-      filtered = filtered.filter(m => (m.gender || '').toLowerCase() === 'male');
+      filtered = filtered.filter((m) => (m.gender || '').toLowerCase() === 'male');
     } else if (activeCompetition.gender === 'women') {
-      filtered = filtered.filter(m => (m.gender || '').toLowerCase() === 'female');
+      filtered = filtered.filter((m) => (m.gender || '').toLowerCase() === 'female');
     }
 
     // Age filter
     if (activeCompetition.age_group === 'o60' || activeCompetition.age_group === 'u25') {
       const today = new Date();
-      filtered = filtered.filter(m => {
+      filtered = filtered.filter((m) => {
         if (!m.date_of_birth) return false;
         const dob = new Date(m.date_of_birth);
         const age = Math.floor((today - dob) / (365.25 * 24 * 60 * 60 * 1000));
@@ -786,32 +786,32 @@ if (club?.email_member_notifications) {
   // Home rinks: 1..effectiveHomeRinks, Away rinks: effectiveHomeRinks+1..effectiveHomeRinks+effectiveAwayRinks
   // Note: effectiveHomeRinks/effectiveAwayRinks are defined below, so we compute inline here
   const _homeRinksCount = competition === 'Friendly' ? friendlyNumRinks : homeRinks;
-  const _awayRinksCount = competition === 'Friendly' ? 0 : (competitions.find(c => c.name === competition)?.away_rinks || 0);
+  const _awayRinksCount = competition === 'Friendly' ? 0 : competitions.find((c) => c.name === competition)?.away_rinks || 0;
   const homeRinkNumbers = new Set(Array.from({ length: _homeRinksCount }, (_, i) => i + 1));
   const awayRinkNumbers = new Set(
     Array.from({ length: _awayRinksCount }, (_, i) => _homeRinksCount + i + 1)
   );
   const captainHomeOptions = [...new Set(
-    Object.entries(selections)
-      .filter(([key, val]) => {
-        if (!val) return false;
-        const match = key.match(/^rink(\d+)_/);
-        return match && homeRinkNumbers.has(parseInt(match[1]));
-      })
-      .map(([, val]) => val)
+    Object.entries(selections).
+    filter(([key, val]) => {
+      if (!val) return false;
+      const match = key.match(/^rink(\d+)_/);
+      return match && homeRinkNumbers.has(parseInt(match[1]));
+    }).
+    map(([, val]) => val)
   )];
   const captainAwayOptions = [...new Set(
-    Object.entries(selections)
-      .filter(([key, val]) => {
-        if (!val) return false;
-        const match = key.match(/^rink(\d+)_/);
-        return match && awayRinkNumbers.has(parseInt(match[1]));
-      })
-      .map(([, val]) => val)
+    Object.entries(selections).
+    filter(([key, val]) => {
+      if (!val) return false;
+      const match = key.match(/^rink(\d+)_/);
+      return match && awayRinkNumbers.has(parseInt(match[1]));
+    }).
+    map(([, val]) => val)
   )];
 
   const getMemberLabel = (email) => {
-    const m = members.find(mb => mb.user_email === email);
+    const m = members.find((mb) => mb.user_email === email);
     return m?.first_name && m?.surname ? `${m.first_name} ${m.surname}` : m?.user_name || email;
   };
 
@@ -821,8 +821,8 @@ if (club?.email_member_notifications) {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-8"
-        >
+          className="text-center p-8">
+          
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center">
             <ShieldAlert className="w-10 h-10 text-red-500" />
           </div>
@@ -834,8 +834,8 @@ if (club?.email_member_notifications) {
             </Button>
           </Link>
         </motion.div>
-      </div>
-    );
+      </div>);
+
   }
 
   const isTopClub = competition === 'Top Club';
@@ -846,10 +846,10 @@ if (club?.email_member_notifications) {
 
   // Effective rink/player settings for Friendly
   const effectiveHomeRinks = isFriendly ? friendlyNumRinks : homeRinks;
-  const effectivePlayersPerRink = isFriendly
-    ? friendlyPlayersPerRink
-    : (competitions.find(c => c.name === competition)?.players_per_rink || 4);
-  const effectiveAwayRinks = isFriendly ? 0 : (competitions.find(c => c.name === competition)?.away_rinks || 0);
+  const effectivePlayersPerRink = isFriendly ?
+  friendlyPlayersPerRink :
+  competitions.find((c) => c.name === competition)?.players_per_rink || 4;
+  const effectiveAwayRinks = isFriendly ? 0 : competitions.find((c) => c.name === competition)?.away_rinks || 0;
   const canShowFriendlyGrid = isFriendly && friendlyLocation && friendlyNumRinks > 0 && friendlyPlayersPerRink > 0;
 
   return (
@@ -858,27 +858,27 @@ if (club?.email_member_notifications) {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <Link 
+          className="mb-8">
+          
+          <Link
             to={createPageUrl('Selection') + `?clubId=${clubId}`}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
+            
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Selections
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">
             {selectionId ? 'Edit Selection' : 'New Selection'}
           </h1>
-          <h2>A star against a player's name shows they have selected this competition as something they wish to be selected for</h2>
+          <h2>inA star against a player's name shows they have selected this competition as something they wish to be selected for.A red </h2>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+            transition={{ delay: 0.1 }}>
+            
             <Card>
               <CardHeader>
                 <CardTitle>Match Details</CardTitle>
@@ -891,9 +891,9 @@ if (club?.email_member_notifications) {
                       <SelectValue placeholder="Select competition" />
                     </SelectTrigger>
                     <SelectContent>
-                      {competitions.map(comp => (
-                        <SelectItem key={comp.id} value={comp.name}>{comp.name}</SelectItem>
-                      ))}
+                      {competitions.map((comp) =>
+                      <SelectItem key={comp.id} value={comp.name}>{comp.name}</SelectItem>
+                      )}
                       <SelectItem value="Fantastic 5s">Fantastic 5s</SelectItem>
                       <SelectItem value="Friendly">Friendly</SelectItem>
                     </SelectContent>
@@ -901,11 +901,11 @@ if (club?.email_member_notifications) {
                 </div>
 
                 {/* Friendly cascading options */}
-                {competition === 'Friendly' && (
-                  <>
+                {competition === 'Friendly' &&
+                <>
                     <div>
                       <Label>Location *</Label>
-                      <Select value={friendlyLocation} onValueChange={(v) => { setFriendlyLocation(v); setSelections({}); }}>
+                      <Select value={friendlyLocation} onValueChange={(v) => {setFriendlyLocation(v);setSelections({});}}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select location" />
                         </SelectTrigger>
@@ -916,31 +916,31 @@ if (club?.email_member_notifications) {
                       </Select>
                     </div>
 
-                    {friendlyLocation && (
-                      <div>
+                    {friendlyLocation &&
+                  <div>
                         <Label>Number of Rinks</Label>
                         <Select value={String(friendlyNumRinks)} onValueChange={(v) => {
-                          const n = parseInt(v);
-                          setFriendlyNumRinks(n);
-                          setHomeRinks(n);
-                          setSelectedRinks([]);
-                          setSelections({});
-                        }}>
+                      const n = parseInt(v);
+                      setFriendlyNumRinks(n);
+                      setHomeRinks(n);
+                      setSelectedRinks([]);
+                      setSelections({});
+                    }}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {[1,2,3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n} Rink{n > 1 ? 's' : ''}</SelectItem>)}
+                            {[1, 2, 3, 4, 5, 6].map((n) => <SelectItem key={n} value={String(n)}>{n} Rink{n > 1 ? 's' : ''}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
+                  }
 
-                    {friendlyLocation && (
-                      <div>
+                    {friendlyLocation &&
+                  <div>
                         <Label>Players per Rink</Label>
                         <Select value={String(friendlyPlayersPerRink)} onValueChange={(v) => {
-                          setFriendlyPlayersPerRink(parseInt(v));
-                          setSelections({});
-                        }}>
+                      setFriendlyPlayersPerRink(parseInt(v));
+                      setSelections({});
+                    }}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="2">2 (Pairs)</SelectItem>
@@ -949,29 +949,29 @@ if (club?.email_member_notifications) {
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
+                  }
                   </>
-                )}
+                }
                 <div>
                   <Label>Match Date *</Label>
                   <Input
                     type="date"
                     value={matchDate}
-                    onChange={(e) => setMatchDate(e.target.value)}
-                  />
+                    onChange={(e) => setMatchDate(e.target.value)} />
+                  
                 </div>
                 <div>
                   <Label>Opponent</Label>
                   <Input
                     value={matchName}
                     onChange={(e) => setMatchName(e.target.value)}
-                    placeholder="e.g., vs Springfield BC"
-                  />
+                    placeholder="e.g., vs Springfield BC" />
+                  
                 </div>
 
                 {/* Fantastic 5s venue */}
-                {isFantastic5s && (
-                  <div>
+                {isFantastic5s &&
+                <div>
                     <Label>Venue</Label>
                     <Select value={fantastic5sVenue} onValueChange={setFantastic5sVenue}>
                       <SelectTrigger>
@@ -983,41 +983,41 @@ if (club?.email_member_notifications) {
                       </SelectContent>
                     </Select>
                   </div>
-                )}
+                }
 
                 {/* Captain fields */}
-                {competition && (captainHomeOptions.length > 0 || captainAwayOptions.length > 0) && (
-                  <div className="space-y-3 pt-2 border-t">
+                {competition && (captainHomeOptions.length > 0 || captainAwayOptions.length > 0) &&
+                <div className="space-y-3 pt-2 border-t">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Captains (optional)</p>
-                    {captainHomeOptions.length > 0 && (
-                      <div>
+                    {captainHomeOptions.length > 0 &&
+                  <div>
                         <Label>Home Captain</Label>
                         <MemberSearchSelect
-                          members={members.filter(m => captainHomeOptions.includes(m.user_email))}
-                          value={homeCaptainEmail || null}
-                          onValueChange={(v) => setHomeCaptainEmail(v || '')}
-                          placeholder="Select home captain"
-                          interestedEmails={interestedEmails}
-                        />
+                      members={members.filter((m) => captainHomeOptions.includes(m.user_email))}
+                      value={homeCaptainEmail || null}
+                      onValueChange={(v) => setHomeCaptainEmail(v || '')}
+                      placeholder="Select home captain"
+                      interestedEmails={interestedEmails} />
+                    
                       </div>
-                    )}
-                    {captainAwayOptions.length > 0 && (
-                      <div>
+                  }
+                    {captainAwayOptions.length > 0 &&
+                  <div>
                         <Label>Away Captain</Label>
                         <MemberSearchSelect
-                          members={members.filter(m => captainAwayOptions.includes(m.user_email))}
-                          value={awayCaptainEmail || null}
-                          onValueChange={(v) => setAwayCaptainEmail(v || '')}
-                          placeholder="Select away captain"
-                          interestedEmails={interestedEmails}
-                        />
+                      members={members.filter((m) => captainAwayOptions.includes(m.user_email))}
+                      value={awayCaptainEmail || null}
+                      onValueChange={(v) => setAwayCaptainEmail(v || '')}
+                      placeholder="Select away captain"
+                      interestedEmails={interestedEmails} />
+                    
                       </div>
-                    )}
+                  }
                   </div>
-                )}
+                }
 
-                {competition === 'Top Club (Outdoor)' && (
-                  <div>
+                {competition === 'Top Club (Outdoor)' &&
+                <div>
                     <Label>Location</Label>
                     <Select value={fantastic5sVenue} onValueChange={setFantastic5sVenue}>
                       <SelectTrigger>
@@ -1029,31 +1029,31 @@ if (club?.email_member_notifications) {
                       </SelectContent>
                     </Select>
                   </div>
-                )}
+                }
 
-                {competition === 'Top Club (Outdoor)' && (
-                  <div className="grid grid-cols-2 gap-2">
+                {competition === 'Top Club (Outdoor)' &&
+                <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label>Start Time</Label>
                       <Input
-                        type="time"
-                        value={matchStartTime}
-                        onChange={(e) => setMatchStartTime(e.target.value)}
-                      />
+                      type="time"
+                      value={matchStartTime}
+                      onChange={(e) => setMatchStartTime(e.target.value)} />
+                    
                     </div>
                     <div>
                       <Label>End Time</Label>
                       <Input
-                        type="time"
-                        value={matchEndTime}
-                        onChange={(e) => setMatchEndTime(e.target.value)}
-                      />
+                      type="time"
+                      value={matchEndTime}
+                      onChange={(e) => setMatchEndTime(e.target.value)} />
+                    
                     </div>
                   </div>
-                )}
+                }
 
-                {competition && competition !== 'Top Club' && competition !== 'Top Club (Outdoor)' && competition !== 'Friendly' && competition !== 'Fantastic 5s' && (
-                  <>
+                {competition && competition !== 'Top Club' && competition !== 'Top Club (Outdoor)' && competition !== 'Friendly' && competition !== 'Fantastic 5s' &&
+                <>
                     <div>
                       <Label>Number of Home Rinks</Label>
                       <Select value={String(homeRinks)} onValueChange={handleHomeRinksChange} disabled>
@@ -1076,19 +1076,19 @@ if (club?.email_member_notifications) {
                         <InfoTooltip content="Choose which rinks will be used for home matches. The number of rinks shown is based on your club's rink count." />
                       </Label>
                       <div className="grid grid-cols-2 gap-2">
-                        {Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1).slice(0, Math.min(6, club?.rink_count || 6)).map(rink => (
-                          <div 
-                            key={rink}
-                            className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
-                            onClick={() => toggleRinkSelection(rink)}
-                          >
-                            <Checkbox 
-                              checked={selectedRinks.includes(rink)}
-                              onCheckedChange={() => toggleRinkSelection(rink)}
-                            />
+                        {Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1).slice(0, Math.min(6, club?.rink_count || 6)).map((rink) =>
+                      <div
+                        key={rink}
+                        className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
+                        onClick={() => toggleRinkSelection(rink)}>
+                        
+                            <Checkbox
+                          checked={selectedRinks.includes(rink)}
+                          onCheckedChange={() => toggleRinkSelection(rink)} />
+                        
                             <span className="text-sm">Rink {rink}</span>
                           </div>
-                        ))}
+                      )}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -1099,9 +1099,9 @@ if (club?.email_member_notifications) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {generateTimeSlots().map(time => (
-                              <SelectItem key={time} value={time}>{time}</SelectItem>
-                            ))}
+                            {generateTimeSlots().map((time) =>
+                          <SelectItem key={time} value={time}>{time}</SelectItem>
+                          )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -1113,46 +1113,46 @@ if (club?.email_member_notifications) {
                           </SelectTrigger>
                           <SelectContent>
                             {(() => {
-                              const duration = club?.session_duration || 2;
-                              const slots = generateTimeSlots().filter(t => t > matchStartTime);
-                              const endTimes = slots.map(time => {
-                                const [hour] = time.split(':').map(Number);
-                                return `${String(hour + duration).padStart(2, '0')}:00`;
-                              });
-                              const closingTime = club?.closing_time || '21:00';
-                              if (!endTimes.includes(closingTime)) endTimes.push(closingTime);
-                              return [...new Set(endTimes)].map(endTime => (
-                                <SelectItem key={endTime} value={endTime}>{endTime}</SelectItem>
-                              ));
-                            })()}
+                            const duration = club?.session_duration || 2;
+                            const slots = generateTimeSlots().filter((t) => t > matchStartTime);
+                            const endTimes = slots.map((time) => {
+                              const [hour] = time.split(':').map(Number);
+                              return `${String(hour + duration).padStart(2, '0')}:00`;
+                            });
+                            const closingTime = club?.closing_time || '21:00';
+                            if (!endTimes.includes(closingTime)) endTimes.push(closingTime);
+                            return [...new Set(endTimes)].map((endTime) =>
+                            <SelectItem key={endTime} value={endTime}>{endTime}</SelectItem>
+                            );
+                          })()}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleBookRinks}
-                      disabled={createBookingMutation.isPending || selectedRinks.length === 0}
-                    >
-                      {createBookingMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <CalendarPlus className="w-4 h-4 mr-2" />
-                      )}
+                    <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleBookRinks}
+                    disabled={createBookingMutation.isPending || selectedRinks.length === 0}>
+                    
+                      {createBookingMutation.isPending ?
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> :
+
+                    <CalendarPlus className="w-4 h-4 mr-2" />
+                    }
                       Book Rinks for Match
                     </Button>
                   </>
-                )}
+                }
 
-                {club?.module_sms_notifications && (
-                  <SmsNotificationControl
-                    clubId={clubId}
-                    enabled={sendSmsNotification}
-                    onChange={setSendSmsNotification}
-                  />
-                )}
+                {club?.module_sms_notifications &&
+                <SmsNotificationControl
+                  clubId={clubId}
+                  enabled={sendSmsNotification}
+                  onChange={setSendSmsNotification} />
+
+                }
 
                 <div className="pt-4 space-y-2">
 <Button
@@ -1163,9 +1163,9 @@ if (club?.email_member_notifications) {
                     onClick={async () => {
                       try {
                         toast.info('Generating scorecards...');
-                        const functionName = (club?.module_custom_branding && club?.use_custom_scorecard_layout)
-                          ? 'generateCustomScorecards'
-                          : 'generateSelectionScorecards';
+                        const functionName = club?.module_custom_branding && club?.use_custom_scorecard_layout ?
+                        'generateCustomScorecards' :
+                        'generateSelectionScorecards';
                         const result = await base44.functions.invoke(functionName, {
                           selectionId: selectionId,
                           clubId: clubId
@@ -1187,25 +1187,25 @@ if (club?.email_member_notifications) {
                         toast.error('Failed to generate scorecards');
                         console.error(error);
                       }
-                    }}
-                  >
+                    }}>
+                    
                     <Printer className="w-4 h-4 mr-2" />
                     Scorecards
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => handleSave(false)}
                     variant="outline"
                     className="w-full"
-                    disabled={isSaving || !competition}
-                  >
+                    disabled={isSaving || !competition}>
+                    
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                     Save Draft
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => handleSave(true, existingSelection?.status === 'published')}
                     className="w-full bg-emerald-600 hover:bg-emerald-700"
-                    disabled={isSaving || !competition}
-                  >
+                    disabled={isSaving || !competition}>
+                    
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                     {existingSelection?.status === 'published' ? 'Republish Selection' : 'Publish Selection'}
                   </Button>
@@ -1218,125 +1218,125 @@ if (club?.email_member_notifications) {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2"
-          >
-            {competition ? (
-              isFantastic5s ? (
-                <Fantastic5sSelectionGrid
-                  members={filteredMembers}
-                  selections={selections}
-                  selectedEmails={selectedEmails}
-                  onSelectionChange={handleSelectionChange}
-                  matchDate={matchDate}
-                  unavailabilities={unavailabilities}
-                  interestedEmails={interestedEmails}
-                />
-              ) : isTopClub ? (
-                <TopClubSelectionGrid
-                  members={filteredMembers}
-                  selections={selections}
-                  selectedEmails={selectedEmails}
-                  onSelectionChange={handleSelectionChange}
-                  matchDate={matchDate}
-                  unavailabilities={unavailabilities}
-                  interestedEmails={interestedEmails}
-                />
-              ) : isTopClubOutdoor ? (
-                <TopClubOutdoorSelectionGrid
-                  members={filteredMembers}
-                  selections={selections}
-                  selectedEmails={selectedEmails}
-                  onSelectionChange={handleSelectionChange}
-                  matchDate={matchDate}
-                  unavailabilities={unavailabilities}
-                  interestedEmails={interestedEmails}
-                />
-              ) : isFriendly ? (
-                canShowFriendlyGrid ? (
-                  <RinkSelectionGrid
-                    members={filteredMembers}
-                    selections={selections}
-                    selectedEmails={selectedEmails}
-                    onSelectionChange={handleSelectionChange}
-                    matchDate={matchDate}
-                    unavailabilities={unavailabilities}
-                    playersPerRink={effectivePlayersPerRink}
-                    homeRinks={effectiveHomeRinks}
-                    awayRinks={0}
-                    locationTag={friendlyLocation}
-                    interestedEmails={interestedEmails}
-                  />
-                ) : (
-                  <Card>
+            className="lg:col-span-2">
+            
+            {competition ?
+            isFantastic5s ?
+            <Fantastic5sSelectionGrid
+              members={filteredMembers}
+              selections={selections}
+              selectedEmails={selectedEmails}
+              onSelectionChange={handleSelectionChange}
+              matchDate={matchDate}
+              unavailabilities={unavailabilities}
+              interestedEmails={interestedEmails} /> :
+
+            isTopClub ?
+            <TopClubSelectionGrid
+              members={filteredMembers}
+              selections={selections}
+              selectedEmails={selectedEmails}
+              onSelectionChange={handleSelectionChange}
+              matchDate={matchDate}
+              unavailabilities={unavailabilities}
+              interestedEmails={interestedEmails} /> :
+
+            isTopClubOutdoor ?
+            <TopClubOutdoorSelectionGrid
+              members={filteredMembers}
+              selections={selections}
+              selectedEmails={selectedEmails}
+              onSelectionChange={handleSelectionChange}
+              matchDate={matchDate}
+              unavailabilities={unavailabilities}
+              interestedEmails={interestedEmails} /> :
+
+            isFriendly ?
+            canShowFriendlyGrid ?
+            <RinkSelectionGrid
+              members={filteredMembers}
+              selections={selections}
+              selectedEmails={selectedEmails}
+              onSelectionChange={handleSelectionChange}
+              matchDate={matchDate}
+              unavailabilities={unavailabilities}
+              playersPerRink={effectivePlayersPerRink}
+              homeRinks={effectiveHomeRinks}
+              awayRinks={0}
+              locationTag={friendlyLocation}
+              interestedEmails={interestedEmails} /> :
+
+
+            <Card>
                     <CardContent className="py-12 text-center text-gray-500">
                       Select Location, Number of Rinks and Players per Rink to build your team
                     </CardContent>
-                  </Card>
-                )
-              ) : (
-                <RinkSelectionGrid
-                  members={filteredMembers}
-                  selections={selections}
-                  selectedEmails={selectedEmails}
-                  onSelectionChange={handleSelectionChange}
-                  matchDate={matchDate}
-                  unavailabilities={unavailabilities}
-                  playersPerRink={effectivePlayersPerRink}
-                  homeRinks={effectiveHomeRinks}
-                  awayRinks={effectiveAwayRinks}
-                  interestedEmails={interestedEmails}
-                />
-              )
-            ) : (
-              <Card>
+                  </Card> :
+
+
+            <RinkSelectionGrid
+              members={filteredMembers}
+              selections={selections}
+              selectedEmails={selectedEmails}
+              onSelectionChange={handleSelectionChange}
+              matchDate={matchDate}
+              unavailabilities={unavailabilities}
+              playersPerRink={effectivePlayersPerRink}
+              homeRinks={effectiveHomeRinks}
+              awayRinks={effectiveAwayRinks}
+              interestedEmails={interestedEmails} /> :
+
+
+
+            <Card>
                 <CardContent className="py-12 text-center text-gray-500">
                   Select a competition to start building your team
                 </CardContent>
               </Card>
-            )}
+            }
           </motion.div>
         </div>
       </div>
 
       {/* Publish Results Modal */}
-      {smsResultsModal !== null && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {smsResultsModal !== null &&
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Selection Published</h2>
             <p className="text-sm text-gray-500 mb-4">
-              {smsResultsModal.filter(r => r.sent).length} of {smsResultsModal.length} players notified by SMS
+              {smsResultsModal.filter((r) => r.sent).length} of {smsResultsModal.length} players notified by SMS
             </p>
             <div className="overflow-y-auto flex-1 space-y-1.5 mb-4">
-              {smsResultsModal.map((r, i) => (
-                <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+              {smsResultsModal.map((r, i) =>
+            <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
                   <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${r.sent ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                    {r.sent ? (
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    ) : (
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    )}
+                    {r.sent ?
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> :
+
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                }
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
-                    {!r.sent && (
-                      <p className="text-xs text-gray-500">{r.reason}</p>
-                    )}
+                    {!r.sent &&
+                <p className="text-xs text-gray-500">{r.reason}</p>
+                }
                   </div>
                 </div>
-              ))}
+            )}
             </div>
             <Button
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => {
-                setSmsResultsModal(null);
-                navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
-              }}
-            >
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => {
+              setSmsResultsModal(null);
+              navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
+            }}>
+            
               Close
             </Button>
           </div>
         </div>
-      )}
+      }
 
       <RinkClashModal
         open={clashModalOpen}
@@ -1346,8 +1346,8 @@ if (club?.email_member_notifications) {
         club={club}
         onProceed={handleClashProceed}
         onClose={() => setClashModalOpen(false)}
-        isLoading={createBookingMutation.isPending}
-      />
-    </div>
-  );
+        isLoading={createBookingMutation.isPending} />
+      
+    </div>);
+
 }
