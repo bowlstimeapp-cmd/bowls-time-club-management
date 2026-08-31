@@ -396,6 +396,14 @@
       "items": {
         "type": "string"
       }
+    },
+    "excluded_platform_competition_ids": {
+      "type": "array",
+      "default": [],
+      "description": "IDs of platform-wide competitions this club has hidden from its Competition Availability page",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

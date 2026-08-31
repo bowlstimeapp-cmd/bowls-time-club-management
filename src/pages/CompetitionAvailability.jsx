@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Pencil, Trash2, Save, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Save, Users, EyeOff, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import CompetitionFormDialog from '@/components/selection/CompetitionFormDialog';
@@ -52,6 +52,15 @@ export default function CompetitionAvailability() {
     },
   });
 
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
+
   const { data: myInterest } = useQuery({
     queryKey: ['myCompetitionInterest', clubId, user?.email],
     queryFn: async () => {
@@ -73,7 +82,10 @@ export default function CompetitionAvailability() {
     }
   }, [myInterest]);
 
-  const allCompetitions = [...clubComps, ...platformComps];
+  const excludedIds = club?.excluded_platform_competition_ids || [];
+  const visiblePlatformComps = platformComps.filter(c => !excludedIds.includes(c.id));
+  const hiddenPlatformComps = platformComps.filter(c => excludedIds.includes(c.id));
+  const allCompetitions = [...clubComps, ...visiblePlatformComps];
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
   const isSelectorOrAdmin = isClubAdmin || membership?.role === 'selector';
 
@@ -134,18 +146,27 @@ export default function CompetitionAvailability() {
   };
 
   const handleCompDelete = async (comp) => {
-    const isPlatform = !comp.club_id;
-    const msg = isPlatform
-      ? `"${comp.name}" is a platform-wide competition shared across all clubs. Deleting it will remove it from every club's list. Delete anyway?`
-      : `Delete competition "${comp.name}"?`;
-    if (!window.confirm(msg)) return;
+    if (!window.confirm(`Delete competition "${comp.name}"?`)) return;
     try {
       await base44.entities.Competition.delete(comp.id);
       toast.success('Competition deleted');
       queryClient.invalidateQueries({ queryKey: ['clubCompetitions', clubId] });
-      if (isPlatform) queryClient.invalidateQueries({ queryKey: ['platformCompetitions'] });
     } catch (error) {
       toast.error('Failed to delete competition');
+    }
+  };
+
+  const handleTogglePlatformExclusion = async (comp, hide) => {
+    const current = club?.excluded_platform_competition_ids || [];
+    const updated = hide
+      ? [...current, comp.id]
+      : current.filter(id => id !== comp.id);
+    try {
+      await base44.functions.invoke('updateClubSettings', { clubId, updates: { excluded_platform_competition_ids: updated } });
+      toast.success(hide ? 'Competition hidden from your club' : 'Competition restored');
+      queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+    } catch (error) {
+      toast.error('Failed to update');
     }
   };
 
@@ -200,13 +221,20 @@ export default function CompetitionAvailability() {
               {isClubAdmin && (
                 <div className="flex gap-1">
                   {comp.club_id && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingComp(comp); setShowCompForm(true); }}>
-                      <Pencil className="w-3.5 h-3.5" />
+                    <>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingComp(comp); setShowCompForm(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => handleCompDelete(comp)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </>
+                  )}
+                  {!comp.club_id && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-500" onClick={() => handleTogglePlatformExclusion(comp, true)} title="Hide from your club">
+                      <EyeOff className="w-3.5 h-3.5" />
                     </Button>
                   )}
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => handleCompDelete(comp)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
                 </div>
               )}
             </div>
@@ -224,6 +252,24 @@ export default function CompetitionAvailability() {
             <Plus className="w-4 h-4 mr-2" /> Add Competition
           </Button>
         </div>
+      )}
+
+      {isClubAdmin && hiddenPlatformComps.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-500">Hidden Platform Competitions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {hiddenPlatformComps.map(comp => (
+              <div key={comp.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                <span className="text-sm text-gray-500">{comp.name}</span>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleTogglePlatformExclusion(comp, false)} title="Restore to your club">
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       <CompetitionFormDialog
