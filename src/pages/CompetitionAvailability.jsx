@@ -134,11 +134,16 @@ export default function CompetitionAvailability() {
   };
 
   const handleCompDelete = async (comp) => {
-    if (!window.confirm(`Delete competition "${comp.name}"?`)) return;
+    const isPlatform = !comp.club_id;
+    const msg = isPlatform
+      ? `"${comp.name}" is a platform-wide competition shared across all clubs. Deleting it will remove it from every club's list. Delete anyway?`
+      : `Delete competition "${comp.name}"?`;
+    if (!window.confirm(msg)) return;
     try {
       await base44.entities.Competition.delete(comp.id);
       toast.success('Competition deleted');
       queryClient.invalidateQueries({ queryKey: ['clubCompetitions', clubId] });
+      if (isPlatform) queryClient.invalidateQueries({ queryKey: ['platformCompetitions'] });
     } catch (error) {
       toast.error('Failed to delete competition');
     }
@@ -192,11 +197,13 @@ export default function CompetitionAvailability() {
                   {comp.age_group && comp.age_group !== 'n/a' && <Badge variant="outline" className="text-xs uppercase">{comp.age_group}</Badge>}
                 </div>
               </div>
-              {isClubAdmin && comp.club_id && (
+              {isClubAdmin && (
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingComp(comp); setShowCompForm(true); }}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
+                  {comp.club_id && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingComp(comp); setShowCompForm(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => handleCompDelete(comp)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
