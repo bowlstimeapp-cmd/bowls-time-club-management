@@ -160,7 +160,7 @@ export default function CompetitionAvailability() {
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Competition Availability</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Games I Want To Play In</h1>
           <p className="text-sm text-gray-500 mt-1">Select the competitions you'd like to be considered for</p>
         </div>
         {isSelectorOrAdmin && (
@@ -190,7 +190,6 @@ export default function CompetitionAvailability() {
                   {comp.season && <Badge variant="outline" className="text-xs capitalize">{comp.season}</Badge>}
                   {comp.gender && comp.gender !== 'mixed' && <Badge variant="outline" className="text-xs capitalize">{comp.gender}</Badge>}
                   {comp.age_group && comp.age_group !== 'n/a' && <Badge variant="outline" className="text-xs uppercase">{comp.age_group}</Badge>}
-                  {!comp.club_id && <Badge variant="outline" className="text-xs bg-gray-50">Platform</Badge>}
                 </div>
               </div>
               {isClubAdmin && comp.club_id && (
