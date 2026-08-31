@@ -19,6 +19,10 @@
       "type": "string",
       "description": "Match start time (HH:MM)"
     },
+    "finish_time": {
+      "type": "string",
+      "description": "Match finish time (HH:MM). If set, rink booking creates sessions between time and finish_time."
+    },
     "venue": {
       "type": "string",
       "enum": [

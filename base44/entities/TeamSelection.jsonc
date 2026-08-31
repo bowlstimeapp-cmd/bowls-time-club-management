@@ -92,6 +92,11 @@
       "type": "boolean",
       "default": false,
       "description": "Whether this selection has been archived (match date has passed)"
+    },
+    "rinks_booked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether rinks have been booked for this selection via the Fixtures module"
     }
   },
   "required": [

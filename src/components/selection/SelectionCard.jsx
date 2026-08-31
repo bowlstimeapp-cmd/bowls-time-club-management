@@ -164,6 +164,11 @@ export default function SelectionCard({
               <Badge variant={selection.status === 'published' ? 'default' : 'secondary'} className="text-xs">
                 {selection.status === 'published' ? 'Published' : 'Draft'}
               </Badge>
+              {selection.status === 'draft' && selection.rinks_booked && (
+                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" /> Rinks Booked
+                </Badge>
+              )}
             </div>
             <p className="text-xs text-gray-400 mt-0.5">{countSelected()} selected</p>
           </div>
@@ -258,6 +263,11 @@ return (
                 <Badge variant={selection.status === 'published' ? 'default' : 'secondary'}>
                   {selection.status === 'published' ? 'Published' : 'Draft'}
                 </Badge>
+                {selection.status === 'draft' && selection.rinks_booked && (
+                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                    <CheckCircle className="w-3 h-3 mr-1" /> Rinks Booked
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-600">
                 <span className="flex items-center gap-1">

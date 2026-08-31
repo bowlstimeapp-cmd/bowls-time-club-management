@@ -33,3 +33,28 @@ export function addHoursToTime(timeStr, hours) {
   const newM = totalMinutes % 60;
   return String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
 }
+
+export function generateSessions(startTime, endTime, club) {
+  if (club.use_custom_sessions && club.custom_sessions && club.custom_sessions.length > 0) {
+    return club.custom_sessions.filter(s =>
+      s.start < endTime && s.end > startTime
+    );
+  }
+
+  const sessions = [];
+  let current = startTime;
+  const durationMinutes = Math.round((club.session_duration || 2) * 60);
+
+  while (current < endTime) {
+    const [h, m] = current.split(':').map(Number);
+    const totalMinutes = h * 60 + m + durationMinutes;
+    let sessionEnd = String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0') + ':' + String(totalMinutes % 60).padStart(2, '0');
+
+    if (sessionEnd > endTime) sessionEnd = endTime;
+
+    sessions.push({ start: current, end: sessionEnd });
+    current = sessionEnd;
+  }
+
+  return sessions;
+}

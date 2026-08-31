@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function FixtureFormModal({ open, onClose, fixture, competitions, clubId, onSaved }) {
-  const [formData, setFormData] = useState({ competition_id: '', date: '', time: '', venue: 'Home', notes: '' });
+  const [formData, setFormData] = useState({ competition_id: '', date: '', time: '', finish_time: '', venue: 'Home', notes: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -19,11 +19,12 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
         competition_id: fixture.competition_id || '',
         date: fixture.date || '',
         time: fixture.time || '',
+        finish_time: fixture.finish_time || '',
         venue: fixture.venue || 'Home',
         notes: fixture.notes || '',
       });
     } else {
-      setFormData({ competition_id: '', date: '', time: '', venue: 'Home', notes: '' });
+      setFormData({ competition_id: '', date: '', time: '', finish_time: '', venue: 'Home', notes: '' });
     }
   }, [fixture, open]);
 
@@ -102,6 +103,11 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
           <div>
             <Label>Time</Label>
             <Input type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} />
+          </div>
+          <div>
+            <Label>Finish Time (optional)</Label>
+            <Input type="time" value={formData.finish_time} onChange={(e) => setFormData({ ...formData, finish_time: e.target.value })} />
+            <p className="text-xs text-gray-500 mt-1">If set, rinks will be booked for all sessions between start and finish time.</p>
           </div>
           <div>
             <Label>Venue</Label>

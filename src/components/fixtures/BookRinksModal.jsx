@@ -28,7 +28,7 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
 
   const bookings = bookingsData?.data?.bookings || [];
   const startTime = fixture?.time || '';
-  const endTime = fixture ? addHoursToTime(fixture.time, club?.session_duration || 2) : '';
+  const endTime = fixture ? (fixture.finish_time || addHoursToTime(fixture.time, club?.session_duration || 2)) : '';
   const allRinkNumbers = useMemo(
     () => Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1),
     [club?.rink_count]
@@ -108,7 +108,7 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Book Rinks — {fixture.date} at {fixture.time}</DialogTitle>
+          <DialogTitle>Book Rinks — {fixture.date} at {fixture.time}{fixture.finish_time ? `–${fixture.finish_time}` : ''}</DialogTitle>
         </DialogHeader>
 
         {clashes ? (

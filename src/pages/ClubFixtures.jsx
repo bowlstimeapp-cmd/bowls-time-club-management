@@ -110,7 +110,7 @@ export default function ClubFixtures() {
                   <tr key={fixture.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{comp?.name || '—'}</td>
                     <td className="px-4 py-3 text-sm">{format(parseISO(fixture.date), 'EEE d MMM yyyy')}</td>
-                    <td className="px-4 py-3 text-sm">{fixture.time}</td>
+                    <td className="px-4 py-3 text-sm">{fixture.time}{fixture.finish_time ? ` – ${fixture.finish_time}` : ''}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                         fixture.venue === 'Home' ? 'bg-emerald-100 text-emerald-700' :
