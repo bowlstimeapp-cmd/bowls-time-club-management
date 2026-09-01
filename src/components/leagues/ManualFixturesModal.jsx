@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 
 const EMPTY_ROW = { home_team_id: '', away_team_id: '', match_date: '', rink_number: '', _id: null };
+const DOUBLE_RINK_EMPTY_ROW = { home_team_id: '', away_team_id: '', match_date: '', rink_number: '', rink_number_2: '', _id: null, _id2: null, _tie_id: null };
 
 function parseCsvLine(line) {
   const result = [];
@@ -34,24 +35,67 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
   React.useEffect(() => {
     if (open) {
       if (existingFixtures.length > 0) {
-        setRows(existingFixtures
-          .filter(f => f.league_id === league?.id)
-          .sort((a, b) => a.match_date.localeCompare(b.match_date))
-          .map(f => ({
-            home_team_id: f.home_team_id,
-            away_team_id: f.away_team_id,
-            match_date: f.match_date,
-            rink_number: f.rink_number?.toString() || '',
-            _id: f.id,
-          }))
-        );
+        if (league?.is_double_rink) {
+          // Group by tie_id for double-rink
+          const ties = {};
+          const standalone = [];
+          existingFixtures
+            .filter(f => f.league_id === league?.id)
+            .forEach(f => {
+              if (f.tie_id) {
+                if (!ties[f.tie_id]) ties[f.tie_id] = [];
+                ties[f.tie_id].push(f);
+              } else {
+                standalone.push(f);
+              }
+            });
+          const doubleRows = Object.keys(ties).sort().map(tieId => {
+            const legs = ties[tieId].sort((a, b) => (a.leg || 1) - (b.leg || 1));
+            return {
+              home_team_id: legs[0]?.home_team_id || '',
+              away_team_id: legs[0]?.away_team_id || '',
+              match_date: legs[0]?.match_date || '',
+              rink_number: legs[0]?.rink_number?.toString() || '',
+              rink_number_2: legs[1]?.rink_number?.toString() || '',
+              _id: legs[0]?.id || null,
+              _id2: legs[1]?.id || null,
+              _tie_id: tieId,
+            };
+          });
+          standalone.forEach(f => {
+            doubleRows.push({
+              home_team_id: f.home_team_id,
+              away_team_id: f.away_team_id,
+              match_date: f.match_date,
+              rink_number: f.rink_number?.toString() || '',
+              rink_number_2: '',
+              _id: f.id,
+              _id2: null,
+              _tie_id: null,
+            });
+          });
+          doubleRows.sort((a, b) => a.match_date.localeCompare(b.match_date));
+          setRows(doubleRows.length > 0 ? doubleRows : [{ ...DOUBLE_RINK_EMPTY_ROW }]);
+        } else {
+          setRows(existingFixtures
+            .filter(f => f.league_id === league?.id)
+            .sort((a, b) => a.match_date.localeCompare(b.match_date))
+            .map(f => ({
+              home_team_id: f.home_team_id,
+              away_team_id: f.away_team_id,
+              match_date: f.match_date,
+              rink_number: f.rink_number?.toString() || '',
+              _id: f.id,
+            }))
+          );
+        }
       } else {
-        setRows([{ ...EMPTY_ROW }]);
+        setRows([{ ...(league?.is_double_rink ? DOUBLE_RINK_EMPTY_ROW : EMPTY_ROW) }]);
       }
     }
   }, [open, league?.id, existingFixtures]);
 
-  const addRow = () => setRows(prev => [...prev, { ...EMPTY_ROW }]);
+  const addRow = () => setRows(prev => [...prev, { ...(league?.is_double_rink ? DOUBLE_RINK_EMPTY_ROW : EMPTY_ROW) }]);
 
   const updateRow = (idx, field, value) => {
     setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
@@ -89,45 +133,90 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
 
     setSaving(true);
     try {
+      const isDoubleRink = league?.is_double_rink;
       // Separate new vs existing
       const toCreate = validRows.filter(r => !r._id);
       const toUpdate = validRows.filter(r => r._id);
       // Find deleted fixtures
       const existingIds = new Set(existingFixtures.filter(f => f.league_id === league.id).map(f => f.id));
-      const keptIds = new Set(rows.filter(r => r._id).map(r => r._id));
+      const keptIds = new Set();
+      rows.forEach(r => {
+        if (r._id) keptIds.add(r._id);
+        if (r._id2) keptIds.add(r._id2);
+      });
       const toDelete = [...existingIds].filter(id => !keptIds.has(id));
 
       // Delete removed
       await Promise.all(toDelete.map(id => base44.entities.LeagueFixture.delete(id)));
 
-      // Update existing
-      for (const r of toUpdate) {
-        await base44.entities.LeagueFixture.update(r._id, {
-          home_team_id: r.home_team_id,
-          away_team_id: r.away_team_id,
-          match_date: r.match_date,
-          rink_number: r.rink_number ? parseInt(r.rink_number) : null,
-          status: 'scheduled',
-        });
-      }
+      if (isDoubleRink) {
+        // Update existing double-rink rows
+        for (const r of toUpdate) {
+          const tieId = r._tie_id || `${r.match_date}-${r.home_team_id}-${r.away_team_id}`;
+          if (r._id) {
+            await base44.entities.LeagueFixture.update(r._id, {
+              home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+              match_date: r.match_date, rink_number: r.rink_number ? parseInt(r.rink_number) : null,
+              status: 'scheduled', tie_id: tieId, leg: 1,
+            });
+          }
+          if (r._id2) {
+            await base44.entities.LeagueFixture.update(r._id2, {
+              home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+              match_date: r.match_date, rink_number: r.rink_number_2 ? parseInt(r.rink_number_2) : null,
+              status: 'scheduled', tie_id: tieId, leg: 2,
+            });
+          } else {
+            await base44.entities.LeagueFixture.create({
+              league_id: league.id, club_id: clubId,
+              home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+              match_date: r.match_date, rink_number: r.rink_number_2 ? parseInt(r.rink_number_2) : null,
+              status: 'scheduled', tie_id: tieId, leg: 2,
+            });
+          }
+        }
 
-      // Create new
-      if (toCreate.length > 0) {
-        await base44.entities.LeagueFixture.bulkCreate(toCreate.map(r => ({
-          league_id: league.id,
-          club_id: clubId,
-          home_team_id: r.home_team_id,
-          away_team_id: r.away_team_id,
-          match_date: r.match_date,
-          rink_number: r.rink_number ? parseInt(r.rink_number) : null,
-          status: 'scheduled',
-        })));
+        // Create new double-rink rows
+        for (const r of toCreate) {
+          const tieId = `${r.match_date}-${r.home_team_id}-${r.away_team_id}-${Date.now()}`;
+          await base44.entities.LeagueFixture.bulkCreate([
+            {
+              league_id: league.id, club_id: clubId,
+              home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+              match_date: r.match_date, rink_number: r.rink_number ? parseInt(r.rink_number) : null,
+              status: 'scheduled', tie_id: tieId, leg: 1,
+            },
+            {
+              league_id: league.id, club_id: clubId,
+              home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+              match_date: r.match_date, rink_number: r.rink_number_2 ? parseInt(r.rink_number_2) : null,
+              status: 'scheduled', tie_id: tieId, leg: 2,
+            },
+          ]);
+        }
+      } else {
+        // Standard (non-double-rink) logic
+        for (const r of toUpdate) {
+          await base44.entities.LeagueFixture.update(r._id, {
+            home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+            match_date: r.match_date, rink_number: r.rink_number ? parseInt(r.rink_number) : null,
+            status: 'scheduled',
+          });
+        }
+        if (toCreate.length > 0) {
+          await base44.entities.LeagueFixture.bulkCreate(toCreate.map(r => ({
+            league_id: league.id, club_id: clubId,
+            home_team_id: r.home_team_id, away_team_id: r.away_team_id,
+            match_date: r.match_date, rink_number: r.rink_number ? parseInt(r.rink_number) : null,
+            status: 'scheduled',
+          })));
+        }
       }
 
       // Mark fixtures as generated
       await base44.entities.League.update(league.id, { fixtures_generated: true });
-      toast.success(`Saved ${validRows.length} fixtures`);
-      onClose(true); // true = refresh
+      toast.success(`Saved ${validRows.length} ${isDoubleRink ? 'meeting' : 'fixture'}${validRows.length !== 1 ? 's' : ''}`);
+      onClose(true);
     } catch (err) {
       toast.error('Failed to save fixtures: ' + err.message);
     }
@@ -169,7 +258,10 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
           parsedDate = `${y}-${m}-${d}`;
         }
         if (!parsedDate?.match(/^\d{4}-\d{2}-\d{2}$/)) { errors.push(`Row ${idx + 2}: Invalid date "${date}" (use YYYY-MM-DD or DD/MM/YYYY)`); return; }
-        imported.push({ home_team_id: homeTeam.id, away_team_id: awayTeam.id, match_date: parsedDate, rink_number: rink?.trim() || '', _id: null });
+        imported.push(league?.is_double_rink
+          ? { home_team_id: homeTeam.id, away_team_id: awayTeam.id, match_date: parsedDate, rink_number: rink?.trim() || '', rink_number_2: '', _id: null, _id2: null, _tie_id: null }
+          : { home_team_id: homeTeam.id, away_team_id: awayTeam.id, match_date: parsedDate, rink_number: rink?.trim() || '', _id: null }
+        );
       });
       if (errors.length > 0) {
         toast.error(`Import issues:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n...and ${errors.length - 3} more` : ''}`);
@@ -188,6 +280,13 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
   };
 
   const teamName = (id) => teams.find(t => t.id === id)?.name || '—';
+  const gridClassHeader = league?.is_double_rink
+    ? 'grid-cols-[1fr_1fr_130px_80px_80px_36px]'
+    : 'grid-cols-[1fr_1fr_130px_80px_36px]';
+  const gridClassRow = league?.is_double_rink
+    ? 'sm:grid-cols-[1fr_1fr_130px_80px_80px_36px]'
+    : 'sm:grid-cols-[1fr_1fr_130px_80px_36px]';
+  const errorColSpan = league?.is_double_rink ? 'sm:col-span-6' : 'sm:col-span-5';
   const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
   return (
@@ -211,7 +310,7 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
             <Upload className="w-4 h-4 mr-1" /> Import CSV
           </Button>
           <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
-          <span className="ml-auto text-sm text-slate-500">{rows.filter(r => r.home_team_id && r.away_team_id && r.match_date).length} valid fixture{rows.length !== 1 ? 's' : ''}</span>
+          <span className="ml-auto text-sm text-slate-500">{rows.filter(r => r.home_team_id && r.away_team_id && r.match_date).length} valid {league?.is_double_rink ? 'meeting' : 'fixture'}{rows.length !== 1 ? 's' : ''}</span>
         </div>
 
         {teams.length < 2 && (
@@ -229,11 +328,12 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
         {/* Fixture grid */}
         <div className="space-y-1">
           {/* Header */}
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_130px_80px_36px] gap-2 px-1 text-xs font-medium text-slate-500 uppercase">
+          <div className={`hidden sm:grid ${gridClassHeader} gap-2 px-1 text-xs font-medium text-slate-500 uppercase`}>
             <div>Home Team</div>
             <div>Away Team</div>
             <div>Date</div>
             <div>Rink</div>
+            {league?.is_double_rink && <div>Rink 2</div>}
             <div></div>
           </div>
 
@@ -242,7 +342,7 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
             const rowErr = getRowError(row);
             const hasIssue = isDupe || rowErr;
             return (
-              <div key={idx} className={`grid grid-cols-1 sm:grid-cols-[1fr_1fr_130px_80px_36px] gap-2 p-2 rounded-lg border ${hasIssue ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}>
+              <div key={idx} className={`grid grid-cols-1 ${gridClassRow} gap-2 p-2 rounded-lg border ${hasIssue ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}>
                 {/* Home */}
                 <div>
                   <Label className="sm:hidden text-xs text-slate-500">Home Team</Label>
@@ -296,6 +396,22 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
                     </SelectContent>
                   </Select>
                 </div>
+                {league?.is_double_rink && (
+                  <div>
+                    <Label className="sm:hidden text-xs text-slate-500">Rink 2</Label>
+                    <Select value={row.rink_number_2?.toString() || ''} onValueChange={v => updateRow(idx, 'rink_number_2', v)}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>—</SelectItem>
+                        {allRinks.map(r => (
+                          <SelectItem key={r} value={r.toString()}>Rink {r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {/* Remove */}
                 <div className="flex items-center justify-end sm:justify-center">
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-red-500" onClick={() => removeRow(idx)}>
@@ -304,7 +420,7 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
                 </div>
                 {/* Inline error */}
                 {hasIssue && (
-                  <div className="sm:col-span-5 text-xs text-red-600 flex items-center gap-1 px-1">
+                  <div className={`${errorColSpan} text-xs text-red-600 flex items-center gap-1 px-1`}>
                     <AlertTriangle className="w-3 h-3" />
                     {rowErr || (isDupe ? 'Duplicate fixture on this date' : '')}
                   </div>

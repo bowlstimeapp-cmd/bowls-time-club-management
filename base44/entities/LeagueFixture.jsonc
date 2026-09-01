@@ -27,6 +27,14 @@
       "type": "number",
       "description": "Rink number assigned"
     },
+    "tie_id": {
+      "type": "string",
+      "description": "Shared identifier linking the two fixtures that make up one double-rink meeting (not set for ordinary fixtures)"
+    },
+    "leg": {
+      "type": "number",
+      "description": "1 or 2, indicating which of the pair this fixture is, for consistent display ordering"
+    },
     "home_score": {
       "type": "number",
       "description": "Home team total shots"

@@ -92,6 +92,7 @@ export default function LeagueAdmin() {
   const [leagueEndTime, setLeagueEndTime] = useState('21:00');
   const [leagueFormat, setLeagueFormat] = useState('fours');
   const [leagueIsSets, setLeagueIsSets] = useState(false);
+  const [leagueIsDoubleRink, setLeagueIsDoubleRink] = useState(false);
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
   const [leagueForceEven, setLeagueForceEven] = useState(true);
   const [leagueRinks, setLeagueRinks] = useState([]);
@@ -311,6 +312,7 @@ export default function LeagueAdmin() {
     setLeagueEndTime('21:00');
     setLeagueFormat('fours');
     setLeagueIsSets(false);
+    setLeagueIsDoubleRink(false);
     setLeagueSetsEnds(8);
     setLeagueForceEven(true);
     setLeagueRinks([]);
@@ -346,6 +348,7 @@ export default function LeagueAdmin() {
     setLeagueFormat(league.format || 'fours');
     setLeagueCreationMode(league.creation_mode || 'auto');
     setLeagueIsSets(league.is_sets || false);
+    setLeagueIsDoubleRink(league.is_double_rink || false);
     setLeagueSetsEnds(league.sets_ends || 8);
     setLeagueForceEven(league.force_even_fixtures !== false);
     setLeagueRinks(league.league_rinks || []);
@@ -394,6 +397,7 @@ export default function LeagueAdmin() {
       session_time: leagueSessionTime.trim() || null,
       format: leagueFormat,
       is_sets: leagueIsSets,
+      is_double_rink: leagueIsDoubleRink,
       sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
       force_even_fixtures: leagueForceEven,
       league_rinks: leagueRinks,
@@ -530,7 +534,13 @@ export default function LeagueAdmin() {
     const collectRound = (round, matchDate) => {
       const dateKey = format(matchDate, 'yyyy-MM-dd');
       for (const match of round) {
-        unassigned.push({ home_team_id: match.home_team_id, away_team_id: match.away_team_id, match_date: dateKey });
+        if (league.is_double_rink) {
+          const tieId = `${dateKey}-${match.home_team_id}-${match.away_team_id}-${weekIndex}`;
+          unassigned.push({ home_team_id: match.home_team_id, away_team_id: match.away_team_id, match_date: dateKey, tie_id: tieId, leg: 1 });
+          unassigned.push({ home_team_id: match.home_team_id, away_team_id: match.away_team_id, match_date: dateKey, tie_id: tieId, leg: 2 });
+        } else {
+          unassigned.push({ home_team_id: match.home_team_id, away_team_id: match.away_team_id, match_date: dateKey });
+        }
       }
     };
 
@@ -569,41 +579,117 @@ export default function LeagueAdmin() {
     const dateRinkUsage = {}; // dateKey -> Set of rinks used that day
     const allFixtures = [];
 
-    for (const match of shuffledFixtures) {
-      const dateKey = match.match_date;
-      if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
+    if (league.is_double_rink) {
+      // Group by tie_id and assign adjacent rink pairs
+      const tieGroups = {};
+      for (const match of shuffledFixtures) {
+        if (!match.tie_id) continue;
+        if (!tieGroups[match.tie_id]) tieGroups[match.tie_id] = [];
+        tieGroups[match.tie_id].push(match);
+      }
 
-      // Use date-specific rinks when adjacent rinks mode is enabled
-      const dateRinks = getRinksForDate(dateKey);
+      for (const tieId of Object.keys(tieGroups)) {
+        const legs = tieGroups[tieId].sort((a, b) => (a.leg || 1) - (b.leg || 2));
+        if (legs.length < 2) continue;
 
-      // Candidate rinks: not used on this date, and still below target
-      const candidates = dateRinks.filter(
-        r => !dateRinkUsage[dateKey].has(r) && rinkAssigned[r] < rinkTarget[r]
-      );
+        const dateKey = legs[0].match_date;
+        if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
+        const dateRinks = getRinksForDate(dateKey);
 
-      // Fallback: any rink not used on this date (ignores target — avoids dropping fixtures)
-      const fallback = dateRinks.filter(r => !dateRinkUsage[dateKey].has(r));
+        // Find adjacent pair from free rinks on this date
+        const freeRinks = dateRinks.filter(r => !dateRinkUsage[dateKey].has(r));
 
-      const pool = candidates.length > 0 ? candidates : fallback;
-      if (pool.length === 0) continue; // truly no rink available on this date — skip
+        let chosenPair = null;
+        let isAdjacent = true;
 
-      // Among pool, pick the rink with fewest assignments so far (with random tie-breaking)
-      const minAssigned = Math.min(...pool.map(r => rinkAssigned[r]));
-      const tied = pool.filter(r => rinkAssigned[r] === minAssigned);
-      const chosenRink = tied[Math.floor(seededRandom() * tied.length)];
+        // Try adjacent pairs first
+        const adjacentPairs = [];
+        for (let i = 0; i < freeRinks.length - 1; i++) {
+          if (freeRinks[i + 1] === freeRinks[i] + 1) {
+            adjacentPairs.push([freeRinks[i], freeRinks[i + 1]]);
+          }
+        }
 
-      dateRinkUsage[dateKey].add(chosenRink);
-      rinkAssigned[chosenRink]++;
+        if (adjacentPairs.length > 0) {
+          // Tie-breaker: least overall rink usage
+          chosenPair = adjacentPairs.reduce((best, pair) => {
+            const bestUsage = best ? rinkAssigned[best[0]] + rinkAssigned[best[1]] : Infinity;
+            const pairUsage = rinkAssigned[pair[0]] + rinkAssigned[pair[1]];
+            return pairUsage < bestUsage ? pair : best;
+          }, null);
+        } else if (freeRinks.length >= 2) {
+          // Fallback: nearest available pair (not necessarily adjacent)
+          chosenPair = [freeRinks[0], freeRinks[1]];
+          let minGap = chosenPair[1] - chosenPair[0];
+          for (let i = 0; i < freeRinks.length - 1; i++) {
+            const gap = freeRinks[i + 1] - freeRinks[i];
+            if (gap < minGap) {
+              minGap = gap;
+              chosenPair = [freeRinks[i], freeRinks[i + 1]];
+            }
+          }
+          isAdjacent = false;
+        }
 
-      allFixtures.push({
-        league_id: league.id,
-        club_id: clubId,
-        home_team_id: match.home_team_id,
-        away_team_id: match.away_team_id,
-        match_date: dateKey,
-        rink_number: chosenRink,
-        status: 'scheduled',
-      });
+        if (chosenPair) {
+          dateRinkUsage[dateKey].add(chosenPair[0]);
+          dateRinkUsage[dateKey].add(chosenPair[1]);
+          rinkAssigned[chosenPair[0]]++;
+          rinkAssigned[chosenPair[1]]++;
+
+          for (let li = 0; li < legs.length; li++) {
+            allFixtures.push({
+              league_id: league.id,
+              club_id: clubId,
+              home_team_id: legs[li].home_team_id,
+              away_team_id: legs[li].away_team_id,
+              match_date: legs[li].match_date,
+              rink_number: chosenPair[li],
+              status: 'scheduled',
+              tie_id: legs[li].tie_id,
+              leg: legs[li].leg,
+              _nonAdjacent: !isAdjacent,
+            });
+          }
+        }
+      }
+    } else {
+      for (const match of shuffledFixtures) {
+        const dateKey = match.match_date;
+        if (!dateRinkUsage[dateKey]) dateRinkUsage[dateKey] = new Set();
+
+        // Use date-specific rinks when adjacent rinks mode is enabled
+        const dateRinks = getRinksForDate(dateKey);
+
+        // Candidate rinks: not used on this date, and still below target
+        const candidates = dateRinks.filter(
+          r => !dateRinkUsage[dateKey].has(r) && rinkAssigned[r] < rinkTarget[r]
+        );
+
+        // Fallback: any rink not used on this date (ignores target — avoids dropping fixtures)
+        const fallback = dateRinks.filter(r => !dateRinkUsage[dateKey].has(r));
+
+        const pool = candidates.length > 0 ? candidates : fallback;
+        if (pool.length === 0) continue; // truly no rink available on this date — skip
+
+        // Among pool, pick the rink with fewest assignments so far (with random tie-breaking)
+        const minAssigned = Math.min(...pool.map(r => rinkAssigned[r]));
+        const tied = pool.filter(r => rinkAssigned[r] === minAssigned);
+        const chosenRink = tied[Math.floor(seededRandom() * tied.length)];
+
+        dateRinkUsage[dateKey].add(chosenRink);
+        rinkAssigned[chosenRink]++;
+
+        allFixtures.push({
+          league_id: league.id,
+          club_id: clubId,
+          home_team_id: match.home_team_id,
+          away_team_id: match.away_team_id,
+          match_date: dateKey,
+          rink_number: chosenRink,
+          status: 'scheduled',
+        });
+      }
     }
 
     return allFixtures;
@@ -635,7 +721,8 @@ export default function LeagueAdmin() {
 
   const handleConfirmFixtures = async () => {
     setGeneratingFixtures(true);
-    await clubData('LeagueFixture', 'bulk_create', { data: pendingFixtures });
+    const cleanFixtures = pendingFixtures.map(({ _nonAdjacent, ...f }) => f);
+    await clubData('LeagueFixture', 'bulk_create', { data: cleanFixtures });
     await clubData('League', 'update', { id: pendingFixtureLeague.id, data: { fixtures_generated: true } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
@@ -1049,6 +1136,9 @@ export default function LeagueAdmin() {
                               )}
                               {league.creation_mode === 'manual' && (
                                 <Badge className="bg-purple-100 text-purple-700 border-purple-200">Manual</Badge>
+                              )}
+                              {league.is_double_rink && (
+                                <Badge className="bg-blue-100 text-blue-700 border-blue-200">Double Rink</Badge>
                               )}
                             </CardTitle>
                             {league.description && (
@@ -1558,6 +1648,19 @@ export default function LeagueAdmin() {
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <Checkbox
+                    id="is-double-rink"
+                    checked={leagueIsDoubleRink}
+                    onCheckedChange={setLeagueIsDoubleRink}
+                  />
+                  <div>
+                    <Label htmlFor="is-double-rink" className="cursor-pointer">Double Rink League</Label>
+                    <p className="text-xs text-gray-500">Each meeting produces two matches on adjacent rinks, with a combined-score bonus.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
                     id="is-sets"
                     checked={leagueIsSets}
                     onCheckedChange={setLeagueIsSets}
@@ -1743,7 +1846,16 @@ export default function LeagueAdmin() {
             <div className="space-y-4">
               {viewingLeague && fixtures
                 .filter(f => f.league_id === viewingLeague.id)
-                .sort((a, b) => a.match_date.localeCompare(b.match_date))
+                .sort((a, b) => {
+                  const dateCmp = a.match_date.localeCompare(b.match_date);
+                  if (dateCmp !== 0) return dateCmp;
+                  if (a.tie_id && b.tie_id) {
+                    const tieCmp = a.tie_id.localeCompare(b.tie_id);
+                    if (tieCmp !== 0) return tieCmp;
+                    return (a.leg || 1) - (b.leg || 1);
+                  }
+                  return 0;
+                })
                 .map(fixture => {
                   const homeTeam = teams.find(t => t.id === fixture.home_team_id);
                   const awayTeam = teams.find(t => t.id === fixture.away_team_id);
@@ -1761,6 +1873,9 @@ export default function LeagueAdmin() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+                        {viewingLeague?.is_double_rink && fixture.tie_id && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-600">Leg {fixture.leg || 1}</Badge>
+                        )}
                         {fixture.status === 'completed' ? (
                           <Badge className="bg-emerald-100 text-emerald-700">
                             {fixture.home_score} - {fixture.away_score}
@@ -1859,6 +1974,7 @@ export default function LeagueAdmin() {
           fixtures={pendingFixtures}
           teams={pendingFixtureTeams}
           rinkCount={club?.rink_count || 6}
+          league={pendingFixtureLeague}
           leagueRinks={pendingFixtureLeague?.league_rinks}
           onRegenerate={handleRegenerateFixtures}
           onConfirm={handleConfirmFixtures}

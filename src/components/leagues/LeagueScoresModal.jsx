@@ -99,7 +99,16 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
 
   const leagueFixtures = fixtures
     .filter(f => f.league_id === league?.id)
-    .sort((a, b) => a.match_date.localeCompare(b.match_date));
+    .sort((a, b) => {
+      const dateCmp = a.match_date.localeCompare(b.match_date);
+      if (dateCmp !== 0) return dateCmp;
+      if (a.tie_id && b.tie_id) {
+        const tieCmp = a.tie_id.localeCompare(b.tie_id);
+        if (tieCmp !== 0) return tieCmp;
+        return (a.leg || 1) - (b.leg || 1);
+      }
+      return 0;
+    });
 
   // Fixtures with a pending (one team submitted, awaiting other)
   const pendingFixtures = leagueFixtures.filter(f => f.pending_submitted_by_email != null && f.status !== 'completed');
@@ -157,7 +166,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
               </tr>
             </thead>
             <tbody>
-              {leagueFixtures.map(fixture => {
+              {leagueFixtures.map((fixture, fixtureIdx) => {
                 const homeTeam = teams.find(t => t.id === fixture.home_team_id);
                 const awayTeam = teams.find(t => t.id === fixture.away_team_id);
                 const s = scores[fixture.id] || { home: '', away: '', home_sets: '', away_sets: '' };
@@ -183,6 +192,9 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                       </td>
                       <td className="p-3 text-center">
                         <Badge variant="outline" className="text-xs">R{fixture.rink_number}</Badge>
+                        {league?.is_double_rink && fixture.tie_id && (
+                          <span className="ml-1 text-xs text-blue-600">L{fixture.leg || 1}</span>
+                        )}
                       </td>
                       <td className="p-3 text-right font-medium text-gray-800">{homeTeam?.name || '—'}</td>
                       {isSetsLeague && (

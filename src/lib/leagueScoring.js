@@ -127,6 +127,35 @@ export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
     }
   });
 
+  // Double-rink combined-score bonus
+  if (league.is_double_rink) {
+    const tieGroups = {};
+    for (const fixture of completedFixtures) {
+      if (!fixture.tie_id) continue;
+      if (!tieGroups[fixture.tie_id]) tieGroups[fixture.tie_id] = [];
+      tieGroups[fixture.tie_id].push(fixture);
+    }
+    for (const tieId of Object.keys(tieGroups)) {
+      const group = tieGroups[tieId];
+      if (group.length !== 2) continue;
+      const [leg1, leg2] = group;
+      if (leg1.home_team_id !== leg2.home_team_id || leg1.away_team_id !== leg2.away_team_id) continue;
+      const homeTotal = (leg1.home_score || 0) + (leg2.home_score || 0);
+      const awayTotal = (leg1.away_score || 0) + (leg2.away_score || 0);
+      const homeEntry = table.find(t => t.team.id === leg1.home_team_id);
+      const awayEntry = table.find(t => t.team.id === leg1.away_team_id);
+      if (!homeEntry || !awayEntry) continue;
+      if (homeTotal > awayTotal) {
+        homeEntry.points += 2;
+      } else if (awayTotal > homeTotal) {
+        awayEntry.points += 2;
+      } else {
+        homeEntry.points += 1;
+        awayEntry.points += 1;
+      }
+    }
+  }
+
   table.forEach(entry => {
     entry.pointsDiff = entry.pointsFor - entry.pointsAgainst;
   });
@@ -142,19 +171,25 @@ export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
  * Returns an array of strings describing the scoring rules for a league.
  */
 export function getScoringRules(league) {
-  if (!league.is_sets) return [];
-  const rules = [];
-  if (league.scoring_points_per_set) {
-    rules.push(`${league.scoring_points_per_set_value ?? 1} point${(league.scoring_points_per_set_value ?? 1) !== 1 ? 's' : ''} per set win (0.5 for a drawn set)`);
+  let rules = [];
+  if (league.is_sets) {
+    if (league.scoring_points_per_set) {
+      rules.push(`${league.scoring_points_per_set_value ?? 1} point${(league.scoring_points_per_set_value ?? 1) !== 1 ? 's' : ''} per set win (0.5 for a drawn set)`);
+    }
+    if (league.scoring_game_win) {
+      rules.push(`${league.scoring_game_win_value ?? 1} point${(league.scoring_game_win_value ?? 1) !== 1 ? 's' : ''} for game win`);
+    }
+    if (league.scoring_standard_win) {
+      rules.push('2 points for game win, 1 point for draw (standard)');
+    }
+    if (league.scoring_highest_shots) {
+      rules.push('1 point for highest overall shots');
+    }
+  } else if (league.is_double_rink) {
+    rules.push('2 points for a win, 1 point for a draw (per match)');
   }
-  if (league.scoring_game_win) {
-    rules.push(`${league.scoring_game_win_value ?? 1} point${(league.scoring_game_win_value ?? 1) !== 1 ? 's' : ''} for game win`);
-  }
-  if (league.scoring_standard_win) {
-    rules.push('2 points for game win, 1 point for draw (standard)');
-  }
-  if (league.scoring_highest_shots) {
-    rules.push('1 point for highest overall shots');
+  if (league.is_double_rink) {
+    rules.unshift('2 points to the team with the higher combined score across both rinks (1 each if tied)');
   }
   return rules;
 }
