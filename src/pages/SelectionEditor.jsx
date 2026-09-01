@@ -607,9 +607,31 @@ export default function SelectionEditor() {
       return;
     }
 
-    const duration = club?.session_duration || 2;
-    const [startHour] = matchStartTime.split(':').map(Number);
-    const [endHour] = matchEndTime.split(':').map(Number);
+    // Generate sessions based on club's custom sessions (if enabled) or session_duration.
+    // Mirrors the server-side generateSessions logic in fixtureHelpers.ts so that
+    // clubs with custom session grids (e.g. 10:00-12:00, 12:00-13:00, 13:00-14:00)
+    // get every session booked between start and end time.
+    const generateRinkSessions = (startTime, endTime, clubData) => {
+      if (clubData?.use_custom_sessions && clubData?.custom_sessions?.length > 0) {
+        return clubData.custom_sessions.filter(s =>
+          s.start < endTime && s.end > startTime
+        );
+      }
+      const sessions = [];
+      let current = startTime;
+      const durationMinutes = Math.round((clubData?.session_duration || 2) * 60);
+      while (current < endTime) {
+        const [h, m] = current.split(':').map(Number);
+        const totalMinutes = h * 60 + m + durationMinutes;
+        let sessionEnd = String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0') + ':' + String(totalMinutes % 60).padStart(2, '0');
+        if (sessionEnd > endTime) sessionEnd = endTime;
+        sessions.push({ start: current, end: sessionEnd });
+        current = sessionEnd;
+      }
+      return sessions;
+    };
+
+    const sessions = generateRinkSessions(matchStartTime, matchEndTime, club);
 
     const bookerName = `${competition}${matchName ? ` vs ${matchName}` : ''}`;
     const rinkCount = club?.rink_count || 6;
@@ -618,18 +640,16 @@ export default function SelectionEditor() {
     const clashes = [];
     const nonClashingBookings = [];
 
-    // Build proposed slots, accounting for other proposed slots in same batch
+    // Build proposed slots from generated sessions, accounting for other proposed slots in same batch
     const proposedSlots = [];
     for (const rinkNum of selectedRinks) {
-      for (let hour = startHour; hour < endHour; hour += duration) {
-        proposedSlots.push({ rink: rinkNum, startTime: `${String(hour).padStart(2, '0')}:00` });
+      for (const session of sessions) {
+        proposedSlots.push({ rink: rinkNum, startTime: session.start, endTime: session.end });
       }
     }
 
-    for (const { rink: rinkNum, startTime: slotStart } of proposedSlots) {
-      const slotEnd = `${String(parseInt(slotStart) + duration).padStart(2, '0')}:00`;
-      const [startH] = slotStart.split(':').map(Number);
-      const slotEndStr = `${String(startH + duration).padStart(2, '0')}:00`;
+    for (const { rink: rinkNum, startTime: slotStart, endTime: slotEnd } of proposedSlots) {
+      const slotEndStr = slotEnd;
 
       const existingBooking = existingBookings.find(
         (b) => b.rink_number === rinkNum &&
