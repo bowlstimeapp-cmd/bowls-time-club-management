@@ -153,6 +153,9 @@ export default function SelectionEditor() {
       }
       if (existingSelection.competition === 'Fantastic 5s' || existingSelection.competition === 'Top Club (Outdoor)') {
         setFantastic5sVenue(existingSelection.friendly_location || '');
+        if (existingSelection.competition === 'Top Club (Outdoor)') {
+          setHomeRinks(5);
+        }
       }
     }
   }, [existingSelection]);
@@ -734,6 +737,9 @@ export default function SelectionEditor() {
     if (compName === 'Friendly') {
       setSelectedRinks([]);
       setHomeRinks(friendlyNumRinks);
+    } else if (compName === 'Top Club (Outdoor)') {
+      setHomeRinks(5);
+      setSelectedRinks([]);
     } else {
       const comp = competitions.find((c) => c.name === compName);
       if (comp) {
@@ -1040,7 +1046,7 @@ export default function SelectionEditor() {
                 {competition === 'Top Club (Outdoor)' &&
                 <div>
                     <Label>Location</Label>
-                    <Select value={fantastic5sVenue} onValueChange={setFantastic5sVenue}>
+                    <Select value={fantastic5sVenue} onValueChange={(v) => { setFantastic5sVenue(v); setSelectedRinks([]); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select location" />
                       </SelectTrigger>
@@ -1052,28 +1058,8 @@ export default function SelectionEditor() {
                   </div>
                 }
 
-                {competition === 'Top Club (Outdoor)' &&
-                <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label>Start Time</Label>
-                      <Input
-                      type="time"
-                      value={matchStartTime}
-                      onChange={(e) => setMatchStartTime(e.target.value)} />
-                    
-                    </div>
-                    <div>
-                      <Label>End Time</Label>
-                      <Input
-                      type="time"
-                      value={matchEndTime}
-                      onChange={(e) => setMatchEndTime(e.target.value)} />
-                    
-                    </div>
-                  </div>
-                }
-
-                {competition && competition !== 'Top Club' && competition !== 'Top Club (Outdoor)' && competition !== 'Friendly' && competition !== 'Fantastic 5s' &&
+                {competition && competition !== 'Top Club' && competition !== 'Friendly' && competition !== 'Fantastic 5s' &&
+                 (competition !== 'Top Club (Outdoor)' || fantastic5sVenue === 'Home') &&
                 <>
                     <div>
                       <Label>Number of Home Rinks</Label>
@@ -1087,6 +1073,7 @@ export default function SelectionEditor() {
                           <SelectItem value="2">2 Rinks</SelectItem>
                           <SelectItem value="3">3 Rinks</SelectItem>
                           <SelectItem value="4">4 Rinks</SelectItem>
+                          <SelectItem value="5">5 Rinks</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
