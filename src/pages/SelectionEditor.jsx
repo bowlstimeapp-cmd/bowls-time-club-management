@@ -151,9 +151,9 @@ export default function SelectionEditor() {
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
         setFriendlyPlayersPerRink(existingSelection.friendly_players_per_rink || 4);
       }
-      if (existingSelection.competition === 'Fantastic 5s' || existingSelection.competition === 'Top Club (Outdoor)') {
+      if (existingSelection.competition === 'Fantastic 5s' || existingSelection.competition === 'Top Club' || existingSelection.competition === 'Top Club (Outdoor)') {
         setFantastic5sVenue(existingSelection.friendly_location || '');
-        if (existingSelection.competition === 'Top Club (Outdoor)') {
+        if (existingSelection.competition === 'Top Club' || existingSelection.competition === 'Top Club (Outdoor)') {
           setHomeRinks(5);
         }
       }
@@ -521,7 +521,7 @@ export default function SelectionEditor() {
         friendly_num_rinks: friendlyNumRinks,
         friendly_players_per_rink: friendlyPlayersPerRink
       } : {}),
-      ...(competition === 'Fantastic 5s' || competition === 'Top Club (Outdoor)' ? {
+      ...(competition === 'Fantastic 5s' || competition === 'Top Club' || competition === 'Top Club (Outdoor)' ? {
         friendly_location: fantastic5sVenue
       } : {})
     };
@@ -737,7 +737,7 @@ export default function SelectionEditor() {
     if (compName === 'Friendly') {
       setSelectedRinks([]);
       setHomeRinks(friendlyNumRinks);
-    } else if (compName === 'Top Club (Outdoor)') {
+    } else if (compName === 'Top Club' || compName === 'Top Club (Outdoor)') {
       setHomeRinks(5);
       setSelectedRinks([]);
     } else {
@@ -1043,7 +1043,7 @@ export default function SelectionEditor() {
                   </div>
                 }
 
-                {competition === 'Top Club (Outdoor)' &&
+                {(competition === 'Top Club' || competition === 'Top Club (Outdoor)') &&
                 <div>
                     <Label>Location</Label>
                     <Select value={fantastic5sVenue} onValueChange={(v) => { setFantastic5sVenue(v); setSelectedRinks([]); }}>
@@ -1058,7 +1058,8 @@ export default function SelectionEditor() {
                   </div>
                 }
 
-                {competition && competition !== 'Top Club' && competition !== 'Friendly' && competition !== 'Fantastic 5s' &&
+                {competition && competition !== 'Friendly' && competition !== 'Fantastic 5s' &&
+                 (competition !== 'Top Club' || fantastic5sVenue === 'Home') &&
                  (competition !== 'Top Club (Outdoor)' || fantastic5sVenue === 'Home') &&
                 <>
                     <div>
