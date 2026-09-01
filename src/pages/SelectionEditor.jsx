@@ -711,6 +711,9 @@ export default function SelectionEditor() {
     await Promise.all(bookingsToCreate.map((b) => createBookingMutation.mutateAsync(b)));
     queryClient.invalidateQueries({ queryKey: ['bookings', clubId, matchDate] });
     toast.success(`${bookingsToCreate.length} booking(s) created`);
+    // Reflect any rink changes made in the clash modal back to the Select Rinks checkboxes
+    const bookedRinks = [...new Set(bookingsToCreate.map((b) => b.rink_number))].sort((a, b) => a - b);
+    setSelectedRinks(bookedRinks);
     setClashModalOpen(false);
   };
 
