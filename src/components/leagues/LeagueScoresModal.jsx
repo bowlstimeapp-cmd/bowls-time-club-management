@@ -322,6 +322,26 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                         </td>
                       </tr>
                     )}
+                    {league?.is_double_rink && fixture.tie_id && (() => {
+                      const isLastLeg = !leagueFixtures[fixtureIdx + 1] || leagueFixtures[fixtureIdx + 1].tie_id !== fixture.tie_id;
+                      if (!isLastLeg) return null;
+                      const tieFixtures = leagueFixtures.filter(f => f.tie_id === fixture.tie_id && f.status === 'completed');
+                      if (tieFixtures.length !== 2) return null;
+                      const homeTotal = tieFixtures.reduce((sum, f) => sum + (f.home_score || 0), 0);
+                      const awayTotal = tieFixtures.reduce((sum, f) => sum + (f.away_score || 0), 0);
+                      return (
+                        <tr className="border-b bg-blue-50">
+                          <td colSpan={isSetsLeague ? 11 : 9} className="px-3 py-1.5">
+                            <div className="flex items-center gap-2 text-xs text-blue-700">
+                              <span className="font-semibold">Combined: {homeTeam?.name} {homeTotal} – {awayTotal} {awayTeam?.name}</span>
+                              {homeTotal > awayTotal && <Badge className="bg-blue-100 text-blue-700">+2 pts {homeTeam?.name}</Badge>}
+                              {awayTotal > homeTotal && <Badge className="bg-blue-100 text-blue-700">+2 pts {awayTeam?.name}</Badge>}
+                              {homeTotal === awayTotal && <Badge className="bg-blue-100 text-blue-700">+1 pt each</Badge>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })()}
                   </React.Fragment>
                 );
               })}

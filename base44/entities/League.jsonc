@@ -131,7 +131,7 @@
     },
     "league_rinks": {
       "type": "array",
-      "description": "Rink numbers available for this league's fixtures.",
+      "description": "Rink numbers available for this league's fixtures",
       "items": {
         "type": "number"
       },
@@ -140,6 +140,7 @@
     "blacklisted_dates": {
       "type": "array",
       "description": "Individual dates where no fixtures should be scheduled",
+      "default": [],
       "items": {
         "type": "object",
         "properties": {
@@ -151,8 +152,7 @@
             "type": "string"
           }
         }
-      },
-      "default": []
+      }
     },
     "scorecards_pdf_url": {
       "type": "string",
@@ -162,6 +162,11 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the league uses sets scoring"
+    },
+    "is_double_rink": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, each fixture produces two matches between the same teams on adjacent rinks, with a combined-score bonus"
     },
     "sets_ends": {
       "type": "number",
