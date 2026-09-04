@@ -1,0 +1,34 @@
+{
+  "properties": {
+    "club_id": {
+      "type": "string"
+    },
+    "county_id": {
+      "type": "string"
+    },
+    "requested_by": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "approved"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "club_id",
+    "county_id",
+    "status",
+    "requested_by"
+  ],
+  "rls": {
+    "create": false,
+    "delete": false,
+    "read": {},
+    "update": false
+  },
+  "type": "object",
+  "name": "ClubCountyAffiliation"
+}
