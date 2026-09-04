@@ -1,0 +1,37 @@
+{
+  "name": "County",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "County name"
+    },
+    "description": {
+      "type": "string",
+      "description": "County description"
+    },
+    "primary_admin_email": {
+      "type": "string",
+      "description": "Email of the county's primary admin"
+    },
+    "season": {
+      "type": "string",
+      "description": "County season"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the county is active"
+    }
+  },
+  "required": [
+    "name",
+    "primary_admin_email"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
