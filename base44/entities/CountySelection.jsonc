@@ -1,0 +1,45 @@
+{
+  "name": "CountySelection",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "county_team_id": {
+      "type": "string",
+      "description": "Reference to the CountyTeam (must be team_type 'representative')"
+    },
+    "fixture_id": {
+      "type": "string",
+      "description": "Reference to a CountyLeagueFixture (Phase 4) \u2014 forward-looking placeholder until Phase 4 exists"
+    },
+    "selected_players": {
+      "type": "array",
+      "default": [],
+      "description": "Array of CountyMembership user_email values selected for this fixture",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published"
+      ],
+      "default": "draft",
+      "description": "Whether the selection is visible to members"
+    }
+  },
+  "required": [
+    "county_id",
+    "county_team_id"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
