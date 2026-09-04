@@ -1,0 +1,53 @@
+{
+  "name": "CountyMembership",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User's email"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "User's display name"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "secretary",
+        "selector",
+        "member"
+      ],
+      "default": "member",
+      "description": "County-scoped role"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved"
+      ],
+      "default": "pending",
+      "description": "Membership status"
+    },
+    "joined_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the member joined the county"
+    }
+  },
+  "required": [
+    "county_id",
+    "user_email"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
