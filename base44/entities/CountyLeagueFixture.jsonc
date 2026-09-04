@@ -1,0 +1,158 @@
+{
+  "name": "CountyLeagueFixture",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "league_id": {
+      "type": "string",
+      "description": "Reference to the CountyLeague"
+    },
+    "home_team_id": {
+      "type": "string",
+      "description": "Reference to CountyTeam (home)"
+    },
+    "away_team_id": {
+      "type": "string",
+      "description": "Reference to CountyTeam (away)"
+    },
+    "match_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fixture date"
+    },
+    "venue": {
+      "type": "string",
+      "description": "Hosting venue (club name or address \u2014 no rink assignment for county fixtures)"
+    },
+    "home_score": {
+      "type": "number",
+      "description": "Home team total shots"
+    },
+    "away_score": {
+      "type": "number",
+      "description": "Away team total shots"
+    },
+    "home_sets": {
+      "type": "number",
+      "description": "Sets won by home team (sets leagues only)"
+    },
+    "away_sets": {
+      "type": "number",
+      "description": "Sets won by away team (sets leagues only)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled",
+      "description": "Fixture status"
+    },
+    "pending_home_score": {
+      "type": "number"
+    },
+    "pending_away_score": {
+      "type": "number"
+    },
+    "pending_home_sets": {
+      "type": "number"
+    },
+    "pending_away_sets": {
+      "type": "number"
+    },
+    "pending_submitted_by_email": {
+      "type": "string"
+    },
+    "pending_submitted_by_team_id": {
+      "type": "string"
+    },
+    "conflict_first_home_score": {
+      "type": "number"
+    },
+    "conflict_first_away_score": {
+      "type": "number"
+    },
+    "conflict_first_home_sets": {
+      "type": "number"
+    },
+    "conflict_first_away_sets": {
+      "type": "number"
+    },
+    "conflict_first_team_id": {
+      "type": "string"
+    },
+    "conflict_first_submitted_by_email": {
+      "type": "string"
+    },
+    "conflict_second_home_score": {
+      "type": "number"
+    },
+    "conflict_second_away_score": {
+      "type": "number"
+    },
+    "conflict_second_home_sets": {
+      "type": "number"
+    },
+    "conflict_second_away_sets": {
+      "type": "number"
+    },
+    "conflict_second_team_id": {
+      "type": "string"
+    },
+    "conflict_second_submitted_by_email": {
+      "type": "string"
+    },
+    "home_roster": {
+      "type": "array",
+      "default": [],
+      "description": "Roster submitted by the home club-type team",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "club_member_email": {
+            "type": "string",
+            "description": "Can be null"
+          }
+        }
+      }
+    },
+    "away_roster": {
+      "type": "array",
+      "default": [],
+      "description": "Roster submitted by the away club-type team",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "club_member_email": {
+            "type": "string",
+            "description": "Can be null"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "county_id",
+    "league_id",
+    "home_team_id",
+    "away_team_id",
+    "match_date"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

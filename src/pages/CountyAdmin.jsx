@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Users, CheckCircle, XCircle, Trash2, ShieldAlert, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import CountyTeamsSection from '@/components/county/CountyTeamsSection';
+import CountyLeaguesSection from '@/components/county/CountyLeaguesSection';
 
 const ROLES = ['admin', 'secretary', 'selector', 'member'];
 
@@ -58,6 +59,7 @@ export default function CountyAdmin() {
       {approvedAffiliations.length === 0 ? <p className="text-sm text-slate-400">No affiliated clubs yet.</p> : approvedAffiliations.map(a => <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3 bg-white"><div><p className="font-medium">{clubName(a.club_id)}</p><p className="text-sm text-slate-500">{allClubs.find(c => c.id === a.club_id)?.primary_admin_email || ''}</p></div>{canAdmin && <Button size="sm" variant="ghost" className="text-red-500" onClick={() => removeAffiliation.mutate(a.id)}><Trash2 className="w-4 h-4 mr-1" />Remove</Button>}</div>)}
     </CardContent></Card>
     <CountyTeamsSection countyId={countyId} canAdmin={canAdmin} />
+    <CountyLeaguesSection countyId={countyId} canAdmin={canAdmin} />
     <Card><CardHeader><CardTitle>Members ({approved.length})</CardTitle></CardHeader><CardContent className="space-y-3">
       {approved.map(m => <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3 bg-white"><div><p className="font-medium">{m.user_name || m.user_email}</p><p className="text-sm text-slate-500">{m.user_email}</p></div><div className="flex items-center gap-2">{canAdmin ? <Select value={m.role} onValueChange={newRole => role.mutate({id:m.id,newRole})}><SelectTrigger className="w-36"><SelectValue /></SelectTrigger><SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select> : <Badge variant="outline">{m.role}</Badge>}{canAdmin && <Button size="sm" variant="ghost" className="text-red-500" onClick={() => remove.mutate(m.id)}><Trash2 className="w-4 h-4" /></Button>}</div></div>)}
     </CardContent></Card>

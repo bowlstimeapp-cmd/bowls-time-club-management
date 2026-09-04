@@ -1,0 +1,87 @@
+{
+  "name": "CountyLeague",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "name": {
+      "type": "string",
+      "description": "League name"
+    },
+    "description": {
+      "type": "string",
+      "description": "League description"
+    },
+    "team_ids": {
+      "type": "array",
+      "default": [],
+      "description": "Ids of CountyTeam records participating in this league",
+      "items": {
+        "type": "string"
+      }
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "League start date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "League end date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "draft"
+      ],
+      "default": "draft",
+      "description": "League status"
+    },
+    "is_sets": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the league uses sets scoring"
+    },
+    "sets_ends": {
+      "type": "number",
+      "description": "Number of ends per set"
+    },
+    "scoring_points_per_set": {
+      "type": "boolean",
+      "default": false
+    },
+    "scoring_points_per_set_value": {
+      "type": "number"
+    },
+    "scoring_game_win": {
+      "type": "boolean",
+      "default": false
+    },
+    "scoring_game_win_value": {
+      "type": "number"
+    },
+    "scoring_standard_win": {
+      "type": "boolean",
+      "default": false
+    },
+    "scoring_highest_shots": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "county_id",
+    "name"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

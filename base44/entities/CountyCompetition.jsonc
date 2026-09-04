@@ -1,0 +1,56 @@
+{
+  "name": "CountyCompetition",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "name": {
+      "type": "string",
+      "description": "Competition name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Competition description"
+    },
+    "team_ids": {
+      "type": "array",
+      "default": [],
+      "description": "Ids of CountyTeam records entered in this competition",
+      "items": {
+        "type": "string"
+      }
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "mixed",
+        "men",
+        "women"
+      ],
+      "default": "mixed",
+      "description": "Gender restriction"
+    },
+    "age_group": {
+      "type": "string",
+      "enum": [
+        "n/a",
+        "u25",
+        "o60"
+      ],
+      "default": "n/a",
+      "description": "Age group restriction"
+    }
+  },
+  "required": [
+    "county_id",
+    "name"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
