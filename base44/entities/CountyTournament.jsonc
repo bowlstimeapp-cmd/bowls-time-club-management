@@ -1,0 +1,145 @@
+{
+  "name": "CountyTournament",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "name": {
+      "type": "string",
+      "description": "Tournament name"
+    },
+    "tournament_type": {
+      "type": "string",
+      "enum": [
+        "knockout",
+        "round_robin"
+      ],
+      "default": "knockout",
+      "description": "Type of tournament"
+    },
+    "comp_format": {
+      "type": "string",
+      "enum": [
+        "singles",
+        "pairs",
+        "triples",
+        "fours"
+      ],
+      "default": "singles",
+      "description": "Competition format for knockout tournaments"
+    },
+    "players": {
+      "type": "array",
+      "description": "Array of player emails (for knockout tournaments)"
+    },
+    "player_teams": {
+      "type": "array",
+      "description": "Array of teams (each team is an array of player emails) for pairs/triples/fours knockout tournaments",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "default": []
+    },
+    "bracket": {
+      "type": "object",
+      "description": "Tournament bracket structure (for knockout tournaments)"
+    },
+    "teams": {
+      "type": "array",
+      "description": "Array of team objects with captain names",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "captain": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rinks_available": {
+      "type": "number",
+      "description": "Number of rinks available for the tournament"
+    },
+    "qualifiers_per_group": {
+      "type": "number",
+      "description": "Number of teams that qualify from each group"
+    },
+    "groups": {
+      "type": "object",
+      "description": "Group allocation for round robin"
+    },
+    "fixtures": {
+      "type": "array",
+      "description": "Round robin fixtures",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "round": {
+            "type": "string"
+          },
+          "team1_id": {
+            "type": "string"
+          },
+          "team2_id": {
+            "type": "string"
+          },
+          "rink": {
+            "type": "number"
+          },
+          "group": {
+            "type": "string"
+          },
+          "team1_score": {
+            "type": "number"
+          },
+          "team2_score": {
+            "type": "number"
+          },
+          "winner_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "knockout_fixtures": {
+      "type": "array",
+      "description": "Knockout stage fixtures"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published"
+      ],
+      "default": "draft",
+      "description": "Whether the tournament is visible to members"
+    }
+  },
+  "required": [
+    "county_id",
+    "name"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}
