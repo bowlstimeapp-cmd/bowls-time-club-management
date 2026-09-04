@@ -19,6 +19,7 @@ import ClubNewsAdmin from '@/components/club/ClubNewsAdmin';
 import { Textarea } from "@/components/ui/textarea";
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
+import AffiliatedCountiesSection from '@/components/club/AffiliatedCountiesSection';
 import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
 import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal';
 import { toast } from "sonner";
@@ -526,6 +527,9 @@ export default function ClubSettings() {
       )}
 
 
+
+      {/* Affiliated Counties */}
+      <AffiliatedCountiesSection clubId={clubId} isClubAdmin={membership?.role === 'admin' && membership?.status === 'approved'} />
 
       <SaveButton isPending={updateMutation.isPending} onClick={handleSave} />
     </div>

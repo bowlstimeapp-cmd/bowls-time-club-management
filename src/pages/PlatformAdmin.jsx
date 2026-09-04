@@ -65,6 +65,7 @@ import PlatformSettings from '@/components/admin/PlatformSettings';
 import PlatformDocuments from '@/components/admin/PlatformDocuments';
 import SmsUsageTab from '@/components/admin/SmsUsageTab';
 import TestPushNotification from '@/components/admin/TestPushNotification';
+import CountiesTab from '@/components/admin/CountiesTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -543,10 +544,11 @@ export default function PlatformAdmin() {
         >
           <Tabs defaultValue="clubs" className="w-full">
             <div className="overflow-x-auto mb-6">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-8">
-                   <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
-                   <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
-                   <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-9">
+                    <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
+                    <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
+                    <TabsTrigger value="counties" className="whitespace-nowrap">Counties</TabsTrigger>
+                    <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
                    <TabsTrigger value="deletions" className="relative whitespace-nowrap">
                      <span className="hidden sm:inline">Account Deletions</span>
                      <span className="sm:hidden">Deletions</span>
@@ -690,6 +692,11 @@ export default function PlatformAdmin() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* ── COUNTIES ── */}
+            <TabsContent value="counties">
+              <CountiesTab />
             </TabsContent>
 
             {/* ── FEEDBACK ── */}
