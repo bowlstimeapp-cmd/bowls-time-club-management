@@ -27,7 +27,7 @@ export default function CountyAffiliations() {
 
   const { data: affData, isLoading } = useQuery({
     queryKey: ['countyAffiliated', countyId],
-    queryFn: () => base44.functions.invoke('getCountyAffiliatedMembers', { countyId }),
+    queryFn: async () => { const res = await base44.functions.invoke('getCountyAffiliatedMembers', { countyId }); return res.data; },
     enabled: !!countyId,
   });
   const { data: allClubs = [] } = useQuery({
