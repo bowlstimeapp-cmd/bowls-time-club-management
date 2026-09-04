@@ -1,14 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { hasClubRole } from '../clubAuth/entry.ts';
-export default async function(req: Request): Promise<Response> {
-  try { const base44=createClientFromRequest(req); const user=await base44.auth.me(); if(!user)return Response.json({error:'Unauthorized'},{status:401});
-    const {club_id,county_id}=await req.json().catch(()=>({})); if(!club_id||!county_id)return Response.json({error:'club_id and county_id are required'},{status:400});
-    if(!(await hasClubRole(base44,user.email,club_id,['admin'])))return Response.json({error:'Forbidden: club admin required'},{status:403});
-    const counties=await base44.asServiceRole.entities.County.filter({id:county_id,is_active:true}); if(!counties[0])return Response.json({error:'County not found or inactive'},{status:404});
-    const existing=await base44.asServiceRole.entities.ClubCountyAffiliation.filter({club_id,county_id});
-    if(existing.some(a=>a.status==='approved'))return Response.json({error:'Club is already affiliated with this county'},{status:400});
-    if(existing.some(a=>a.status==='pending'))return Response.json({error:'Affiliation request already pending'},{status:400});
-    const affiliation=await base44.asServiceRole.entities.ClubCountyAffiliation.create({club_id,county_id,status:'pending',requested_by:user.email});
-    return Response.json({success:true,affiliation});
-  } catch(e){return Response.json({error:e.message||'Failed to request club affiliation'},{status:500});}
-}
+export function isPlatformAdmin(user){return user?.role==='admin';}
+export async function getClubMembership(base44,userEmail,clubId){const r=await base44.asServiceRole.entities.ClubMembership.filter({club_id:clubId,user_email:userEmail,status:'approved'});return r[0]||null;}
+export async function hasClubRole(base44,userEmail,clubId,roles){const m=await getClubMembership(base44,userEmail,clubId);return !!m&&roles.includes(m.role);}
+export async function getCountyMembership(base44,userEmail,countyId){const r=await base44.asServiceRole.entities.CountyMembership.filter({county_id:countyId,user_email:userEmail,status:'approved'});return r[0]||null;}
+export async function hasCountyRole(base44,userEmail,countyId,roles){const m=await getCountyMembership(base44,userEmail,countyId);return !!m&&roles.includes(m.role);}
+export async function requireCountyRole(base44,user,countyId,roles){if(isPlatformAdmin(user))return;if(!(await hasCountyRole(base44,user.email,countyId,roles)))throw {status:403,message:`Forbidden: requires county role ${roles.join(' or ')}`};}
+export default async function(req){try{const b=createClientFromRequest(req),u=await b.auth.me();if(!u)return Response.json({error:'Unauthorized'},{status:401});const {club_id,county_id}=await req.json().catch(()=>({}));if(!club_id||!county_id)return Response.json({error:'club_id and county_id are required'},{status:400});if(!(await hasClubRole(b,u.email,club_id,['admin'])))return Response.json({error:'Forbidden: club admin required'},{status:403});if(!(await b.asServiceRole.entities.County.filter({id:county_id,is_active:true}))[0])return Response.json({error:'County not found or inactive'},{status:404});const e=await b.asServiceRole.entities.ClubCountyAffiliation.filter({club_id,county_id});if(e.length)return Response.json({error:'Affiliation already exists or is pending'},{status:400});const a=await b.asServiceRole.entities.ClubCountyAffiliation.create({club_id,county_id,status:'pending',requested_by:u.email});return Response.json({success:true,affiliation:a});}catch(e){return Response.json({error:e.message||'Failed to request club affiliation'},{status:500});}}
