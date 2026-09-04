@@ -40,6 +40,8 @@ import CountyAffiliations from './pages/CountyAffiliations';
 import CountyTournaments from './pages/county/CountyTournaments';
 import CountyTournamentEditor from './pages/county/CountyTournamentEditor';
 import CountyTournamentView from './pages/county/CountyTournamentView';
+import CountyRegistration from './pages/county/CountyRegistration';
+import CountyEntriesAdmin from './pages/county/CountyEntriesAdmin';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -113,6 +115,8 @@ const AuthenticatedApp = () => {
       <Route path="/CountyTournaments" element={<LayoutWrapper currentPageName="CountyTournaments"><CountyTournaments /></LayoutWrapper>} />
       <Route path="/CountyTournamentEditor" element={<LayoutWrapper currentPageName="CountyTournamentEditor"><CountyTournamentEditor /></LayoutWrapper>} />
       <Route path="/CountyTournamentView" element={<LayoutWrapper currentPageName="CountyTournamentView"><CountyTournamentView /></LayoutWrapper>} />
+      <Route path="/CountyRegistration" element={<LayoutWrapper currentPageName="CountyRegistration"><CountyRegistration /></LayoutWrapper>} />
+      <Route path="/CountyEntriesAdmin" element={<LayoutWrapper currentPageName="CountyEntriesAdmin"><CountyEntriesAdmin /></LayoutWrapper>} />
       {/* Senior Experience Mode routes — no layout wrapper, they have their own SeniorLayout */}
       <Route path="/SeniorHome" element={<SeniorHome />} />
       <Route path="/SeniorBookRink" element={<SeniorBookRink />} />

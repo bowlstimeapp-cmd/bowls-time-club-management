@@ -4,7 +4,7 @@ import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
-import { Home, Users, Building2, Settings, Trophy } from 'lucide-react';
+import { Home, Users, Building2, Settings, Trophy, ClipboardList } from 'lucide-react';
 
 export default function CountyNav() {
   const [params] = useSearchParams();
@@ -28,6 +28,7 @@ export default function CountyNav() {
     { name: 'Home', page: 'CountyHome', icon: Home, show: true },
     { name: 'Members', page: 'CountyMembers', icon: Users, show: true },
     { name: 'Competitions', page: 'CountyTournaments', icon: Trophy, show: true },
+    { name: 'Registration', page: 'CountyRegistration', icon: ClipboardList, show: true },
     { name: 'Clubs', page: 'CountyAffiliations', icon: Building2, show: canManage },
     { name: 'Settings', page: 'CountyAdmin', icon: Settings, show: canManage },
   ].filter(l => l.show);

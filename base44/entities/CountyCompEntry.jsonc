@@ -1,0 +1,58 @@
+{
+  "name": "CountyCompEntry",
+  "type": "object",
+  "properties": {
+    "competition_id": {
+      "type": "string",
+      "description": "Reference to the CountyCompReg"
+    },
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the lead entrant"
+    },
+    "member_name": {
+      "type": "string",
+      "description": "Full name of the lead entrant at time of registration"
+    },
+    "team_members": {
+      "type": "array",
+      "description": "Other members in the team (for pairs/triples/fours)",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the entry was submitted"
+    }
+  },
+  "required": [
+    "competition_id",
+    "county_id",
+    "user_email"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "update": false,
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

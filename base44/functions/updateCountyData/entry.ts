@@ -64,6 +64,51 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── COUNTY COMP REG ───────────────────────────────────────────────────────
+    if (entity === 'CountyCompReg') {
+      if (action === 'create') {
+        if (!data) return Response.json({ error: 'Missing data' }, { status: 400 });
+        const created = await base44.asServiceRole.entities.CountyCompReg.create({ ...data, county_id: countyId });
+        return Response.json({ success: true, id: created.id, record: created });
+      }
+      if (action === 'update') {
+        if (!id || !data) return Response.json({ error: 'Missing id or data' }, { status: 400 });
+        const record = await verifyBelongsToCounty(base44, 'CountyCompReg', id, countyId);
+        if (!record) return Response.json({ error: 'Competition not found' }, { status: 404 });
+        await base44.asServiceRole.entities.CountyCompReg.update(id, data);
+        return Response.json({ success: true });
+      }
+      if (action === 'delete') {
+        if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+        const record = await verifyBelongsToCounty(base44, 'CountyCompReg', id, countyId);
+        if (!record) return Response.json({ error: 'Competition not found' }, { status: 404 });
+        // Delete all entries for this competition
+        const entries = await base44.asServiceRole.entities.CountyCompEntry.filter({ competition_id: id });
+        for (const e of entries) {
+          await base44.asServiceRole.entities.CountyCompEntry.delete(e.id);
+        }
+        await base44.asServiceRole.entities.CountyCompReg.delete(id);
+        return Response.json({ success: true });
+      }
+    }
+
+    // ── COUNTY COMP ENTRY ────────────────────────────────────────────────────
+    if (entity === 'CountyCompEntry') {
+      if (action === 'delete') {
+        if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+        const record = await verifyBelongsToCounty(base44, 'CountyCompEntry', id, countyId);
+        if (!record) return Response.json({ error: 'Entry not found' }, { status: 404 });
+        await base44.asServiceRole.entities.CountyCompEntry.delete(id);
+        return Response.json({ success: true });
+      }
+      if (action === 'bulk_create') {
+        if (!data || !Array.isArray(data)) return Response.json({ error: 'Missing data array' }, { status: 400 });
+        const records = data.map(e => ({ ...e, county_id: countyId }));
+        const created = await base44.asServiceRole.entities.CountyCompEntry.bulkCreate(records);
+        return Response.json({ success: true, added: created.length });
+      }
+    }
+
     return Response.json({ error: `Unknown entity/action: ${entity}/${action}` }, { status: 400 });
   } catch (error) {
     console.error('updateCountyData error:', error);
