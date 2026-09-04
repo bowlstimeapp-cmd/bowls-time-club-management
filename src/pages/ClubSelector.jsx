@@ -17,7 +17,8 @@ import {
   ArrowRight,
   Search,
   Mail,
-  LogOut } from
+  LogOut,
+  MapPin } from
 'lucide-react';
 import { toast } from "sonner";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -57,6 +58,44 @@ export default function ClubSelector() {
     queryFn: () => base44.entities.ClubMembership.filter({ user_email: user.email }),
     enabled: !!user?.email
   });
+
+  // County memberships for this user (individually)
+  const { data: countyMemberships = [] } = useQuery({
+    queryKey: ['myCountyMemberships', user?.email],
+    queryFn: () => base44.entities.CountyMembership.filter({ user_email: user.email, status: 'approved' }),
+    enabled: !!user?.email,
+  });
+
+  const approvedClubIds = memberships.filter(m => m.status === 'approved').map(m => m.club_id);
+
+  const { data: clubAffiliations = [] } = useQuery({
+    queryKey: ['myClubCountyAffiliations', approvedClubIds.join(',')],
+    queryFn: () => base44.entities.ClubCountyAffiliation.filter({ status: 'approved' }),
+    enabled: approvedClubIds.length > 0,
+  });
+
+  const affiliationCountyIds = clubAffiliations
+    .filter(a => approvedClubIds.includes(a.club_id))
+    .map(a => a.county_id);
+  const membershipCountyIds = countyMemberships.map(m => m.county_id);
+  const allCountyIds = [...new Set([...membershipCountyIds, ...affiliationCountyIds])];
+
+  const { data: countyRecords = [] } = useQuery({
+    queryKey: ['myCounties', allCountyIds.join(',')],
+    queryFn: () => Promise.all(allCountyIds.map(id => base44.entities.County.filter({ id }).then(r => r[0]))).then(results => results.filter(Boolean)),
+    enabled: allCountyIds.length > 0,
+  });
+
+  const countyConnection = (countyId) => {
+    const membership = countyMemberships.find(m => m.county_id === countyId);
+    if (membership) return { type: 'member', role: membership.role };
+    const affiliation = clubAffiliations.find(a => a.county_id === countyId && approvedClubIds.includes(a.club_id));
+    if (affiliation) {
+      const club = clubs.find(c => c.id === affiliation.club_id);
+      return { type: 'club', clubName: club?.name || 'your club' };
+    }
+    return { type: 'member' };
+  };
 
   const [requestSentModal, setRequestSentModal] = useState(false);
   const [createClubOpen, setCreateClubOpen] = useState(false);
@@ -335,6 +374,58 @@ export default function ClubSelector() {
                   </div>
                 </div>
               }
+
+              {countyRecords.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="w-5 h-5 text-emerald-600" />
+                    <h2 className="text-base font-semibold text-gray-800">Your Counties</h2>
+                    <span className="text-sm text-gray-400">— counties you're connected to</span>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <AnimatePresence>
+                      {countyRecords.map((county, i) => {
+                        const conn = countyConnection(county.id);
+                        const roleLabel = conn.role === 'admin' ? 'County Admin' : conn.role === 'secretary' ? 'Secretary' : 'Member';
+                        return (
+                          <motion.div
+                            key={county.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}>
+                            <Card className="h-full hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => navigate(createPageUrl('CountyAdmin') + `?countyId=${county.id}`)}>
+                              <CardContent className="p-0">
+                                <div className="h-3 bg-gradient-to-r from-purple-500 to-purple-600" />
+                                <div className="p-6">
+                                  <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                                        <MapPin className="w-6 h-6 text-purple-600" />
+                                      </div>
+                                      <div>
+                                        <h3 className="font-semibold text-gray-900">{county.name}</h3>
+                                        <p className="text-sm text-gray-500">County</p>
+                                      </div>
+                                    </div>
+                                    <Badge className={conn.type === 'member' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-blue-100 text-blue-800 border-blue-200'}>
+                                      {conn.type === 'member' ? roleLabel : `Via ${conn.clubName}`}
+                                    </Badge>
+                                  </div>
+                                  {county.description && <p className="text-sm text-gray-600 mb-4 line-clamp-2">{county.description}</p>}
+                                  <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                                    View County
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
 
               {otherClubs.length > 0 &&
               <div>
