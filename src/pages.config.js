@@ -88,6 +88,7 @@ import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
 import OnboardingChecklist from './pages/OnboardingChecklist';
 import helloworld from './pages/helloworld';
+import CountyAdmin from './pages/CountyAdmin';
 import __Layout from './Layout.jsx';
 
 
@@ -133,6 +134,7 @@ export const PAGES = {
     "UserGuides": UserGuides,
     "OnboardingChecklist": OnboardingChecklist,
     "helloworld": helloworld,
+    "CountyAdmin": CountyAdmin,
 }
 
 export const pagesConfig = {
