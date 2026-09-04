@@ -87,6 +87,7 @@ import TournamentEditor from './pages/TournamentEditor';
 import TournamentView from './pages/TournamentView';
 import UserGuides from './pages/UserGuides';
 import OnboardingChecklist from './pages/OnboardingChecklist';
+import helloworld from './pages/helloworld';
 import __Layout from './Layout.jsx';
 
 
@@ -131,6 +132,7 @@ export const PAGES = {
     "TournamentView": TournamentView,
     "UserGuides": UserGuides,
     "OnboardingChecklist": OnboardingChecklist,
+    "helloworld": helloworld,
 }
 
 export const pagesConfig = {
