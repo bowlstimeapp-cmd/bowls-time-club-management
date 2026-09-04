@@ -21,10 +21,10 @@ export default function AffiliatedCountiesSection({ clubId, isClubAdmin }) {
     enabled: !!clubId,
   });
 
-  // All counties (for the request dropdown)
+  // All counties (for name lookup — includes inactive, so affiliated counties always resolve their name)
   const { data: counties = [] } = useQuery({
     queryKey: ['allCounties'],
-    queryFn: () => base44.entities.County.filter({ is_active: true }),
+    queryFn: () => base44.entities.County.filter({}),
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['clubCountyAffiliations', clubId] });
@@ -52,7 +52,7 @@ export default function AffiliatedCountiesSection({ clubId, isClubAdmin }) {
   const pending = affiliations.filter(a => a.status === 'pending');
   const countyName = (id) => counties.find(c => c.id === id)?.name || 'Unknown county';
 
-  const availableCounties = counties.filter(c => !affiliations.some(a => a.county_id === c.id));
+  const availableCounties = counties.filter(c => c.is_active !== false && !affiliations.some(a => a.county_id === c.id));
 
   return (
     <Card>
