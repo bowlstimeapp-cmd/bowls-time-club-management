@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { Building2, Plus, Pencil, Loader2, Users, Link2, ShieldCheck } from 'lucide-react';
+import { Building2, Plus, Pencil, Loader2, Users, Link2, ShieldCheck, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import { Link } from 'react-router-dom';
@@ -27,6 +27,26 @@ export default function CountiesTab() {
   const { data: counties = [], isLoading } = useQuery({
     queryKey: ['allCounties'],
     queryFn: () => base44.entities.County.list('-created_date'),
+  });
+  const { data: allClubs = [] } = useQuery({
+    queryKey: ['allActiveClubsForCountyEdit'],
+    queryFn: () => base44.entities.Club.filter({ is_active: true }),
+    enabled: dialogOpen && !!editingCounty,
+  });
+  const { data: countyAffiliations = [] } = useQuery({
+    queryKey: ['countyEditAffiliations', editingCounty?.id],
+    queryFn: () => base44.entities.ClubCountyAffiliation.filter({ county_id: editingCounty.id }),
+    enabled: !!editingCounty?.id,
+  });
+  const addAffMutation = useMutation({
+    mutationFn: clubId => base44.functions.invoke('manageCountyAffiliation', { action: 'add', countyId: editingCounty.id, clubId }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['countyEditAffiliations', editingCounty.id] }); toast.success('Club affiliated'); setClubSearch(''); },
+    onError: e => toast.error(e?.message || 'Failed'),
+  });
+  const removeAffMutation = useMutation({
+    mutationFn: affiliationId => base44.functions.invoke('manageCountyAffiliation', { action: 'remove', countyId: editingCounty.id, affiliationId }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['countyEditAffiliations', editingCounty.id] }); toast.success('Affiliation removed'); },
+    onError: e => toast.error(e?.message || 'Failed'),
   });
 
   const createMutation = useMutation({
@@ -67,7 +87,8 @@ export default function CountiesTab() {
     setDialogOpen(true);
   };
 
-  const handleCloseDialog = () => { setDialogOpen(false); setEditingCounty(null); };
+  const handleCloseDialog = () => { setDialogOpen(false); setEditingCounty(null); setClubSearch(''); };
+  const [clubSearch, setClubSearch] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -126,7 +147,7 @@ export default function CountiesTab() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
           <DialogHeader>
             <DialogTitle>{editingCounty ? 'Edit County' : 'Create New County'}</DialogTitle>
           </DialogHeader>
@@ -172,6 +193,39 @@ export default function CountiesTab() {
               </Button>
             </DialogFooter>
           </form>
+          {editingCounty && (
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="font-semibold text-sm flex items-center gap-2"><Building2 className="w-4 h-4" /> Affiliated Clubs ({countyAffiliations.length})</h3>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input placeholder="Search clubs to add..." value={clubSearch} onChange={e => setClubSearch(e.target.value)} className="pl-9" />
+              </div>
+              {clubSearch && (
+                <div className="border rounded-lg divide-y max-h-32 overflow-y-auto">
+                  {allClubs.filter(c => c.name.toLowerCase().includes(clubSearch.toLowerCase()) && !countyAffiliations.some(a => a.club_id === c.id)).slice(0, 8).map(c => (
+                    <div key={c.id} className="flex items-center justify-between p-2">
+                      <span className="text-sm">{c.name}</span>
+                      <Button size="sm" type="button" onClick={() => addAffMutation.mutate(c.id)} disabled={addAffMutation.isPending}>Add</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="space-y-1">
+                {countyAffiliations.length === 0 ? <p className="text-xs text-gray-400">No affiliated clubs yet.</p> : countyAffiliations.map(a => {
+                  const club = allClubs.find(c => c.id === a.club_id);
+                  return (
+                    <div key={a.id} className="flex items-center justify-between p-2 border rounded-lg">
+                      <span className="text-sm">{club?.name || 'Unknown club'}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{a.status}</Badge>
+                        <Button size="sm" type="button" variant="ghost" className="text-red-500" onClick={() => removeAffMutation.mutate(a.id)} disabled={removeAffMutation.isPending}>Remove</Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Card>

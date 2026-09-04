@@ -393,7 +393,7 @@ export default function ClubSelector() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}>
-                            <Card className="h-full hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => navigate(createPageUrl('CountyAdmin') + `?countyId=${county.id}`)}>
+                            <Card className="h-full hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => navigate(createPageUrl('CountyHome') + `?countyId=${county.id}`)}>
                               <CardContent className="p-0">
                                 <div className="h-3 bg-gradient-to-r from-purple-500 to-purple-600" />
                                 <div className="p-6">
