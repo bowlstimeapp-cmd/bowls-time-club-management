@@ -32,7 +32,8 @@ import {
   Hash,
   CreditCard,
   UserX,
-  Download
+  Download,
+  Send
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link, useSearchParams } from 'react-router-dom';
@@ -58,7 +59,7 @@ const membershipDotColor = {
   'Social Member':        'bg-purple-400',
 };
 
-function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge }) {
+function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge, isPlatformAdmin, onEmail }) {
   const role = member.role || 'member';
   const roleBadge = roleMeta[role] || roleMeta.member;
   const initials = (member.user_name || member.user_email || '?')
@@ -160,6 +161,16 @@ function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, 
         )}
       </div>
 
+      {/* Email button — platform admin only, appears on hover */}
+      {isPlatformAdmin && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onEmail(member); }}
+          className="absolute bottom-3 right-12 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 z-10"
+          title="Email member"
+        >
+          <Mail className="w-3.5 h-3.5" />
+        </button>
+      )}
       {/* Remove button — appears on hover */}
       {!isSelf && (
         <button
@@ -198,6 +209,11 @@ export default function ClubAdmin() {
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSelection, setMergeSelection] = useState([]);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [emailModalMember, setEmailModalMember] = useState(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -414,6 +430,33 @@ export default function ClubAdmin() {
     setMergeMode(false);
     setMergeSelection([]);
     setMergeDialogOpen(false);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailModalMember) return;
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      toast.error('Please enter subject and body');
+      return;
+    }
+    setEmailSending(true);
+    try {
+      await base44.integrations.Core.SendEmail({
+        to: emailModalMember.user_email,
+        subject: emailSubject,
+        body: emailBody,
+      });
+      setEmailSending(false);
+      setEmailSuccess(true);
+      setTimeout(() => {
+        setEmailSuccess(false);
+        setEmailModalMember(null);
+        setEmailSubject('');
+        setEmailBody('');
+      }, 3000);
+    } catch (err) {
+      setEmailSending(false);
+      toast.error('Failed to send email');
+    }
   };
 
   const { data: latestPayments = [] } = useQuery({
@@ -784,6 +827,8 @@ export default function ClubAdmin() {
                             isMergeMode={mergeMode}
                             isSelected={mergeSelection.some(m => m.id === member.id)}
                             onToggleMerge={handleToggleMergeSelect}
+                            isPlatformAdmin={isPlatformAdmin}
+                            onEmail={(member) => { setEmailModalMember(member); setEmailSubject(''); setEmailBody(''); }}
                           />
                         </motion.div>
                       ))}
@@ -834,6 +879,8 @@ export default function ClubAdmin() {
                           onRemove={(id) => deleteMembershipMutation.mutate(id)}
                           isSelf={false}
                           payment={paymentByEmail[member.user_email]}
+                          isPlatformAdmin={isPlatformAdmin}
+                          onEmail={(member) => { setEmailModalMember(member); setEmailSubject(''); setEmailBody(''); }}
                         />
                       </motion.div>
                     ))}
@@ -1012,6 +1059,83 @@ export default function ClubAdmin() {
                     {editingCompetition ? 'Update' : 'Create'}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Email Compose Modal */}
+        {emailModalMember && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <Card className="max-w-lg w-full rounded-2xl shadow-xl border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Email Member
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm text-slate-600 mb-1.5 block">To</Label>
+                  <Input
+                    value={emailModalMember.user_email}
+                    readOnly
+                    className="rounded-xl bg-slate-50"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-600 mb-1.5 block">Subject</Label>
+                  <Input
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    placeholder="Email subject"
+                    className="rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-600 mb-1.5 block">Message</Label>
+                  <textarea
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    placeholder="Type your message here..."
+                    rows={5}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 rounded-xl"
+                    onClick={() => { setEmailModalMember(null); setEmailSubject(''); setEmailBody(''); }}
+                    disabled={emailSending || emailSuccess}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleSendEmail}
+                    disabled={emailSending || emailSuccess || !emailSubject.trim() || !emailBody.trim()}
+                  >
+                    {emailSending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {emailSending ? 'Sending...' : <Send className="w-4 h-4 mr-2" />}
+                    Send
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Email Success Popup */}
+        {emailSuccess && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <Card className="max-w-sm w-full rounded-2xl shadow-xl border-0">
+              <CardContent className="py-8 flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                  <CheckCircle className="w-8 h-8 text-emerald-600" />
+                </div>
+                <p className="text-lg font-semibold text-slate-900">Email sent successfully</p>
+                <p className="text-sm text-slate-400 mt-1">This window will close automatically</p>
               </CardContent>
             </Card>
           </div>
