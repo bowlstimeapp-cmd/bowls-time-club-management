@@ -1,0 +1,39 @@
+{
+  "name": "Accolade Check \u2014 Booking Approved",
+  "description": "",
+  "trigger": {
+    "condition": "${ ((.trigger.data.status == \"approved\") and (.trigger.changed_fields | index(\"status\") != null)) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Booking"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "accolade_check_booking_approved",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkAccoladeTriggers",
+            "args": {
+              "trigger_type": "booking_count"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "checkAccoladeTriggers"
+  }
+}

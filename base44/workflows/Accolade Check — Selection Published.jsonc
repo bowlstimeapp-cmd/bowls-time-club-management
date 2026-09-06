@@ -1,0 +1,39 @@
+{
+  "name": "Accolade Check \u2014 Selection Published",
+  "description": "",
+  "trigger": {
+    "condition": "${ ((.trigger.data.status == \"published\") and (.trigger.changed_fields | index(\"status\") != null)) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "TeamSelection"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "accolade_check_selection_published",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkAccoladeTriggers",
+            "args": {
+              "trigger_type": "selection_count"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "checkAccoladeTriggers"
+  }
+}
