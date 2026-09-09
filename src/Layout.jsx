@@ -38,7 +38,8 @@ import {
   Award,
   Receipt,
   Rocket,
-  Star
+  Star,
+  Coffee
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
@@ -68,6 +69,9 @@ const MODULE_PAGE_MAP = {
   ScorecardLayoutEditor: { key: 'module_custom_branding', name: 'Custom Branding', desc: 'Design custom scorecard layouts with your club branding, colours, and logo.' },
   ClubMessaging: { key: 'module_messaging', name: 'Club Messaging', desc: 'Chat with members in dedicated channels for announcements, social events, and selection discussions.' },
 };
+
+// TODO: Replace with the real Stripe Payment Link URL once created in the Stripe dashboard
+const STRIPE_PAYMENT_LINK_URL = 'https://buy.stripe.com/REPLACE_ME';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
@@ -822,6 +826,15 @@ export default function Layout({ children, currentPageName }) {
         ) : children}
       </main>
       
+      {currentPageName !== 'ClubHome' && (
+        <footer className="py-4 text-center border-t border-gray-100">
+          <a href={STRIPE_PAYMENT_LINK_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <Coffee className="w-3.5 h-3.5" />
+            Enjoying Bowls Time? Show your appreciation
+          </a>
+        </footer>
+      )}
+
       {/* Floating Feedback Button */}
       <FloatingFeedbackButton />
     </div>
