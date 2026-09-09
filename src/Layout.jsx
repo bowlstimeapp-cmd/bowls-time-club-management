@@ -71,7 +71,7 @@ const MODULE_PAGE_MAP = {
 };
 
 // TODO: Replace with the real Stripe Payment Link URL once created in the Stripe dashboard
-const STRIPE_PAYMENT_LINK_URL = 'https://buy.stripe.com/REPLACE_ME';
+const STRIPE_PAYMENT_LINK_URL = 'https://buy.stripe.com/28EfZjgiC0K81Hb5mKak000';
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
