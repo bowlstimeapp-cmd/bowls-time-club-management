@@ -15,21 +15,30 @@ import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
 
-export default function BlacklistDatesDialog({ open, onClose, league }) {
+export default function BlacklistDatesDialog({ open, onClose, league, clubId }) {
   const queryClient = useQueryClient();
   const [newDate, setNewDate] = useState('');
   const [reason, setReason] = useState('');
   // Local copy so list updates immediately without waiting for query refetch
   const [localDates, setLocalDates] = useState([]);
 
+  // Sync from the league only when a different league is opened — not on every
+  // refetch (which creates a new object and would wipe optimistic local state)
   useEffect(() => {
     if (league) {
       setLocalDates(league.blacklisted_dates || []);
     }
-  }, [league]);
+  }, [league?.id]);
 
   const updateLeagueMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.League.update(id, data),
+    mutationFn: ({ id, data }) =>
+      base44.functions.invoke('updateClubData', {
+        entity: 'League',
+        action: 'update',
+        clubId,
+        id,
+        data,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues'] });
     },

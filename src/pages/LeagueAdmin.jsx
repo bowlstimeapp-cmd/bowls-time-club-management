@@ -1158,6 +1158,19 @@ export default function LeagueAdmin() {
                                 )}
                               </div>
                             )}
+                            {(league.blacklisted_dates || []).length > 0 && (
+                              <div className="flex items-start gap-1.5 mt-1 text-sm text-red-600">
+                                <CalendarX className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                <span>
+                                  No fixtures on:{' '}
+                                  {league.blacklisted_dates
+                                    .slice()
+                                    .sort((a, b) => a.date.localeCompare(b.date))
+                                    .map(d => format(parseISO(d.date), 'd MMM yyyy'))
+                                    .join(', ')}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2 flex-wrap">
@@ -1986,6 +1999,7 @@ export default function LeagueAdmin() {
           open={blacklistDialogOpen}
           onClose={() => setBlacklistDialogOpen(false)}
           league={blacklistLeague ? (leagues.find(l => l.id === blacklistLeague.id) || blacklistLeague) : null}
+          clubId={clubId}
         />
 
         {/* Rink Clash Modal */}

@@ -71,6 +71,19 @@ export default function LeagueAdminTableView({
                       <span className="text-emerald-600">{leagueFixtures.length} fixtures</span>
                     )}
                   </div>
+                  {(league.blacklisted_dates || []).length > 0 && (
+                    <div className="flex items-start gap-1.5 text-xs text-red-600 mt-0.5 flex-wrap">
+                      <CalendarX className="w-3 h-3 mt-0.5 shrink-0" />
+                      <span>
+                        No fixtures on:{' '}
+                        {league.blacklisted_dates
+                          .slice()
+                          .sort((a, b) => a.date.localeCompare(b.date))
+                          .map(d => format(parseISO(d.date), 'd MMM yyyy'))
+                          .join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </button>
 
