@@ -547,6 +547,37 @@ export default function SelectionEditor() {
         const fullList = buildFullPlayerList(allSelected, smsResults);
         setSmsResultsModal(fullList);
       } else if (isRepublish) {
+        // If the ticked rinks changed since the previous publish, move the
+        // previously booked rinks to the newly selected ones
+        const prevRinks = (existingSelection.selected_rinks || []).map(Number).sort((a, b) => a - b);
+        const nextRinks = selectedRinks.map(Number).sort((a, b) => a - b);
+        if (prevRinks.join(',') !== nextRinks.join(',')) {
+          try {
+            const res = await base44.functions.invoke('updateTeamSelection', {
+              action: 'move_bookings',
+              clubId,
+              selectionId,
+              data: {
+                oldRinks: prevRinks,
+                newRinks: nextRinks,
+                bookingDate: existingSelection.match_date,
+                startTime: existingSelection.match_start_time,
+                endTime: existingSelection.match_end_time
+              }
+            });
+            const { moved = 0, cancelled = 0, blocked = [] } = res?.data || {};
+            if (moved > 0 || cancelled > 0) {
+              toast.success(`Rink bookings moved to the new rinks (${moved} moved${cancelled ? `, ${cancelled} cancelled` : ''})`);
+              queryClient.invalidateQueries({ queryKey: ['bookings'] });
+            }
+            if (blocked.length > 0) {
+              toast.warning(`${blocked.length} booking(s) couldn't be moved — the new rink is already booked at that time`);
+            }
+          } catch (moveErr) {
+            toast.error('Failed to move rink bookings — update them from Bookings Admin');
+            console.warn(moveErr);
+          }
+        }
         // Only notify newly added players
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
         const originalPlayerEmails = [...new Set(Object.values(originalSelections).filter(Boolean))];

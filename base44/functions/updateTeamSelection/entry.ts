@@ -69,6 +69,75 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    if (action === 'move_bookings') {
+      if (!isSelectorLevel) {
+        return Response.json({ error: 'Forbidden: requires selector or admin role' }, { status: 403 });
+      }
+      const { oldRinks, newRinks, bookingDate, startTime, endTime } = data || {};
+      if (!selectionId || !Array.isArray(oldRinks) || !Array.isArray(newRinks)) {
+        return Response.json({ error: 'Missing selectionId, oldRinks or newRinks' }, { status: 400 });
+      }
+      const existing = await base44.asServiceRole.entities.TeamSelection.filter({ id: selectionId });
+      if (!existing[0] || existing[0].club_id !== clubId) {
+        return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
+      }
+      const date = bookingDate || existing[0].match_date;
+      const start = startTime || existing[0].match_start_time;
+      const end = endTime || existing[0].match_end_time || start;
+      if (!date || !start) {
+        return Response.json({ success: true, moved: 0, cancelled: 0, blocked: [] });
+      }
+
+      const oldSet = new Set(oldRinks.map(Number));
+      const dayBookings = await base44.asServiceRole.entities.Booking.filter({ club_id: clubId, date });
+
+      // Bookings created for this match by the app (Selection Editor "Book Rinks"
+      // or the Fixtures module), still active, on a previously selected rink,
+      // starting within the match window.
+      const linked = dayBookings.filter(b =>
+        (b.admin_notes === '__selection__' || b.admin_notes === '__fixture__') &&
+        b.status !== 'cancelled' && b.status !== 'rejected' &&
+        oldSet.has(b.rink_number) &&
+        b.start_time >= start && b.start_time < end
+      );
+      if (linked.length === 0) {
+        return Response.json({ success: true, moved: 0, cancelled: 0, blocked: [] });
+      }
+
+      // Positional mapping: sorted old rinks -> sorted new rinks. Old rinks with
+      // no corresponding new rink (rink count reduced) get their bookings cancelled.
+      const oldSorted = [...oldSet].sort((a, b) => a - b);
+      const newSorted = [...new Set(newRinks.map(Number))].filter(n => !isNaN(n)).sort((a, b) => a - b);
+      const rinkMap = new Map();
+      oldSorted.forEach((r, i) => rinkMap.set(r, i < newSorted.length ? newSorted[i] : null));
+
+      const active = dayBookings.filter(b => b.status !== 'cancelled' && b.status !== 'rejected');
+      const movedIds = new Set();
+      let moved = 0, cancelled = 0;
+      const blocked = [];
+      for (const b of linked) {
+        const target = rinkMap.get(Number(b.rink_number));
+        if (target === undefined || target === b.rink_number) continue;
+        if (target === null) {
+          await base44.asServiceRole.entities.Booking.update(b.id, { status: 'cancelled' });
+          movedIds.add(b.id);
+          cancelled++;
+          continue;
+        }
+        // Target rink must be free for this booking's time slot
+        const clash = active.find(x =>
+          x.id !== b.id && !movedIds.has(x.id) &&
+          x.rink_number === target &&
+          x.start_time < (b.end_time || end) && (x.end_time || end) > b.start_time
+        );
+        if (clash) { blocked.push({ from: b.rink_number, to: target }); continue; }
+        await base44.asServiceRole.entities.Booking.update(b.id, { rink_number: target });
+        movedIds.add(b.id);
+        moved++;
+      }
+      return Response.json({ success: true, moved, cancelled, blocked });
+    }
+
     if (action === 'delete') {
       if (!isAdminLevel) {
         return Response.json({ error: 'Forbidden: only club admins can delete selections' }, { status: 403 });
