@@ -36,6 +36,11 @@ export default function CountySelections() {
     queryFn: () => base44.entities.CountyTeam.filter({ county_id: countyId }),
     enabled: !!countyId,
   });
+  const { data: squads = [] } = useQuery({
+    queryKey: ['countySquads', countyId],
+    queryFn: () => base44.entities.CountySquad.filter({ county_id: countyId }),
+    enabled: !!countyId,
+  });
   const { data: affData } = useQuery({
     queryKey: ['countyAffiliated', countyId],
     queryFn: async () => { const res = await base44.functions.invoke('getCountyAffiliatedMembers', { countyId }); return res.data; },
@@ -127,6 +132,7 @@ export default function CountySelections() {
         onOpenChange={(open) => { setEditorOpen(open); if (!open) setEditing(null); }}
         selection={editing}
         teams={repTeams}
+        squads={squads}
         members={members}
         saving={saveSelection.isPending}
         onSave={({ selectionId, data }) => saveSelection.mutate({ selectionId, data })}

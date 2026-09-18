@@ -1,0 +1,36 @@
+{
+  "name": "CountySquad",
+  "type": "object",
+  "properties": {
+    "county_id": {
+      "type": "string",
+      "description": "Reference to the county"
+    },
+    "name": {
+      "type": "string",
+      "description": "Squad name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Squad description"
+    },
+    "players": {
+      "type": "array",
+      "default": [],
+      "description": "Array of county member user_email values in this squad",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "county_id",
+    "name"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

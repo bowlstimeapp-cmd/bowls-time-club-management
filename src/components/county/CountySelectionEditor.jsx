@@ -4,15 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Check } from 'lucide-react';
+import CountyMemberPicker from '@/components/county/CountyMemberPicker';
 
-export default function CountySelectionEditor({ open, onOpenChange, selection, teams, members, saving, onSave }) {
+export default function CountySelectionEditor({ open, onOpenChange, selection, teams, squads = [], members, saving, onSave }) {
   const [teamId, setTeamId] = useState('');
   const [matchName, setMatchName] = useState('');
   const [matchDate, setMatchDate] = useState('');
   const [opponent, setOpponent] = useState('');
   const [players, setPlayers] = useState([]);
-  const [search, setSearch] = useState('');
+  const [squadFilter, setSquadFilter] = useState('all');
 
   useEffect(() => {
     if (open) {
@@ -21,17 +21,19 @@ export default function CountySelectionEditor({ open, onOpenChange, selection, t
       setMatchDate(selection?.match_date || '');
       setOpponent(selection?.opponent || '');
       setPlayers(selection?.selected_players || []);
-      setSearch('');
+      setSquadFilter('all');
     }
   }, [open, selection]);
 
   const togglePlayer = (email) =>
     setPlayers(prev => prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]);
 
-  const lower = search.toLowerCase();
-  const filteredMembers = members.filter(m =>
-    !search || m.name.toLowerCase().includes(lower) || m.email.toLowerCase().includes(lower)
-  );
+  const squadPlayerEmails = squadFilter === 'all'
+    ? null
+    : (squads.find(s => s.id === squadFilter)?.players || []);
+  const selectableMembers = squadPlayerEmails
+    ? members.filter(m => squadPlayerEmails.includes(m.email))
+    : members;
 
   const submit = (status) => {
     if (!teamId) return;
@@ -83,32 +85,22 @@ export default function CountySelectionEditor({ open, onOpenChange, selection, t
 
           <div>
             <Label className="mb-2 block">Players ({players.length} selected)</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
-              <Input placeholder="Search county members..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8" />
-            </div>
-            <div className="mt-2 border rounded-lg max-h-64 overflow-y-auto divide-y divide-gray-100">
-              {filteredMembers.length === 0 ? (
-                <p className="p-4 text-sm text-gray-400 text-center">No members found.</p>
-              ) : filteredMembers.map(m => (
-                <button
-                  key={m.email}
-                  type="button"
-                  onClick={() => togglePlayer(m.email)}
-                  className="w-full flex items-center justify-between gap-3 px-3 py-2 hover:bg-gray-50 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{m.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{m.email}</p>
-                  </div>
-                  {players.includes(m.email) && (
-                    <span className="flex items-center gap-1 text-emerald-600 text-xs font-medium shrink-0">
-                      <Check className="w-4 h-4" /> Selected
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            <Select value={squadFilter} onValueChange={setSquadFilter}>
+              <SelectTrigger className="mb-2">
+                <SelectValue placeholder="Choose players from..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All county members</SelectItem>
+                {squads.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <CountyMemberPicker
+              members={selectableMembers}
+              selected={players}
+              onToggle={togglePlayer}
+            />
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-2">

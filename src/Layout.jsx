@@ -130,7 +130,7 @@ export default function Layout({ children, currentPageName }) {
   const allMyClubs = allClubs.filter(c => c.id !== clubId && memberClubIds.has(c.id));
 
   // Pages that don't need club context
-  const noClubPages = ['ClubSelector', 'PlatformAdmin', 'ClubAnalyticsDashboard', 'PlatformInvoices', 'InvoiceView', 'CountyHome', 'CountyMembers', 'CountySelections', 'CountyAffiliations', 'CountyAdmin', 'CountyTournaments', 'CountyTournamentEditor', 'CountyTournamentView', 'CountyRegistration', 'CountyEntriesAdmin'];
+  const noClubPages = ['ClubSelector', 'PlatformAdmin', 'ClubAnalyticsDashboard', 'PlatformInvoices', 'InvoiceView', 'CountyHome', 'CountyMembers', 'CountySelections', 'CountySquads', 'CountyAffiliations', 'CountyAdmin', 'CountyTournaments', 'CountyTournamentEditor', 'CountyTournamentView', 'CountyRegistration', 'CountyEntriesAdmin'];
   const needsClub = !noClubPages.includes(currentPageName);
 
   // Pages that non-members can access even with a clubId
