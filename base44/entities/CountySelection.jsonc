@@ -14,10 +14,23 @@
       "type": "string",
       "description": "Reference to a CountyLeagueFixture (Phase 4) \u2014 forward-looking placeholder until Phase 4 exists"
     },
+    "match_name": {
+      "type": "string",
+      "description": "Optional name/description for this match"
+    },
+    "match_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the match"
+    },
+    "opponent": {
+      "type": "string",
+      "description": "Opponent county or team name"
+    },
     "selected_players": {
       "type": "array",
       "default": [],
-      "description": "Array of CountyMembership user_email values selected for this fixture",
+      "description": "Array of county member user_email values selected for this match",
       "items": {
         "type": "string"
       }

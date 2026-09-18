@@ -27,6 +27,7 @@ export default function CountyNav() {
   const links = [
     { name: 'Home', page: 'CountyHome', icon: Home, show: true },
     { name: 'Members', page: 'CountyMembers', icon: Users, show: true },
+    { name: 'Selection', page: 'CountySelections', icon: ClipboardList, show: true },
     { name: 'Competitions', page: 'CountyTournaments', icon: Trophy, show: true },
     { name: 'Registration', page: 'CountyRegistration', icon: ClipboardList, show: true },
     { name: 'Clubs', page: 'CountyAffiliations', icon: Building2, show: canManage },

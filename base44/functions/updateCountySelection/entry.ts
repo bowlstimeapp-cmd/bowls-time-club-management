@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { isPlatformAdmin, getCountyMembership } from '../../shared/countyAuth.ts';
+import { isPlatformAdminOrHasRole } from '../../shared/countyAuth.ts';
+import { getAllCountyMemberEmails } from '../../shared/countyMembers.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -7,15 +8,21 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { selectionId, countyId, data } = await req.json();
+    const { selectionId, countyId, data, delete: doDelete } = await req.json();
     if (!countyId) return Response.json({ error: 'Missing required field: countyId' }, { status: 400 });
 
-    let authorized = isPlatformAdmin(user);
-    if (!authorized) {
-      const myMembership = await getCountyMembership(base44, user.email, countyId);
-      authorized = !!myMembership && ['admin', 'secretary', 'selector'].includes(myMembership.role);
-    }
+    const authorized = await isPlatformAdminOrHasRole(base44, user, countyId, ['admin', 'secretary', 'selector']);
     if (!authorized) return Response.json({ error: 'Forbidden: requires county admin or selector role' }, { status: 403 });
+
+    // Delete mode
+    if (doDelete) {
+      if (!selectionId) return Response.json({ error: 'Missing selectionId for delete' }, { status: 400 });
+      const existing = (await base44.asServiceRole.entities.CountySelection.filter({ id: selectionId }))[0];
+      if (!existing) return Response.json({ error: 'Selection not found' }, { status: 404 });
+      if (existing.county_id !== countyId) return Response.json({ error: 'Selection does not belong to this county' }, { status: 403 });
+      await base44.asServiceRole.entities.CountySelection.delete(selectionId);
+      return Response.json({ success: true, deleted: true });
+    }
 
     const updates = { ...(data || {}) };
 
@@ -41,13 +48,14 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Any member of the county may be selected — direct members and
+      // members of affiliated clubs alike.
       const players = Array.isArray(updates.selected_players) ? updates.selected_players : [];
       if (players.length > 0) {
-        const memberships = await base44.asServiceRole.entities.CountyMembership.filter({ county_id: countyId, status: 'approved' });
-        const approvedEmails = new Set(memberships.map(m => m.user_email));
-        const invalid = players.filter(p => !approvedEmails.has(p));
+        const memberEmails = await getAllCountyMemberEmails(base44, countyId);
+        const invalid = players.filter(p => !memberEmails.has(p));
         if (invalid.length > 0) {
-          return Response.json({ error: `Players not approved county members: ${invalid.join(', ')}` }, { status: 400 });
+          return Response.json({ error: `Players are not county members: ${invalid.join(', ')}` }, { status: 400 });
         }
       }
     }
