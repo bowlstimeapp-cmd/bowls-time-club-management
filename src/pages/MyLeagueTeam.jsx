@@ -135,7 +135,12 @@ export default function MyLeagueTeam() {
     t.captain_email !== user?.email && 
     (t.players || []).includes(user?.email)
   );
-  const myTeams = [...captainTeams, ...playerTeams];
+  // Archived (completed) leagues are removed from My Teams
+  const isArchivedLeague = (leagueId) => {
+    const l = leagues.find(x => x.id === leagueId);
+    return l?.status === 'completed';
+  };
+  const myTeams = [...captainTeams, ...playerTeams].filter(t => !isArchivedLeague(t.league_id));
   
   // Get unique leagues from my teams
   const myLeagueIds = [...new Set(myTeams.map(t => t.league_id))];

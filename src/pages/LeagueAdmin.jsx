@@ -61,6 +61,7 @@ import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import LeagueScoresModal from '@/components/leagues/LeagueScoresModal';
+import LeagueArchiveSection from '@/components/leagues/LeagueArchiveSection';
 import LeagueTableDialog from '@/components/leagues/LeagueTableDialog';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -141,6 +142,7 @@ export default function LeagueAdmin() {
   const [manualFixturesModalOpen, setManualFixturesModalOpen] = useState(false);
   const [manualFixturesLeague, setManualFixturesLeague] = useState(null);
   const [leagueCreationMode, setLeagueCreationMode] = useState('auto');
+  const [showArchive, setShowArchive] = useState(false);
 
   // Scorecard date filter dialog
   const [scorecardDialogLeague, setScorecardDialogLeague] = useState(null);
@@ -209,6 +211,30 @@ export default function LeagueAdmin() {
   });
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+
+  // Leagues split into active and archived (completed) sections
+  const activeLeagues = leagues.filter(l => l.status !== 'completed');
+  const archivedLeagues = leagues.filter(l => l.status === 'completed');
+
+  // Archive any of this club's leagues whose fixtures have all been played
+  const archiveFinishedLeagues = async () => {
+    try {
+      const res = await base44.functions.invoke('archiveCompletedLeagues', { clubId });
+      const archived = res?.data?.archived || [];
+      if (archived.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+        toast.success(`${archived.map(l => l.name).join(', ')} moved to archive — all fixtures played`);
+      }
+    } catch (e) {
+      console.warn('archiveCompletedLeagues failed:', e);
+    }
+  };
+
+  const handleRestoreLeague = async (league) => {
+    await clubData('League', 'update', { id: league.id, data: { status: 'active' } });
+    queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+    toast.success(`${league.name} restored to active leagues`);
+  };
 
   // Helper for club data mutations
   const clubData = (entity, action, extra = {}) =>
@@ -909,6 +935,7 @@ export default function LeagueAdmin() {
     setScoreDialogOpen(false);
     setEditingFixture(null);
     toast.success('Score saved');
+    await archiveFinishedLeagues();
   };
 
   const viewLeagueTable = (league) => {
@@ -1067,12 +1094,36 @@ export default function LeagueAdmin() {
           </div>
         </motion.div>
 
+        <div className="flex items-center gap-2 mb-6">
+          <Button
+            variant={!showArchive ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowArchive(false)}
+          >
+            Active Leagues ({activeLeagues.length})
+          </Button>
+          <Button
+            variant={showArchive ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowArchive(true)}
+          >
+            Archive ({archivedLeagues.length})
+          </Button>
+        </div>
+
         {leaguesLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-48 w-full" />
           </div>
-        ) : leagues.length === 0 ? (
+        ) : showArchive ? (
+          <LeagueArchiveSection
+            leagues={archivedLeagues}
+            onViewTable={viewLeagueTable}
+            onRestore={handleRestoreLeague}
+            onDelete={(id) => setDeleteLeagueId(id)}
+          />
+        ) : activeLeagues.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Trophy className="w-12 h-12 mx-auto text-gray-300 mb-4" />
@@ -1086,7 +1137,7 @@ export default function LeagueAdmin() {
           </Card>
         ) : club?.alt_view_leagues ? (
           <LeagueAdminTableView
-            leagues={leagues}
+            leagues={activeLeagues}
             teams={teams}
             fixtures={fixtures}
             club={club}
@@ -1108,7 +1159,7 @@ export default function LeagueAdmin() {
           />
         ) : (
           <div className="space-y-6">
-            {leagues.map((league) => {
+            {activeLeagues.map((league) => {
               const leagueTeams = teams.filter(t => t.league_id === league.id);
               return (
                 <motion.div
