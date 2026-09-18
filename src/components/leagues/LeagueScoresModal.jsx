@@ -60,16 +60,6 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['allLeagueFixtures', clubId] });
     toast.success('Score saved');
-    try {
-      const res = await base44.functions.invoke('archiveCompletedLeagues', { clubId });
-      const archived = res?.data?.archived || [];
-      if (archived.length > 0) {
-        queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
-        toast.success(`${archived.map(l => l.name).join(', ')} moved to archive — all fixtures played`);
-      }
-    } catch (e) {
-      console.warn('archiveCompletedLeagues failed:', e);
-    }
   };
 
   const handleClear = async (fixture) => {

@@ -50,7 +50,8 @@ import {
   CalendarCheck,
   BarChart3,
   Printer,
-  CalendarX
+  CalendarX,
+  Archive
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import TeamDialog from '@/components/leagues/TeamDialog';
@@ -216,18 +217,11 @@ export default function LeagueAdmin() {
   const activeLeagues = leagues.filter(l => l.status !== 'completed');
   const archivedLeagues = leagues.filter(l => l.status === 'completed');
 
-  // Archive any of this club's leagues whose fixtures have all been played
-  const archiveFinishedLeagues = async () => {
-    try {
-      const res = await base44.functions.invoke('archiveCompletedLeagues', { clubId });
-      const archived = res?.data?.archived || [];
-      if (archived.length > 0) {
-        queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
-        toast.success(`${archived.map(l => l.name).join(', ')} moved to archive — all fixtures played`);
-      }
-    } catch (e) {
-      console.warn('archiveCompletedLeagues failed:', e);
-    }
+  // Club admin archives a league manually
+  const handleArchiveLeague = async (league) => {
+    await clubData('League', 'update', { id: league.id, data: { status: 'completed' } });
+    queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+    toast.success(`${league.name} moved to archive`);
   };
 
   const handleRestoreLeague = async (league) => {
@@ -935,7 +929,6 @@ export default function LeagueAdmin() {
     setScoreDialogOpen(false);
     setEditingFixture(null);
     toast.success('Score saved');
-    await archiveFinishedLeagues();
   };
 
   const viewLeagueTable = (league) => {
@@ -1156,6 +1149,7 @@ export default function LeagueAdmin() {
             generatingFixtures={generatingFixtures}
             bookingRinks={bookingRinks}
             onGenerateScorecards={(league) => openScorecardDialog(league)}
+            onArchiveLeague={handleArchiveLeague}
           />
         ) : (
           <div className="space-y-6">
@@ -1321,7 +1315,11 @@ export default function LeagueAdmin() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleEditLeague(league)}
+                            onClick={() => handleArchiveLeague(league)}
+                          >
+                            <Archive className="w-4 h-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEditLeague(league)}
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>

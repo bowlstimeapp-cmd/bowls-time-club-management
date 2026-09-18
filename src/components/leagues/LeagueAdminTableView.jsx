@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Trophy, Users, Pencil, Trash2, Plus, Zap, CalendarCheck, List,
-  BarChart3, Printer, CalendarX, ChevronDown, ChevronRight, Loader2
+  BarChart3, Printer, CalendarX, ChevronDown, ChevronRight, Loader2, Archive
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
@@ -16,7 +16,7 @@ const statusColors = {
 export default function LeagueAdminTableView({
   leagues, teams, fixtures, club, members,
   onEditLeague, onDeleteLeague, onAddTeam, onEditTeam, onDeleteTeam,
-  onGenerateFixtures, onBookRinks, onViewFixtures, onViewTable, onBlacklist,
+  onGenerateFixtures, onBookRinks, onViewFixtures, onViewTable, onBlacklist, onArchiveLeague,
   generatingFixtures, bookingRinks, onGenerateScorecards, onOpenScores,
 }) {
   const [expandedLeague, setExpandedLeague] = useState(null);
@@ -121,6 +121,9 @@ export default function LeagueAdminTableView({
                 )}
                 <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onBlacklist(league)} title="Blacklist Dates">
                   <CalendarX className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onArchiveLeague(league)} title="Archive league">
+                  <Archive className="w-3.5 h-3.5" />
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onEditLeague(league)} title="Edit">
                   <Pencil className="w-3.5 h-3.5" />
