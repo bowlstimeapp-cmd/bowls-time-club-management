@@ -118,7 +118,9 @@ Deno.serve(async (req) => {
 
     const elements = layout?.layout_config?.elements || [];
 
-    const getMemberName = (email) => {
+    const selectionNames = selection.selection_names || {};
+    const getMemberName = (email, positionKey) => {
+      if (positionKey && selectionNames[positionKey]) return selectionNames[positionKey];
       const member = memberships.find(m => m.user_email === email);
       if (!member) return email || '';
       return member.first_name && member.surname
@@ -156,7 +158,7 @@ Deno.serve(async (req) => {
       const positions = positionsForRink(rinkNum);
       const players = positions.map(pos => ({
         position: posToNumber[pos] || pos,
-        name: (selection.selections[`rink${rinkNum}_${pos}`] ? getMemberName(selection.selections[`rink${rinkNum}_${pos}`]) : '')
+        name: (selection.selections[`rink${rinkNum}_${pos}`] ? getMemberName(selection.selections[`rink${rinkNum}_${pos}`], `rink${rinkNum}_${pos}`) : '')
       }));
       return {
         competition: selection.competition,

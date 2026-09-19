@@ -5,7 +5,7 @@ import { Users } from 'lucide-react';
 import { parseISO, isWithinInterval } from 'date-fns';
 import SearchableMemberSelect from '@/components/selection/SearchableMemberSelect';
 
-export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0, locationTag = null, interestedEmails }) {
+export default function RinkSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], playersPerRink = 4, homeRinks = 2, awayRinks = 0, locationTag = null, interestedEmails, selectionNames = {} }) {
   const positions = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
   
   const rinks = [];
@@ -20,7 +20,8 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
 
   const getMemberName = (member) => member?.user_name || member?.user_email || 'Unknown';
 
-  const getMemberNameByEmail = (email) => {
+  const getMemberNameByEmail = (email, positionKey) => {
+    if (positionKey && selectionNames?.[positionKey]) return selectionNames[positionKey];
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
   };
@@ -76,7 +77,7 @@ export default function RinkSelectionGrid({ members, selections, selectedEmails,
                   <SearchableMemberSelect
                     members={members}
                     value={selectedMember || null}
-                    onValueChange={(email) => onSelectionChange(positionKey, email)}
+                    onValueChange={(email, member) => onSelectionChange(positionKey, email, member)}
                     positionKey={positionKey}
                     isAvailableFn={isAvailable}
                     isUnavailableOnDateFn={isUnavailableOnDate}

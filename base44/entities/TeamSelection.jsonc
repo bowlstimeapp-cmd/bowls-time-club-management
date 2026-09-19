@@ -33,6 +33,11 @@
       "type": "object",
       "description": "JSON object mapping positions to member emails"
     },
+    "selection_names": {
+      "type": "object",
+      "default": {},
+      "description": "JSON object mapping positions to the selected member's display name at time of selection (disambiguates members who share an email address)"
+    },
     "selected_rinks": {
       "type": "array",
       "description": "Array of rink numbers selected for this match"

@@ -24,8 +24,8 @@ export default function SearchableMemberSelect({
     ? members.filter(m => getMemberName(m).toLowerCase().includes(search.toLowerCase()))
     : members;
 
-  const handleSelect = (email) => {
-    onValueChange(email || null);
+  const handleSelect = (member) => {
+    onValueChange(member ? member.user_email : null, member || null);
     setOpen(false);
     setSearch('');
   };
@@ -39,7 +39,7 @@ export default function SearchableMemberSelect({
           className="flex-1 justify-between h-9 font-normal text-sm min-w-0"
         >
           <span className={cn("truncate", !value && "text-gray-400")}>
-            {value ? getMemberNameByEmail(value) : placeholder}
+            {value ? getMemberNameByEmail(value, positionKey) : placeholder}
           </span>
           {value && interestedEmails?.has(value) && (
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0" />
@@ -80,7 +80,7 @@ export default function SearchableMemberSelect({
                   !available && "opacity-40 cursor-not-allowed",
                   value === member.user_email && "bg-emerald-50 text-emerald-700"
                 )}
-                onClick={() => available && handleSelect(member.user_email)}
+                onClick={() => available && handleSelect(member)}
                 disabled={!available}
               >
                 {unavailableDate ? (

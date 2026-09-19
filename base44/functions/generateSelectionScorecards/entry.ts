@@ -28,7 +28,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Selection or club not found' }, { status: 404 });
     }
 
-    const getMemberName = (email) => {
+    const selectionNames = selection.selection_names || {};
+    const getMemberName = (email, positionKey) => {
+      if (positionKey && selectionNames[positionKey]) return selectionNames[positionKey];
       const member = memberships.find(m => m.user_email === email);
       if (!member) return email || '';
       return member.first_name && member.surname
@@ -69,7 +71,7 @@ Deno.serve(async (req) => {
         const email = selection.selections[`rink${rinkNum}_${pos}`];
         return {
           position: posToNumber[pos] || pos,
-          name: email ? getMemberName(email) : ''
+          name: email ? getMemberName(email, `rink${rinkNum}_${pos}`) : ''
         };
       });
 

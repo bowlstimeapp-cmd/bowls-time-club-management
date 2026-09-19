@@ -42,6 +42,7 @@ export default function LiveScoring() {
   const [ends, setEnds] = useState({});
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [editedSelections, setEditedSelections] = useState({});
+  const [editedNames, setEditedNames] = useState({});
 
   useEffect(() => {
     const loadUser = async () => {
@@ -117,6 +118,7 @@ export default function LiveScoring() {
   useEffect(() => {
     if (selection?.selections) {
       setEditedSelections(selection.selections);
+      setEditedNames(selection.selection_names || {});
     }
   }, [selection]);
 
@@ -146,18 +148,33 @@ export default function LiveScoring() {
   const handleSaveTeamEdit = () => {
     updateSelectionMutation.mutate({
       id: selectionId,
-      data: { selections: editedSelections }
+      data: { selections: editedSelections, selection_names: editedNames }
     });
   };
 
   const canEdit = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
 
-  const getMemberName = (email) => {
+  const selectionNames = selection?.selection_names || {};
+  const getMemberName = (email, positionKey) => {
+    if (positionKey && selectionNames[positionKey]) return selectionNames[positionKey];
     const member = members.find(m => m.user_email === email);
     if (member?.first_name && member?.surname) {
       return `${member.first_name} ${member.surname}`;
     }
     return member?.user_name || email || 'TBD';
+  };
+
+  const nameOf = (m) => m?.first_name && m?.surname
+    ? `${m.first_name} ${m.surname}`
+    : m?.user_name || m?.user_email || 'TBD';
+
+  const getSelectedMemberId = (posKey) => {
+    const email = editedSelections[posKey];
+    if (!email) return '';
+    const storedName = editedNames[posKey];
+    const matches = members.filter(m => m.user_email === email);
+    const exact = storedName ? matches.find(m => nameOf(m) === storedName) : null;
+    return (exact || matches[0])?.id || '';
   };
 
   const handleSave = async () => {
@@ -337,7 +354,7 @@ export default function LiveScoring() {
                             const posKey = `rink${rink.number}_${pos}`;
                             return oppositionPlayers[posKey] || '';
                           }
-                          return getMemberName(positions[pos]);
+                          return getMemberName(positions[pos], `rink${rink.number}_${pos}`);
                         });
                         
                         if (isOpposition) {
@@ -474,12 +491,21 @@ export default function LiveScoring() {
                         <div key={pos}>
                           <Label className="text-xs text-gray-500">{pos}</Label>
                           <Select
-                            value={editedSelections[posKey] || ''}
-                            onValueChange={(value) => {
-                              setEditedSelections(prev => ({
-                                ...prev,
-                                [posKey]: value || undefined
-                              }));
+                            value={getSelectedMemberId(posKey)}
+                            onValueChange={(memberId) => {
+                              const member = members.find(m => m.id === memberId);
+                              setEditedSelections(prev => {
+                                const next = { ...prev };
+                                if (member) next[posKey] = member.user_email;
+                                else delete next[posKey];
+                                return next;
+                              });
+                              setEditedNames(prev => {
+                                const next = { ...prev };
+                                if (member) next[posKey] = nameOf(member);
+                                else delete next[posKey];
+                                return next;
+                              });
                             }}
                           >
                             <SelectTrigger className="h-8">
@@ -488,10 +514,8 @@ export default function LiveScoring() {
                             <SelectContent>
                               <SelectItem value={null}>-- None --</SelectItem>
                               {members.map((member) => (
-                                <SelectItem key={member.user_email} value={member.user_email}>
-                                  {member.first_name && member.surname 
-                                    ? `${member.first_name} ${member.surname}`
-                                    : member.user_name || member.user_email}
+                                <SelectItem key={member.id} value={member.id}>
+                                  {nameOf(member)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

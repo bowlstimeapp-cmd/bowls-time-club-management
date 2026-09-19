@@ -12,10 +12,11 @@ const TOP_CLUB_EVENTS = [
   { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
 ];
 
-export default function TopClubSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], interestedEmails }) {
+export default function TopClubSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], interestedEmails, selectionNames = {} }) {
   const getPositionKey = (eventId, position) => `${eventId}_${position}`;
   const getMemberName = (member) => member?.user_name || member?.user_email || 'Unknown';
-  const getMemberNameByEmail = (email) => {
+  const getMemberNameByEmail = (email, positionKey) => {
+    if (positionKey && selectionNames?.[positionKey]) return selectionNames[positionKey];
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
   };
@@ -56,7 +57,7 @@ export default function TopClubSelectionGrid({ members, selections, selectedEmai
                     <SearchableMemberSelect
                       members={members}
                       value={selectedMember || null}
-                      onValueChange={(email) => onSelectionChange(positionKey, email)}
+                      onValueChange={(email, member) => onSelectionChange(positionKey, email, member)}
                       positionKey={positionKey}
                       isAvailableFn={isAvailable}
                       isUnavailableOnDateFn={isUnavailableOnDate}

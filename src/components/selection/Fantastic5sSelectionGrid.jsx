@@ -13,11 +13,12 @@ const FANTASTIC5S_RINKS = [
   { number: 4, label: 'Triples',  positions: ['Lead', '2', 'Skip'] },
 ];
 
-export default function Fantastic5sSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], interestedEmails }) {
+export default function Fantastic5sSelectionGrid({ members, selections, selectedEmails, onSelectionChange, matchDate, unavailabilities = [], interestedEmails, selectionNames = {} }) {
   const getPositionKey = (rinkNum, position) => `rink${rinkNum}_${position}`;
 
   const getMemberName = (member) => member?.user_name || member?.user_email || 'Unknown';
-  const getMemberNameByEmail = (email) => {
+  const getMemberNameByEmail = (email, positionKey) => {
+    if (positionKey && selectionNames?.[positionKey]) return selectionNames[positionKey];
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
   };
@@ -70,7 +71,7 @@ export default function Fantastic5sSelectionGrid({ members, selections, selected
                   <SearchableMemberSelect
                     members={members}
                     value={selections[positionKey] || null}
-                    onValueChange={(email) => onSelectionChange(positionKey, email)}
+                    onValueChange={(email, member) => onSelectionChange(positionKey, email, member)}
                     positionKey={positionKey}
                     isAvailableFn={isAvailable}
                     isUnavailableOnDateFn={isUnavailableOnDate}

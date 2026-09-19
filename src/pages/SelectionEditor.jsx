@@ -40,7 +40,7 @@ import SmsNotificationControl from '@/components/selection/SmsNotificationContro
 
 const APP_BASE_URL = window.location.origin;
 
-const buildFormattedTeamList = (selectionsObj, membersArr) => {
+const buildFormattedTeamList = (selectionsObj, membersArr, namesObj = {}) => {
   const positionOrder = ['Lead', '2', '3', 'Skip'];
   const rinkMap = {};
   for (const [pos, email] of Object.entries(selectionsObj)) {
@@ -50,10 +50,11 @@ const buildFormattedTeamList = (selectionsObj, membersArr) => {
     const rinkNum = parseInt(match[1]);
     const position = match[2];
     if (!rinkMap[rinkNum]) rinkMap[rinkNum] = {};
+    const storedName = namesObj[pos];
     const member = membersArr.find((m) => m.user_email === email);
-    rinkMap[rinkNum][position] = member?.first_name && member?.surname ?
+    rinkMap[rinkNum][position] = storedName || (member?.first_name && member?.surname ?
     `${member.first_name} ${member.surname}` :
-    member?.user_name || email;
+    member?.user_name || email);
   }
   return Object.keys(rinkMap).
   sort((a, b) => parseInt(a) - parseInt(b)).
@@ -80,6 +81,7 @@ export default function SelectionEditor() {
   const [matchDate, setMatchDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [matchName, setMatchName] = useState('');
   const [selections, setSelections] = useState({});
+  const [selectionNames, setSelectionNames] = useState({});
   const [originalSelections, setOriginalSelections] = useState({});
   const [homeRinks, setHomeRinks] = useState(2);
   const [selectedRinks, setSelectedRinks] = useState([]);
@@ -139,6 +141,7 @@ export default function SelectionEditor() {
       setMatchDate(existingSelection.match_date);
       setMatchName(existingSelection.match_name || '');
       setSelections(existingSelection.selections || {});
+      setSelectionNames(existingSelection.selection_names || {});
       setOriginalSelections(existingSelection.selections || {});
       setHomeRinks(existingSelection.home_rinks || 2);
       setSelectedRinks((existingSelection.selected_rinks || []).map(Number));
@@ -272,7 +275,7 @@ export default function SelectionEditor() {
     const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
 
     // Build team list for email
-    const teamList = buildFormattedTeamList(selections, members);
+    const teamList = buildFormattedTeamList(selections, members, selectionNames);
 
     const matchUrl = `https://app.bowls-time.com${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
 
@@ -508,6 +511,7 @@ export default function SelectionEditor() {
       match_date: matchDate,
       match_name: matchName,
       selections,
+      selection_names: selectionNames,
       home_rinks: competition === 'Friendly' ? friendlyNumRinks : homeRinks,
       selected_rinks: selectedRinks.map((r) => String(r)),
       match_start_time: matchStartTime,
@@ -748,7 +752,7 @@ export default function SelectionEditor() {
     setClashModalOpen(false);
   };
 
-  const handleSelectionChange = (position, memberEmail) => {
+  const handleSelectionChange = (position, memberEmail, member) => {
     const previousEmail = selections[position];
 
     // If removing a player, delete their availability record
@@ -763,6 +767,20 @@ export default function SelectionEditor() {
       ...prev,
       [position]: memberEmail
     }));
+
+    // Record the picked member's display name so members sharing an email
+    // (e.g. family members) display as the person actually selected
+    setSelectionNames((prev) => {
+      const next = { ...prev };
+      if (memberEmail && member) {
+        next[position] = member.first_name && member.surname
+          ? `${member.first_name} ${member.surname}`
+          : member.user_name || memberEmail;
+      } else {
+        delete next[position];
+      }
+      return next;
+    });
   };
 
   const handleCompetitionChange = (compName) => {
@@ -1268,6 +1286,7 @@ export default function SelectionEditor() {
             <Fantastic5sSelectionGrid
               members={filteredMembers}
               selections={selections}
+              selectionNames={selectionNames}
               selectedEmails={selectedEmails}
               onSelectionChange={handleSelectionChange}
               matchDate={matchDate}
@@ -1278,6 +1297,7 @@ export default function SelectionEditor() {
             <TopClubSelectionGrid
               members={filteredMembers}
               selections={selections}
+              selectionNames={selectionNames}
               selectedEmails={selectedEmails}
               onSelectionChange={handleSelectionChange}
               matchDate={matchDate}
@@ -1288,6 +1308,7 @@ export default function SelectionEditor() {
             <TopClubOutdoorSelectionGrid
               members={filteredMembers}
               selections={selections}
+              selectionNames={selectionNames}
               selectedEmails={selectedEmails}
               onSelectionChange={handleSelectionChange}
               matchDate={matchDate}
@@ -1299,6 +1320,7 @@ export default function SelectionEditor() {
             <RinkSelectionGrid
               members={filteredMembers}
               selections={selections}
+              selectionNames={selectionNames}
               selectedEmails={selectedEmails}
               onSelectionChange={handleSelectionChange}
               matchDate={matchDate}
@@ -1320,6 +1342,7 @@ export default function SelectionEditor() {
             <RinkSelectionGrid
               members={filteredMembers}
               selections={selections}
+              selectionNames={selectionNames}
               selectedEmails={selectedEmails}
               onSelectionChange={handleSelectionChange}
               matchDate={matchDate}

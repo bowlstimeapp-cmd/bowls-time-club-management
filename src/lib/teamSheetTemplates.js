@@ -281,8 +281,10 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
   const positionLabels = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
   const sel = selection.selections || {};
 
-  const getMemberName = (email) => {
+  const selNames = selection.selection_names || {};
+  const getMemberName = (email, positionKey) => {
     if (!email) return 'TBD';
+    if (positionKey && selNames[positionKey]) return selNames[positionKey];
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
   };
@@ -291,12 +293,12 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     ...Array.from({ length: homeRinksCount }, (_, i) => ({
       number: i + 1,
       tag: 'Home',
-      positions: positionLabels.map(pos => ({ label: pos, name: getMemberName(sel[`rink${i+1}_${pos}`]) })),
+      positions: positionLabels.map(pos => ({ label: pos, name: getMemberName(sel[`rink${i+1}_${pos}`], `rink${i+1}_${pos}`) })),
     })),
     ...Array.from({ length: awayRinksCount }, (_, i) => ({
       number: homeRinksCount + i + 1,
       tag: 'Away',
-      positions: positionLabels.map(pos => ({ label: pos, name: getMemberName(sel[`rink${homeRinksCount+i+1}_${pos}`]) })),
+      positions: positionLabels.map(pos => ({ label: pos, name: getMemberName(sel[`rink${homeRinksCount+i+1}_${pos}`], `rink${homeRinksCount+i+1}_${pos}`) })),
     })),
   ];
 
@@ -309,7 +311,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
   ];
   const topClubEvents = TOP_CLUB_EVENTS.map(ev => ({
     name: ev.name,
-    positions: ev.positions.map(pos => ({ label: pos, name: getMemberName(sel[`${ev.id}_${pos}`]) })),
+    positions: ev.positions.map(pos => ({ label: pos, name: getMemberName(sel[`${ev.id}_${pos}`], `${ev.id}_${pos}`) })),
   }));
 
   const isFantastic5s = selection.competition === 'Fantastic 5s';
@@ -323,7 +325,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     const f5RinkData = f5Rinks.map(r => ({
       number: r.number,
       tag: r.tag,
-      positions: r.positions.map(pos => ({ label: pos, name: getMemberName(sel[`rink${r.number}_${pos}`]) })),
+      positions: r.positions.map(pos => ({ label: pos, name: getMemberName(sel[`rink${r.number}_${pos}`], `rink${r.number}_${pos}`) })),
     }));
     let matchDate = selection.match_date;
     try { matchDate = format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy'); } catch {}

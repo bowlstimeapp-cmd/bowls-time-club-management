@@ -146,8 +146,10 @@ export default function SelectionView() {
     await printTeamSheet(data, club);
   };
 
-  const getMemberName = (email) => {
+  const selectionNames = selection?.selection_names || {};
+  const getMemberName = (email, positionKey) => {
     if (!email) return 'TBD';
+    if (positionKey && selectionNames[positionKey]) return selectionNames[positionKey];
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
   };
@@ -321,7 +323,7 @@ export default function SelectionView() {
                                 <User className="w-4 h-4 text-gray-400" />
                               )}
                               <PlayerAccoladeHover email={memberEmail} accolades={accoladeList} assignments={accoladeAssignments}>
-                                {getMemberName(memberEmail)}
+                                {getMemberName(memberEmail, positionKey)}
                               </PlayerAccoladeHover>
                               {isCaptain(memberEmail) && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold" title="Captain">C</span>
@@ -361,7 +363,7 @@ export default function SelectionView() {
                               ) : (
                                 <User className="w-4 h-4 text-gray-400" />
                               )}
-                              {getMemberName(memberEmail)}
+                              {getMemberName(memberEmail, positionKey)}
                             </span>
                           </div>
                         );
@@ -397,7 +399,7 @@ export default function SelectionView() {
                               ) : (
                                 <User className="w-4 h-4 text-gray-400" />
                               )}
-                              {getMemberName(memberEmail)}
+                              {getMemberName(memberEmail, positionKey)}
                             </span>
                           </div>
                         );
@@ -437,7 +439,7 @@ export default function SelectionView() {
                                 <User className="w-4 h-4 text-gray-400" />
                               )}
                               <PlayerAccoladeHover email={memberEmail} accolades={accoladeList} assignments={accoladeAssignments}>
-                                  {getMemberName(memberEmail)}
+                                  {getMemberName(memberEmail, positionKey)}
                                 </PlayerAccoladeHover>
                                   {isCaptain(memberEmail) && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold" title="Captain">C</span>
