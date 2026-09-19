@@ -456,7 +456,37 @@ export default function ClubSettings() {
         </CardContent>
       </Card>
 
-
+      {/* Kiosk Mode */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Monitor className="w-5 h-5" />Kiosk Mode</CardTitle>
+          <CardDescription>Enable touchscreen member login for a kiosk device in the clubhouse</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Enable Kiosk Mode</Label>
+              <p className="text-sm text-gray-500">Members select their name on the kiosk to book rinks without signing in</p>
+            </div>
+            <Switch checked={kioskModeEnabled} onCheckedChange={setKioskModeEnabled} />
+          </div>
+          {kioskModeEnabled && (
+            <div>
+              <Label>Kiosk Account</Label>
+              <p className="text-sm text-gray-500 mb-2">The member account the kiosk stays signed in as. Use a dedicated account that is an approved member of this club (e.g. clubtablet@yourclub.com).</p>
+              <Select value={kioskAccountEmail} onValueChange={setKioskAccountEmail}>
+                <SelectTrigger><SelectValue placeholder="Choose the kiosk account member" /></SelectTrigger>
+                <SelectContent>
+                  {members.map(m => {
+                    const label = (m.user_name || `${m.first_name || ''} ${m.surname || ''}`.trim() || m.user_email);
+                    return <SelectItem key={m.user_email} value={m.user_email}>{label} — {m.user_email}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Custom Scorecard Layout */}
       {club?.module_custom_branding && (
