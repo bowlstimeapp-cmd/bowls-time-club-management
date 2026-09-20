@@ -50,13 +50,11 @@ export default function CountyMemberProfileModal({ member, open, onOpenChange, c
         {canPromote && (
           member.role === 'admin' ? (
             <p className="text-xs text-center text-gray-400 pt-1">This member is already a county admin.</p>
-          ) : member.countyMembershipId ? (
+          ) : (
             <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={onMakeAdmin} disabled={makingAdmin}>
               {makingAdmin ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
               Make County Admin
             </Button>
-          ) : (
-            <p className="text-xs text-center text-gray-400 pt-1">Club-affiliated members join the county through their club and can't be given county roles directly.</p>
           )
         )}
       </DialogContent>

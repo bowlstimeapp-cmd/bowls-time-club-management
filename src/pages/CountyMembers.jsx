@@ -40,7 +40,7 @@ export default function CountyMembers() {
   const refresh = () => qc.invalidateQueries({ queryKey: ['countyAffiliated', countyId] });
   const approve = useMutation({ mutationFn: id => base44.functions.invoke('approveCountyMembership', { membershipId: id }), onSuccess: () => { refresh(); toast.success('Approved'); }, onError: e => toast.error(e?.message || 'Failed') });
   const reject = useMutation({ mutationFn: id => base44.functions.invoke('rejectCountyMembership', { membershipId: id }), onSuccess: () => { refresh(); toast.success('Rejected'); }, onError: e => toast.error(e?.message || 'Failed') });
-  const changeRole = useMutation({ mutationFn: ({id, newRole}) => base44.functions.invoke('changeCountyMemberRole', { membershipId: id, newRole }), onSuccess: () => { refresh(); toast.success('Role updated'); }, onError: e => toast.error(e?.message || 'Failed') });
+  const changeRole = useMutation({ mutationFn: ({id, newRole, countyId: cid, email, name}) => base44.functions.invoke('changeCountyMemberRole', { membershipId: id, newRole, countyId: cid, email, name }), onSuccess: () => { refresh(); toast.success('Role updated'); }, onError: e => toast.error(e?.message || 'Failed') });
   const removeMember = useMutation({ mutationFn: id => base44.functions.invoke('removeCountyMember', { membershipId: id }), onSuccess: () => { refresh(); toast.success('Member removed'); }, onError: e => toast.error(e?.message || 'Failed') });
 
   if (!countyId) return <div className="p-8 text-center text-gray-500">No county selected.</div>;
@@ -125,10 +125,13 @@ export default function CountyMembers() {
           onOpenChange={(o) => !o && setSelected(null)}
           canPromote={canPromote}
           makingAdmin={changeRole.isPending}
-          onMakeAdmin={() => selected?.countyMembershipId && changeRole.mutate(
-            { id: selected.countyMembershipId, newRole: 'admin' },
-            { onSuccess: () => setSelected(null) }
-          )}
+          onMakeAdmin={() => {
+            if (!selected) return;
+            const payload = selected.countyMembershipId
+              ? { id: selected.countyMembershipId, newRole: 'admin' }
+              : { countyId, email: selected.email, name: selected.name, newRole: 'admin' };
+            changeRole.mutate(payload, { onSuccess: () => setSelected(null) });
+          }}
         />
       </div>
     </>
