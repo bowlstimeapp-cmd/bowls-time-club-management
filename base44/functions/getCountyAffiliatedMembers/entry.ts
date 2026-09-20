@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
         source: 'direct',
         clubs: [],
         countyMembershipId: m.id,
+        phone: null,
       });
     }
 
@@ -55,6 +56,7 @@ Deno.serve(async (req) => {
         const existing = memberMap.get(m.user_email);
         if (existing) {
           existing.clubs.push({ clubId, clubName });
+          if (!existing.phone && m.phone) existing.phone = m.phone;
           if (existing.source === 'direct') existing.source = 'both';
         } else {
           const name = m.user_name || ((m.first_name || '') + ' ' + (m.surname || '')).trim() || m.user_email;
@@ -64,10 +66,23 @@ Deno.serve(async (req) => {
             role: 'member',
             source: 'club',
             clubs: [{ clubId, clubName }],
+            phone: m.phone || null,
           });
         }
       }
     });
+
+    // Fill in phone numbers for direct members from their user profile
+    const directEmails = Array.from(memberMap.values()).filter(x => x.source !== 'club' && !x.phone).map(x => x.email);
+    if (directEmails.length > 0) {
+      const users = await Promise.all(directEmails.map(e => base44.asServiceRole.entities.User.filter({ email: e }).then(r => r[0])));
+      users.filter(Boolean).forEach(u => {
+        if (u.phone) {
+          const entry = memberMap.get(u.email);
+          if (entry && !entry.phone) entry.phone = u.phone;
+        }
+      });
+    }
 
     // Pending direct memberships
     const pending = countyMemberships.filter(m => m.status === 'pending').map(m => ({

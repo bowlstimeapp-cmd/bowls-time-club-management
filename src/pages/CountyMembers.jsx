@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import CountyNav from '@/components/county/CountyNav';
+import CountyMemberProfileModal from '@/components/county/CountyMemberProfileModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ export default function CountyMembers() {
   const countyId = params.get('countyId');
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(null);
 
   const { data: user } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
   const { data: countyMembership } = useQuery({
@@ -27,6 +29,7 @@ export default function CountyMembers() {
   });
   const isPlatformAdmin = user?.role === 'admin';
   const canManage = isPlatformAdmin || countyMembership?.role === 'admin' || countyMembership?.role === 'secretary';
+  const canPromote = isPlatformAdmin || countyMembership?.role === 'admin';
 
   const { data: affData, isLoading } = useQuery({
     queryKey: ['countyAffiliated', countyId],
@@ -82,7 +85,7 @@ export default function CountyMembers() {
           <div className="divide-y">
             {filtered.length === 0 ? <p className="p-6 text-center text-gray-400 text-sm">No members found.</p> : filtered.map(m => (
               <div key={m.email} className="flex flex-wrap items-center justify-between gap-3 p-3">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setSelected(m)}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-sm">{m.name}</p>
                     {m.source === 'direct' && <Badge className="bg-emerald-100 text-emerald-700 text-xs">Direct</Badge>}
@@ -115,6 +118,18 @@ export default function CountyMembers() {
             Club-affiliated members (blue badge) are managed automatically — they leave when their club is unaffiliated or they leave the club.
           </div>
         )}
+
+        <CountyMemberProfileModal
+          member={selected}
+          open={!!selected}
+          onOpenChange={(o) => !o && setSelected(null)}
+          canPromote={canPromote}
+          makingAdmin={changeRole.isPending}
+          onMakeAdmin={() => selected?.countyMembershipId && changeRole.mutate(
+            { id: selected.countyMembershipId, newRole: 'admin' },
+            { onSuccess: () => setSelected(null) }
+          )}
+        />
       </div>
     </>
   );
