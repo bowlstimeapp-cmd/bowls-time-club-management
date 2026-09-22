@@ -762,17 +762,37 @@ useEffect(() => {
       }
     }
 
-    // Process in batches of 100 with a 60s pause between batches to avoid rate limits
+    // Create each booking independently so one failure (e.g. a clash or a rate
+    // limit) doesn't abort the rest of the batch. Sent in small waves to
+    // avoid tripping rate limits.
     const BATCH_SIZE = 100;
+    const CONCURRENCY = 4;
     const createdBookings = [];
+    const failedBookings = [];
+    const invokeOne = async (payload) => {
+      try {
+        const res = await base44.functions.invoke('createBooking', payload);
+        return { ok: true, booking: res.data.booking };
+      } catch (err) {
+        const error = typeof err === 'string'
+          ? err
+          : (err?.response?.data?.error || err?.data?.error || err?.message || 'Unknown error');
+        return { ok: false, payload, error };
+      }
+    };
     for (let i = 0; i < bookingPayloads.length; i += BATCH_SIZE) {
       if (i > 0) {
-        toast.info(`Pausing 60s to avoid rate limits… (${createdBookings.length}/${bookingPayloads.length} created)`);
+        toast.info(`Pausing 60s to avoid rate limits… (${i}/${bookingPayloads.length} processed)`);
         await new Promise(resolve => setTimeout(resolve, 60000));
       }
       const batch = bookingPayloads.slice(i, i + BATCH_SIZE);
-      const batchResults = await Promise.all(batch.map(payload => createBookingMutation.mutateAsync(payload)));
-      createdBookings.push(...batchResults);
+      for (let j = 0; j < batch.length; j += CONCURRENCY) {
+        const results = await Promise.all(batch.slice(j, j + CONCURRENCY).map(invokeOne));
+        for (const result of results) {
+          if (result.ok) createdBookings.push(result.booking);
+          else failedBookings.push(result);
+        }
+      }
     }
 
     if (isPrivileged) {
@@ -785,11 +805,27 @@ useEffect(() => {
     }
     
     setBulkModalOpen(false);
-    
-    const message = status === 'approved' 
-      ? `${createdBookings.length} booking(s) created across ${dates.length} date(s)!` 
-      : `${createdBookings.length} booking request(s) submitted! Awaiting approval.`;
-    toast.success(message);
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+
+    if (createdBookings.length > 0) {
+      const message = status === 'approved'
+        ? `${createdBookings.length} booking(s) created across ${dates.length} date(s)!`
+        : `${createdBookings.length} booking request(s) submitted! Awaiting approval.`;
+      toast.success(message);
+    }
+    if (failedBookings.length > 0) {
+      const details = failedBookings
+        .slice(0, 5)
+        .map(f => `Rink ${f.payload.rink_number} on ${f.payload.date} ${f.payload.start_time}–${f.payload.end_time}: ${f.error}`)
+        .join(' • ');
+      toast.warning(
+        `${failedBookings.length} booking(s) could not be created`,
+        {
+          description: details + (failedBookings.length > 5 ? ` • …and ${failedBookings.length - 5} more` : ''),
+          duration: 10000,
+        }
+      );
+    }
   };
 
   const handleCopyBooking = async (booking, newRink, newStartTime) => {
