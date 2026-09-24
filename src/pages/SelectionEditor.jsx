@@ -847,9 +847,19 @@ export default function SelectionEditor() {
     // Age filter
     if (activeCompetition.age_group === 'o60' || activeCompetition.age_group === 'u25') {
       const today = new Date();
+      // Date of birth may be stored as ISO (yyyy-mm-dd) or UK format (dd/mm/yyyy)
+      const parseDob = (dobStr) => {
+        const str = String(dobStr).trim();
+        const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (isoMatch) return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+        const ukMatch = str.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+        if (ukMatch) return new Date(Number(ukMatch[3]), Number(ukMatch[2]) - 1, Number(ukMatch[1]));
+        return null;
+      };
       filtered = filtered.filter((m) => {
         if (!m.date_of_birth) return false;
-        const dob = new Date(m.date_of_birth);
+        const dob = parseDob(m.date_of_birth);
+        if (!dob || isNaN(dob.getTime())) return false;
         const age = Math.floor((today - dob) / (365.25 * 24 * 60 * 60 * 1000));
         if (activeCompetition.age_group === 'o60') return age >= 60;
         if (activeCompetition.age_group === 'u25') return age <= 25;
