@@ -151,6 +151,18 @@ Deno.serve(async (req) => {
         }
         return Response.json({ success: true, deleted: deletedIds.length });
       }
+      if (action === 'bulk_update') {
+        if (!ids || !Array.isArray(ids) || !data) return Response.json({ error: 'Missing ids array or data' }, { status: 400 });
+        const updatedIds = [];
+        for (const bid of ids) {
+          const record = await verifyBelongsToClub(base44, 'Booking', bid, clubId);
+          if (record) {
+            await base44.asServiceRole.entities.Booking.update(bid, data);
+            updatedIds.push(bid);
+          }
+        }
+        return Response.json({ success: true, updated: updatedIds.length });
+      }
       if (action === 'bulk_create') {
         if (!data || !Array.isArray(data)) return Response.json({ error: 'Missing data array' }, { status: 400 });
         const records = data.map(b => ({ ...b, club_id: clubId }));

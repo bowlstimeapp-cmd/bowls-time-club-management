@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Trophy, Users, Pencil, Trash2, Plus, Zap, CalendarCheck, List,
-  BarChart3, Printer, CalendarX, ChevronDown, ChevronRight, Loader2, Archive
+  BarChart3, Printer, CalendarX, ChevronDown, ChevronRight, Loader2, Archive, RefreshCw
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
@@ -18,6 +18,7 @@ export default function LeagueAdminTableView({
   onEditLeague, onDeleteLeague, onAddTeam, onEditTeam, onDeleteTeam,
   onGenerateFixtures, onBookRinks, onViewFixtures, onViewTable, onBlacklist, onArchiveLeague,
   generatingFixtures, bookingRinks, onGenerateScorecards, onOpenScores,
+  onRegenerateFixtures, regeneratingFixtures,
 }) {
   const [expandedLeague, setExpandedLeague] = useState(null);
   const toggle = (id) => setExpandedLeague(prev => prev === id ? null : id);
@@ -101,6 +102,13 @@ export default function LeagueAdminTableView({
                     onClick={() => onBookRinks(league)} disabled={bookingRinks}>
                     {bookingRinks ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarCheck className="w-3 h-3" />}
                     <span className="hidden sm:inline ml-1">Book</span>
+                  </Button>
+                )}
+                {league.fixtures_generated && league.creation_mode !== 'manual' && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    onClick={() => onRegenerateFixtures(league)} disabled={regeneratingFixtures}
+                    title="Delete existing fixtures and bookings, then rebuild from current league settings">
+                    {regeneratingFixtures ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                   </Button>
                 )}
                 {league.fixtures_generated && (

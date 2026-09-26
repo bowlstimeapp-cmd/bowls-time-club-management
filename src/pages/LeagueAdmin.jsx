@@ -51,7 +51,8 @@ import {
   BarChart3,
   Printer,
   CalendarX,
-  Archive
+  Archive,
+  RefreshCw
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import TeamDialog from '@/components/leagues/TeamDialog';
@@ -118,6 +119,10 @@ export default function LeagueAdmin() {
   const [pendingFixtureLeague, setPendingFixtureLeague] = useState(null);
   const [pendingFixtureTeams, setPendingFixtureTeams] = useState([]);
   const [regenerateCounter, setRegenerateCounter] = useState(0);
+  // Regenerate fixtures (rebuild existing fixtures + bookings from current league settings)
+  const [regenDialogLeague, setRegenDialogLeague] = useState(null);
+  const [regeneratingFixtures, setRegeneratingFixtures] = useState(false);
+  const [pendingIsRegeneration, setPendingIsRegeneration] = useState(false);
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
@@ -741,9 +746,13 @@ export default function LeagueAdmin() {
 
   const handleConfirmFixtures = async () => {
     setGeneratingFixtures(true);
+    const wasRegeneration = pendingIsRegeneration;
+    const createdCount = pendingFixtures.length;
+    const league = pendingFixtureLeague;
     const cleanFixtures = pendingFixtures.map(({ _nonAdjacent, ...f }) => f);
-    await clubData('LeagueFixture', 'bulk_create', { data: cleanFixtures });
-    await clubData('League', 'update', { id: pendingFixtureLeague.id, data: { fixtures_generated: true } });
+    const createdRes = await clubData('LeagueFixture', 'bulk_create', { data: cleanFixtures });
+    const createdFixtures = createdRes?.data?.records || [];
+    await clubData('League', 'update', { id: league.id, data: { fixtures_generated: true } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     setGeneratingFixtures(false);
@@ -751,7 +760,76 @@ export default function LeagueAdmin() {
     setPendingFixtures([]);
     setPendingFixtureLeague(null);
     setPendingFixtureTeams([]);
-    toast.success(`Generated ${pendingFixtures.length} fixtures`);
+    setPendingIsRegeneration(false);
+    if (wasRegeneration) {
+      toast.success(`Regenerated ${createdCount} fixtures — now re-booking rinks`);
+      await handleBookRinks(league, createdFixtures);
+    } else {
+      toast.success(`Generated ${createdCount} fixtures`);
+    }
+  };
+
+  // Regenerate: cancel all previous bookings for this league, delete its fixtures,
+  // then rebuild from the league's CURRENT settings (start/end dates, session times,
+  // rinks, blacklisted dates) and re-book the rinks.
+  const handleRegenerateLeague = async (league) => {
+    if (!league) return;
+    const leagueTeamsList = teams.filter(t => t.league_id === league.id);
+
+    if (leagueTeamsList.length < 2) {
+      toast.error('Need at least 2 teams to regenerate fixtures');
+      setRegenDialogLeague(null);
+      return;
+    }
+    if (!league.start_date || !league.end_date) {
+      toast.error('Please set league start and end dates first');
+      setRegenDialogLeague(null);
+      return;
+    }
+
+    setRegeneratingFixtures(true);
+    try {
+      // 1. Cancel every rink booking associated with this league — both the
+      //    bookings linked to fixtures and any made under the league's booker name
+      const existingFixtures = await base44.entities.LeagueFixture.filter({ league_id: league.id });
+      const linkedBookingIds = existingFixtures.map(f => f.booking_id).filter(Boolean);
+      const leagueBookingsRes = await base44.functions.invoke('listBookingsForScheduling', {
+        clubId,
+        booker_name: `League - ${league.name}`
+      });
+      const namedBookingIds = (leagueBookingsRes.data?.bookings || []).map(b => b.id);
+      const allBookingIds = [...new Set([...linkedBookingIds, ...namedBookingIds])];
+      if (allBookingIds.length > 0) {
+        await clubData('Booking', 'bulk_update', { ids: allBookingIds, data: { status: 'cancelled' } });
+      }
+
+      // 2. Delete the old fixtures (any scores already entered are lost)
+      if (existingFixtures.length > 0) {
+        await clubData('LeagueFixture', 'bulk_delete', { ids: existingFixtures.map(f => f.id) });
+      }
+
+      // 3. Reset the league flags so it can be re-booked
+      await clubData('League', 'update', { id: league.id, data: { fixtures_generated: false, bookings_created: false } });
+      queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+
+      // 4. Build fresh fixtures from the current settings and show the preview
+      const freshFixtures = buildFixtureList(league, leagueTeamsList);
+      setPendingFixtures(freshFixtures);
+      setPendingFixtureLeague(league);
+      setPendingFixtureTeams(leagueTeamsList);
+      setRegenerateCounter(0);
+      setPendingIsRegeneration(true);
+      setDistributionModalOpen(true);
+      setRegenDialogLeague(null);
+      toast.success(`Cancelled ${allBookingIds.length} booking(s) — review the new fixtures below`);
+    } catch (error) {
+      console.error('Regenerate fixtures error:', error);
+      toast.error('Failed to regenerate fixtures: ' + (error?.message || error));
+      setRegenDialogLeague(null);
+    }
+    setRegeneratingFixtures(false);
   };
 
   const handleRegenerateFixtures = () => {
@@ -762,8 +840,8 @@ export default function LeagueAdmin() {
     setPendingFixtures(allFixtures);
   };
 
-  const handleBookRinks = async (league) => {
-    const leagueFixtures = fixtures.filter(f => f.league_id === league.id);
+  const handleBookRinks = async (league, fixtureListOverride) => {
+    const leagueFixtures = fixtureListOverride || fixtures.filter(f => f.league_id === league.id);
     const leagueTeams = teams.filter(t => t.league_id === league.id);
     
     if (leagueFixtures.length === 0) {
@@ -1150,6 +1228,8 @@ export default function LeagueAdmin() {
             bookingRinks={bookingRinks}
             onGenerateScorecards={(league) => openScorecardDialog(league)}
             onArchiveLeague={handleArchiveLeague}
+            onRegenerateFixtures={(league) => setRegenDialogLeague(league)}
+            regeneratingFixtures={regeneratingFixtures}
           />
         ) : (
           <div className="space-y-6">
@@ -1262,6 +1342,23 @@ export default function LeagueAdmin() {
                                 <CalendarCheck className="w-4 h-4 mr-1" />
                               )}
                               Book Rinks
+                            </Button>
+                          )}
+                          {league.creation_mode !== 'manual' && league.fixtures_generated && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setRegenDialogLeague(league)}
+                              disabled={regeneratingFixtures}
+                              className="text-amber-600 hover:bg-amber-50"
+                              title="Delete existing fixtures and bookings, then rebuild from current league settings"
+                            >
+                              {regeneratingFixtures ? (
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4 mr-1" />
+                              )}
+                              Regenerate
                             </Button>
                           )}
                           {league.fixtures_generated && (
@@ -1873,6 +1970,28 @@ export default function LeagueAdmin() {
                 className="bg-red-600 hover:bg-red-700"
               >
                 Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Regenerate Fixtures Confirmation */}
+        <AlertDialog open={!!regenDialogLeague} onOpenChange={() => setRegenDialogLeague(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Regenerate fixtures for {regenDialogLeague?.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will delete all existing fixtures for this league — including any scores already entered — and cancel every rink booking made for it. New fixtures will be rebuilt from the league's current settings (start/end dates, session times, rinks and blacklisted dates), then the rinks will be re-booked. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => handleRegenerateLeague(regenDialogLeague)}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {regeneratingFixtures && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Regenerate Fixtures
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
