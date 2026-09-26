@@ -171,19 +171,22 @@ export default function MemberDashboard() {
   const myTeamIdStr = useMemo(() => myTeams.map(t => t.id).join(','), [myTeams]);
 
   const { data: leagueFixtures = [], isLoading: fixturesLoading } = useQuery({
-    queryKey: ['myLeagueFixtures', clubId, myTeamIdStr],
+    queryKey: ['myLeagueFixtures', clubId, myTeamIdStr, user?.email],
     queryFn: async () => {
       const myTeamIds = myTeamIdStr.split(',').filter(Boolean);
       const all = await base44.entities.LeagueFixture.filter({ club_id: clubId });
       return all
-        .filter(f =>
-          f.match_date >= todayStr &&
-          f.status !== 'cancelled' &&
-          (myTeamIds.includes(f.home_team_id) || myTeamIds.includes(f.away_team_id))
-        )
+        .filter(f => {
+          if (f.match_date < todayStr || f.status === 'cancelled') return false;
+          const myTeam = myTeams.find(t => t.id === f.home_team_id || t.id === f.away_team_id);
+          if (!myTeam) return false;
+          // Only show fixtures where I've been selected in the team rota to play
+          const rota = myTeam.fixture_rota?.[f.id];
+          return Array.isArray(rota) && rota.includes(user.email);
+        })
         .sort((a, b) => a.match_date.localeCompare(b.match_date));
     },
-    enabled: !!clubId && !!myTeamIdStr,
+    enabled: !!clubId && !!myTeamIdStr && !!user?.email,
   });
 
   const mySelections = useMemo(() => {
@@ -369,7 +372,7 @@ export default function MemberDashboard() {
           ) : myTeams.length === 0 ? (
             <div className="p-5 text-center text-sm text-gray-400">You are not currently assigned to a league team.</div>
           ) : leagueFixtures.length === 0 ? (
-            <div className="p-5 text-center text-sm text-gray-400">No upcoming league fixtures for your teams.</div>
+            <div className="p-5 text-center text-sm text-gray-400">No upcoming league fixtures you're selected to play in.</div>
           ) : (
             <div className="divide-y">
               {leagueFixtures.map(fixture => {
