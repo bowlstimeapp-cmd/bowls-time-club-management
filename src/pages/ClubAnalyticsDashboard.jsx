@@ -19,6 +19,7 @@ import {
   MessageSquare, Send, Trophy, ShieldCheck, ArrowLeft, Layers,
 } from 'lucide-react';
 import ClubSearchSelect from '@/components/admin/ClubSearchSelect';
+import LeagueAnalyticsSection from '@/components/analytics/LeagueAnalyticsSection';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -338,6 +339,9 @@ export default function ClubAnalyticsDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Leagues */}
+            <LeagueAnalyticsSection clubId={clubId} />
           </>
         )}
       </div>
