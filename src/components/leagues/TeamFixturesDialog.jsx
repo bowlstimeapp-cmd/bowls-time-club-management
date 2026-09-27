@@ -54,7 +54,7 @@ const openPrintWindow = (title, bodyHtml, extraCss = '') => {
 };
 
 // Printable copy of the team's fixture list
-const printFixtures = (league, team, list, teams) => {
+export const printFixtures = (league, team, list, teams) => {
   const rows = list.map(f => {
     const isHome = f.home_team_id === team.id;
     const opp = teams.find(t => t.id === (isHome ? f.away_team_id : f.home_team_id))?.name || 'TBD';
@@ -95,7 +95,7 @@ const printFixtures = (league, team, list, teams) => {
 
 // Printable blank rota: fixture details on the left, 8 empty columns for captains
 // to write player names and tick who is playing each week
-const printBlankRota = (league, team, list, teams) => {
+export const printBlankRota = (league, team, list, teams) => {
   const fixtureRows = list.map(f => {
     const isHome = f.home_team_id === team.id;
     const opp = teams.find(t => t.id === (isHome ? f.away_team_id : f.home_team_id))?.name || 'TBD';

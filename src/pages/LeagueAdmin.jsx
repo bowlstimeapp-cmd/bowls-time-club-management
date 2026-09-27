@@ -52,7 +52,8 @@ import {
   Printer,
   CalendarX,
   Archive,
-  RefreshCw
+  RefreshCw,
+  ClipboardList
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import TeamDialog from '@/components/leagues/TeamDialog';
@@ -65,7 +66,7 @@ import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import LeagueScoresModal from '@/components/leagues/LeagueScoresModal';
 import LeagueArchiveSection from '@/components/leagues/LeagueArchiveSection';
 import LeagueTableDialog from '@/components/leagues/LeagueTableDialog';
-import TeamFixturesDialog from '@/components/leagues/TeamFixturesDialog';
+import TeamFixturesDialog, { printFixtures as printTeamFixtures, printBlankRota as printTeamBlankRota } from '@/components/leagues/TeamFixturesDialog';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -130,6 +131,7 @@ export default function LeagueAdmin() {
 
   const [generatingFixtures, setGeneratingFixtures] = useState(false);
   const [fixturesDialogOpen, setFixturesDialogOpen] = useState(false);
+  const [fixturesTeamFilter, setFixturesTeamFilter] = useState('all');
   const [viewingLeague, setViewingLeague] = useState(null);
   const [bookingRinks, setBookingRinks] = useState(false);
   const [scoreDialogOpen, setScoreDialogOpen] = useState(false);
@@ -987,6 +989,7 @@ export default function LeagueAdmin() {
 
   const viewFixtures = (league) => {
     setViewingLeague(league);
+    setFixturesTeamFilter('all');
     setFixturesDialogOpen(true);
   };
 
@@ -2079,9 +2082,11 @@ export default function LeagueAdmin() {
             <DialogHeader>
               <DialogTitle>{viewingLeague?.name} - Fixtures</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              {viewingLeague && fixtures
-                .filter(f => f.league_id === viewingLeague.id)
+            {viewingLeague && (() => {
+              const leagueTeamsList = teams.filter(t => t.league_id === viewingLeague.id);
+              const sortedFixtures = fixtures
+                .filter(f => f.league_id === viewingLeague.id &&
+                  (fixturesTeamFilter === 'all' || f.home_team_id === fixturesTeamFilter || f.away_team_id === fixturesTeamFilter))
                 .sort((a, b) => {
                   const dateCmp = a.match_date.localeCompare(b.match_date);
                   if (dateCmp !== 0) return dateCmp;
@@ -2091,47 +2096,88 @@ export default function LeagueAdmin() {
                     return (a.leg || 1) - (b.leg || 1);
                   }
                   return 0;
-                })
-                .map(fixture => {
-                  const homeTeam = teams.find(t => t.id === fixture.home_team_id);
-                  const awayTeam = teams.find(t => t.id === fixture.away_team_id);
-                  return (
-                    <div key={fixture.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="text-sm text-gray-500 w-24">
-                          {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+                });
+              const selectedTeam = leagueTeamsList.find(t => t.id === fixturesTeamFilter);
+              const printableFixtures = sortedFixtures.filter(f => f.status !== 'cancelled');
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Team</Label>
+                    <Select value={fixturesTeamFilter} onValueChange={setFixturesTeamFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All teams" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All teams</SelectItem>
+                        {leagueTeamsList.map(t => (
+                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    {sortedFixtures.map(fixture => {
+                      const homeTeam = teams.find(t => t.id === fixture.home_team_id);
+                      const awayTeam = teams.find(t => t.id === fixture.away_team_id);
+                      return (
+                        <div key={fixture.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <div className="text-sm text-gray-500 w-24">
+                              {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{homeTeam?.name || 'Unknown'}</span>
+                              <span className="text-gray-400">vs</span>
+                              <span className="font-medium">{awayTeam?.name || 'Unknown'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+                            {viewingLeague?.is_double_rink && fixture.tie_id && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-600">Leg {fixture.leg || 1}</Badge>
+                            )}
+                            {fixture.status === 'completed' ? (
+                              <Badge className="bg-emerald-100 text-emerald-700">
+                                {fixture.home_score} - {fixture.away_score}
+                              </Badge>
+                            ) : null}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openScoreDialog(fixture)}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{homeTeam?.name || 'Unknown'}</span>
-                          <span className="text-gray-400">vs</span>
-                          <span className="font-medium">{awayTeam?.name || 'Unknown'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">Rink {fixture.rink_number}</Badge>
-                        {viewingLeague?.is_double_rink && fixture.tie_id && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-600">Leg {fixture.leg || 1}</Badge>
-                        )}
-                        {fixture.status === 'completed' ? (
-                          <Badge className="bg-emerald-100 text-emerald-700">
-                            {fixture.home_score} - {fixture.away_score}
-                          </Badge>
-                        ) : null}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openScoreDialog(fixture)}
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      );
+                    })}
+                    {sortedFixtures.length === 0 && (
+                      <p className="text-center text-gray-500 py-4">No fixtures generated yet</p>
+                    )}
+                  </div>
+                  {selectedTeam && printableFixtures.length > 0 && (
+                    <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => printTeamBlankRota(viewingLeague, selectedTeam, printableFixtures, teams)}
+                      >
+                        <ClipboardList className="w-4 h-4 mr-2" />
+                        Print Blank Rota
+                      </Button>
+                      <Button
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => printTeamFixtures(viewingLeague, selectedTeam, printableFixtures, teams)}
+                      >
+                        <Printer className="w-4 h-4 mr-2" />
+                        Print Fixtures
+                      </Button>
                     </div>
-                  );
-                })}
-              {viewingLeague && fixtures.filter(f => f.league_id === viewingLeague.id).length === 0 && (
-                <p className="text-center text-gray-500 py-4">No fixtures generated yet</p>
-              )}
-            </div>
+                  )}
+                </div>
+              );
+            })()}
           </DialogContent>
         </Dialog>
 
