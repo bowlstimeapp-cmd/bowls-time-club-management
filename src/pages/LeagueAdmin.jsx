@@ -151,6 +151,7 @@ export default function LeagueAdmin() {
   const [leagueCreationMode, setLeagueCreationMode] = useState('auto');
   const [showArchive, setShowArchive] = useState(false);
   const [teamFixtures, setTeamFixtures] = useState(null);
+  const [archiveLeagueId, setArchiveLeagueId] = useState(null);
 
   // Scorecard date filter dialog
   const [scorecardDialogLeague, setScorecardDialogLeague] = useState(null);
@@ -1246,7 +1247,7 @@ export default function LeagueAdmin() {
             generatingFixtures={generatingFixtures}
             bookingRinks={bookingRinks}
             onGenerateScorecards={(league) => openScorecardDialog(league)}
-            onArchiveLeague={handleArchiveLeague}
+            onArchiveLeague={(league) => setArchiveLeagueId(league.id)}
             onRegenerateFixtures={(league) => setRegenDialogLeague(league)}
             regeneratingFixtures={regeneratingFixtures}
             onViewTeamFixtures={openTeamFixtures}
@@ -1430,11 +1431,11 @@ export default function LeagueAdmin() {
                             <span className="hidden md:inline">Blacklist</span>
                           </Button>
                           <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleArchiveLeague(league)}
+                           variant="outline" 
+                           size="sm"
+                           onClick={() => setArchiveLeagueId(league.id)}
                           >
-                            <Archive className="w-4 h-4" />
+                           <Archive className="w-4 h-4" />
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => handleEditLeague(league)}
                           >
@@ -2021,6 +2022,31 @@ export default function LeagueAdmin() {
               >
                 {regeneratingFixtures && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Regenerate Fixtures
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Archive League Confirmation */}
+        <AlertDialog open={!!archiveLeagueId} onOpenChange={() => setArchiveLeagueId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archive this league?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {leagues.find(l => l.id === archiveLeagueId)?.name} will be moved to the Archive section. Nothing is deleted — its teams, fixtures, scores and bookings are kept, and you can restore it from the Archive at any time.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  const leagueToArchive = leagues.find(l => l.id === archiveLeagueId);
+                  setArchiveLeagueId(null);
+                  if (leagueToArchive) handleArchiveLeague(leagueToArchive);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                Yes, Archive League
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
