@@ -16,7 +16,7 @@ import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
 
-export default function PlayerAvailabilityDialog({ open, onClose, team, getMemberName }) {
+export default function PlayerAvailabilityDialog({ open, onClose, team, fixtures = [], getMemberName }) {
   const queryClient = useQueryClient();
 const [selectedPlayer, setSelectedPlayer] = useState('');
 const [unavailableDate, setUnavailableDate] = useState('');
@@ -52,7 +52,19 @@ const handleAddUnavailability = () => {
 
   setLocalUnavailability(updated);
   setUnavailableDate('');
-  updateTeamMutation.mutate({ id: team.id, data: { player_unavailability: updated } });
+
+  // Also unselect the player from the rota for any fixture on that date
+  const data = { player_unavailability: updated };
+  const rota = { ...(team?.fixture_rota || {}) };
+  let rotaChanged = false;
+  fixtures.forEach(f => {
+    if (f.match_date === unavailableDate && (rota[f.id] || []).includes(selectedPlayer)) {
+      rota[f.id] = rota[f.id].filter(p => p !== selectedPlayer);
+      rotaChanged = true;
+    }
+  });
+  if (rotaChanged) data.fixture_rota = rota;
+  updateTeamMutation.mutate({ id: team.id, data });
 };
 
 const handleRemoveUnavailability = (playerEmail, date) => {

@@ -833,11 +833,11 @@ export default function MyLeagueTeam() {
                       <table className="w-full border-collapse text-sm">
                         <thead>
                           <tr>
-                            <th className="border p-2 bg-gray-50 text-left">Fixture</th>
-                            <th className="border p-2 bg-gray-50 text-left">Date</th>
-                            <th className="border p-2 bg-gray-50">Rink</th>
+                            <th className="border p-2 bg-gray-50 text-left sticky left-0 top-0 z-30">Fixture</th>
+                            <th className="border p-2 bg-gray-50 text-left sticky top-0 z-20">Date</th>
+                            <th className="border p-2 bg-gray-50 sticky top-0 z-20">Rink</th>
                             {players.map(player => (
-                              <th key={player} className="border p-2 bg-gray-50 text-center whitespace-nowrap">
+                              <th key={player} className="border p-2 bg-gray-50 text-center whitespace-nowrap sticky top-0 z-20">
                                 {getMemberName(player).split(' ').map(n => n[0]).join('')}
                                 <div className="text-xs font-normal text-gray-500">
                                   {getMemberName(player)}
@@ -861,7 +861,7 @@ export default function MyLeagueTeam() {
                             
                             return (
                               <tr key={fixture.id} className={rowIdx % 2 === 1 ? 'bg-gray-50' : ''}>
-                                <td className="border p-2 fixture-cell">
+                                <td className={`border p-2 fixture-cell sticky left-0 z-10 ${rowIdx % 2 === 1 ? 'bg-gray-50' : 'bg-white'}`}>
                                   vs {opponent?.name}
                                 </td>
                                 <td className="border p-2 whitespace-nowrap">
@@ -956,6 +956,7 @@ export default function MyLeagueTeam() {
           open={availabilityDialogOpen}
           onClose={() => setAvailabilityDialogOpen(false)}
           team={availabilityTeam}
+          fixtures={fixtures}
           getMemberName={getMemberName}
         />
 
@@ -985,7 +986,7 @@ export default function MyLeagueTeam() {
                         <th className="border p-2 bg-gray-50 text-left">Date</th>
                         <th className="border p-2 bg-gray-50">Rink</th>
                         {players.map(player => (
-                          <th key={player} className="border p-2 bg-gray-50 text-center whitespace-nowrap">
+                          <th key={player} className="border p-2 bg-gray-50 text-center whitespace-nowrap sticky top-0 z-20">
                             <div className="text-xs">
                               {getMemberName(player)}
                             </div>
@@ -1004,7 +1005,7 @@ const isHome = fixture.home_team_id === liveEditingTeam.id;
                         
                         return (
                           <tr key={fixture.id} className={isHighlighted ? 'bg-red-50' : ''}>
-                            <td className={`border p-2 ${isHighlighted ? 'border-red-300' : ''}`}>
+                            <td className={`border p-2 sticky left-0 z-10 ${isHighlighted ? 'bg-red-50 border-red-300' : 'bg-white'}`}>
                               vs {opponent?.name}
                               {isHighlighted && <span className="ml-2 text-xs text-red-600 font-medium">({rotaPlayers.length} players)</span>}
                             </td>
