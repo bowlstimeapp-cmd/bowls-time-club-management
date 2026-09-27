@@ -774,7 +774,7 @@ export default function LeagueAdmin() {
     const cleanFixtures = pendingFixtures.map(({ _nonAdjacent, ...f }) => f);
     const createdRes = await clubData('LeagueFixture', 'bulk_create', { data: cleanFixtures });
     const createdFixtures = createdRes?.data?.records || [];
-    await clubData('League', 'update', { id: league.id, data: { fixtures_generated: true } });
+    await clubData('League', 'update', { id: league.id, data: { fixtures_generated: true, status: 'active' } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     setGeneratingFixtures(false);

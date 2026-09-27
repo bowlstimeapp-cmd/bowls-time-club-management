@@ -214,7 +214,7 @@ export default function ManualFixturesModal({ open, onClose, league, teams, club
       }
 
       // Mark fixtures as generated
-      await base44.entities.League.update(league.id, { fixtures_generated: true });
+      await base44.entities.League.update(league.id, { fixtures_generated: true, status: 'active' });
       toast.success(`Saved ${validRows.length} ${isDoubleRink ? 'meeting' : 'fixture'}${validRows.length !== 1 ? 's' : ''}`);
       onClose(true);
     } catch (err) {
