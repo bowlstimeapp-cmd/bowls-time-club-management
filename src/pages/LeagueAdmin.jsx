@@ -65,6 +65,7 @@ import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
 import LeagueScoresModal from '@/components/leagues/LeagueScoresModal';
 import LeagueArchiveSection from '@/components/leagues/LeagueArchiveSection';
 import LeagueTableDialog from '@/components/leagues/LeagueTableDialog';
+import TeamFixturesDialog from '@/components/leagues/TeamFixturesDialog';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -149,6 +150,7 @@ export default function LeagueAdmin() {
   const [manualFixturesLeague, setManualFixturesLeague] = useState(null);
   const [leagueCreationMode, setLeagueCreationMode] = useState('auto');
   const [showArchive, setShowArchive] = useState(false);
+  const [teamFixtures, setTeamFixtures] = useState(null);
 
   // Scorecard date filter dialog
   const [scorecardDialogLeague, setScorecardDialogLeague] = useState(null);
@@ -218,9 +220,26 @@ export default function LeagueAdmin() {
 
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
+  // Sort leagues by playing day then start time (Monday 10am first, Monday 6pm next, Tuesday…)
+  // The playing day comes from the league start date (fixtures run weekly from it)
+  const leagueDayTimeSort = (a, b) => {
+    const dayIdx = (l) => {
+      if (!l.start_date) return 7; // leagues without a start date go last
+      return (parseISO(l.start_date).getDay() + 6) % 7; // Monday=0 … Sunday=6
+    };
+    const dayCmp = dayIdx(a) - dayIdx(b);
+    if (dayCmp !== 0) return dayCmp;
+    return (a.start_time || '').localeCompare(b.start_time || '');
+  };
+
   // Leagues split into active and archived (completed) sections
-  const activeLeagues = leagues.filter(l => l.status !== 'completed');
-  const archivedLeagues = leagues.filter(l => l.status === 'completed');
+  const activeLeagues = leagues.filter(l => l.status !== 'completed').sort(leagueDayTimeSort);
+  const archivedLeagues = leagues.filter(l => l.status === 'completed').sort(leagueDayTimeSort);
+
+  const openTeamFixtures = (team) => {
+    const teamLeague = leagues.find(l => l.id === team.league_id);
+    setTeamFixtures({ league: teamLeague, team });
+  };
 
   // Club admin archives a league manually
   const handleArchiveLeague = async (league) => {
@@ -1230,6 +1249,7 @@ export default function LeagueAdmin() {
             onArchiveLeague={handleArchiveLeague}
             onRegenerateFixtures={(league) => setRegenDialogLeague(league)}
             regeneratingFixtures={regeneratingFixtures}
+            onViewTeamFixtures={openTeamFixtures}
           />
         ) : (
           <div className="space-y-6">
@@ -1471,6 +1491,15 @@ export default function LeagueAdmin() {
                                   )}
                                 </div>
                                 <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => openTeamFixtures(team)}
+                                    title="View team fixtures"
+                                  >
+                                    <List className="w-3 h-3" />
+                                  </Button>
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
@@ -2180,6 +2209,16 @@ export default function LeagueAdmin() {
           onProceed={handleLeagueClashProceed}
           onClose={() => setClashModalOpen(false)}
           isLoading={bookingRinks}
+        />
+
+        {/* Team Fixtures Dialog */}
+        <TeamFixturesDialog
+          open={!!teamFixtures}
+          onClose={() => setTeamFixtures(null)}
+          league={teamFixtures?.league}
+          team={teamFixtures?.team}
+          fixtures={fixtures}
+          teams={teams}
         />
 
         {/* League Table Dialog */}

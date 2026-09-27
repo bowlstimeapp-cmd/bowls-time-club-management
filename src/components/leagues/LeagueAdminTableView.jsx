@@ -18,7 +18,7 @@ export default function LeagueAdminTableView({
   onEditLeague, onDeleteLeague, onAddTeam, onEditTeam, onDeleteTeam,
   onGenerateFixtures, onBookRinks, onViewFixtures, onViewTable, onBlacklist, onArchiveLeague,
   generatingFixtures, bookingRinks, onGenerateScorecards, onOpenScores,
-  onRegenerateFixtures, regeneratingFixtures,
+  onRegenerateFixtures, regeneratingFixtures, onViewTeamFixtures,
 }) {
   const [expandedLeague, setExpandedLeague] = useState(null);
   const toggle = (id) => setExpandedLeague(prev => prev === id ? null : id);
@@ -176,6 +176,9 @@ export default function LeagueAdminTableView({
                           <td className="px-5 py-2.5 text-gray-500">{team.players?.length ?? 0}</td>
                           <td className="px-3 py-2 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => onViewTeamFixtures(team)} title="View team fixtures">
+                                <List className="w-3 h-3" />
+                              </Button>
                               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => onEditTeam(team)}>
                                 <Pencil className="w-3 h-3" />
                               </Button>
