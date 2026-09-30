@@ -622,6 +622,18 @@ export default function LeagueAdmin() {
     const rinkAssigned = {}; // rink -> assigned so far
     availableRinks.forEach(r => { rinkAssigned[r] = 0; });
 
+    // --- Per-team even rink distribution ---
+    // Ideal share per rink for each team = 1 / (number of rinks in league settings).
+    // A team's games on any single rink must stay within ideal share + 10% tolerance.
+    const teamShareCap = (1 / V) + 0.10;
+    const teamRinkCount = {}; // `${teamId}:${rink}` -> games on that rink
+    const teamGameCount = {}; // teamId -> fixtures assigned so far
+    const teamShareOk = (teamId, rink, extraOnRink, extraTeamFixtures) => {
+      const share = ((teamRinkCount[`${teamId}:${rink}`] || 0) + extraOnRink) /
+        ((teamGameCount[teamId] || 0) + extraTeamFixtures);
+      return share <= teamShareCap;
+    };
+
     // --- Step 4: assign rinks respecting date conflicts and targets ---
     const dateRinkUsage = {}; // dateKey -> Set of rinks used that day
     const allFixtures = [];
@@ -658,8 +670,16 @@ export default function LeagueAdmin() {
         }
 
         if (adjacentPairs.length > 0) {
+          // Prefer pairs that keep both teams within their per-rink share cap
+          const homeId = legs[0].home_team_id;
+          const awayId = legs[0].away_team_id;
+          const capOkPairs = adjacentPairs.filter(p =>
+            teamShareOk(homeId, p[0], 1, 2) && teamShareOk(homeId, p[1], 1, 2) &&
+            teamShareOk(awayId, p[0], 1, 2) && teamShareOk(awayId, p[1], 1, 2)
+          );
+          const pairPool = capOkPairs.length > 0 ? capOkPairs : adjacentPairs;
           // Tie-breaker: least overall rink usage
-          chosenPair = adjacentPairs.reduce((best, pair) => {
+          chosenPair = pairPool.reduce((best, pair) => {
             const bestUsage = best ? rinkAssigned[best[0]] + rinkAssigned[best[1]] : Infinity;
             const pairUsage = rinkAssigned[pair[0]] + rinkAssigned[pair[1]];
             return pairUsage < bestUsage ? pair : best;
@@ -683,6 +703,16 @@ export default function LeagueAdmin() {
           dateRinkUsage[dateKey].add(chosenPair[1]);
           rinkAssigned[chosenPair[0]]++;
           rinkAssigned[chosenPair[1]]++;
+          const tieHome = legs[0].home_team_id;
+          const tieAway = legs[0].away_team_id;
+          teamGameCount[tieHome] = (teamGameCount[tieHome] || 0) + 2;
+          teamGameCount[tieAway] = (teamGameCount[tieAway] || 0) + 2;
+          chosenPair.forEach(r => {
+            const hk = `${tieHome}:${r}`;
+            const ak = `${tieAway}:${r}`;
+            teamRinkCount[hk] = (teamRinkCount[hk] || 0) + 1;
+            teamRinkCount[ak] = (teamRinkCount[ak] || 0) + 1;
+          });
 
           for (let li = 0; li < legs.length; li++) {
             allFixtures.push({
@@ -708,15 +738,22 @@ export default function LeagueAdmin() {
         // Use date-specific rinks when adjacent rinks mode is enabled
         const dateRinks = getRinksForDate(dateKey);
 
-        // Candidate rinks: not used on this date, and still below target
+        // Candidate rinks: not used on this date, still below target, and keeping
+        // both teams within their per-rink share cap (ideal share + 10% tolerance)
         const candidates = dateRinks.filter(
+          r => !dateRinkUsage[dateKey].has(r) && rinkAssigned[r] < rinkTarget[r] &&
+            teamShareOk(match.home_team_id, r, 1, 1) && teamShareOk(match.away_team_id, r, 1, 1)
+        );
+
+        // Fallback 1: ignore the per-team cap but still respect rink targets
+        const targetOnly = dateRinks.filter(
           r => !dateRinkUsage[dateKey].has(r) && rinkAssigned[r] < rinkTarget[r]
         );
 
-        // Fallback: any rink not used on this date (ignores target — avoids dropping fixtures)
+        // Fallback 2: any rink not used on this date (avoids dropping fixtures)
         const fallback = dateRinks.filter(r => !dateRinkUsage[dateKey].has(r));
 
-        const pool = candidates.length > 0 ? candidates : fallback;
+        const pool = candidates.length > 0 ? candidates : (targetOnly.length > 0 ? targetOnly : fallback);
         if (pool.length === 0) continue; // truly no rink available on this date — skip
 
         // Among pool, pick the rink with fewest assignments so far (with random tie-breaking)
@@ -726,6 +763,12 @@ export default function LeagueAdmin() {
 
         dateRinkUsage[dateKey].add(chosenRink);
         rinkAssigned[chosenRink]++;
+        const homeKey = `${match.home_team_id}:${chosenRink}`;
+        const awayKey = `${match.away_team_id}:${chosenRink}`;
+        teamRinkCount[homeKey] = (teamRinkCount[homeKey] || 0) + 1;
+        teamRinkCount[awayKey] = (teamRinkCount[awayKey] || 0) + 1;
+        teamGameCount[match.home_team_id] = (teamGameCount[match.home_team_id] || 0) + 1;
+        teamGameCount[match.away_team_id] = (teamGameCount[match.away_team_id] || 0) + 1;
 
         allFixtures.push({
           league_id: league.id,
