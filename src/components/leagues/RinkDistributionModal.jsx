@@ -11,7 +11,7 @@ import { Loader2, RefreshCw, Check, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
-export default function RinkDistributionModal({ open, onClose, fixtures, teams, rinkCount, leagueRinks, league, onRegenerate, onConfirm, isLoading }) {
+export default function RinkDistributionModal({ open, onClose, fixtures, teams, rinkCount, leagueRinks, league, onRegenerate, onConfirm, isLoading, isRealloc }) {
   if (!fixtures || !teams) return null;
 
   // Only show rinks that are used in the fixtures (i.e. the selected league rinks)
@@ -56,11 +56,13 @@ export default function RinkDistributionModal({ open, onClose, fixtures, teams, 
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen && onClose) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
         <DialogHeader>
-          <DialogTitle>Fixture Distribution Preview</DialogTitle>
+          <DialogTitle>{isRealloc ? 'Rink Allocation Preview' : 'Fixture Distribution Preview'}</DialogTitle>
         </DialogHeader>
 
         <p className="text-sm text-gray-500 mb-4">
-          Review how matches are distributed across rinks before confirming. Each cell shows the number of games that team plays on that rink.
+          {isRealloc
+            ? 'Review the new rink allocation below. The fixtures themselves are unchanged — confirming will cancel the existing rink bookings for this league and re-book them using these rinks. Keep redrawing until you are happy.'
+            : 'Review how matches are distributed across rinks before confirming. Each cell shows the number of games that team plays on that rink.'}
         </p>
 
         <div className="overflow-x-auto">
@@ -139,11 +141,11 @@ export default function RinkDistributionModal({ open, onClose, fixtures, teams, 
           </Button>
           <Button variant="outline" onClick={onRegenerate} disabled={isLoading}>
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Regenerate
+            {isRealloc ? 'Redraw Rinks' : 'Regenerate'}
           </Button>
           <Button onClick={onConfirm} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700">
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-            Confirm Fixtures
+            {isRealloc ? 'Accept & Re-book' : 'Confirm Fixtures'}
           </Button>
         </DialogFooter>
       </DialogContent>

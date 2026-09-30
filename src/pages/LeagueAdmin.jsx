@@ -271,7 +271,51 @@ export default function LeagueAdmin() {
   const clubData = (entity, action, extra = {}) =>
     base44.functions.invoke('updateClubData', { entity, action, clubId, ...extra });
 
-  // League mutations
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Batched booking cancellation - avoids rate limiting on large leagues
+  const cancelBookingsInBatches = async (bookingIds) => {
+    if (!bookingIds || bookingIds.length === 0) return;
+    const CHUNK = 20;
+    let done = 0;
+    setBookingProgress({ phase: 'cancelling', done: 0, total: bookingIds.length });
+    try {
+      for (let i = 0; i < bookingIds.length; i += CHUNK) {
+        const chunk = bookingIds.slice(i, i + CHUNK);
+        await clubData('Booking', 'bulk_update', { ids: chunk, data: { status: 'cancelled' } });
+        done += chunk.length;
+        setBookingProgress({ phase: 'cancelling', done, total: bookingIds.length });
+        if (i + CHUNK < bookingIds.length) {
+          await sleep(600);
+        }
+      }
+    } finally {
+      setBookingProgress(null);
+    }
+  };
+
+  // Batched fixture deletion - avoids rate limiting on large leagues
+  const deleteFixturesInBatches = async (fixtureIds) => {
+    if (!fixtureIds || fixtureIds.length === 0) return;
+    const CHUNK = 25;
+    let done = 0;
+    setBookingProgress({ phase: 'deleting_fixtures', done: 0, total: fixtureIds.length });
+    try {
+      for (let i = 0; i < fixtureIds.length; i += CHUNK) {
+        const chunk = fixtureIds.slice(i, i + CHUNK);
+        await clubData('LeagueFixture', 'bulk_delete', { ids: chunk });
+        done += chunk.length;
+        setBookingProgress({ phase: 'deleting_fixtures', done, total: fixtureIds.length });
+        if (i + CHUNK < fixtureIds.length) {
+          await sleep(600);
+        }
+      }
+    } finally {
+      setBookingProgress(null);
+    }
+  };
+
+  // League mutations (create / update / delete)
   const createLeagueMutation = useMutation({
     mutationFn: (data) => clubData('League', 'create', { data }),
     onSuccess: () => {
@@ -501,31 +545,88 @@ export default function LeagueAdmin() {
     setPendingFixtureLeague(league);
     setPendingFixtureTeams(leagueTeams);
     setRegenerateCounter(0);
+    setPendingIsRealloc(false);
     setDistributionModalOpen(true);
   };
 
   const handleConfirmFixtures = async () => {
     setGeneratingFixtures(true);
-    const wasRegeneration = pendingIsRegeneration;
-    const createdCount = pendingFixtures.length;
+    try {
+      if (pendingIsRealloc) {
+        await confirmReallocFixtures();
+      } else {
+        const wasRegeneration = pendingIsRegeneration;
+        const createdCount = pendingFixtures.length;
+        const league = pendingFixtureLeague;
+        const cleanFixtures = pendingFixtures.map(({ _nonAdjacent, ...f }) => f);
+        const createdRes = await clubData('LeagueFixture', 'bulk_create', { data: cleanFixtures });
+        const createdFixtures = createdRes?.data?.records || [];
+        await clubData('League', 'update', { id: league.id, data: { fixtures_generated: true, status: 'active' } });
+        queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+        queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
+        setDistributionModalOpen(false);
+        setPendingFixtures([]);
+        setPendingFixtureLeague(null);
+        setPendingFixtureTeams([]);
+        setPendingIsRegeneration(false);
+        if (wasRegeneration) {
+          toast.success(`Regenerated ${createdCount} fixtures — now re-booking rinks`);
+          await handleBookRinks(league, createdFixtures);
+        } else {
+          toast.success(`Generated ${createdCount} fixtures`);
+        }
+      }
+    } finally {
+      setGeneratingFixtures(false);
+    }
+  };
+
+  // Accept in the distribution modal after a rink-allocation redraw: cancel the
+  // existing rink bookings for this league, save the new rink numbers, then
+  // re-book using the fresh allocations (all batched).
+  const confirmReallocFixtures = async () => {
     const league = pendingFixtureLeague;
-    const cleanFixtures = pendingFixtures.map(({ _nonAdjacent, ...f }) => f);
-    const createdRes = await clubData('LeagueFixture', 'bulk_create', { data: cleanFixtures });
-    const createdFixtures = createdRes?.data?.records || [];
-    await clubData('League', 'update', { id: league.id, data: { fixtures_generated: true, status: 'active' } });
-    queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
-    queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
-    setGeneratingFixtures(false);
-    setDistributionModalOpen(false);
-    setPendingFixtures([]);
-    setPendingFixtureLeague(null);
-    setPendingFixtureTeams([]);
-    setPendingIsRegeneration(false);
-    if (wasRegeneration) {
-      toast.success(`Regenerated ${createdCount} fixtures — now re-booking rinks`);
-      await handleBookRinks(league, createdFixtures);
-    } else {
-      toast.success(`Generated ${createdCount} fixtures`);
+    try {
+      const linkedBookingIds = (reallocSourceFixtures || []).map(f => f.booking_id).filter(Boolean);
+      let namedBookingIds = [];
+      try {
+        const leagueBookingsRes = await base44.functions.invoke('listBookingsForScheduling', {
+          clubId,
+          booker_name: `League - ${league.name}`
+        });
+        namedBookingIds = (leagueBookingsRes.data?.bookings || []).map(b => b.id);
+      } catch (_err) {
+        // proceed with linked bookings only
+      }
+      const allBookingIds = [...new Set([...linkedBookingIds, ...namedBookingIds])];
+      if (allBookingIds.length > 0) {
+        await cancelBookingsInBatches(allBookingIds);
+      }
+
+      // Save the new rink numbers to the fixtures (batched)
+      const updates = pendingFixtures
+        .filter(f => f.id)
+        .map(({ _nonAdjacent, ...f }) => ({ id: f.id, rink_number: f.rink_number }));
+      const UPDATE_CHUNK = 100;
+      setBookingProgress({ phase: 'updating', done: 0, total: updates.length });
+      for (let i = 0; i < updates.length; i += UPDATE_CHUNK) {
+        await base44.entities.LeagueFixture.bulkUpdate(updates.slice(i, i + UPDATE_CHUNK));
+        setBookingProgress({ phase: 'updating', done: Math.min(i + UPDATE_CHUNK, updates.length), total: updates.length });
+        if (i + UPDATE_CHUNK < updates.length) {
+          await sleep(600);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      setDistributionModalOpen(false);
+      setPendingIsRealloc(false);
+      setReallocSourceFixtures(null);
+      toast.success(`New rink allocation saved — re-booking ${updates.length} fixture${updates.length !== 1 ? 's' : ''}`);
+
+      // Re-book the rinks using the new allocations (clashes handled as normal)
+      await handleBookRinks(league, pendingFixtures.map(({ _nonAdjacent, ...f }) => f));
+    } finally {
+      setBookingProgress(null);
     }
   };
 
@@ -560,12 +661,12 @@ export default function LeagueAdmin() {
       const namedBookingIds = (leagueBookingsRes.data?.bookings || []).map(b => b.id);
       const allBookingIds = [...new Set([...linkedBookingIds, ...namedBookingIds])];
       if (allBookingIds.length > 0) {
-        await clubData('Booking', 'bulk_update', { ids: allBookingIds, data: { status: 'cancelled' } });
+        await cancelBookingsInBatches(allBookingIds);
       }
 
       // 2. Delete the old fixtures (any scores already entered are lost)
       if (existingFixtures.length > 0) {
-        await clubData('LeagueFixture', 'bulk_delete', { ids: existingFixtures.map(f => f.id) });
+        await deleteFixturesInBatches(existingFixtures.map(f => f.id));
       }
 
       // 3. Reset the league flags so it can be re-booked
@@ -581,6 +682,7 @@ export default function LeagueAdmin() {
       setPendingFixtureTeams(leagueTeamsList);
       setRegenerateCounter(0);
       setPendingIsRegeneration(true);
+      setPendingIsRealloc(false);
       setDistributionModalOpen(true);
       setRegenDialogLeague(null);
       toast.success(`Cancelled ${allBookingIds.length} booking(s) — review the new fixtures below`);
@@ -598,6 +700,30 @@ export default function LeagueAdmin() {
     setRegenerateCounter(nextSeed);
     const allFixtures = buildFixtureList(pendingFixtureLeague, pendingFixtureTeams, nextSeed);
     setPendingFixtures(allFixtures);
+  };
+
+  // "Regenerate Rink Allocations" — redraw rink numbers only (the fixtures
+  // themselves are kept), then show the distribution modal so the admin can
+  // keep redrawing until happy before accepting and re-booking.
+  const handleReallocateRinks = (league) => {
+    const leagueFixturesList = fixtures.filter(f => f.league_id === league.id);
+    if (leagueFixturesList.length === 0) {
+      toast.error('No fixtures to reallocate');
+      return;
+    }
+    setReallocSourceFixtures(leagueFixturesList);
+    setPendingFixtures(reassignRinkAllocations(league, leagueFixturesList, club?.rink_count || 6, Math.floor(Math.random() * 999983) + 1));
+    setPendingFixtureLeague(league);
+    setPendingFixtureTeams(teams.filter(t => t.league_id === league.id));
+    setPendingIsRegeneration(false);
+    setPendingIsRealloc(true);
+    setDistributionModalOpen(true);
+  };
+
+  // Regenerate button inside the modal during a rink-allocation redraw
+  const handleRegenerateAllocations = () => {
+    const nextSeed = Math.floor(Math.random() * 999983) + 1;
+    setPendingFixtures(reassignRinkAllocations(pendingFixtureLeague, reallocSourceFixtures, club?.rink_count || 6, nextSeed));
   };
 
   const handleBookRinks = async (league, fixtureListOverride) => {
@@ -701,22 +827,47 @@ export default function LeagueAdmin() {
       toast.info('No bookings created');
       return;
     }
-    const cleanBookings = bookingsToCreate.map(({ _fixtureId, ...b }) => b);
-    const createdRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'bulk_create', clubId, data: cleanBookings });
-    const createdBookings = createdRes?.data?.records || [];
-
-    for (let i = 0; i < bookingsToCreate.length; i++) {
-      const fixtureId = bookingsToCreate[i]._fixtureId;
-      if (fixtureId && createdBookings[i]?.id) {
-        await clubData('LeagueFixture', 'update', { id: fixtureId, data: { booking_id: createdBookings[i].id } });
+    try {
+      // Create bookings in batches so large leagues avoid rate limits
+      const CHUNK = 40;
+      const createdBookings = [];
+      setBookingProgress({ phase: 'creating', done: 0, total: bookingsToCreate.length });
+      for (let i = 0; i < bookingsToCreate.length; i += CHUNK) {
+        const chunk = bookingsToCreate.slice(i, i + CHUNK).map(({ _fixtureId, ...b }) => b);
+        const createdRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'bulk_create', clubId, data: chunk });
+        createdBookings.push(...(createdRes?.data?.records || []));
+        setBookingProgress({ phase: 'creating', done: createdBookings.length, total: bookingsToCreate.length });
+        if (i + CHUNK < bookingsToCreate.length) {
+          await sleep(600);
+        }
       }
-    }
 
-    await clubData('League', 'update', { id: league.id, data: { bookings_created: true } });
+      // Link the first booking of each fixture back to the fixture (batched)
+      const links = [];
+      for (let i = 0; i < bookingsToCreate.length; i++) {
+        const fixtureId = bookingsToCreate[i]._fixtureId;
+        if (fixtureId && createdBookings[i]?.id) {
+          links.push({ id: fixtureId, booking_id: createdBookings[i].id });
+        }
+      }
+      const LINK_CHUNK = 100;
+      setBookingProgress({ phase: 'linking', done: 0, total: links.length });
+      for (let i = 0; i < links.length; i += LINK_CHUNK) {
+        await base44.entities.LeagueFixture.bulkUpdate(links.slice(i, i + LINK_CHUNK));
+        setBookingProgress({ phase: 'linking', done: Math.min(i + LINK_CHUNK, links.length), total: links.length });
+        if (i + LINK_CHUNK < links.length) {
+          await sleep(600);
+        }
+      }
+
+      await clubData('League', 'update', { id: league.id, data: { bookings_created: true } });
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`Fixtures generated and rinks successfully booked. ${createdBookings.length} rink booking${createdBookings.length !== 1 ? 's' : ''} created.`);
+    } finally {
+      setBookingProgress(null);
+    }
   };
 
   const handleLeagueClashProceed = async (bookingsToCreate) => {
@@ -997,6 +1148,7 @@ export default function LeagueAdmin() {
             onRegenerateFixtures={(league) => setRegenDialogLeague(league)}
             regeneratingFixtures={regeneratingFixtures}
             onViewTeamFixtures={openTeamFixtures}
+            onReallocateRinks={handleReallocateRinks}
           />
         ) : (
           <div className="space-y-6">
@@ -1126,6 +1278,19 @@ export default function LeagueAdmin() {
                                 <RefreshCw className="w-4 h-4 mr-1" />
                               )}
                               Regenerate
+                            </Button>
+                          )}
+                          {league.fixtures_generated && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReallocateRinks(league)}
+                              disabled={regeneratingFixtures}
+                              className="text-blue-600 hover:bg-blue-50"
+                              title="Redraw rink allocations without changing fixtures"
+                            >
+                              <Shuffle className="w-4 h-4 mr-1" />
+                              Regenerate Rink Allocations
                             </Button>
                           )}
                           {league.fixtures_generated && (
@@ -2001,10 +2166,14 @@ export default function LeagueAdmin() {
           rinkCount={club?.rink_count || 6}
           league={pendingFixtureLeague}
           leagueRinks={pendingFixtureLeague?.league_rinks}
-          onRegenerate={handleRegenerateFixtures}
+          onRegenerate={pendingIsRealloc ? handleRegenerateAllocations : handleRegenerateFixtures}
           onConfirm={handleConfirmFixtures}
+          isRealloc={pendingIsRealloc}
           isLoading={generatingFixtures}
         />
+
+        {/* Batched booking / cleanup progress overlay */}
+        <BookingProgressOverlay progress={bookingProgress} />
 
         {/* Blacklist Dates Dialog */}
         <BlacklistDatesDialog
