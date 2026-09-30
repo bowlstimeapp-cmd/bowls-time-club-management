@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, CheckCircle, XCircle, Users, Calendar } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Users, Calendar, CalendarX } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -20,6 +20,7 @@ const notificationIcons = {
   booking_rejected: XCircle,
   booking_moved: Calendar,
   team_selection: Users,
+  unavailability_conflict: CalendarX,
 };
 
 export default function NotificationDropdown({ userEmail, clubId }) {

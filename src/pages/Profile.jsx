@@ -245,6 +245,11 @@ export default function Profile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myUnavailabilities'] });
       toast.success('Unavailability added');
+      // Sync into My Teams unavailability and warn captains if selected to play
+      base44.functions.invoke('syncPlayerUnavailability', {
+        user_email: user.email,
+        new_range: { start_date: startDate, end_date: endDate },
+      }).catch(() => {});
       setStartDate('');
       setEndDate('');
     },

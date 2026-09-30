@@ -1122,11 +1122,16 @@ export default function LeagueAdmin() {
       ...(initialPlayers && { players: initialPlayers }),
     };
 
+    const playersToSync = editingTeam ? (players ?? []) : (initialPlayers || []);
     if (editingTeam) {
       updateTeamMutation.mutate({ id: editingTeam.id, data: { ...data, players: players ?? [] } });
     } else {
       createTeamMutation.mutate(data);
     }
+    // Prepopulate My Teams unavailability from each player's My Profile unavailability
+    playersToSync.forEach(email => {
+      if (email) base44.functions.invoke('syncPlayerUnavailability', { user_email: email, notify: false }).catch(() => {});
+    });
   };
 
   const openAddTeam = (league) => {

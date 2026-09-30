@@ -36,7 +36,8 @@ import {
   Pencil,
   BarChart3,
   CalendarX,
-  MessageSquare
+  MessageSquare,
+  AlertTriangle
 } from 'lucide-react';
 import PlayerAvailabilityDialog from '@/components/teams/PlayerAvailabilityDialog';
 import RegenerateRotaModal from '@/components/teams/RegenerateRotaModal';
@@ -173,6 +174,10 @@ export default function MyLeagueTeam() {
       id: selectedTeam.id,
       data: { players: [...currentPlayers, selectedPlayer] }
     });
+    // Prepopulate My Teams unavailability from the player's My Profile unavailability
+    base44.functions.invoke('syncPlayerUnavailability', { user_email: selectedPlayer, notify: false })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] }))
+      .catch(() => {});
   };
 
   const handleRemovePlayer = (team, playerEmail) => {
@@ -517,7 +522,20 @@ export default function MyLeagueTeam() {
                 .sort((a, b) => a.match_date.localeCompare(b.match_date));
               const players = team.players || [];
               const hasRota = team.fixture_rota && Object.keys(team.fixture_rota).length > 0;
-              
+              // Players selected in the rota on a day they are marked unavailable
+              const rotaConflicts = [];
+              if (hasRota && team.player_unavailability) {
+                teamFixtures.forEach(f => {
+                  const opponent = teams.find(t => t.id === (f.home_team_id === team.id ? f.away_team_id : f.home_team_id))?.name;
+                  (team.fixture_rota[f.id] || []).forEach(playerEmail => {
+                    const unavailable = team.player_unavailability[playerEmail] || [];
+                    if (unavailable.includes(f.match_date)) {
+                      rotaConflicts.push({ playerEmail, date: f.match_date, opponent });
+                    }
+                  });
+                });
+              }
+
               return (
                 <motion.div
                   key={team.id}
@@ -665,6 +683,21 @@ export default function MyLeagueTeam() {
                             <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
                               {userIsCaptain ? 'Generate a rota to evenly distribute players across fixtures' : 'No rota generated yet'}
                             </p>
+                          )}
+                          {rotaConflicts.length > 0 && (
+                            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              <p className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                Unavailable players selected in this rota
+                              </p>
+                              <ul className="mt-1.5 space-y-1">
+                                {rotaConflicts.map((c, i) => (
+                                  <li key={i} className="text-xs text-amber-700">
+                                    {getMemberName(c.playerEmail)} is unavailable on {format(parseISO(c.date), 'EEE d MMM yyyy')} but is selected to play{c.opponent ? ` vs ${c.opponent}` : ''}.
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           )}
                         </div>
                       )}
