@@ -6,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Users, ListChecks, Calendar } from 'lucide-react';
+import { Trophy, Users, ListChecks, Calendar, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 function LeagueStat({ icon: Icon, label, value, accent, sub }) {
@@ -64,6 +64,30 @@ export default function LeagueAnalyticsSection({ clubId }) {
     t => t.fixture_rota && Object.keys(t.fixture_rota).length > 0
   );
 
+  // Teams (active leagues) with players selected on a day they're marked unavailable
+  const teamsWithConflicts = useMemo(() => {
+    return teamsInActiveLeagues
+      .map(team => {
+        const rota = team.fixture_rota;
+        if (!rota || Object.keys(rota).length === 0 || !team.player_unavailability) return null;
+        const teamFixturesList = fixtures
+          .filter(f => f.home_team_id === team.id || f.away_team_id === team.id)
+          .sort((a, b) => a.match_date.localeCompare(b.match_date));
+        const conflicts = [];
+        teamFixturesList.forEach(f => {
+          const opponent = teams.find(t => t.id === (f.home_team_id === team.id ? f.away_team_id : f.home_team_id))?.name;
+          (rota[f.id] || []).forEach(playerEmail => {
+            const unavailable = team.player_unavailability[playerEmail] || [];
+            if (unavailable.includes(f.match_date)) {
+              conflicts.push({ playerEmail, date: f.match_date, opponent });
+            }
+          });
+        });
+        return conflicts.length > 0 ? { team, conflicts } : null;
+      })
+      .filter(Boolean);
+  }, [teamsInActiveLeagues, fixtures, teams]);
+
   const selectedLeague = leagues.find(l => l.id === selectedLeagueId);
   const leagueTeams = teams.filter(t => t.league_id === selectedLeagueId);
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
@@ -100,6 +124,40 @@ export default function LeagueAnalyticsSection({ clubId }) {
             <LeagueStat icon={ListChecks} label="Teams with a Generated Rota" value={teamsWithRota.length} accent="bg-amber-100 text-amber-600" />
           </div>
         )}
+
+        {/* Rota conflict warnings */}
+        <div className="border-t pt-5">
+          <p className="text-xs font-medium text-gray-500 mb-2">
+            Rota Conflict Warnings — teams with players selected on a day they are unavailable
+          </p>
+          {teamsWithConflicts.length === 0 ? (
+            <p className="text-sm text-emerald-600 flex items-center gap-1.5">
+              <ListChecks className="w-4 h-4" /> No rota conflicts in active leagues.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {teamsWithConflicts.map(({ team, conflicts }) => (
+                <div key={team.id} className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-sm font-semibold text-gray-900">{team.name}</span>
+                    <span className="text-xs text-gray-500">({leagues.find(l => l.id === team.league_id)?.name || 'Unknown league'})</span>
+                    <span className="ml-auto text-xs font-medium text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                      {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {conflicts.map((c, i) => (
+                      <li key={i} className="text-xs text-gray-600 pl-6">
+                        {getMemberName(c.playerEmail)} is unavailable on {format(parseISO(c.date), 'EEE d MMM yyyy')} but is selected to play{c.opponent ? ` vs ${c.opponent}` : ''}.
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Rota viewer */}
         <div className="border-t pt-5">
