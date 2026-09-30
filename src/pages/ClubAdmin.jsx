@@ -29,6 +29,7 @@ import {
   Trash2,
   Loader2,
   Mail,
+  AtSign,
   Hash,
   CreditCard,
   UserX,
@@ -43,6 +44,7 @@ import MemberDetailModal from '@/components/member/MemberDetailModal';
 import AddMemberModal from '@/components/member/AddMemberModal';
 import BulkUploadModal from '@/components/member/BulkUploadModal';
 import MergeMembersDialog from '@/components/member/MergeMembersDialog';
+import ChangeMemberEmailDialog from '@/components/member/ChangeMemberEmailDialog';
 
 // Role pill config
 const roleMeta = {
@@ -59,7 +61,7 @@ const membershipDotColor = {
   'Social Member':        'bg-purple-400',
 };
 
-function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge, isPlatformAdmin, onEmail }) {
+function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge, isPlatformAdmin, onEmail, onChangeEmail }) {
   const role = member.role || 'member';
   const roleBadge = roleMeta[role] || roleMeta.member;
   const initials = (member.user_name || member.user_email || '?')
@@ -161,11 +163,21 @@ function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, 
         )}
       </div>
 
+      {/* Change email button — platform admin only, appears on hover */}
+      {isPlatformAdmin && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onChangeEmail(member); }}
+          className="absolute bottom-3 right-12 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 z-10"
+          title="Change member email"
+        >
+          <AtSign className="w-3.5 h-3.5" />
+        </button>
+      )}
       {/* Email button — platform admin only, appears on hover */}
       {isPlatformAdmin && (
         <button
           onClick={(e) => { e.stopPropagation(); onEmail(member); }}
-          className="absolute bottom-3 right-12 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 z-10"
+          className="absolute bottom-3 right-20 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 z-10"
           title="Email member"
         >
           <Mail className="w-3.5 h-3.5" />
@@ -214,6 +226,7 @@ export default function ClubAdmin() {
   const [emailBody, setEmailBody] = useState('');
   const [emailSending, setEmailSending] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [emailChangeMember, setEmailChangeMember] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -829,6 +842,7 @@ export default function ClubAdmin() {
                             onToggleMerge={handleToggleMergeSelect}
                             isPlatformAdmin={isPlatformAdmin}
                             onEmail={(member) => { setEmailModalMember(member); setEmailSubject(''); setEmailBody(''); }}
+                            onChangeEmail={(member) => setEmailChangeMember(member)}
                           />
                         </motion.div>
                       ))}
@@ -881,6 +895,7 @@ export default function ClubAdmin() {
                           payment={paymentByEmail[member.user_email]}
                           isPlatformAdmin={isPlatformAdmin}
                           onEmail={(member) => { setEmailModalMember(member); setEmailSubject(''); setEmailBody(''); }}
+                            onChangeEmail={(member) => setEmailChangeMember(member)}
                         />
                       </motion.div>
                     ))}
@@ -998,6 +1013,13 @@ export default function ClubAdmin() {
           targetMember={mergeSelection[1]}
           clubId={clubId}
           onMerged={handleMergeComplete}
+        />
+        <ChangeMemberEmailDialog
+          open={!!emailChangeMember}
+          member={emailChangeMember}
+          clubId={clubId}
+          onClose={() => setEmailChangeMember(null)}
+          onComplete={() => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] })}
         />
 
         {/* Delete All Members Confirmation */}

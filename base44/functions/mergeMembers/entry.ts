@@ -1,101 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import {
+  repointField,
+  repointTournaments,
+} from '../../shared/memberEmailHelpers.ts';
 
 // ---------------------------------------------------------------------------
 // Member Identity Merge — repoints all club data from a source (placeholder) email
 // to a target (real) email, then deletes the source ClubMembership.
 //
 // Authorization: caller must be an approved club admin OR platform admin.
+// Helpers are shared with updateMemberEmail in base44/shared/memberEmailHelpers.ts.
 // PlayerElo is explicitly NOT touched (known limitation).
 // created_by fields are NOT touched (audit metadata, not identity).
 // ---------------------------------------------------------------------------
-
-// Helper: repoint a single email field on an entity
-async function repointField(sr, entityName, field, sourceEmail, targetEmail, clubId, scopeByClub) {
-  const query = scopeByClub ? { [field]: sourceEmail, club_id: clubId } : { [field]: sourceEmail };
-  const key = `${entityName}_${field}`;
-
-  // Count matching records (best-effort)
-  let count = 0;
-  try {
-    const records = await sr.entities[entityName].filter(query);
-    count = records.length;
-  } catch (_countErr) {
-    count = -1; // count unknown — proceed with update anyway
-  }
-
-  if (count === 0) return { key, count: 0, success: true };
-
-  // Update matching records
-  try {
-    await sr.entities[entityName].updateMany(query, { $set: { [field]: targetEmail } });
-    return { key, count, success: true };
-  } catch (e) {
-    return { key, count, success: false, error: e.message };
-  }
-}
-
-// Helper: replace email in a pipe-separated bracket entry (teams are "email1|email2|...")
-function replaceInEntry(entry, sourceEmail, targetEmail) {
-  if (!entry || typeof entry !== 'string') return entry;
-  return entry.split('|').map(e => e === sourceEmail ? targetEmail : e).join('|');
-}
-
-// Helper: walk bracket recursively and replace emails in player1, player2, winner, score_submitted_by
-function walkBracket(bracket, sourceEmail, targetEmail) {
-  let modified = false;
-  const newBracket = JSON.parse(JSON.stringify(bracket));
-  if (newBracket.rounds) {
-    for (const round of newBracket.rounds) {
-      for (const match of round) {
-        if (match.player1) { const v = replaceInEntry(match.player1, sourceEmail, targetEmail); if (v !== match.player1) { match.player1 = v; modified = true; } }
-        if (match.player2) { const v = replaceInEntry(match.player2, sourceEmail, targetEmail); if (v !== match.player2) { match.player2 = v; modified = true; } }
-        if (match.winner) { const v = replaceInEntry(match.winner, sourceEmail, targetEmail); if (v !== match.winner) { match.winner = v; modified = true; } }
-        if (match.score_submitted_by === sourceEmail) { match.score_submitted_by = targetEmail; modified = true; }
-      }
-    }
-  }
-  return { bracket: newBracket, modified };
-}
-
-// Helper: repoint ClubTournament data (players array, player_teams nested arrays, bracket)
-async function repointTournaments(sr, clubId, sourceEmail, targetEmail) {
-  try {
-    const tournaments = await sr.entities.ClubTournament.filter({ club_id: clubId });
-    let count = 0;
-    for (const tournament of tournaments) {
-      let modified = false;
-      const update = {};
-
-      // players array
-      if (tournament.players && tournament.players.includes(sourceEmail)) {
-        update.players = tournament.players.map(p => p === sourceEmail ? targetEmail : p);
-        modified = true;
-      }
-
-      // player_teams (nested arrays of arrays of emails)
-      if (tournament.player_teams && tournament.player_teams.some(team => team && team.includes(sourceEmail))) {
-        update.player_teams = tournament.player_teams.map(team =>
-          (team || []).map(p => p === sourceEmail ? targetEmail : p)
-        );
-        modified = true;
-      }
-
-      // bracket (recursive walk)
-      if (tournament.bracket) {
-        const result = walkBracket(tournament.bracket, sourceEmail, targetEmail);
-        if (result.modified) { update.bracket = result.bracket; modified = true; }
-      }
-
-      if (modified) {
-        await sr.entities.ClubTournament.update(tournament.id, update);
-        count++;
-      }
-    }
-    return { key: 'ClubTournament', count, success: true };
-  } catch (e) {
-    return { key: 'ClubTournament', count: 0, success: false, error: e.message };
-  }
-}
 
 export default async function(req) {
   try {
