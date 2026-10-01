@@ -206,14 +206,15 @@ useEffect(() => {
     enabled: !!clubId && !!user?.email,
   });
 
-  // After fixtures + teams load, find the first past unscored fixture for this member
+  // After fixtures + teams load, find the first unscored fixture (booking start
+  // time passed) for this member
   // and show the result prompt (only once per session — cleared on close)
   const [resultPromptChecked, setResultPromptChecked] = useState(false);
   React.useEffect(() => {
     if (resultPromptChecked) return;
     if (!user?.email || !allLeagueFixtures.length || !leagueTeams.length) return;
 
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const now = new Date();
 
     // For kiosk sessions, check by the kiosk member's email
     const checkEmail = kioskMember ? kioskMember.user_email : user.email;
@@ -232,13 +233,16 @@ useEffect(() => {
 
     const myTeamIds = new Set(myTeams.map(t => t.id));
 
-    // Past fixtures involving my teams with no confirmed result
-    const candidates = allLeagueFixtures.filter(f =>
-      f.match_date < today &&
-      f.status !== 'completed' &&
-      f.status !== 'cancelled' &&
-      (myTeamIds.has(f.home_team_id) || myTeamIds.has(f.away_team_id))
-    );
+    // Fixtures involving my teams with no confirmed result, whose rink booking
+    // start time has passed (league start_time on the fixture date — same-day
+    // fixtures only become promptable once the match is underway)
+    const candidates = allLeagueFixtures.filter(f => {
+      if (f.status === 'completed' || f.status === 'cancelled') return false;
+      if (!(myTeamIds.has(f.home_team_id) || myTeamIds.has(f.away_team_id))) return false;
+      const league = leagues.find(l => l.id === f.league_id);
+      const startTime = league?.start_time || '00:00';
+      return new Date(`${f.match_date}T${startTime}`) <= now;
+    });
 
     if (!candidates.length) {
       setResultPromptChecked(true);
