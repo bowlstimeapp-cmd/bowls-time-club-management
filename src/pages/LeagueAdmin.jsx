@@ -392,9 +392,29 @@ export default function LeagueAdmin() {
   });
 
   const deleteTeamMutation = useMutation({
-    mutationFn: (id) => clubData('LeagueTeam', 'delete', { id }),
+    mutationFn: async (id) => {
+      // Remove every fixture referencing the deleted team (so regeneration,
+      // tables and team views never show a blank entry for it)
+      const [asHome, asAway] = await Promise.all([
+        base44.entities.LeagueFixture.filter({ home_team_id: id }),
+        base44.entities.LeagueFixture.filter({ away_team_id: id }),
+      ]);
+      const teamFixtures = [...asHome, ...asAway].filter(
+        (f, i, arr) => arr.findIndex(x => x.id === f.id) === i
+      );
+      const linkedBookingIds = teamFixtures.map(f => f.booking_id).filter(Boolean);
+      if (linkedBookingIds.length > 0) {
+        await cancelBookingsInBatches(linkedBookingIds);
+      }
+      if (teamFixtures.length > 0) {
+        await deleteFixturesInBatches(teamFixtures.map(f => f.id));
+      }
+      await clubData('LeagueTeam', 'delete', { id });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
       toast.success('Team deleted');
       setDeleteTeamId(null);
     },
@@ -1969,7 +1989,7 @@ export default function LeagueAdmin() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Team?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete this team. This action cannot be undone.
+                This will permanently delete this team and remove any of its fixtures (and their rink bookings) from the league. If fixtures have already been generated, regenerate them afterwards to rebalance the schedule. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
