@@ -747,7 +747,11 @@ export default function LeagueAdmin() {
   };
 
   const handleBookRinks = async (league, fixtureListOverride) => {
-    const leagueFixtures = fixtureListOverride || fixtures.filter(f => f.league_id === league.id);
+    // Always process from the earliest (first) fixture date onwards, so
+    // bookings are created from the league start date regardless of how the
+    // fixtures happen to be ordered in the query results.
+    const leagueFixtures = (fixtureListOverride || fixtures.filter(f => f.league_id === league.id))
+      .slice().sort((a, b) => String(a.match_date).localeCompare(String(b.match_date)));
     const leagueTeams = teams.filter(t => t.league_id === league.id);
     
     if (leagueFixtures.length === 0) {
@@ -805,8 +809,26 @@ export default function LeagueAdmin() {
 
     const clashes = [];
     const nonClashingBookings = [];
+    const alreadyBookedLinks = []; // fixtures whose rink was booked on a previous run
 
     for (const proposed of proposedBookings) {
+      // Already booked by an earlier run of this same league booking? Skip it
+      // quietly (and repair the fixture link) instead of raising a clash —
+      // this keeps "Book Rinks" idempotent so re-running it fills any gaps.
+      const ownBooking = allExistingBookings.find(
+        b => b.booker_name === proposed.booker_name &&
+             b.status === 'approved' &&
+             b.rink_number === proposed.rink_number &&
+             b.date === proposed.date &&
+             b.start_time === proposed.start_time
+      );
+      if (ownBooking) {
+        if (proposed._fixtureId) {
+          alreadyBookedLinks.push({ id: proposed._fixtureId, booking_id: ownBooking.id });
+        }
+        continue;
+      }
+
       const existingBooking = allExistingBookings.find(
         b => b.rink_number === proposed.rink_number &&
              b.date === proposed.date &&
@@ -835,48 +857,67 @@ export default function LeagueAdmin() {
     setBookingRinks(false);
 
     if (clashes.length === 0) {
-      await doCreateLeagueBookings(nonClashingBookings, leagueFixtures, league);
+      await doCreateLeagueBookings(nonClashingBookings, leagueFixtures, league, alreadyBookedLinks);
     } else {
-      setClashData({ clashes, nonClashingBookings, league, leagueFixturesForBooking: leagueFixtures, allExistingBookings });
+      setClashData({ clashes, nonClashingBookings, league, leagueFixturesForBooking: leagueFixtures, allExistingBookings, alreadyBookedLinks });
       setClashModalOpen(true);
     }
   };
 
-  const doCreateLeagueBookings = async (bookingsToCreate, leagueFixtures, league) => {
-    if (bookingsToCreate.length === 0) {
-      toast.info('No bookings created');
+  const doCreateLeagueBookings = async (bookingsToCreate, leagueFixtures, league, alreadyBookedLinks = []) => {
+    if (bookingsToCreate.length === 0 && alreadyBookedLinks.length === 0) {
+      toast.info('All fixtures already booked — nothing to do');
       return;
     }
     try {
-      // Create bookings in batches so large leagues avoid rate limits
+      // Create bookings in batches so large leagues avoid rate limits, and
+      // retry each chunk so a one-off rate-limit blip can't silently drop
+      // bookings from the middle of the schedule.
       const CHUNK = 40;
       const createdBookings = [];
-      setBookingProgress({ phase: 'creating', done: 0, total: bookingsToCreate.length });
+      // Fixture links include fixtures whose rink was already booked on a
+      // previous run, plus the first booking of each newly created fixture
+      const links = [...alreadyBookedLinks];
+      const totalSlots = bookingsToCreate.length + alreadyBookedLinks.length;
+      setBookingProgress({ phase: 'creating', done: 0, total: totalSlots });
       for (let i = 0; i < bookingsToCreate.length; i += CHUNK) {
-        const chunk = bookingsToCreate.slice(i, i + CHUNK).map(({ _fixtureId, ...b }) => b);
-        const createdRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'bulk_create', clubId, data: chunk });
-        createdBookings.push(...(createdRes?.data?.records || []));
-        setBookingProgress({ phase: 'creating', done: createdBookings.length, total: bookingsToCreate.length });
+        const chunkOriginals = bookingsToCreate.slice(i, i + CHUNK);
+        const chunk = chunkOriginals.map(({ _fixtureId, ...b }) => b);
+        let createdRes = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            createdRes = await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'bulk_create', clubId, data: chunk });
+            break;
+          } catch (err) {
+            if (attempt === 2) throw err;
+            await sleep(2000 * (attempt + 1));
+          }
+        }
+        const records = createdRes?.data?.records || [];
+        // Match fixture links chunk-locally so a partial chunk can't
+        // mis-align links to the wrong fixture
+        chunkOriginals.forEach((orig, j) => {
+          if (orig._fixtureId && records[j]?.id) {
+            links.push({ id: orig._fixtureId, booking_id: records[j].id });
+          }
+        });
+        createdBookings.push(...records);
+        setBookingProgress({ phase: 'creating', done: Math.min(i + CHUNK, bookingsToCreate.length) + alreadyBookedLinks.length, total: totalSlots });
         if (i + CHUNK < bookingsToCreate.length) {
           await sleep(600);
         }
       }
 
       // Link the first booking of each fixture back to the fixture (batched)
-      const links = [];
-      for (let i = 0; i < bookingsToCreate.length; i++) {
-        const fixtureId = bookingsToCreate[i]._fixtureId;
-        if (fixtureId && createdBookings[i]?.id) {
-          links.push({ id: fixtureId, booking_id: createdBookings[i].id });
-        }
-      }
       const LINK_CHUNK = 100;
-      setBookingProgress({ phase: 'linking', done: 0, total: links.length });
-      for (let i = 0; i < links.length; i += LINK_CHUNK) {
-        await base44.entities.LeagueFixture.bulkUpdate(links.slice(i, i + LINK_CHUNK));
-        setBookingProgress({ phase: 'linking', done: Math.min(i + LINK_CHUNK, links.length), total: links.length });
-        if (i + LINK_CHUNK < links.length) {
-          await sleep(600);
+      if (links.length > 0) {
+        setBookingProgress({ phase: 'linking', done: 0, total: links.length });
+        for (let i = 0; i < links.length; i += LINK_CHUNK) {
+          await base44.entities.LeagueFixture.bulkUpdate(links.slice(i, i + LINK_CHUNK));
+          setBookingProgress({ phase: 'linking', done: Math.min(i + LINK_CHUNK, links.length), total: links.length });
+          if (i + LINK_CHUNK < links.length) {
+            await sleep(600);
+          }
         }
       }
 
@@ -884,15 +925,16 @@ export default function LeagueAdmin() {
     queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
     queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
-    toast.success(`Fixtures generated and rinks successfully booked. ${createdBookings.length} rink booking${createdBookings.length !== 1 ? 's' : ''} created.`);
+    const totalDone = createdBookings.length + alreadyBookedLinks.length;
+    toast.success(`Rinks booked from the first fixture. ${createdBookings.length} new booking${createdBookings.length !== 1 ? 's' : ''} created${alreadyBookedLinks.length ? `, ${alreadyBookedLinks.length} already in place from a previous run` : ''} covering ${totalDone} fixture${totalDone !== 1 ? 's' : ''}.`);
     } finally {
       setBookingProgress(null);
     }
   };
 
   const handleLeagueClashProceed = async (bookingsToCreate) => {
-    const { league, leagueFixturesForBooking } = clashData;
-    await doCreateLeagueBookings(bookingsToCreate, leagueFixturesForBooking, league);
+    const { league, leagueFixturesForBooking, alreadyBookedLinks } = clashData;
+    await doCreateLeagueBookings(bookingsToCreate, leagueFixturesForBooking, league, alreadyBookedLinks || []);
     setClashModalOpen(false);
   };
 
