@@ -87,6 +87,7 @@ import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membersh
 import { buildFixtureList as buildFixturesForLeague, reassignRinkAllocations } from '@/lib/leagueFixtureGenerator';
 import LeagueSearchSelect from '@/components/leagues/LeagueSearchSelect';
 import LeagueFocusView from '@/components/leagues/LeagueFocusView';
+import LeagueTeamsSection from '@/components/leagues/LeagueTeamsSection';
 
 export default function LeagueAdmin() {
   const [searchParams] = useSearchParams();
@@ -1181,7 +1182,7 @@ export default function LeagueAdmin() {
   };
 
   // The standard League card, shared by the "See all" list and the single-league view
-  const renderLeagueCard = (league, leagueTeams) => (
+  const renderLeagueCard = (league, leagueTeams, teamsDefaultOpen = true) => (
     <motion.div
       key={league.id}
       initial={{ opacity: 0, y: 20 }}
@@ -1376,76 +1377,14 @@ export default function LeagueAdmin() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-medium text-gray-700 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Teams ({leagueTeams.length})
-            </h4>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openAddTeam(league)}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Add Team
-            </Button>
-          </div>
-
-          {leagueTeams.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">
-              No teams in this league yet
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {leagueTeams.map((team) => (
-                <div
-                  key={team.id}
-                  className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h5 className="font-medium text-gray-900">{team.name}</h5>
-                      {team.captain_email ? (
-                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                          <UserCircle className="w-4 h-4" />
-                          {team.captain_name || team.captain_email}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-400 mt-1">No captain assigned</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => openTeamFixtures(team)}
-                        title="View team fixtures"
-                      >
-                        <List className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleEditTeam(team)}
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                        onClick={() => setDeleteTeamId(team.id)}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <LeagueTeamsSection
+            leagueTeams={leagueTeams}
+            defaultOpen={teamsDefaultOpen}
+            onAddTeam={() => openAddTeam(league)}
+            onViewFixtures={openTeamFixtures}
+            onEditTeam={handleEditTeam}
+            onDeleteTeam={(id) => setDeleteTeamId(id)}
+          />
         </CardContent>
       </Card>
     </motion.div>
@@ -1535,7 +1474,7 @@ export default function LeagueAdmin() {
             const focusTeams = teams.filter(t => t.league_id === focusLeague.id);
             return (
               <div className="space-y-6">
-                {renderLeagueCard(focusLeague, focusTeams)}
+                {renderLeagueCard(focusLeague, focusTeams, false)}
                 <LeagueFocusView
                   league={focusLeague}
                   teams={teams}
