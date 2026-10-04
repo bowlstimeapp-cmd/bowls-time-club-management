@@ -1182,7 +1182,7 @@ export default function LeagueAdmin() {
   };
 
   // The standard League card, shared by the "See all" list and the single-league view
-  const renderLeagueCard = (league, leagueTeams, teamsDefaultOpen = true) => (
+  const renderLeagueCard = (league, leagueTeams, teamsDefaultOpen = false) => (
     <motion.div
       key={league.id}
       initial={{ opacity: 0, y: 20 }}
