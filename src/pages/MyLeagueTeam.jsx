@@ -202,24 +202,52 @@ export default function MyLeagueTeam() {
     const member = members.find(m => m.user_email === email);
     return member?.phone || '';
   };
+// Per-team save queue so rapid clicks are written in order
+const rotaSaveQueue = useRef({});
+const rotaPendingSaves = useRef({});
 
-  const handleToggleRotaPlayer = async (team, fixtureId, playerEmail) => {
-    // Refetch the latest team data to avoid stale state
-    const latestTeams = await base44.entities.LeagueTeam.filter({ id: team.id });
-    const latestTeam = latestTeams[0];
-    
-    const rota = { ...(latestTeam?.fixture_rota || {}) };
-    const currentPlayers = [...(rota[fixtureId] || [])];
-    
-    if (currentPlayers.includes(playerEmail)) {
-      rota[fixtureId] = currentPlayers.filter(p => p !== playerEmail);
-    } else {
-      rota[fixtureId] = [...currentPlayers, playerEmail];
+const handleToggleRotaPlayer = (team, fixtureId, playerEmail) => {
+  const cacheKey = ['leagueTeams', clubId];
+
+  // Use the latest cached team (already includes any earlier unsaved ticks)
+  const cachedTeam = (queryClient.getQueryData(cacheKey) || []).find(t => t.id === team.id) || team;
+  const rota = { ...(cachedTeam.fixture_rota || {}) };
+  const currentPlayers = [...(rota[fixtureId] || [])];
+
+  rota[fixtureId] = currentPlayers.includes(playerEmail)
+    ? currentPlayers.filter(p => p !== playerEmail)
+    : [...currentPlayers, playerEmail];
+
+  // 1. Update the UI instantly
+  queryClient.setQueryData(cacheKey, (old = []) =>
+    old.map(t => (t.id === team.id ? { ...t, fixture_rota: rota } : t))
+  );
+
+  // 2. Save in the background, one at a time per team, in click order
+  rotaPendingSaves.current[team.id] = (rotaPendingSaves.current[team.id] || 0) + 1;
+  const previous = rotaSaveQueue.current[team.id] || Promise.resolve();
+
+  rotaSaveQueue.current[team.id] = previous.then(async () => {
+    try {
+      await base44.functions.invoke('updateClubData', {
+        entity: 'LeagueTeam',
+        action: 'captain_update',
+        clubId,
+        id: team.id,
+        data: { fixture_rota: rota },
+      });
+    } catch (err) {
+      toast.error('Could not save rota change - reverting');
+      queryClient.invalidateQueries({ queryKey: ['leagueTeams'], exact: false });
+    } finally {
+      rotaPendingSaves.current[team.id] -= 1;
+      // Once the last queued save has finished, quietly resync with the server
+      if (rotaPendingSaves.current[team.id] === 0) {
+        queryClient.invalidateQueries({ queryKey: ['leagueTeams'], exact: false });
+      }
     }
-    
-    await base44.functions.invoke('updateClubData', { entity: 'LeagueTeam', action: 'captain_update', clubId, id: team.id, data: { fixture_rota: rota } });
-    queryClient.invalidateQueries({ queryKey: ['leagueTeams'], exact: false });
-  };
+  });
+};
 
   const openAddPlayer = (team) => {
     setSelectedTeam(team);
