@@ -163,6 +163,8 @@ export default function LeagueAdmin() {
   const [awayScore, setAwayScore] = useState('');
   const [homeSets, setHomeSets] = useState('');
   const [awaySets, setAwaySets] = useState('');
+  const [hadTiebreak, setHadTiebreak] = useState(false);
+  const [tiebreakWinner, setTiebreakWinner] = useState(null);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
   const [scoresModalOpen, setScoresModalOpen] = useState(false);
@@ -974,6 +976,8 @@ export default function LeagueAdmin() {
     setAwayScore(fixture.away_score?.toString() || '');
     setHomeSets(fixture.home_sets?.toString() || '');
     setAwaySets(fixture.away_sets?.toString() || '');
+    setHadTiebreak(fixture.had_tiebreak === true);
+    setTiebreakWinner(fixture.tiebreak_winner || null);
     setScoreDialogOpen(true);
   };
 
@@ -988,6 +992,21 @@ export default function LeagueAdmin() {
       toast.error('Please enter both set counts');
       return;
     }
+    if (isSetsLeague) {
+      const setsLevel = parseInt(homeSets) === parseInt(awaySets);
+      if (!hadTiebreak && setsLevel) {
+        toast.error('Sets are level – switch on Tiebreak and choose the winner');
+        return;
+      }
+      if (hadTiebreak && !setsLevel) {
+        toast.error('A tiebreak is only played when sets are level');
+        return;
+      }
+      if (hadTiebreak && !tiebreakWinner) {
+        toast.error('Please choose the tiebreak winner');
+        return;
+      }
+    }
     
     const updateData = {
       home_score: parseInt(homeScore),
@@ -997,6 +1016,8 @@ export default function LeagueAdmin() {
     if (isSetsLeague) {
       updateData.home_sets = parseInt(homeSets);
       updateData.away_sets = parseInt(awaySets);
+      updateData.had_tiebreak = hadTiebreak;
+      updateData.tiebreak_winner = hadTiebreak ? tiebreakWinner : null;
     }
 
     await clubData('LeagueFixture', 'update', { id: editingFixture.id, data: updateData });
@@ -2196,6 +2217,38 @@ export default function LeagueAdmin() {
                           <Label className="block mb-2 text-xs">{awayTeam?.name}</Label>
                           <Input type="number" min="0" value={awaySets} onChange={(e) => setAwaySets(e.target.value)} className="text-center" placeholder="0" />
                         </div>
+                      </div>
+                      {homeSets !== '' && awaySets !== '' && parseInt(homeSets) === parseInt(awaySets) && (
+                        <p className="text-xs text-red-600 font-medium text-center mt-2">Sets level – add tiebreak winner</p>
+                      )}
+                      <div className="flex flex-col items-center gap-2 mt-3">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Tiebreak played</Label>
+                          <Switch
+                            checked={hadTiebreak}
+                            onCheckedChange={(v) => { setHadTiebreak(v); if (!v) setTiebreakWinner(null); }}
+                          />
+                        </div>
+                        {hadTiebreak && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant={tiebreakWinner === 'home' ? 'default' : 'outline'}
+                              className={tiebreakWinner === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                              onClick={() => setTiebreakWinner('home')}
+                            >
+                              {homeTeam?.name || 'Home'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={tiebreakWinner === 'away' ? 'default' : 'outline'}
+                              className={tiebreakWinner === 'away' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                              onClick={() => setTiebreakWinner('away')}
+                            >
+                              {awayTeam?.name || 'Away'}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
