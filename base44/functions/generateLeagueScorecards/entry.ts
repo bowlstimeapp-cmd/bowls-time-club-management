@@ -128,11 +128,28 @@ Deno.serve(async (req) => {
           <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
         </tr>`;
 
-        if (set < 1) {
-          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
-          rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
-        }
+        rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
+        rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
       }
+
+      // Tie Break section — always 3 ends, regardless of sets_ends
+      rows += `<tr class="pos-label-row">
+        <td colspan="5" class="pos-label-cell">TIE BREAK (only if sets are 1–1)</td>
+      </tr>`;
+      for (let e = 1; e <= 3; e++) {
+        rows += `<tr>
+          <td></td>
+          <td></td>
+          <td class="end-num">${e}</td>
+          <td></td>
+          <td></td>
+        </tr>`;
+      }
+      rows += `<tr class="total-row">
+        <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
+        <td></td>
+        <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
+      </tr>`;
 
       rows += `<tr class="sets-row">
         <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>

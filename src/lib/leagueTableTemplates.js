@@ -22,14 +22,14 @@ function formatDate(iso) {
   try { return format(parseISO(iso), 'd MMMM yyyy'); } catch { return iso; }
 }
 
-function buildTableRows(tableData) {
+function buildTableRows(tableData, isSets) {
   return (tableData || []).map(row => `
     <tr>
       <td class="pos">${row.position}</td>
       <td class="team">${row.teamName}</td>
       <td>${row.played}</td>
       <td>${row.won}</td>
-      <td>${row.drawn}</td>
+      ${isSets ? '' : `<td>${row.drawn}</td>`}
       <td>${row.lost}</td>
       <td>${row.pointsFor}</td>
       <td>${row.pointsAgainst}</td>
@@ -62,7 +62,7 @@ function classicTemplate(data) {
   const { primaryColour, fontSize, tableData, showFooter, footerText } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const light = lighten(primaryColour, 0.92);
-  const rows = buildTableRows(tableData);
+  const rows = buildTableRows(tableData, data.isSets);
 
   return `<html><head><title>League Table</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -94,7 +94,7 @@ function classicTemplate(data) {
         <tr>
           <th>#</th>
           <th class="team-col">Team</th>
-          <th>P</th><th>W</th><th>D</th><th>L</th>
+          <th>P</th><th>W</th>${data.isSets ? '' : '<th>D</th>'}<th>L</th>
           <th>PF</th><th>PA</th><th>+/-</th><th>Pts</th>
         </tr>
       </thead>
@@ -108,7 +108,7 @@ function classicTemplate(data) {
 function modernTemplate(data) {
   const { primaryColour, fontSize, tableData, showFooter, footerText } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
-  const rows = buildTableRows(tableData);
+  const rows = buildTableRows(tableData, data.isSets);
 
   return `<html><head><title>League Table</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -139,7 +139,7 @@ function modernTemplate(data) {
         <tr>
           <th>#</th>
           <th class="team-col">Team</th>
-          <th>P</th><th>W</th><th>D</th><th>L</th>
+          <th>P</th><th>W</th>${data.isSets ? '' : '<th>D</th>'}<th>L</th>
           <th>PF</th><th>PA</th><th>+/-</th><th>Pts</th>
         </tr>
       </thead>
@@ -153,7 +153,7 @@ function modernTemplate(data) {
 function minimalTemplate(data) {
   const { fontSize, tableData, showFooter, footerText } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
-  const rows = buildTableRows(tableData);
+  const rows = buildTableRows(tableData, data.isSets);
 
   return `<html><head><title>League Table</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -184,7 +184,7 @@ function minimalTemplate(data) {
         <tr>
           <th>#</th>
           <th class="team-col">Team</th>
-          <th>P</th><th>W</th><th>D</th><th>L</th>
+          <th>P</th><th>W</th>${data.isSets ? '' : '<th>D</th>'}<th>L</th>
           <th>PF</th><th>PA</th><th>+/-</th><th>Pts</th>
         </tr>
       </thead>
@@ -297,6 +297,7 @@ export function buildLeagueTableData({ league, club, tableEntries }) {
     template:          club?.league_table_template || 'classic',
     advancedMode:      club?.league_table_advanced_mode || false,
     customHtml:        club?.league_table_custom_html || '',
+    isSets:            !!league?.is_sets,
     tableData:         (tableEntries || []).map((entry, idx) => ({
       position:      idx + 1,
       teamName:      entry.team?.name || '',

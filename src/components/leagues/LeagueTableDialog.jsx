@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Printer, BarChart3, Settings2, Loader2 } from 'lucide-react';
-import { calculateLeagueTable, getScoringRules } from '@/lib/leagueScoring';
+import { calculateLeagueTable } from '@/lib/leagueScoring';
+import LeagueStandingsTable from './LeagueStandingsTable';
 import { buildLeagueTableData, printLeagueTable } from '@/lib/leagueTableTemplates';
 import LeagueTableTemplateSettings from './LeagueTableTemplateSettings';
 import { base44 } from '@/api/base44Client';
@@ -29,7 +30,6 @@ export default function LeagueTableDialog({ open, onOpenChange, league, teams, f
   const leagueTeams = teams.filter(t => t.league_id === league.id);
   const leagueFixtures = fixtures.filter(f => f.league_id === league.id);
   const table = calculateLeagueTable(league, leagueTeams, leagueFixtures);
-  const scoringRules = getScoringRules(league);
 
   // Merge pending settings into effective club for printing
   const effectiveClub = pendingSettings ? { ...club, ...pendingSettings } : club;
@@ -101,48 +101,7 @@ export default function LeagueTableDialog({ open, onOpenChange, league, teams, f
 
           {/* ── Table Tab ── */}
           <TabsContent value="table">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr>
-                    <th className="border p-2 bg-gray-50 text-center">Pos</th>
-                    <th className="border p-2 bg-gray-50 text-left">Team</th>
-                    <th className="border p-2 bg-gray-50 text-center">P</th>
-                    <th className="border p-2 bg-gray-50 text-center">W</th>
-                    <th className="border p-2 bg-gray-50 text-center">D</th>
-                    <th className="border p-2 bg-gray-50 text-center">L</th>
-                    <th className="border p-2 bg-gray-50 text-center">PF</th>
-                    <th className="border p-2 bg-gray-50 text-center">PA</th>
-                    <th className="border p-2 bg-gray-50 text-center">+/-</th>
-                    <th className="border p-2 bg-gray-50 text-center">Pts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.map((entry, idx) => (
-                    <tr key={entry.team.id} className={idx % 2 === 1 ? 'bg-gray-50' : ''}>
-                      <td className="border p-2 text-center font-medium">{idx + 1}</td>
-                      <td className="border p-2 font-medium">{entry.team.name}</td>
-                      <td className="border p-2 text-center">{entry.played}</td>
-                      <td className="border p-2 text-center">{entry.won}</td>
-                      <td className="border p-2 text-center">{entry.drawn}</td>
-                      <td className="border p-2 text-center">{entry.lost}</td>
-                      <td className="border p-2 text-center">{entry.pointsFor}</td>
-                      <td className="border p-2 text-center">{entry.pointsAgainst}</td>
-                      <td className="border p-2 text-center">{entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}</td>
-                      <td className="border p-2 text-center font-bold">{entry.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {scoringRules.length > 0 && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg border text-sm text-gray-600">
-                <p className="font-semibold text-gray-700 mb-1">Scoring Rules:</p>
-                <ul className="space-y-0.5">
-                  {scoringRules.map((rule, i) => <li key={i}>• {rule}</li>)}
-                </ul>
-              </div>
-            )}
+            <LeagueStandingsTable table={table} league={league} />
           </TabsContent>
 
           {/* ── Print Settings Tab ── */}

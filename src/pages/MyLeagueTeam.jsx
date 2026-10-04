@@ -48,6 +48,8 @@ import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO } from 'date-fns';
+import { calculateLeagueTable } from '@/lib/leagueScoring';
+import LeagueStandingsTable from '@/components/leagues/LeagueStandingsTable';
 
 export default function MyLeagueTeam() {
   const [searchParams] = useSearchParams();
@@ -199,62 +201,6 @@ export default function MyLeagueTeam() {
   const getMemberPhone = (email) => {
     const member = members.find(m => m.user_email === email);
     return member?.phone || '';
-  };
-
-  const calculateLeagueTable = (league) => {
-    const leagueTeams = teams.filter(t => t.league_id === league.id);
-    const leagueFixtures = fixtures.filter(f => f.league_id === league.id && f.status === 'completed');
-    
-    const table = leagueTeams.map(team => ({
-      team,
-      played: 0,
-      won: 0,
-      lost: 0,
-      drawn: 0,
-      pointsFor: 0,
-      pointsAgainst: 0,
-      pointsDiff: 0,
-      points: 0
-    }));
-    
-    leagueFixtures.forEach(fixture => {
-      const homeEntry = table.find(t => t.team.id === fixture.home_team_id);
-      const awayEntry = table.find(t => t.team.id === fixture.away_team_id);
-      
-      if (homeEntry && awayEntry && fixture.home_score !== undefined && fixture.away_score !== undefined) {
-        homeEntry.played++;
-        awayEntry.played++;
-        homeEntry.pointsFor += fixture.home_score;
-        homeEntry.pointsAgainst += fixture.away_score;
-        awayEntry.pointsFor += fixture.away_score;
-        awayEntry.pointsAgainst += fixture.home_score;
-        
-        if (fixture.home_score > fixture.away_score) {
-          homeEntry.won++;
-          homeEntry.points += 2;
-          awayEntry.lost++;
-        } else if (fixture.away_score > fixture.home_score) {
-          awayEntry.won++;
-          awayEntry.points += 2;
-          homeEntry.lost++;
-        } else {
-          homeEntry.drawn++;
-          awayEntry.drawn++;
-          homeEntry.points += 1;
-          awayEntry.points += 1;
-        }
-      }
-    });
-    
-    table.forEach(entry => {
-      entry.pointsDiff = entry.pointsFor - entry.pointsAgainst;
-    });
-    
-    return table.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.pointsDiff !== a.pointsDiff) return b.pointsDiff - a.pointsDiff;
-      return b.pointsFor - a.pointsFor;
-    });
   };
 
   const handleToggleRotaPlayer = async (team, fixtureId, playerEmail) => {
@@ -709,36 +655,16 @@ export default function MyLeagueTeam() {
                             <BarChart3 className="w-4 h-4" />
                             League Table
                           </h4>
-                          <div className="overflow-x-auto">
-                            <table className="w-full border-collapse text-xs">
-                              <thead>
-                                <tr>
-                                  <th className="border p-1.5 bg-gray-50">#</th>
-                                  <th className="border p-1.5 bg-gray-50 text-left">Team</th>
-                                  <th className="border p-1.5 bg-gray-50">P</th>
-                                  <th className="border p-1.5 bg-gray-50">W</th>
-                                  <th className="border p-1.5 bg-gray-50">D</th>
-                                  <th className="border p-1.5 bg-gray-50">L</th>
-                                  <th className="border p-1.5 bg-gray-50">+/-</th>
-                                  <th className="border p-1.5 bg-gray-50">Pts</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {calculateLeagueTable(league).map((entry, idx) => (
-                                  <tr key={entry.team.id} className={entry.team.id === team.id ? 'bg-emerald-50' : ''}>
-                                    <td className="border p-1.5 text-center">{idx + 1}</td>
-                                    <td className="border p-1.5 font-medium">{entry.team.name}</td>
-                                    <td className="border p-1.5 text-center">{entry.played}</td>
-                                    <td className="border p-1.5 text-center">{entry.won}</td>
-                                    <td className="border p-1.5 text-center">{entry.drawn}</td>
-                                    <td className="border p-1.5 text-center">{entry.lost}</td>
-                                    <td className="border p-1.5 text-center">{entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}</td>
-                                    <td className="border p-1.5 text-center font-bold">{entry.points}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                          <LeagueStandingsTable
+                            table={calculateLeagueTable(
+                              league,
+                              teams.filter(t => t.league_id === league.id),
+                              fixtures.filter(f => f.league_id === league.id)
+                            )}
+                            league={league}
+                            highlightTeamId={team.id}
+                            compact
+                          />
                         </div>
                       )}
 

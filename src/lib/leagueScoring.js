@@ -14,6 +14,23 @@
  *   home_sets / away_sets (number of sets won each)
  *   home_score / away_score (total shots, used for shots-based point)
  */
+/**
+ * Determine the game winner of a sets fixture: "home", "away" or null.
+ * The tiebreak decides when one was played; otherwise the sets won.
+ * Returns null for legacy results with level sets and no tiebreak recorded
+ * (those keep counting as draws so old data doesn't break).
+ */
+export function getSetsGameWinner(fixture) {
+  if (fixture.had_tiebreak && (fixture.tiebreak_winner === 'home' || fixture.tiebreak_winner === 'away')) {
+    return fixture.tiebreak_winner;
+  }
+  const homeSets = fixture.home_sets ?? 0;
+  const awaySets = fixture.away_sets ?? 0;
+  if (homeSets > awaySets) return 'home';
+  if (awaySets > homeSets) return 'away';
+  return null;
+}
+
 export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
   const completedFixtures = leagueFixtures.filter(f => f.status === 'completed');
 
@@ -50,14 +67,16 @@ export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
       const homeSets = fixture.home_sets ?? 0;
       const awaySets = fixture.away_sets ?? 0;
 
-      // Track win/draw/loss based on sets won
-      if (homeSets > awaySets) {
+      // Track win/draw/loss based on the game winner (sets + tiebreak)
+      const gameWinner = getSetsGameWinner(fixture);
+      if (gameWinner === 'home') {
         homeEntry.won++;
         awayEntry.lost++;
-      } else if (awaySets > homeSets) {
+      } else if (gameWinner === 'away') {
         awayEntry.won++;
         homeEntry.lost++;
       } else {
+        // Legacy result: sets level, no tiebreak recorded — count as a draw
         homeEntry.drawn++;
         awayEntry.drawn++;
       }
@@ -74,22 +93,22 @@ export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
         //  so drawn game overall = equal sets, handled by the value split naturally)
       }
 
-      // Points for game win (more sets than opponent)
+      // Points for game win (sets + tiebreak decide the game)
       if (league.scoring_game_win) {
         const gameVal = league.scoring_game_win_value ?? 1;
-        if (homeSets > awaySets) {
+        if (gameWinner === 'home') {
           homeEntry.points += gameVal;
-        } else if (awaySets > homeSets) {
+        } else if (gameWinner === 'away') {
           awayEntry.points += gameVal;
         }
-        // No game win points for equal sets
       }
 
-      // Standard 2 points per win (sets context)
+      // Standard 2 points per win (sets context) — no draw point except the
+      // legacy null case (level sets, no tiebreak recorded), which keeps 1 each
       if (league.scoring_standard_win) {
-        if (homeSets > awaySets) {
+        if (gameWinner === 'home') {
           homeEntry.points += 2;
-        } else if (awaySets > homeSets) {
+        } else if (gameWinner === 'away') {
           awayEntry.points += 2;
         } else {
           homeEntry.points += 1;
@@ -180,10 +199,10 @@ export function getScoringRules(league) {
       rules.push(`${league.scoring_game_win_value ?? 1} point${(league.scoring_game_win_value ?? 1) !== 1 ? 's' : ''} for game win`);
     }
     if (league.scoring_standard_win) {
-      rules.push('2 points for game win, 1 point for draw (standard)');
+      rules.push('2 points for a game win (if the sets are level, the tiebreak decides it – there are no draws)');
     }
     if (league.scoring_highest_shots) {
-      rules.push('1 point for highest overall shots');
+      rules.push('1 point for highest overall shots (both sets plus tiebreak)');
     }
   } else if (league.is_double_rink) {
     rules.push('2 points for a win, 1 point for a draw (per match)');

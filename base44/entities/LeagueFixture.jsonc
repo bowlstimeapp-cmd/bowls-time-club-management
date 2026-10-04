@@ -51,6 +51,19 @@
       "type": "number",
       "description": "Number of sets won by away team (sets leagues only)"
     },
+    "had_tiebreak": {
+      "type": "boolean",
+      "default": false,
+      "description": "Sets leagues only \u2014 true when the sets were level and a tiebreak was played"
+    },
+    "tiebreak_winner": {
+      "type": "string",
+      "enum": [
+        "home",
+        "away"
+      ],
+      "description": "Sets leagues only \u2014 which team won the tiebreak"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -83,6 +96,12 @@
     "pending_submitted_by_team_id": {
       "type": "string"
     },
+    "pending_had_tiebreak": {
+      "type": "boolean"
+    },
+    "pending_tiebreak_winner": {
+      "type": "string"
+    },
     "conflict_first_home_score": {
       "type": "number"
     },
@@ -101,6 +120,12 @@
     "conflict_first_submitted_by_email": {
       "type": "string"
     },
+    "conflict_first_had_tiebreak": {
+      "type": "boolean"
+    },
+    "conflict_first_tiebreak_winner": {
+      "type": "string"
+    },
     "conflict_second_home_score": {
       "type": "number"
     },
@@ -117,6 +142,12 @@
       "type": "string"
     },
     "conflict_second_submitted_by_email": {
+      "type": "string"
+    },
+    "conflict_second_had_tiebreak": {
+      "type": "boolean"
+    },
+    "conflict_second_tiebreak_winner": {
       "type": "string"
     }
   },

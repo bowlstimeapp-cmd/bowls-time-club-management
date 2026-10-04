@@ -65,13 +65,30 @@ Deno.serve(async (req) => {
       lines.push(rowLine(['Score', 'Running Total', '', 'Running Total', 'Score']));
 
       // End rows
-      for (let end = 1; end <= 24; end++) {
-        lines.push(rowLine(['', '', end, '', '']));
+      if (league.is_sets) {
+        const setsEnds = parseInt(league.sets_ends) || 8;
+        for (const setLabel of ['SET 1', 'SET 2']) {
+          lines.push(rowLine([setLabel, '', '', '', '']));
+          for (let end = 1; end <= setsEnds; end++) {
+            lines.push(rowLine(['', '', end, '', '']));
+          }
+          lines.push(rowLine(['TOTAL', '', '', '', 'TOTAL']));
+          lines.push(rowLine(['', '', '', '', '']));
+        }
+        // Tie Break section — always 3 ends
+        lines.push(rowLine(['TIE BREAK (only if sets are 1-1)', '', '', '', '']));
+        for (let end = 1; end <= 3; end++) {
+          lines.push(rowLine(['', '', end, '', '']));
+        }
+        lines.push(rowLine(['TOTAL', '', '', '', 'TOTAL']));
+        lines.push(rowLine(['', '', '', '', '']));
+      } else {
+        for (let end = 1; end <= 24; end++) {
+          lines.push(rowLine(['', '', end, '', '']));
+        }
+        lines.push(rowLine(['TOTAL', '', '', '', 'TOTAL']));
+        lines.push(rowLine(['', '', '', '', '']));
       }
-
-      // Footer
-      lines.push(rowLine(['TOTAL', '', '', '', 'TOTAL']));
-      lines.push(rowLine(['', '', '', '', '']));
       lines.push(rowLine(['Skip (Home):', '', '', 'Skip (Away):', '']));
       lines.push(rowLine(['', '', '', '', '']));
       lines.push(rowLine(['', '', '', '', '']));

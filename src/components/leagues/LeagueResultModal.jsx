@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
 import { Trophy, Calendar, MapPin, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -53,11 +54,36 @@ export default function LeagueResultModal({
   const [awayScore, setAwayScore] = useState(hasPending ? String(fixture.pending_away_score ?? '') : '');
   const [homeSets, setHomeSets] = useState(hasPending ? String(fixture.pending_home_sets ?? '') : '');
   const [awaySets, setAwaySets] = useState(hasPending ? String(fixture.pending_away_sets ?? '') : '');
+  const [tiebreakOn, setTiebreakOn] = useState(hasPending ? fixture.pending_had_tiebreak === true : false);
+  const [tiebreakWinner, setTiebreakWinner] = useState(hasPending ? (fixture.pending_tiebreak_winner || null) : null);
   const [saving, setSaving] = useState(false);
 
   const isSetsLeague = league?.is_sets;
 
-  const notifyAdminConflict = async (theirHome, theirAway, ourHome, ourAway) => {
+  // Small preview shown before saving: game winner and shots point
+  let previewLine = null;
+  if (isSetsLeague && homeScore !== '' && awayScore !== '' && homeSets !== '' && awaySets !== '') {
+    const hsNum = parseInt(homeSets);
+    const asNum = parseInt(awaySets);
+    const gw = tiebreakOn ? tiebreakWinner : (hsNum > asNum ? 'home' : asNum > hsNum ? 'away' : null);
+    if (gw) {
+      const gwName = gw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');
+      const gv = league?.scoring_standard_win ? 2 : league?.scoring_game_win ? (league.scoring_game_win_value ?? 1) : null;
+      const hN = parseInt(homeScore);
+      const aN = parseInt(awayScore);
+      const sw = hN > aN ? 'home' : aN > hN ? 'away' : null;
+      const parts = [`Game winner: ${gwName}${gv ? ` (+${gv})` : ''}`];
+      if (sw) {
+        const swName = sw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');
+        parts.push(`Most shots: ${swName}${league?.scoring_highest_shots ? ' (+1)' : ''}`);
+      } else {
+        parts.push('Shots level – no point');
+      }
+      previewLine = parts.join(' · ');
+    }
+  }
+
+  const notifyAdminConflict = async (theirHome, theirAway, ourHome, ourAway, theirTiebreakText = '', ourTiebreakText = '') => {
     // Find all admin memberships for this club
     try {
       const admins = await base44.entities.ClubMembership.filter({
@@ -68,7 +94,7 @@ export default function LeagueResultModal({
 
       const fixtureDesc = `${homeTeam?.name} vs ${awayTeam?.name} on ${format(parseISO(fixture.match_date), 'd MMM yyyy')}${fixture.rink_number ? ` (Rink ${fixture.rink_number})` : ''}`;
       const leagueName = league?.name || 'Unknown league';
-      const conflictDetail = `First submission: ${homeTeam?.name} ${theirHome} – ${theirAway} ${awayTeam?.name}. Second submission: ${homeTeam?.name} ${ourHome} – ${ourAway} ${awayTeam?.name}.`;
+      const conflictDetail = `First submission: ${homeTeam?.name} ${theirHome} – ${theirAway} ${awayTeam?.name}${theirTiebreakText}. Second submission: ${homeTeam?.name} ${ourHome} – ${ourAway} ${awayTeam?.name}${ourTiebreakText}.`;
 
       const message = `Score conflict in ${leagueName} — ${fixtureDesc}. ${conflictDetail} Please review in the Scores admin and enter the correct result.`;
 
@@ -102,6 +128,22 @@ export default function LeagueResultModal({
     const hsS = isSetsLeague ? parseInt(homeSets) : null;
     const asS = isSetsLeague ? parseInt(awaySets) : null;
 
+    if (isSetsLeague) {
+      const setsLevel = hsS === asS;
+      if (!tiebreakOn && setsLevel) {
+        toast.error('Sets are level – switch on Tiebreak and choose the winner');
+        return;
+      }
+      if (tiebreakOn && !setsLevel) {
+        toast.error('A tiebreak is only played when sets are level');
+        return;
+      }
+      if (tiebreakOn && !tiebreakWinner) {
+        toast.error('Please choose the tiebreak winner');
+        return;
+      }
+    }
+
     setSaving(true);
 
     if (!hasPending) {
@@ -109,7 +151,7 @@ export default function LeagueResultModal({
       await base44.entities.LeagueFixture.update(fixture.id, {
         pending_home_score: hs,
         pending_away_score: as_,
-        ...(isSetsLeague ? { pending_home_sets: hsS, pending_away_sets: asS } : {}),
+        ...(isSetsLeague ? { pending_home_sets: hsS, pending_away_sets: asS, pending_had_tiebreak: tiebreakOn, pending_tiebreak_winner: tiebreakOn ? tiebreakWinner : null } : {}),
         pending_submitted_by_email: effectiveEmail,
         pending_submitted_by_team_id: userTeamId,
       });
@@ -119,14 +161,15 @@ export default function LeagueResultModal({
       const scoresMatch =
         fixture.pending_home_score === hs &&
         fixture.pending_away_score === as_ &&
-        (!isSetsLeague || (fixture.pending_home_sets === hsS && fixture.pending_away_sets === asS));
+        (!isSetsLeague || (fixture.pending_home_sets === hsS && fixture.pending_away_sets === asS)) &&
+        (!isSetsLeague || ((fixture.pending_had_tiebreak === true) === tiebreakOn && (!tiebreakOn || (fixture.pending_tiebreak_winner || null) === tiebreakWinner)));
 
       if (scoresMatch) {
         // Confirmed!
         await base44.entities.LeagueFixture.update(fixture.id, {
           home_score: hs,
           away_score: as_,
-          ...(isSetsLeague ? { home_sets: hsS, away_sets: asS } : {}),
+          ...(isSetsLeague ? { home_sets: hsS, away_sets: asS, had_tiebreak: tiebreakOn, tiebreak_winner: tiebreakOn ? tiebreakWinner : null } : {}),
           status: 'completed',
           pending_home_score: null,
           pending_away_score: null,
@@ -134,6 +177,8 @@ export default function LeagueResultModal({
           pending_away_sets: null,
           pending_submitted_by_email: null,
           pending_submitted_by_team_id: null,
+          pending_had_tiebreak: null,
+          pending_tiebreak_winner: null,
         });
         toast.success('Result confirmed! The match result has been recorded.');
       } else {
@@ -144,6 +189,8 @@ export default function LeagueResultModal({
         conflict_first_away_score: fixture.pending_away_score,
         conflict_first_home_sets: fixture.pending_home_sets ?? null,
         conflict_first_away_sets: fixture.pending_away_sets ?? null,
+        conflict_first_had_tiebreak: fixture.pending_had_tiebreak === true,
+        conflict_first_tiebreak_winner: fixture.pending_tiebreak_winner || null,
         conflict_first_team_id: fixture.pending_submitted_by_team_id,
         conflict_first_submitted_by_email: fixture.pending_submitted_by_email,
         // Store second team's submission
@@ -151,6 +198,8 @@ export default function LeagueResultModal({
         conflict_second_away_score: as_,
         conflict_second_home_sets: isSetsLeague ? hsS : null,
         conflict_second_away_sets: isSetsLeague ? asS : null,
+        conflict_second_had_tiebreak: isSetsLeague ? tiebreakOn : false,
+        conflict_second_tiebreak_winner: isSetsLeague && tiebreakOn ? tiebreakWinner : null,
         conflict_second_team_id: userTeamId,
         conflict_second_submitted_by_email: effectiveEmail,
         });
@@ -160,7 +209,9 @@ export default function LeagueResultModal({
           fixture.pending_home_score,
           fixture.pending_away_score,
           hs,
-          as_
+          as_,
+          fixture.pending_had_tiebreak ? ` (tiebreak: ${fixture.pending_tiebreak_winner === 'home' ? homeTeam?.name : awayTeam?.name})` : '',
+          tiebreakOn ? ` (tiebreak: ${tiebreakWinner === 'home' ? homeTeam?.name : awayTeam?.name})` : ''
         );
 
         toast.error("The scores don't match the other team's entry. The club admin has been notified to resolve the conflict.");
@@ -220,7 +271,7 @@ export default function LeagueResultModal({
                 <p className="font-semibold mb-1">The other team has already submitted a score:</p>
                 <p className="font-mono text-base font-bold">
                   {homeTeam?.name} {fixture.pending_home_score} – {fixture.pending_away_score} {awayTeam?.name}
-                  {fixture.pending_home_sets != null && ` (Sets: ${fixture.pending_home_sets}–${fixture.pending_away_sets})`}
+                  {fixture.pending_home_sets != null && ` (Sets: ${fixture.pending_home_sets}–${fixture.pending_away_sets}${fixture.pending_had_tiebreak ? `, tiebreak: ${fixture.pending_tiebreak_winner === 'home' ? homeTeam?.name : awayTeam?.name}` : ''})`}
                 </p>
                 <p className="text-xs mt-1 text-amber-700">The scores above are pre-filled for you. Accept them or enter the correct scores to flag a conflict to the admin.</p>
               </div>
@@ -267,9 +318,28 @@ export default function LeagueResultModal({
                 </div>
               )}
 
+              {isSetsLeague && (
+                <div className="rounded-lg border p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Tiebreak</Label>
+                    <Switch checked={tiebreakOn} onCheckedChange={(v) => { setTiebreakOn(v); if (!v) setTiebreakWinner(null); }} />
+                  </div>
+                  {tiebreakOn && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-2">Tiebreak winner</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button type="button" variant={tiebreakWinner === 'home' ? 'default' : 'outline'} onClick={() => setTiebreakWinner('home')} className={tiebreakWinner === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>{homeTeam?.name || 'Home'}</Button>
+                        <Button type="button" variant={tiebreakWinner === 'away' ? 'default' : 'outline'} onClick={() => setTiebreakWinner('away')} className={tiebreakWinner === 'away' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>{awayTeam?.name || 'Away'}</Button>
+                      </div>
+                    </div>
+                  )}
+                  {previewLine && <p className="text-xs text-gray-500 text-center">{previewLine}</p>}
+                </div>
+              )}
+
               <div>
                 <p className="text-xs font-semibold text-gray-500 mb-2">
-                  {isSetsLeague ? 'Total Shots' : 'Final Score'}
+                  {isSetsLeague ? 'Total shots (both sets + tiebreak if played)' : 'Final Score'}
                 </p>
                 <div className="grid grid-cols-3 gap-3 items-center">
                   <div>

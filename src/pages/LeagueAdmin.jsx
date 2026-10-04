@@ -150,6 +150,8 @@ export default function LeagueAdmin() {
   const [awayScore, setAwayScore] = useState('');
   const [homeSets, setHomeSets] = useState('');
   const [awaySets, setAwaySets] = useState('');
+  const [tiebreakOn, setTiebreakOn] = useState(false);
+  const [tiebreakWinner, setTiebreakWinner] = useState(null);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
   const [scoresModalOpen, setScoresModalOpen] = useState(false);
@@ -950,6 +952,8 @@ export default function LeagueAdmin() {
     setAwayScore(fixture.away_score?.toString() || '');
     setHomeSets(fixture.home_sets?.toString() || '');
     setAwaySets(fixture.away_sets?.toString() || '');
+    setTiebreakOn(fixture.had_tiebreak === true);
+    setTiebreakWinner(fixture.tiebreak_winner || null);
     setScoreDialogOpen(true);
   };
 
@@ -964,6 +968,21 @@ export default function LeagueAdmin() {
       toast.error('Please enter both set counts');
       return;
     }
+    if (isSetsLeague) {
+      const setsLevel = parseInt(homeSets) === parseInt(awaySets);
+      if (!tiebreakOn && setsLevel) {
+        toast.error('Sets are level – switch on Tiebreak and choose the winner');
+        return;
+      }
+      if (tiebreakOn && !setsLevel) {
+        toast.error('A tiebreak is only played when sets are level');
+        return;
+      }
+      if (tiebreakOn && !tiebreakWinner) {
+        toast.error('Please choose the tiebreak winner');
+        return;
+      }
+    }
     
     const updateData = {
       home_score: parseInt(homeScore),
@@ -973,6 +992,8 @@ export default function LeagueAdmin() {
     if (isSetsLeague) {
       updateData.home_sets = parseInt(homeSets);
       updateData.away_sets = parseInt(awaySets);
+      updateData.had_tiebreak = tiebreakOn;
+      updateData.tiebreak_winner = tiebreakOn ? tiebreakWinner : null;
     }
 
     await clubData('LeagueFixture', 'update', { id: editingFixture.id, data: updateData });
@@ -2183,8 +2204,41 @@ export default function LeagueAdmin() {
                       </div>
                     </div>
                   )}
+                  {isSetsLeague && (
+                    <div className="rounded-lg border p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-semibold">Tiebreak</Label>
+                        <Switch checked={tiebreakOn} onCheckedChange={(v) => { setTiebreakOn(v); if (!v) setTiebreakWinner(null); }} />
+                      </div>
+                      {tiebreakOn && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 mb-2">Tiebreak winner</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button type="button" variant={tiebreakWinner === 'home' ? 'default' : 'outline'} onClick={() => setTiebreakWinner('home')} className={tiebreakWinner === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>{homeTeam?.name || 'Home'}</Button>
+                            <Button type="button" variant={tiebreakWinner === 'away' ? 'default' : 'outline'} onClick={() => setTiebreakWinner('away')} className={tiebreakWinner === 'away' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>{awayTeam?.name || 'Away'}</Button>
+                          </div>
+                        </div>
+                      )}
+                      {(() => {
+                        if (homeSets === '' || awaySets === '' || homeScore === '' || awayScore === '') return null;
+                        const hsN = parseInt(homeSets); const asN = parseInt(awaySets);
+                        const gw = tiebreakOn ? tiebreakWinner : (hsN > asN ? 'home' : asN > hsN ? 'away' : null);
+                        if (!gw) return null;
+                        const gwName = gw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');
+                        const gv = scoringLeague.scoring_standard_win ? 2 : scoringLeague.scoring_game_win ? (scoringLeague.scoring_game_win_value ?? 1) : null;
+                        const hN = parseInt(homeScore); const aN = parseInt(awayScore);
+                        const sw = hN > aN ? 'home' : aN > hN ? 'away' : null;
+                        const parts = ['Game winner: ' + gwName + (gv ? ' (+' + gv + ')' : '')];
+                        if (sw) parts.push('Most shots: ' + (sw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away')) + (scoringLeague.scoring_highest_shots ? ' (+1)' : ''));
+                        else parts.push('Shots level – no point');
+                        return <p className="text-xs text-gray-500 text-center">{parts.join(' · ')}</p>;
+                      })()}
+                    </div>
+                  )}
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 text-center mb-2">Total Shots</p>
+                    <p className="text-xs font-semibold text-gray-500 text-center mb-2">
+                      {isSetsLeague ? 'Total shots (both sets + tiebreak if played)' : 'Total Shots'}
+                    </p>
                     <div className="grid grid-cols-3 gap-4 items-center">
                       <div className="text-right">
                         {!isSetsLeague && <Label className="block mb-2">{homeTeam?.name}</Label>}
