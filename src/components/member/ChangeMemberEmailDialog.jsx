@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { AtSign, AlertTriangle, Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function ChangeMemberEmailDialog({ open, onClose, member, clubId, onComplete }) {
+export default function ChangeMemberEmailDialog({ open, onClose, member, clubId, isClubAdmin, onComplete }) {
   const [newEmail, setNewEmail] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -83,6 +83,7 @@ export default function ChangeMemberEmailDialog({ open, onClose, member, clubId,
             <p className="text-xs text-amber-800">
               This updates the member's email on their membership, bookings, teams, entries and other club records.
               If this member already signs in with their old email, their sign-in account is not changed.
+              {isClubAdmin && ' This only updates this club\u2019s records. The member will still sign in with their old email unless their login is changed separately.'}
             </p>
           </div>
         </div>

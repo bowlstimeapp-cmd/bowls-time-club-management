@@ -61,7 +61,7 @@ const membershipDotColor = {
   'Social Member':        'bg-purple-400',
 };
 
-function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge, isPlatformAdmin, onEmail, onChangeEmail }) {
+function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, isSelected, onToggleMerge, isPlatformAdmin, isClubAdmin, onEmail, onChangeEmail }) {
   const role = member.role || 'member';
   const roleBadge = roleMeta[role] || roleMeta.member;
   const initials = (member.user_name || member.user_email || '?')
@@ -163,8 +163,8 @@ function MemberCard({ member, onSelect, onRemove, isSelf, payment, isMergeMode, 
         )}
       </div>
 
-      {/* Change email button — platform admin only, appears on hover */}
-      {isPlatformAdmin && (
+      {/* Change email button — platform admin, or club admin (not on own card); appears on hover */}
+      {(isPlatformAdmin || (isClubAdmin && !isSelf)) && (
         <button
           onClick={(e) => { e.stopPropagation(); onChangeEmail(member); }}
           className="absolute bottom-3 right-12 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 z-10"
@@ -841,6 +841,7 @@ export default function ClubAdmin() {
                             isSelected={mergeSelection.some(m => m.id === member.id)}
                             onToggleMerge={handleToggleMergeSelect}
                             isPlatformAdmin={isPlatformAdmin}
+                            isClubAdmin={isClubAdmin}
                             onEmail={(member) => { setEmailModalMember(member); setEmailSubject(''); setEmailBody(''); }}
                             onChangeEmail={(member) => setEmailChangeMember(member)}
                           />
@@ -894,6 +895,7 @@ export default function ClubAdmin() {
                           isSelf={false}
                           payment={paymentByEmail[member.user_email]}
                           isPlatformAdmin={isPlatformAdmin}
+                          isClubAdmin={isClubAdmin}
                           onEmail={(member) => { setEmailModalMember(member); setEmailSubject(''); setEmailBody(''); }}
                             onChangeEmail={(member) => setEmailChangeMember(member)}
                         />
@@ -1018,6 +1020,7 @@ export default function ClubAdmin() {
           open={!!emailChangeMember}
           member={emailChangeMember}
           clubId={clubId}
+          isClubAdmin={isClubAdmin && !isPlatformAdmin}
           onClose={() => setEmailChangeMember(null)}
           onComplete={() => queryClient.invalidateQueries({ queryKey: ['clubMemberships'] })}
         />
