@@ -1531,14 +1531,19 @@ export default function LeagueAdmin() {
         ) : selectedLeagueFilter !== 'all' ? (
           (() => {
             const focusLeague = activeLeagues.find(l => l.id === selectedLeagueFilter);
-            return focusLeague ? (
-              <LeagueFocusView
-                league={focusLeague}
-                teams={teams}
-                fixtures={fixtures}
-                onScoreEdit={openScoreDialog}
-              />
-            ) : null;
+            if (!focusLeague) return null;
+            const focusTeams = teams.filter(t => t.league_id === focusLeague.id);
+            return (
+              <div className="space-y-6">
+                {renderLeagueCard(focusLeague, focusTeams)}
+                <LeagueFocusView
+                  league={focusLeague}
+                  teams={teams}
+                  fixtures={fixtures}
+                  onScoreEdit={openScoreDialog}
+                />
+              </div>
+            );
           })()
         ) : club?.alt_view_leagues ? (
           <LeagueAdminTableView

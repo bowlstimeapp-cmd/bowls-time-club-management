@@ -101,6 +101,7 @@ export default function LeagueFocusView({ league, teams = [], fixtures = [], onS
       <Card>
         <CardHeader>
           <CardTitle>League table</CardTitle>
+          <CardDescription>{league.name}</CardDescription>
         </CardHeader>
         <CardContent>
           {leagueTeams.length === 0 ? (
