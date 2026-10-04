@@ -34,6 +34,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { 
   Plus, 
   Trophy, 
@@ -54,7 +62,9 @@ import {
   Archive,
   RefreshCw,
   Shuffle,
-  ClipboardList
+  ClipboardList,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import TeamDialog from '@/components/leagues/TeamDialog';
@@ -150,8 +160,6 @@ export default function LeagueAdmin() {
   const [awayScore, setAwayScore] = useState('');
   const [homeSets, setHomeSets] = useState('');
   const [awaySets, setAwaySets] = useState('');
-  const [tiebreakOn, setTiebreakOn] = useState(false);
-  const [tiebreakWinner, setTiebreakWinner] = useState(null);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
   const [viewingTableLeague, setViewingTableLeague] = useState(null);
   const [scoresModalOpen, setScoresModalOpen] = useState(false);
@@ -952,8 +960,6 @@ export default function LeagueAdmin() {
     setAwayScore(fixture.away_score?.toString() || '');
     setHomeSets(fixture.home_sets?.toString() || '');
     setAwaySets(fixture.away_sets?.toString() || '');
-    setTiebreakOn(fixture.had_tiebreak === true);
-    setTiebreakWinner(fixture.tiebreak_winner || null);
     setScoreDialogOpen(true);
   };
 
@@ -968,21 +974,6 @@ export default function LeagueAdmin() {
       toast.error('Please enter both set counts');
       return;
     }
-    if (isSetsLeague) {
-      const setsLevel = parseInt(homeSets) === parseInt(awaySets);
-      if (!tiebreakOn && setsLevel) {
-        toast.error('Sets are level – switch on Tiebreak and choose the winner');
-        return;
-      }
-      if (tiebreakOn && !setsLevel) {
-        toast.error('A tiebreak is only played when sets are level');
-        return;
-      }
-      if (tiebreakOn && !tiebreakWinner) {
-        toast.error('Please choose the tiebreak winner');
-        return;
-      }
-    }
     
     const updateData = {
       home_score: parseInt(homeScore),
@@ -992,8 +983,6 @@ export default function LeagueAdmin() {
     if (isSetsLeague) {
       updateData.home_sets = parseInt(homeSets);
       updateData.away_sets = parseInt(awaySets);
-      updateData.had_tiebreak = tiebreakOn;
-      updateData.tiebreak_winner = tiebreakOn ? tiebreakWinner : null;
     }
 
     await clubData('LeagueFixture', 'update', { id: editingFixture.id, data: updateData });
@@ -1300,150 +1289,135 @@ export default function LeagueAdmin() {
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {/* Manual mode: always show Edit Fixtures button */}
-                          {league.creation_mode === 'manual' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => { setManualFixturesLeague(league); setManualFixturesModalOpen(true); }}
-                              className="text-purple-600 hover:bg-purple-50 border-purple-200"
+                        {/* Manage menu: setup tools and league admin actions */}
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="shrink-0">
+                              <Settings className="w-4 h-4 mr-1" />
+                              Manage
+                              <ChevronDown className="w-4 h-4 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-60">
+                            <DropdownMenuLabel className="text-xs font-normal text-gray-500">Fixtures</DropdownMenuLabel>
+                            {league.creation_mode !== 'manual' && league.fixtures_generated && (
+                              <DropdownMenuItem
+                                disabled={regeneratingFixtures}
+                                onSelect={() => setRegenDialogLeague(league)}
+                                title="Delete existing fixtures and bookings, then rebuild from current league settings"
+                              >
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Regenerate fixtures
+                              </DropdownMenuItem>
+                            )}
+                            {league.fixtures_generated && (
+                              <DropdownMenuItem
+                                disabled={regeneratingFixtures}
+                                onSelect={() => handleReallocateRinks(league)}
+                                title="Redraw rink allocations without changing fixtures"
+                              >
+                                <Shuffle className="w-4 h-4 mr-2" />
+                                Re-allocate rinks
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setBlacklistLeague(league);
+                                setBlacklistDialogOpen(true);
+                              }}
                             >
+                              <CalendarX className="w-4 h-4 mr-2" />
+                              Blacklist dates
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-xs font-normal text-gray-500">League</DropdownMenuLabel>
+                            <DropdownMenuItem onSelect={() => handleEditLeague(league)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Edit league
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setArchiveLeagueId(league.id)}>
+                              <Archive className="w-4 h-4 mr-2" />
+                              Archive league
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                              onSelect={() => setDeleteLeagueId(league.id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete league
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      {/* Everyday actions: always visible and labelled */}
+                      <div className="flex gap-2 flex-wrap mt-4 empty:hidden">
+                        {/* Manual mode: always show Edit Fixtures button */}
+                        {league.creation_mode === 'manual' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setManualFixturesLeague(league); setManualFixturesModalOpen(true); }}
+                            className="text-purple-600 hover:bg-purple-50 border-purple-200"
+                          >
+                            <List className="w-4 h-4 mr-1" />
+                            {league.fixtures_generated ? 'Edit Fixtures' : 'Add Fixtures'}
+                          </Button>
+                        )}
+                        {/* Auto mode: show Generate Fixtures when conditions met */}
+                        {league.creation_mode !== 'manual' && !league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateFixtures(league)}
+                            disabled={generatingFixtures}
+                            className="text-emerald-600 hover:bg-emerald-50"
+                          >
+                            {generatingFixtures ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Zap className="w-4 h-4 mr-1" />
+                            )}
+                            Generate Fixtures
+                          </Button>
+                        )}
+                        {league.fixtures_generated && !league.bookings_created && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleBookRinks(league)}
+                            disabled={bookingRinks}
+                            className="text-blue-600 hover:bg-blue-50"
+                          >
+                            {bookingRinks ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <CalendarCheck className="w-4 h-4 mr-1" />
+                            )}
+                            Book Rinks
+                          </Button>
+                        )}
+                        {league.fixtures_generated && (
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => openScoresModal(league)}>
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Enter scores
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => viewFixtures(league)}>
                               <List className="w-4 h-4 mr-1" />
-                              {league.fixtures_generated ? 'Edit Fixtures' : 'Add Fixtures'}
+                              Fixtures
                             </Button>
-                          )}
-                          {/* Auto mode: show Generate Fixtures when conditions met */}
-                          {league.creation_mode !== 'manual' && !league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleGenerateFixtures(league)}
-                              disabled={generatingFixtures}
-                              className="text-emerald-600 hover:bg-emerald-50"
-                            >
-                              {generatingFixtures ? (
-                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                              ) : (
-                                <Zap className="w-4 h-4 mr-1" />
-                              )}
-                              Generate Fixtures
+                            <Button variant="outline" size="sm" onClick={() => viewLeagueTable(league)}>
+                              <BarChart3 className="w-4 h-4 mr-1" />
+                              League table
                             </Button>
-                          )}
-                          {league.fixtures_generated && !league.bookings_created && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleBookRinks(league)}
-                              disabled={bookingRinks}
-                              className="text-blue-600 hover:bg-blue-50"
-                            >
-                              {bookingRinks ? (
-                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                              ) : (
-                                <CalendarCheck className="w-4 h-4 mr-1" />
-                              )}
-                              Book Rinks
+                            <Button variant="outline" size="sm" onClick={() => openScorecardDialog(league)}>
+                              <Printer className="w-4 h-4 mr-1" />
+                              Print scorecards
                             </Button>
-                          )}
-                          {league.creation_mode !== 'manual' && league.fixtures_generated && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setRegenDialogLeague(league)}
-                              disabled={regeneratingFixtures}
-                              className="text-amber-600 hover:bg-amber-50"
-                              title="Delete existing fixtures and bookings, then rebuild from current league settings"
-                            >
-                              {regeneratingFixtures ? (
-                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                              ) : (
-                                <RefreshCw className="w-4 h-4 mr-1" />
-                              )}
-                              Regenerate
-                            </Button>
-                          )}
-                          {league.fixtures_generated && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleReallocateRinks(league)}
-                              disabled={regeneratingFixtures}
-                              className="text-blue-600 hover:bg-blue-50"
-                              title="Redraw rink allocations without changing fixtures"
-                            >
-                              <Shuffle className="w-4 h-4 mr-1" />
-                              Regenerate Rink Allocations
-                            </Button>
-                          )}
-                          {league.fixtures_generated && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openScoresModal(league)}
-                              >
-                                <Pencil className="w-4 h-4 mr-1" />
-                                Scores
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => viewFixtures(league)}
-                              >
-                                <List className="w-4 h-4 mr-1" />
-                                Fixtures
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => viewLeagueTable(league)}
-                              >
-                                <BarChart3 className="w-4 h-4 mr-1" />
-                                Table
-                              </Button>
-<Button 
-                                 variant="outline" 
-                                 size="sm"
-                                 onClick={() => openScorecardDialog(league)}
-                               >
-                                 <Printer className="w-4 h-4 mr-1" />
-                                 Scorecards
-                               </Button>
-                            </>
-                          )}
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setBlacklistLeague(league);
-                              setBlacklistDialogOpen(true);
-                            }}
-                            title="Blacklist dates"
-                          >
-                            <CalendarX className="w-4 h-4 mr-1" />
-                            <span className="hidden md:inline">Blacklist</span>
-                          </Button>
-                          <Button 
-                           variant="outline" 
-                           size="sm"
-                           onClick={() => setArchiveLeagueId(league.id)}
-                          >
-                           <Archive className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEditLeague(league)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-red-600 hover:bg-red-50"
-                            onClick={() => setDeleteLeagueId(league.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                          </>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -2204,41 +2178,8 @@ export default function LeagueAdmin() {
                       </div>
                     </div>
                   )}
-                  {isSetsLeague && (
-                    <div className="rounded-lg border p-3 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-semibold">Tiebreak</Label>
-                        <Switch checked={tiebreakOn} onCheckedChange={(v) => { setTiebreakOn(v); if (!v) setTiebreakWinner(null); }} />
-                      </div>
-                      {tiebreakOn && (
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 mb-2">Tiebreak winner</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button type="button" variant={tiebreakWinner === 'home' ? 'default' : 'outline'} onClick={() => setTiebreakWinner('home')} className={tiebreakWinner === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>{homeTeam?.name || 'Home'}</Button>
-                            <Button type="button" variant={tiebreakWinner === 'away' ? 'default' : 'outline'} onClick={() => setTiebreakWinner('away')} className={tiebreakWinner === 'away' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>{awayTeam?.name || 'Away'}</Button>
-                          </div>
-                        </div>
-                      )}
-                      {(() => {
-                        if (homeSets === '' || awaySets === '' || homeScore === '' || awayScore === '') return null;
-                        const hsN = parseInt(homeSets); const asN = parseInt(awaySets);
-                        const gw = tiebreakOn ? tiebreakWinner : (hsN > asN ? 'home' : asN > hsN ? 'away' : null);
-                        if (!gw) return null;
-                        const gwName = gw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');
-                        const gv = scoringLeague.scoring_standard_win ? 2 : scoringLeague.scoring_game_win ? (scoringLeague.scoring_game_win_value ?? 1) : null;
-                        const hN = parseInt(homeScore); const aN = parseInt(awayScore);
-                        const sw = hN > aN ? 'home' : aN > hN ? 'away' : null;
-                        const parts = ['Game winner: ' + gwName + (gv ? ' (+' + gv + ')' : '')];
-                        if (sw) parts.push('Most shots: ' + (sw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away')) + (scoringLeague.scoring_highest_shots ? ' (+1)' : ''));
-                        else parts.push('Shots level – no point');
-                        return <p className="text-xs text-gray-500 text-center">{parts.join(' · ')}</p>;
-                      })()}
-                    </div>
-                  )}
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 text-center mb-2">
-                      {isSetsLeague ? 'Total shots (both sets + tiebreak if played)' : 'Total Shots'}
-                    </p>
+                    <p className="text-xs font-semibold text-gray-500 text-center mb-2">Total Shots</p>
                     <div className="grid grid-cols-3 gap-4 items-center">
                       <div className="text-right">
                         {!isSetsLeague && <Label className="block mb-2">{homeTeam?.name}</Label>}
