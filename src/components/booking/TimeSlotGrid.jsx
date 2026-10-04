@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, Loader2, Check, Users, UserPlus, UserMinus, Square, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isLeagueBooking, getLeagueBookingDisplay } from '@/lib/leagueBookingDisplay';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -166,6 +167,13 @@ export default function TimeSlotGrid({
     return { league, homeTeam, awayTeam };
   };
 
+  // Three-line league display for any booking with a "League - " booker name,
+  // whether or not a fixture links to it
+  const getLeagueDisplay = (booking) =>
+    isLeagueBooking(booking)
+      ? getLeagueBookingDisplay(booking, leagueFixtures, leagueTeams)
+      : null;
+
   const handleSlotClick = (rink, slot, slotIndex) => {
     if (justDropped.current) return;
 
@@ -310,7 +318,8 @@ export default function TimeSlotGrid({
                     booking?.booker_email !== currentUserEmail;
 
                   // League info
-                  const leagueInfo = getLeagueInfo(booking);
+                  const leagueDisplay = getLeagueDisplay(booking);
+                  const leagueInfo = leagueDisplay ? null : getLeagueInfo(booking);
 
                   // Drop zone: empty slot OR admin swapping onto booked slot
                   const isSwapTarget = !copyMode && !available && isAdmin && isDragging && draggingBooking?.id !== booking?.id;
@@ -431,8 +440,21 @@ export default function TimeSlotGrid({
                                     </span>
                                   )}
 
-                                  {/* League fixture info */}
-                                  {leagueInfo ? (
+                                  {/* League booking info (three-line format) */}
+                                  {leagueDisplay ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      {leagueDisplay.leagueName && (
+                                        <span className="text-[10px] font-semibold opacity-90 truncate leading-tight">
+                                          {leagueDisplay.leagueName}
+                                        </span>
+                                      )}
+                                      {leagueDisplay.matchText && (
+                                        <span className="text-[10px] opacity-80 truncate leading-tight">
+                                          {leagueDisplay.matchText}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : leagueInfo ? (
                                     <div className="flex flex-col gap-0.5">
                                       {leagueInfo.league && (
                                         <span className="text-[10px] font-semibold opacity-90 truncate leading-tight">
@@ -516,7 +538,13 @@ export default function TimeSlotGrid({
                           <div className="text-center">
                             <p className="font-medium">{booking?.booker_name}</p>
                             <p className="text-xs capitalize">{booking?.competition_type || booking?.status}</p>
-                            {leagueInfo?.homeTeam && leagueInfo?.awayTeam && (
+                            {leagueDisplay?.leagueName && (
+                              <p className="text-xs">{leagueDisplay.leagueName}</p>
+                            )}
+                            {leagueDisplay?.matchText && (
+                              <p className="text-xs">{leagueDisplay.matchText}</p>
+                            )}
+                            {!leagueDisplay && leagueInfo?.homeTeam && leagueInfo?.awayTeam && (
                               <p className="text-xs">{leagueInfo.homeTeam.name} vs {leagueInfo.awayTeam.name}</p>
                             )}
                             {isRollup && <p className="text-xs">{rollupCount}/8 members</p>}

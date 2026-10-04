@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, User, Trophy, FileText, CheckCircle, XCircle, Loader2, Users, UserPlus, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { isLeagueBooking, getLeagueBookingDisplay } from '@/lib/leagueBookingDisplay';
 
 const statusIcons = {
   approved: CheckCircle,
@@ -81,6 +82,16 @@ export default function BookingDetailModal({
               </div>
             </div>
 
+            {isLeagueBooking(booking) && getLeagueBookingDisplay(booking).leagueName && (
+              <div className="flex items-start gap-3">
+                <Trophy className="w-4 h-4 text-gray-500 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500">League</p>
+                  <p className="text-sm font-medium">{getLeagueBookingDisplay(booking).leagueName}</p>
+                </div>
+              </div>
+            )}
+
             {booking.competition_type && (
               <div className="flex items-start gap-3">
                 <Trophy className="w-4 h-4 text-gray-500 mt-0.5" />
@@ -99,7 +110,7 @@ export default function BookingDetailModal({
               <div className="flex items-start gap-3">
                 <FileText className="w-4 h-4 text-gray-500 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500">Notes</p>
+                  <p className="text-xs text-gray-500">{isLeagueBooking(booking) ? 'Match' : 'Notes'}</p>
                   <p className="text-sm">{booking.notes}</p>
                 </div>
               </div>

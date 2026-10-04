@@ -6,6 +6,7 @@ import { createPageUrl } from '@/utils';
 import { format, addDays } from 'date-fns';
 import { Loader2, Users, Clock, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isLeagueBooking, getLeagueBookingDisplay } from '@/lib/leagueBookingDisplay';
 
 const generateTimeSlots = (openingTime = '10:00', closingTime = '21:00', duration = 2) => {
   const slots = [];
@@ -251,25 +252,46 @@ export default function RinkDisplayTV() {
                               {booking.booker_name}
                             </span>
                             {isFullscreen ? (
-                              (() => {
-                                const compType = booking.competition_type === 'Other' && booking.competition_other
-                                  ? booking.competition_other
-                                  : booking.competition_type;
-                                const mainParts = [compType, booking.booking_format].filter(Boolean).join(' - ');
-                                const line = booking.notes ? `${mainParts}. ${booking.notes}` : mainParts;
-                                return line ? (
-                                  <span className="opacity-80 mt-0.5 line-clamp-2" style={{ fontSize: '0.9rem' }}>
-                                    {line}
-                                  </span>
-                                ) : null;
-                              })()
-                            ) : (
-                              booking.competition_type && (
-                                <span className="opacity-80 mt-0.5" style={{ fontSize: '0.75rem' }}>
-                                  {booking.competition_type === 'Other' && booking.competition_other
+                              isLeagueBooking(booking) ? (
+                                <>
+                                  {getLeagueBookingDisplay(booking).leagueName && (
+                                    <span className="opacity-80 mt-0.5" style={{ fontSize: '0.9rem' }}>
+                                      {getLeagueBookingDisplay(booking).leagueName}
+                                    </span>
+                                  )}
+                                  {booking.notes && (
+                                    <span className="opacity-80 mt-0.5 line-clamp-2" style={{ fontSize: '0.9rem' }}>
+                                      {booking.notes}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                (() => {
+                                  const compType = booking.competition_type === 'Other' && booking.competition_other
                                     ? booking.competition_other
-                                    : booking.competition_type}
+                                    : booking.competition_type;
+                                  const mainParts = [compType, booking.booking_format].filter(Boolean).join(' - ');
+                                  const line = booking.notes ? `${mainParts}. ${booking.notes}` : mainParts;
+                                  return line ? (
+                                    <span className="opacity-80 mt-0.5 line-clamp-2" style={{ fontSize: '0.9rem' }}>
+                                      {line}
+                                    </span>
+                                  ) : null;
+                                })()
+                              )
+                            ) : (
+                              isLeagueBooking(booking) ? (
+                                <span className="opacity-80 mt-0.5" style={{ fontSize: '0.75rem' }}>
+                                  {getLeagueBookingDisplay(booking).leagueName}
                                 </span>
+                              ) : (
+                                booking.competition_type && (
+                                  <span className="opacity-80 mt-0.5" style={{ fontSize: '0.75rem' }}>
+                                    {booking.competition_type === 'Other' && booking.competition_other
+                                      ? booking.competition_other
+                                      : booking.competition_type}
+                                  </span>
+                                )
                               )
                             )}
                             {isRollup && (

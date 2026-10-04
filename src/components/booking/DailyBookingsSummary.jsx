@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { format } from 'date-fns';
+import { isLeagueBooking, getLeagueBookingDisplay } from '@/lib/leagueBookingDisplay';
 
 /**
  * Fetches all the context needed to enrich bookings with player names,
@@ -145,6 +146,9 @@ export default function DailyBookingsSummary({ clubId, selectedDate, bookings, c
       slotBookings.forEach(booking => {
         const fixture = getLeagueFixtureForBooking(booking);
         const selection = !fixture ? getTeamSelectionForBooking(booking) : null;
+        // League booking without a fixture link — still show the league name and teams lines
+        const lgUnlinked = !fixture && !selection && isLeagueBooking(booking);
+        const lgDisplay = lgUnlinked ? getLeagueBookingDisplay(booking, leagueFixtures, leagueTeams) : null;
         const bgColor = competitionColours[booking.competition_type] || '#f9fafb';
         const isPending = booking.status === 'pending';
 
@@ -176,6 +180,8 @@ export default function DailyBookingsSummary({ clubId, selectedDate, bookings, c
               <ul>${playerList}</ul>
             </div>
           `;
+        } else if (lgUnlinked) {
+          membersSection = `<div class="league-label">${lgDisplay.leagueName}</div>`;
         } else if (booking.competition_type === 'Roll-up' && booking.rollup_members?.length > 0) {
           const rollupList = [
             { name: booking.booker_name },
@@ -188,8 +194,8 @@ export default function DailyBookingsSummary({ clubId, selectedDate, bookings, c
           <div class="rink-card" style="background:${bgColor}${isPending ? ';border:2px dashed #f59e0b' : ''}">
             <div class="rink-title">Rink ${booking.rink_number}</div>
             <div class="booker">${booking.booker_name}</div>
-            <div class="comp-type">${booking.competition_type || ''}${booking.competition_other ? ` – ${booking.competition_other}` : ''}${booking.booking_format ? ` (${booking.booking_format})` : ''}${isPending ? ' <span class="pending-badge">Pending</span>' : ''}</div>
-            ${booking.notes ? `<div class="notes">${booking.notes}</div>` : ''}
+            ${lgUnlinked ? `<div class="comp-type league-line">${lgDisplay.leagueName}</div>` : `<div class="comp-type">${booking.competition_type || ''}${booking.competition_other ? ` – ${booking.competition_other}` : ''}${booking.booking_format ? ` (${booking.booking_format})` : ''}${isPending ? ' <span class="pending-badge">Pending</span>' : ''}</div>`}
+            ${booking.notes ? `<div class="${lgUnlinked ? 'match-line' : 'notes'}">${booking.notes}</div>` : ''}
             ${membersSection}
           </div>
         `;
@@ -220,6 +226,8 @@ export default function DailyBookingsSummary({ clubId, selectedDate, bookings, c
     .booker { font-size: 10px; color: #374151; margin-bottom: 2px; }
     .comp-type { font-size: 9px; color: #6b7280; font-style: italic; margin-bottom: 4px; }
     .notes { font-size: 9px; color: #92400e; background: #fffbeb; border-radius: 3px; padding: 2px 4px; margin-bottom: 4px; }
+    .match-line { font-size: 9px; color: #374151; font-weight: 600; margin-bottom: 4px; }
+    .league-line { font-style: normal; font-weight: 600; color: #065f46; }
     .pending-badge { background: #f59e0b; color: #fff; border-radius: 3px; padding: 1px 4px; font-size: 8px; font-style: normal; font-weight: 600; }
     .league-players { display: flex; gap: 6px; margin-top: 4px; }
     .team-col { flex: 1; }

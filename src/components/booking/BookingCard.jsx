@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { isLeagueBooking, getLeagueBookingDisplay } from '@/lib/leagueBookingDisplay';
 
 const statusConfig = {
   pending: { 
@@ -124,6 +125,13 @@ export default function BookingCard({
                   {isAdmin && (
                     <p className="text-sm text-gray-700">
                       <span className="font-medium">Booked by:</span> {booking.booker_name} ({booking.booker_email})
+                    </p>
+                  )}
+
+                  {isLeagueBooking(booking) && getLeagueBookingDisplay(booking).leagueName && (
+                    <p className="text-sm font-medium text-emerald-700 flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 flex-shrink-0" />
+                      {getLeagueBookingDisplay(booking).leagueName}
                     </p>
                   )}
 
