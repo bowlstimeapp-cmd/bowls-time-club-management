@@ -2218,9 +2218,9 @@ export default function LeagueAdmin() {
                           <Input type="number" min="0" value={awaySets} onChange={(e) => setAwaySets(e.target.value)} className="text-center" placeholder="0" />
                         </div>
                       </div>
-                      {homeSets !== '' && awaySets !== '' && parseInt(homeSets) === parseInt(awaySets) && (
-                        <p className="text-xs text-red-600 font-medium text-center mt-2">Sets level – add tiebreak winner</p>
-                      )}
+{homeSets !== '' && awaySets !== '' && parseInt(homeSets) === parseInt(awaySets) && !(hadTiebreak && tiebreakWinner) && (
+  <p className="text-xs text-red-600 font-medium text-center mt-2">Sets level – add tiebreak winner</p>
+)}
                       <div className="flex flex-col items-center gap-2 mt-3">
                         <div className="flex items-center gap-2">
                           <Label className="text-xs">Tiebreak played</Label>
