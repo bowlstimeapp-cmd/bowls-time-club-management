@@ -85,6 +85,8 @@ import { createPageUrl } from '@/utils';
 import { format, parseISO, addDays, eachWeekOfInterval, isBefore } from 'date-fns';
 import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
 import { buildFixtureList as buildFixturesForLeague, reassignRinkAllocations } from '@/lib/leagueFixtureGenerator';
+import LeagueSearchSelect from '@/components/leagues/LeagueSearchSelect';
+import LeagueFocusView from '@/components/leagues/LeagueFocusView';
 
 export default function LeagueAdmin() {
   const [searchParams] = useSearchParams();
@@ -175,6 +177,10 @@ export default function LeagueAdmin() {
   const [teamFixtures, setTeamFixtures] = useState(null);
   const [archiveLeagueId, setArchiveLeagueId] = useState(null);
 
+  // League focus selector ('all' or a league id) — distinct from selectedLeague (team dialog)
+  const [selectedLeagueFilter, setSelectedLeagueFilter] = useState('all');
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+
   // Scorecard date filter dialog
   const [scorecardDialogLeague, setScorecardDialogLeague] = useState(null);
   const [scorecardMatchDate, setScorecardMatchDate] = useState('');
@@ -258,6 +264,13 @@ export default function LeagueAdmin() {
   // Leagues split into active and archived (completed) sections
   const activeLeagues = leagues.filter(l => l.status !== 'completed').sort(leagueDayTimeSort);
   const archivedLeagues = leagues.filter(l => l.status === 'completed').sort(leagueDayTimeSort);
+
+  // If the focused league is later archived or deleted, fall back to "See all"
+  useEffect(() => {
+    if (selectedLeagueFilter !== 'all' && !leagues.some(l => l.id === selectedLeagueFilter)) {
+      setSelectedLeagueFilter('all');
+    }
+  }, [leagues, selectedLeagueFilter]);
 
   const openTeamFixtures = (team) => {
     const teamLeague = leagues.find(l => l.id === team.league_id);
@@ -1131,6 +1144,313 @@ export default function LeagueAdmin() {
     completed: 'bg-blue-100 text-blue-700',
   };
 
+  // Fixture row used by the overdue and upcoming lists in the single-league view
+  const renderFixtureRow = (league, fixture, showPending) => {
+    const homeTeam = teams.find(t => t.id === fixture.home_team_id);
+    const awayTeam = teams.find(t => t.id === fixture.away_team_id);
+    return (
+      <div key={fixture.id} className="flex items-center justify-between p-3 border rounded-lg">
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500 w-24">
+            {format(parseISO(fixture.match_date), 'd MMM yyyy')}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{homeTeam?.name || 'Unknown'}</span>
+            <span className="text-gray-400">vs</span>
+            <span className="font-medium">{awayTeam?.name || 'Unknown'}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline">Rink {fixture.rink_number}</Badge>
+          {league?.is_double_rink && fixture.tie_id && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-600">Leg {fixture.leg || 1}</Badge>
+          )}
+          {showPending && fixture.pending_home_score != null && (
+            <Badge className="bg-amber-100 text-amber-800">Score pending approval</Badge>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openScoreDialog(fixture)}
+          >
+            <Pencil className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // The standard League card, shared by the "See all" list and the single-league view
+  const renderLeagueCard = (league, leagueTeams) => (
+    <motion.div
+      key={league.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <CardTitle className="flex items-center gap-2 flex-wrap">
+                  {league.name}
+                  <Badge className={statusColors[league.status || 'draft']}>
+                    {league.status || 'draft'}
+                  </Badge>
+                  {league.format && (
+                    <Badge variant="outline">
+                      {league.format === 'triples' ? 'Triples' : 'Fours'}
+                    </Badge>
+                  )}
+                  {league.creation_mode === 'manual' && (
+                    <Badge className="bg-purple-100 text-purple-700 border-purple-200">Manual</Badge>
+                  )}
+                  {league.is_double_rink && (
+                    <Badge className="bg-blue-100 text-blue-700 border-blue-200">Double Rink</Badge>
+                  )}
+                </CardTitle>
+                {league.description && (
+                  <CardDescription>{league.description}</CardDescription>
+                )}
+                {league.start_date && league.end_date && (
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {format(parseISO(league.start_date), 'd MMM')} - {format(parseISO(league.end_date), 'd MMM yyyy')}
+                    </span>
+                    {league.start_time && league.end_time && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {league.start_time} - {league.end_time}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {(league.blacklisted_dates || []).length > 0 && (
+                  <div className="flex items-start gap-1.5 mt-1 text-sm text-red-600">
+                    <CalendarX className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      No fixtures on:{' '}
+                      {league.blacklisted_dates
+                        .slice()
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map(d => format(parseISO(d.date), 'd MMM yyyy'))
+                        .join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Manage menu: setup tools and league admin actions */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Settings className="w-4 h-4 mr-1" />
+                  Manage
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel className="text-xs font-normal text-gray-500">Fixtures</DropdownMenuLabel>
+                {league.creation_mode !== 'manual' && league.fixtures_generated && (
+                  <DropdownMenuItem
+                    disabled={regeneratingFixtures}
+                    onSelect={() => setRegenDialogLeague(league)}
+                    title="Delete existing fixtures and bookings, then rebuild from current league settings"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Regenerate fixtures
+                  </DropdownMenuItem>
+                )}
+                {league.fixtures_generated && (
+                  <DropdownMenuItem
+                    disabled={regeneratingFixtures}
+                    onSelect={() => handleReallocateRinks(league)}
+                    title="Redraw rink allocations without changing fixtures"
+                  >
+                    <Shuffle className="w-4 h-4 mr-2" />
+                    Re-allocate rinks
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setBlacklistLeague(league);
+                    setBlacklistDialogOpen(true);
+                  }}
+                >
+                  <CalendarX className="w-4 h-4 mr-2" />
+                  Blacklist dates
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-gray-500">League</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => handleEditLeague(league)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit league
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setArchiveLeagueId(league.id)}>
+                  <Archive className="w-4 h-4 mr-2" />
+                  Archive league
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  onSelect={() => setDeleteLeagueId(league.id)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete league
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Everyday actions: always visible and labelled */}
+          <div className="flex gap-2 flex-wrap mt-4 empty:hidden">
+            {/* Manual mode: always show Edit Fixtures button */}
+            {league.creation_mode === 'manual' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setManualFixturesLeague(league); setManualFixturesModalOpen(true); }}
+                className="text-purple-600 hover:bg-purple-50 border-purple-200"
+              >
+                <List className="w-4 h-4 mr-1" />
+                {league.fixtures_generated ? 'Edit Fixtures' : 'Add Fixtures'}
+              </Button>
+            )}
+            {/* Auto mode: show Generate Fixtures when conditions met */}
+            {league.creation_mode !== 'manual' && !league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleGenerateFixtures(league)}
+                disabled={generatingFixtures}
+                className="text-emerald-600 hover:bg-emerald-50"
+              >
+                {generatingFixtures ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Zap className="w-4 h-4 mr-1" />
+                )}
+                Generate Fixtures
+              </Button>
+            )}
+            {league.fixtures_generated && !league.bookings_created && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBookRinks(league)}
+                disabled={bookingRinks}
+                className="text-blue-600 hover:bg-blue-50"
+              >
+                {bookingRinks ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <CalendarCheck className="w-4 h-4 mr-1" />
+                )}
+                Book Rinks
+              </Button>
+            )}
+            {league.fixtures_generated && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => openScoresModal(league)}>
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Enter scores
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => viewFixtures(league)}>
+                  <List className="w-4 h-4 mr-1" />
+                  Fixtures
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => viewLeagueTable(league)}>
+                  <BarChart3 className="w-4 h-4 mr-1" />
+                  League table
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => openScorecardDialog(league)}>
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print scorecards
+                </Button>
+              </>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-gray-700 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Teams ({leagueTeams.length})
+            </h4>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openAddTeam(league)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add Team
+            </Button>
+          </div>
+
+          {leagueTeams.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No teams in this league yet
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {leagueTeams.map((team) => (
+                <div
+                  key={team.id}
+                  className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h5 className="font-medium text-gray-900">{team.name}</h5>
+                      {team.captain_email ? (
+                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                          <UserCircle className="w-4 h-4" />
+                          {team.captain_name || team.captain_email}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-400 mt-1">No captain assigned</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => openTeamFixtures(team)}
+                        title="View team fixtures"
+                      >
+                        <List className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleEditTeam(team)}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                        onClick={() => setDeleteTeamId(team.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1171,6 +1491,19 @@ export default function LeagueAdmin() {
           </Button>
         </div>
 
+        {!showArchive && activeLeagues.length > 0 && (
+          <div className="mb-6 -mt-3">
+            <LeagueSearchSelect
+              leagues={activeLeagues}
+              value={selectedLeagueFilter}
+              onValueChange={(id) => {
+                setSelectedLeagueFilter(id || 'all');
+                setShowAllUpcoming(false);
+              }}
+            />
+          </div>
+        )}
+
         {leaguesLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full" />
@@ -1195,6 +1528,18 @@ export default function LeagueAdmin() {
               </Button>
             </CardContent>
           </Card>
+        ) : selectedLeagueFilter !== 'all' ? (
+          (() => {
+            const focusLeague = activeLeagues.find(l => l.id === selectedLeagueFilter);
+            return focusLeague ? (
+              <LeagueFocusView
+                league={focusLeague}
+                teams={teams}
+                fixtures={fixtures}
+                onScoreEdit={openScoreDialog}
+              />
+            ) : null;
+          })()
         ) : club?.alt_view_leagues ? (
           <LeagueAdminTableView
             leagues={activeLeagues}
@@ -1226,275 +1571,7 @@ export default function LeagueAdmin() {
           <div className="space-y-6">
             {activeLeagues.map((league) => {
               const leagueTeams = teams.filter(t => t.league_id === league.id);
-              return (
-                <motion.div
-                  key={league.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 text-emerald-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="flex items-center gap-2 flex-wrap">
-                              {league.name}
-                              <Badge className={statusColors[league.status || 'draft']}>
-                                {league.status || 'draft'}
-                              </Badge>
-                              {league.format && (
-                                <Badge variant="outline">
-                                  {league.format === 'triples' ? 'Triples' : 'Fours'}
-                                </Badge>
-                              )}
-                              {league.creation_mode === 'manual' && (
-                                <Badge className="bg-purple-100 text-purple-700 border-purple-200">Manual</Badge>
-                              )}
-                              {league.is_double_rink && (
-                                <Badge className="bg-blue-100 text-blue-700 border-blue-200">Double Rink</Badge>
-                              )}
-                            </CardTitle>
-                            {league.description && (
-                              <CardDescription>{league.description}</CardDescription>
-                            )}
-                            {league.start_date && league.end_date && (
-                              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  {format(parseISO(league.start_date), 'd MMM')} - {format(parseISO(league.end_date), 'd MMM yyyy')}
-                                </span>
-                                {league.start_time && league.end_time && (
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {league.start_time} - {league.end_time}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {(league.blacklisted_dates || []).length > 0 && (
-                              <div className="flex items-start gap-1.5 mt-1 text-sm text-red-600">
-                                <CalendarX className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                                <span>
-                                  No fixtures on:{' '}
-                                  {league.blacklisted_dates
-                                    .slice()
-                                    .sort((a, b) => a.date.localeCompare(b.date))
-                                    .map(d => format(parseISO(d.date), 'd MMM yyyy'))
-                                    .join(', ')}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {/* Manage menu: setup tools and league admin actions */}
-                        <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="shrink-0">
-                              <Settings className="w-4 h-4 mr-1" />
-                              Manage
-                              <ChevronDown className="w-4 h-4 ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-60">
-                            <DropdownMenuLabel className="text-xs font-normal text-gray-500">Fixtures</DropdownMenuLabel>
-                            {league.creation_mode !== 'manual' && league.fixtures_generated && (
-                              <DropdownMenuItem
-                                disabled={regeneratingFixtures}
-                                onSelect={() => setRegenDialogLeague(league)}
-                                title="Delete existing fixtures and bookings, then rebuild from current league settings"
-                              >
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                Regenerate fixtures
-                              </DropdownMenuItem>
-                            )}
-                            {league.fixtures_generated && (
-                              <DropdownMenuItem
-                                disabled={regeneratingFixtures}
-                                onSelect={() => handleReallocateRinks(league)}
-                                title="Redraw rink allocations without changing fixtures"
-                              >
-                                <Shuffle className="w-4 h-4 mr-2" />
-                                Re-allocate rinks
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onSelect={() => {
-                                setBlacklistLeague(league);
-                                setBlacklistDialogOpen(true);
-                              }}
-                            >
-                              <CalendarX className="w-4 h-4 mr-2" />
-                              Blacklist dates
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuLabel className="text-xs font-normal text-gray-500">League</DropdownMenuLabel>
-                            <DropdownMenuItem onSelect={() => handleEditLeague(league)}>
-                              <Pencil className="w-4 h-4 mr-2" />
-                              Edit league
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setArchiveLeagueId(league.id)}>
-                              <Archive className="w-4 h-4 mr-2" />
-                              Archive league
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                              onSelect={() => setDeleteLeagueId(league.id)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete league
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* Everyday actions: always visible and labelled */}
-                      <div className="flex gap-2 flex-wrap mt-4 empty:hidden">
-                        {/* Manual mode: always show Edit Fixtures button */}
-                        {league.creation_mode === 'manual' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => { setManualFixturesLeague(league); setManualFixturesModalOpen(true); }}
-                            className="text-purple-600 hover:bg-purple-50 border-purple-200"
-                          >
-                            <List className="w-4 h-4 mr-1" />
-                            {league.fixtures_generated ? 'Edit Fixtures' : 'Add Fixtures'}
-                          </Button>
-                        )}
-                        {/* Auto mode: show Generate Fixtures when conditions met */}
-                        {league.creation_mode !== 'manual' && !league.fixtures_generated && leagueTeams.length >= 2 && league.start_date && league.end_date && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleGenerateFixtures(league)}
-                            disabled={generatingFixtures}
-                            className="text-emerald-600 hover:bg-emerald-50"
-                          >
-                            {generatingFixtures ? (
-                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                            ) : (
-                              <Zap className="w-4 h-4 mr-1" />
-                            )}
-                            Generate Fixtures
-                          </Button>
-                        )}
-                        {league.fixtures_generated && !league.bookings_created && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleBookRinks(league)}
-                            disabled={bookingRinks}
-                            className="text-blue-600 hover:bg-blue-50"
-                          >
-                            {bookingRinks ? (
-                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                            ) : (
-                              <CalendarCheck className="w-4 h-4 mr-1" />
-                            )}
-                            Book Rinks
-                          </Button>
-                        )}
-                        {league.fixtures_generated && (
-                          <>
-                            <Button variant="outline" size="sm" onClick={() => openScoresModal(league)}>
-                              <Pencil className="w-4 h-4 mr-1" />
-                              Enter scores
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => viewFixtures(league)}>
-                              <List className="w-4 h-4 mr-1" />
-                              Fixtures
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => viewLeagueTable(league)}>
-                              <BarChart3 className="w-4 h-4 mr-1" />
-                              League table
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => openScorecardDialog(league)}>
-                              <Printer className="w-4 h-4 mr-1" />
-                              Print scorecards
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-medium text-gray-700 flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          Teams ({leagueTeams.length})
-                        </h4>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => openAddTeam(league)}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Team
-                        </Button>
-                      </div>
-
-                      {leagueTeams.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">
-                          No teams in this league yet
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {leagueTeams.map((team) => (
-                            <div 
-                              key={team.id}
-                              className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h5 className="font-medium text-gray-900">{team.name}</h5>
-                                  {team.captain_email ? (
-                                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                                      <UserCircle className="w-4 h-4" />
-                                      {team.captain_name || team.captain_email}
-                                    </p>
-                                  ) : (
-                                    <p className="text-sm text-gray-400 mt-1">No captain assigned</p>
-                                  )}
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => openTeamFixtures(team)}
-                                    title="View team fixtures"
-                                  >
-                                    <List className="w-3 h-3" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => handleEditTeam(team)}
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                                    onClick={() => setDeleteTeamId(team.id)}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
+              return renderLeagueCard(league, leagueTeams);
             })}
           </div>
         )}
