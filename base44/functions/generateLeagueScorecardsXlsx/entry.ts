@@ -67,21 +67,19 @@ Deno.serve(async (req) => {
       // End rows
       if (league.is_sets) {
         const setsEnds = parseInt(league.sets_ends) || 8;
-        for (const setLabel of ['SET 1', 'SET 2']) {
-          lines.push(rowLine([setLabel, '', '', '', '']));
+        // Set 1 and Set 2 back to back, no blank lines between sections
+        for (let set = 0; set < 2; set++) {
           for (let end = 1; end <= setsEnds; end++) {
             lines.push(rowLine(['', '', end, '', '']));
           }
           lines.push(rowLine(['TOTAL', '', '', '', 'TOTAL']));
-          lines.push(rowLine(['', '', '', '', '']));
         }
-        // Tie Break section — always 3 ends
-        lines.push(rowLine(['TIE BREAK (only if sets are 1-1)', '', '', '', '']));
+        // Tie Break section — always exactly 3 ends
+        lines.push(rowLine(['Tie Break', '', '', '', '']));
         for (let end = 1; end <= 3; end++) {
           lines.push(rowLine(['', '', end, '', '']));
         }
         lines.push(rowLine(['TOTAL', '', '', '', 'TOTAL']));
-        lines.push(rowLine(['', '', '', '', '']));
       } else {
         for (let end = 1; end <= 24; end++) {
           lines.push(rowLine(['', '', end, '', '']));

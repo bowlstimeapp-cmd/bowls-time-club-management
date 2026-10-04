@@ -57,7 +57,11 @@ Deno.serve(async (req) => {
       return {
         leagueName: league.name,
         season: club.season === 'indoor' ? 'Indoor Season' : 'Outdoor Season',
-        seasonYears: `${new Date(league.start_date).getFullYear()}-${new Date(league.end_date).getFullYear()}`,
+        seasonYears: (() => {
+          const startYr = new Date(league.start_date).getFullYear();
+          const endYr = new Date(league.end_date).getFullYear();
+          return startYr === endYr ? String(startYr) : `${startYr}-${String(endYr).slice(-2)}`;
+        })(),
         dayName,
         dateStr: `${day} ${monthName} ${year}`,
         round: dateToRound[fixture.match_date],
@@ -105,10 +109,8 @@ Deno.serve(async (req) => {
         return rows + total;
       }
 
-      // Sets mode
-      const totalEnds = setsEnds * 2;
+      // Sets mode — 3 sections back to back: Set 1 (ends + TOTAL), Set 2 (ends + TOTAL), Tie Break (heading + 3 ends + TOTAL)
       let rows = '';
-      let globalEndIdx = 0;
 
       for (let set = 0; set < 2; set++) {
         for (let e = 1; e <= setsEnds; e++) {
@@ -119,7 +121,6 @@ Deno.serve(async (req) => {
             <td></td>
             <td></td>
           </tr>`;
-          globalEndIdx++;
         }
 
         rows += `<tr class="total-row">
@@ -127,14 +128,11 @@ Deno.serve(async (req) => {
           <td></td>
           <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
         </tr>`;
-
-        rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
-        rows += `<tr class="spacer-row"><td></td><td></td><td></td><td></td><td></td></tr>`;
       }
 
-      // Tie Break section — always 3 ends, regardless of sets_ends
+      // Tie Break section — always exactly 3 ends, regardless of sets_ends
       rows += `<tr class="pos-label-row">
-        <td colspan="5" class="pos-label-cell">TIE BREAK (only if sets are 1–1)</td>
+        <td colspan="5" class="pos-label-cell">Tie Break</td>
       </tr>`;
       for (let e = 1; e <= 3; e++) {
         rows += `<tr>
@@ -149,12 +147,6 @@ Deno.serve(async (req) => {
         <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
         <td></td>
         <td colspan="2" style="text-align:left;padding-left:1mm;">TOTAL</td>
-      </tr>`;
-
-      rows += `<tr class="sets-row">
-        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
-        <td></td>
-        <td colspan="2" style="text-align:center;font-weight:bold;font-size:6pt;padding:1mm;">Sets ____</td>
       </tr>`;
 
       return rows;
@@ -195,7 +187,8 @@ Deno.serve(async (req) => {
       overflow: hidden;
     }
     .header {
-      height: 18mm;
+      min-height: 18mm;
+      height: auto;
       border-bottom: 1px solid #000;
       display: flex;
       padding: 3mm;
@@ -221,7 +214,7 @@ Deno.serve(async (req) => {
       justify-content: space-between;
     }
     .league-name { font-size: 9pt; font-weight: bold; line-height: 1.1; }
-    .season-info { font-size: 7pt; line-height: 1.2; }
+    .season-info { font-size: 7pt; line-height: 1.2; white-space: nowrap; }
     .match-details {
       background: #f5f5f5;
       padding: 2mm;
@@ -299,10 +292,7 @@ ${scorecards.map((card, idx) => {
       </div>
       <div class="info-box">
         <div class="league-name">${card.leagueName}</div>
-        <div class="season-info">
-          <div>${card.season}</div>
-          <div>${card.seasonYears}</div>
-        </div>
+        <div class="season-info" style="${`${card.season} ${card.seasonYears}`.length > 22 ? 'font-size:6pt;' : ''}">${card.season} ${card.seasonYears}</div>
       </div>
     </div>
     <div class="match-details">
