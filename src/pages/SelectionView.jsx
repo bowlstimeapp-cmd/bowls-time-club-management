@@ -193,7 +193,9 @@ export default function SelectionView() {
   // Use competition entity as source of truth when available, fall back to selection fields
   const homeRinksCount = activeComp ? activeComp.home_rinks : (selection?.home_rinks || 2);
   const awayRinksCount = isTopClub ? 0 : (activeComp ? (activeComp.away_rinks || 0) : 0);
-  const playersPerRink = activeComp?.players_per_rink || 4;
+  const playersPerRink = selection.competition === 'Friendly'
+    ? (selection.friendly_players_per_rink || 4)
+    : (activeComp?.players_per_rink || 4);
   const dynamicRinks = [
     ...Array.from({ length: homeRinksCount }, (_, i) => ({ number: i + 1, tag: 'Home' })),
     ...Array.from({ length: awayRinksCount }, (_, i) => ({ number: homeRinksCount + i + 1, tag: 'Away' })),

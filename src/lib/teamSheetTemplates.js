@@ -277,7 +277,9 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
   const isTopClub = selection.competition === 'Top Club';
   const homeRinksCount = activeComp ? activeComp.home_rinks : (selection?.home_rinks || 2);
   const awayRinksCount = isTopClub ? 0 : (activeComp ? (activeComp.away_rinks || 0) : 0);
-  const playersPerRink = activeComp?.players_per_rink || 4;
+  const playersPerRink = selection.competition === 'Friendly'
+    ? (selection.friendly_players_per_rink || 4)
+    : (activeComp?.players_per_rink || 4);
   const positionLabels = ['Lead', '2', '3', 'Skip', '5', '6'].slice(0, playersPerRink);
   const sel = selection.selections || {};
 
