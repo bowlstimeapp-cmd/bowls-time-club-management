@@ -994,7 +994,7 @@ export default function SelectionEditor() {
                 <>
                     <div>
                       <Label>Location *</Label>
-                      <Select value={friendlyLocation} onValueChange={(v) => {setFriendlyLocation(v);setSelections({});}}>
+                      <Select value={friendlyLocation} onValueChange={(v) => {setFriendlyLocation(v);setSelections({});setSelectedRinks([]);}}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select location" />
                         </SelectTrigger>
@@ -1120,9 +1120,11 @@ export default function SelectionEditor() {
                   </div>
                 }
 
-                {competition && competition !== 'Friendly' && competition !== 'Fantastic 5s' &&
-                 (competition !== 'Top Club' || fantastic5sVenue === 'Home') &&
-                 (competition !== 'Top Club (Outdoor)' || fantastic5sVenue === 'Home') &&
+                {competition && competition !== 'Fantastic 5s' &&
+                 (competition === 'Friendly'
+                   ? friendlyLocation === 'Home'
+                   : (competition !== 'Top Club' || fantastic5sVenue === 'Home') &&
+                     (competition !== 'Top Club (Outdoor)' || fantastic5sVenue === 'Home')) &&
                 <>
                     <div>
                       <Label>Number of Home Rinks</Label>
