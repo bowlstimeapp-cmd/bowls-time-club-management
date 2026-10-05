@@ -32,7 +32,7 @@ const TOP_CLUB_OUTDOOR_EVENTS = [
 
 const TOP_CLUB_EVENTS = [
   { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
-  { id: 'ladies_two_wood', name: "Ladies Two Wood", positions: ['Player'] },
+  { id: 'ladies_two_wood', name: "Ladies' Two Wood", positions: ['Player'] },
   { id: 'pairs', name: 'Pairs', positions: ['Lead', 'Skip'] },
   { id: 'triple', name: 'Triple', positions: ['Lead', '2', 'Skip'] },
   { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
