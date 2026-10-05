@@ -26,7 +26,7 @@ const TOP_CLUB_OUTDOOR_EVENTS = [
   { id: 'two_wood_singles', name: '2 Wood Singles', positions: ['Player'] },
   { id: 'four_wood_singles', name: '4 Wood Singles', positions: ['Player'] },
   { id: 'pairs', name: 'Pairs', positions: ['Lead', 'Skip'] },
-  { id: 'triple', name: 'Triple', positions: ['Lead', '2', 'Skip'] },
+  { id: 'triple', name: 'Triples', positions: ['Lead', '2', 'Skip'] },
   { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
 ];
 
@@ -34,7 +34,7 @@ const TOP_CLUB_EVENTS = [
   { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
   { id: 'ladies_two_wood', name: "Ladies' Two Wood", positions: ['Player'] },
   { id: 'pairs', name: 'Pairs', positions: ['Lead', 'Skip'] },
-  { id: 'triple', name: 'Triple', positions: ['Lead', '2', 'Skip'] },
+  { id: 'triple', name: 'Triples', positions: ['Lead', '2', 'Skip'] },
   { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
 ];
 
