@@ -72,9 +72,20 @@ export default async function(req) {
     const allClubMemberships = await sr.entities.ClubMembership.filter({ club_id: clubId });
     const clash = allClubMemberships.find(m => String(m.user_email || '').trim().toLowerCase() === email.toLowerCase());
     if (clash) {
-      return Response.json({
-        error: 'A member with this email already exists in this club — use Merge Members instead',
-      }, { status: 409 });
+      if (clash.status === 'rejected') {
+        // A rejected join request holding the new email is stale once the real
+        // membership is repointed to it — remove it so it doesn't block the change
+        try {
+          await sr.entities.ClubMembership.delete(clash.id);
+          summary['rejected_clash_removed'] = 1;
+        } catch (e) {
+          return Response.json({ error: `Could not clear rejected duplicate membership: ${e.message}` }, { status: 500 });
+        }
+      } else {
+        return Response.json({
+          error: 'A member with this email already exists in this club — use Merge Members instead',
+        }, { status: 409 });
+      }
     }
 
     if (!oldEmail) {
