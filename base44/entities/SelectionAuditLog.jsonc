@@ -1,0 +1,72 @@
+{
+  "name": "SelectionAuditLog",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "selection_id": {
+      "type": "string",
+      "description": "Reference to the TeamSelection"
+    },
+    "competition": {
+      "type": "string",
+      "description": "Competition of the selection at the time of the change"
+    },
+    "match_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Match date of the selection at the time of the change"
+    },
+    "match_name": {
+      "type": "string",
+      "description": "Match name of the selection at the time of the change"
+    },
+    "change": {
+      "type": "string",
+      "enum": [
+        "added",
+        "removed",
+        "replaced"
+      ],
+      "description": "Type of change made to the team sheet"
+    },
+    "position": {
+      "type": "string",
+      "description": "Team sheet position key the change applied to (e.g. rink4_Lead)"
+    },
+    "member_name": {
+      "type": "string",
+      "description": "Display name of the member after the change"
+    },
+    "member_email": {
+      "type": "string",
+      "description": "Member email after the change (null for removed players)"
+    },
+    "previous_member_email": {
+      "type": "string",
+      "description": "Member email at that position before the change"
+    },
+    "performed_by_email": {
+      "type": "string",
+      "description": "Email of the selector/admin who saved the change"
+    },
+    "performed_by_name": {
+      "type": "string",
+      "description": "Name of the selector/admin who saved the change"
+    }
+  },
+  "required": [
+    "club_id",
+    "selection_id",
+    "change",
+    "position"
+  ],
+  "rls": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

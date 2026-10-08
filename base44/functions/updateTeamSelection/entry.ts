@@ -13,6 +13,57 @@ async function getClubMembership(base44, userEmail, clubId) {
   return results[0] || null;
 }
 
+/**
+ * Selection audit log — records every player added, removed or replaced via the
+ * team sheet dropdowns, attributed to the signed-in selector/admin who saved.
+ */
+async function logSelectionChanges(base44, user, clubId, selectionId, before, after, data, oldNames = {}) {
+  const prevMap = {};
+  Object.entries(before || {}).forEach(([k, v]) => { if (v) prevMap[k] = v; });
+  const nextMap = {};
+  Object.entries(after || {}).forEach(([k, v]) => { if (v) nextMap[k] = v; });
+  const newNames = data.selection_names || {};
+  const entries = [];
+  Object.keys(nextMap).forEach((key) => {
+    const prev = prevMap[key];
+    if (prev && prev === nextMap[key]) return;
+    entries.push({
+      club_id: clubId,
+      selection_id: selectionId,
+      competition: data.competition || null,
+      match_date: data.match_date || null,
+      match_name: data.match_name || null,
+      change: prev ? 'replaced' : 'added',
+      position: key,
+      member_name: newNames[key] || nextMap[key],
+      member_email: nextMap[key],
+      previous_member_email: prev || null,
+      performed_by_email: user.email,
+      performed_by_name: user.full_name || user.email,
+    });
+  });
+  Object.keys(prevMap).forEach((key) => {
+    if (nextMap[key]) return;
+    entries.push({
+      club_id: clubId,
+      selection_id: selectionId,
+      competition: data.competition || null,
+      match_date: data.match_date || null,
+      match_name: data.match_name || null,
+      change: 'removed',
+      position: key,
+      member_name: oldNames[key] || prevMap[key],
+      member_email: null,
+      previous_member_email: prevMap[key],
+      performed_by_email: user.email,
+      performed_by_name: user.full_name || user.email,
+    });
+  });
+  if (entries.length > 0) {
+    await base44.asServiceRole.entities.SelectionAuditLog.bulkCreate(entries);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -53,6 +104,7 @@ Deno.serve(async (req) => {
       }
       if (!data) return Response.json({ error: 'Missing data for create' }, { status: 400 });
       const created = await base44.asServiceRole.entities.TeamSelection.create({ ...data, club_id: clubId });
+      await logSelectionChanges(base44, user, clubId, created.id, {}, data.selections, data);
       return Response.json({ success: true, id: created.id, record: created });
     }
 
@@ -66,6 +118,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
       }
       await base44.asServiceRole.entities.TeamSelection.update(selectionId, data);
+      await logSelectionChanges(base44, user, clubId, selectionId, existing[0].selections, data.selections, data, existing[0].selection_names);
       return Response.json({ success: true });
     }
 

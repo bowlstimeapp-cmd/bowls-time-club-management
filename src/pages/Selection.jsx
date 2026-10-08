@@ -27,6 +27,7 @@ import {
   Clock,
   Archive,
   Settings,
+  History,
 } from 'lucide-react';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -37,6 +38,7 @@ import AdminAvailabilityModal from '@/components/selection/AdminAvailabilityModa
 import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
 import SelectionColourSettings from '@/components/selection/SelectionColourSettings';
+import SelectionAuditLogDialog from '@/components/selection/SelectionAuditLogDialog';
 
 export default function Selection() {
   const [searchParams] = useSearchParams();
@@ -52,6 +54,7 @@ export default function Selection() {
   const tourDemoViewBtnRef = useRef(null);
   const tourLiveScoreBtnRef = useRef(null);
   const [adminAvailabilitySelection, setAdminAvailabilitySelection] = useState(null);
+  const [auditLogOpen, setAuditLogOpen] = useState(false);
 
   // Auto-advance from step 16 → 17 after a moment (user is already on Selection)
   useEffect(() => {
@@ -318,6 +321,10 @@ export default function Selection() {
           </div>
           {isSelector && (
             <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setAuditLogOpen(true)}>
+                <History className="w-4 h-4 mr-2" />
+                Audit Log
+              </Button>
               <Button variant="outline" onClick={() => setColourSettingsOpen(true)}>
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -591,6 +598,13 @@ export default function Selection() {
       <SelectionColourSettings
         open={colourSettingsOpen}
         onClose={() => setColourSettingsOpen(false)}
+        clubId={clubId}
+      />
+
+      {/* Selection Audit Log */}
+      <SelectionAuditLogDialog
+        open={auditLogOpen}
+        onOpenChange={setAuditLogOpen}
         clubId={clubId}
       />
 
