@@ -28,6 +28,17 @@ import { format, parseISO } from 'date-fns';
 
 const POSITIONS = ['Skip', '3', '2', 'Lead'];
 
+// Top Club events (indoor + outdoor) — selection keys are `${eventId}_${position}`
+const TOP_CLUB_EVENTS = [
+  { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
+  { id: 'ladies_two_wood', name: "Ladies' Two Wood", positions: ['Player'] },
+  { id: 'two_wood_singles', name: '2 Wood Singles', positions: ['Player'] },
+  { id: 'four_wood_singles', name: '4 Wood Singles', positions: ['Player'] },
+  { id: 'pairs', name: 'Pairs', positions: ['Lead', 'Skip'] },
+  { id: 'triple', name: 'Triple', positions: ['Lead', '2', 'Skip'] },
+  { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
+];
+
 export default function LiveScoring() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
@@ -153,6 +164,7 @@ export default function LiveScoring() {
   };
 
   const canEdit = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
+  const isTopClub = selection?.competition === 'Top Club';
 
   const selectionNames = selection?.selection_names || {};
   const getMemberName = (email, positionKey) => {
@@ -205,17 +217,41 @@ export default function LiveScoring() {
   const oppositionTotal = calculateTotal(oppositionScores);
   const totalEnds = calculateTotal(ends);
 
-  // Build rinks from selection - check all possible rinks 1-6
-  const getRinks = () => {
+  // Build scoring rows: rinks for standard competitions, events for Top Club
+  const getMatches = () => {
     if (!selection?.selections) return [];
-    const rinks = [];
+
+    if (isTopClub) {
+      const matches = [];
+      for (const event of TOP_CLUB_EVENTS) {
+        const positions = {};
+        let hasPlayers = false;
+        for (const pos of event.positions) {
+          const key = `${event.id}_${pos}`;
+          if (selection.selections[key]) {
+            hasPlayers = true;
+          }
+          positions[pos] = selection.selections[key];
+        }
+        if (hasPlayers) {
+          matches.push({
+            key: event.id,
+            label: event.name,
+            badge: null,
+            positions,
+            positionsList: event.positions,
+          });
+        }
+      }
+      return matches;
+    }
+
+    // Standard competitions: check all possible rink numbers 1-6
+    const matches = [];
     const homeRinksCount = selection.home_rinks || 2;
-    
-    // Check all possible rink numbers 1-6 to find which ones have players assigned
     for (let rinkNum = 1; rinkNum <= 6; rinkNum++) {
       const rinkPositions = {};
       let hasPlayers = false;
-      
       for (const pos of POSITIONS) {
         const key = `rink${rinkNum}_${pos}`;
         if (selection.selections[key]) {
@@ -223,19 +259,20 @@ export default function LiveScoring() {
         }
         rinkPositions[pos] = selection.selections[key];
       }
-      
       if (hasPlayers) {
-        rinks.push({ 
-          number: rinkNum, 
+        matches.push({
+          key: `rink${rinkNum}`,
+          label: String(rinkNum),
+          badge: matches.length < homeRinksCount ? 'Home' : 'Away',
           positions: rinkPositions,
-          isHome: rinks.length < homeRinksCount
+          positionsList: POSITIONS,
         });
       }
     }
-    return rinks;
+    return matches;
   };
 
-  const rinks = getRinks();
+  const matches = getMatches();
 
   if (!selection) {
     return (
@@ -331,14 +368,14 @@ export default function LiveScoring() {
         >
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Rink Scores</CardTitle>
+              <CardTitle className="text-lg">{isTopClub ? 'Match Scores' : 'Rink Scores'}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                    <tr className="border-b">
-                     <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-24">Rink</th>
+                     <th className="text-left py-2 px-2 text-sm font-medium text-gray-500 w-24">{isTopClub ? 'Match' : 'Rink'}</th>
                      <th className="text-left py-2 px-2 text-sm font-medium text-emerald-700">{club?.name || 'Club'} Team</th>
                      <th className="text-center py-2 px-2 text-sm font-medium text-emerald-700 w-20">Score</th>
                      <th className="text-center py-2 px-2 text-sm font-medium text-gray-500 w-16">Ends</th>
@@ -347,26 +384,26 @@ export default function LiveScoring() {
                    </tr>
                   </thead>
                   <tbody>
-                    {rinks.map((rink) => {
+                    {matches.map((match) => {
                       const getTeamDisplay = (positions, isOpposition = false) => {
-                        const names = POSITIONS.map((pos, idx) => {
+                        const names = match.positionsList.map((pos) => {
                           if (isOpposition) {
-                            const posKey = `rink${rink.number}_${pos}`;
+                            const posKey = `${match.key}_${pos}`;
                             return oppositionPlayers[posKey] || '';
                           }
-                          return getMemberName(positions[pos], `rink${rink.number}_${pos}`);
+                          return getMemberName(positions[pos], `${match.key}_${pos}`);
                         });
-                        
+
                         if (isOpposition) {
                           return (
                             <div className="flex flex-wrap gap-1 items-center">
-                              {POSITIONS.map((pos, idx) => {
-                                const posKey = `rink${rink.number}_${pos}`;
+                              {match.positionsList.map((pos, idx) => {
+                                const posKey = `${match.key}_${pos}`;
                                 return (
                                   <React.Fragment key={pos}>
                                     <Input
                                       placeholder={pos}
-                                      className={`h-7 ${pos === 'Skip' ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
+                                      className={`h-7 ${['Skip', 'Player'].includes(pos) ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
                                       value={oppositionPlayers[posKey] || ''}
                                       onChange={(e) => setOppositionPlayers(prev => ({
                                         ...prev,
@@ -374,14 +411,14 @@ export default function LiveScoring() {
                                       }))}
                                       disabled={!canEdit}
                                     />
-                                    {idx < POSITIONS.length - 1 && <span className="text-gray-300">•</span>}
+                                    {idx < match.positionsList.length - 1 && <span className="text-gray-300">•</span>}
                                   </React.Fragment>
                                 );
                               })}
                             </div>
                           );
                         }
-                        
+
                         return (
                           <div className="text-sm">
                             <span className="font-bold text-base uppercase">{names[0]}</span>
@@ -393,27 +430,29 @@ export default function LiveScoring() {
                       };
 
                       return (
-                        <tr key={rink.number} className="border-b last:border-0">
+                        <tr key={match.key} className="border-b last:border-0">
                           <td className="py-3 px-2 w-24">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-600">{rink.number}</span>
-                              <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {rink.isHome ? 'Home' : 'Away'}
-                              </Badge>
+                              <span className="text-sm font-medium text-gray-600">{match.label}</span>
+                              {match.badge && (
+                                <Badge className={`text-xs ${match.badge === 'Home' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {match.badge}
+                                </Badge>
+                              )}
                             </div>
                           </td>
                           <td className="py-3 px-2">
-                            {getTeamDisplay(rink.positions, false)}
+                            {getTeamDisplay(match.positions, false)}
                           </td>
                           <td className="py-3 px-2">
                            <Input
                              type="number"
                              min="0"
                              className="w-16 text-center h-8"
-                             value={clubScores[`rink${rink.number}`] || ''}
+                             value={clubScores[match.key] || ''}
                              onChange={(e) => setClubScores(prev => ({
                                ...prev,
-                               [`rink${rink.number}`]: e.target.value
+                               [match.key]: e.target.value
                              }))}
                              disabled={!canEdit}
                            />
@@ -423,10 +462,10 @@ export default function LiveScoring() {
                              type="number"
                              min="0"
                              className="w-14 text-center h-8"
-                             value={ends[`rink${rink.number}`] || ''}
+                             value={ends[match.key] || ''}
                              onChange={(e) => setEnds(prev => ({
                                ...prev,
-                               [`rink${rink.number}`]: e.target.value
+                               [match.key]: e.target.value
                              }))}
                              disabled={!canEdit}
                            />
@@ -436,16 +475,16 @@ export default function LiveScoring() {
                              type="number"
                              min="0"
                              className="w-16 text-center h-8"
-                             value={oppositionScores[`rink${rink.number}`] || ''}
+                             value={oppositionScores[match.key] || ''}
                              onChange={(e) => setOppositionScores(prev => ({
                                ...prev,
-                               [`rink${rink.number}`]: e.target.value
+                               [match.key]: e.target.value
                              }))}
                              disabled={!canEdit}
                            />
                           </td>
                           <td className="py-3 px-2">
-                            {getTeamDisplay(rink.positions, true)}
+                            {getTeamDisplay(match.positions, true)}
                           </td>
                         </tr>
                       );
@@ -476,17 +515,19 @@ export default function LiveScoring() {
               <DialogTitle>Edit Team Selection</DialogTitle>
             </DialogHeader>
             <div className="space-y-6">
-              {rinks.map((rink) => (
-                <div key={rink.number} className="border rounded-lg p-4">
+              {matches.map((match) => (
+                <div key={match.key} className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="font-medium">Rink {rink.number}</span>
-                    <Badge className={`text-xs ${rink.isHome ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {rink.isHome ? 'Home' : 'Away'}
-                    </Badge>
+                    <span className="font-medium">{isTopClub ? match.label : `Rink ${match.label}`}</span>
+                    {match.badge && (
+                      <Badge className={`text-xs ${match.badge === 'Home' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {match.badge}
+                      </Badge>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {POSITIONS.map((pos) => {
-                      const posKey = `rink${rink.number}_${pos}`;
+                    {match.positionsList.map((pos) => {
+                      const posKey = `${match.key}_${pos}`;
                       return (
                         <div key={pos}>
                           <Label className="text-xs text-gray-500">{pos}</Label>
