@@ -133,17 +133,16 @@ export default function LiveScoring() {
     }
   }, [selection]);
 
-  const createScoreMutation = useMutation({
-    mutationFn: (data) => base44.entities.MatchScore.create(data),
+  // Saving goes through a backend function so any club admin/selector/live scorer
+  // can save, regardless of who originally created the score record.
+  const saveScoreMutation = useMutation({
+    mutationFn: (data) => base44.functions.invoke('saveMatchScore', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
+      toast.success('Scores saved');
     },
-  });
-
-  const updateScoreMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.MatchScore.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
+    onError: () => {
+      toast.error('Failed to save scores');
     },
   });
 
@@ -190,23 +189,17 @@ export default function LiveScoring() {
   };
 
   const handleSave = async () => {
-    const data = {
-      selection_id: selectionId,
-      club_id: clubId,
+    await saveScoreMutation.mutateAsync({
+      selectionId,
+      clubId,
       opposition_players: oppositionPlayers,
       club_scores: clubScores,
       opposition_scores: oppositionScores,
       ends: ends,
-    };
-
-    if (matchScore) {
-      await updateScoreMutation.mutateAsync({ id: matchScore.id, data });
-    } else {
-      await createScoreMutation.mutateAsync(data);
-    }
+    });
   };
 
-  const isSaving = createScoreMutation.isPending || updateScoreMutation.isPending;
+  const isSaving = saveScoreMutation.isPending;
 
   // Calculate totals
   const calculateTotal = (scores) => {
