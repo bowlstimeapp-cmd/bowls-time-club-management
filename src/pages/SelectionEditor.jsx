@@ -24,6 +24,7 @@ import {
   Printer } from
 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -99,6 +100,7 @@ export default function SelectionEditor() {
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
   const [sendSmsNotification, setSendSmsNotification] = useState(false);
   const [smsResultsModal, setSmsResultsModal] = useState(null);
+  const [showRinksOnScorecards, setShowRinksOnScorecards] = useState(true);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -149,6 +151,7 @@ export default function SelectionEditor() {
       setMatchEndTime(existingSelection.match_end_time || '14:00');
       setHomeCaptainEmail(existingSelection.home_captain_email || '');
       setAwayCaptainEmail(existingSelection.away_captain_email || '');
+      setShowRinksOnScorecards(existingSelection.show_rinks_on_scorecards !== false);
       if (existingSelection.competition === 'Friendly') {
         setFriendlyLocation(existingSelection.friendly_location || '');
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
@@ -518,6 +521,7 @@ export default function SelectionEditor() {
       match_end_time: matchEndTime,
       status: publish ? 'published' : 'draft',
       selector_email: user.email,
+      show_rinks_on_scorecards: showRinksOnScorecards,
       home_captain_email: homeCaptainEmail || null,
       away_captain_email: awayCaptainEmail || null,
       ...(competition === 'Friendly' ? {
@@ -786,6 +790,9 @@ export default function SelectionEditor() {
   const handleCompetitionChange = (compName) => {
     setCompetition(compName);
     setSelections({});
+    // Rink-print default: from the matching Competition record, or true for the built-ins
+    const compForRinks = competitions.find((c) => c.name === compName);
+    setShowRinksOnScorecards(compForRinks ? compForRinks.show_rinks_on_scorecards !== false : true);
     if (compName === 'Friendly') {
       setSelectedRinks([]);
       setHomeRinks(friendlyNumRinks);
@@ -1228,6 +1235,13 @@ export default function SelectionEditor() {
                 }
 
                 <div className="pt-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+                    <div>
+                      <Label className="text-sm font-medium">Show rink numbers on scorecards</Label>
+                      <p className="text-xs text-gray-500 mt-0.5">Turn off to leave booked rinks off the printed scorecards</p>
+                    </div>
+                    <Switch checked={showRinksOnScorecards} onCheckedChange={setShowRinksOnScorecards} />
+                  </div>
 <Button
                     type="button"
                     variant="outline"
@@ -1241,7 +1255,8 @@ export default function SelectionEditor() {
                         'generateSelectionScorecards';
                         const result = await base44.functions.invoke(functionName, {
                           selectionId: selectionId,
-                          clubId: clubId
+                          clubId: clubId,
+                          showRinks: showRinksOnScorecards
                         });
                         const html = typeof result === 'string' ? result : result?.html || result?.data;
                         if (!html) {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export default function CompetitionFormDialog({ open, onClose, competition, onSa
     players_per_rink: 4,
     home_rinks: 2,
     away_rinks: 0,
+    show_rinks_on_scorecards: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +31,7 @@ export default function CompetitionFormDialog({ open, onClose, competition, onSa
         players_per_rink: competition.players_per_rink || 4,
         home_rinks: competition.home_rinks || 2,
         away_rinks: competition.away_rinks || 0,
+        show_rinks_on_scorecards: competition.show_rinks_on_scorecards !== false,
       });
     } else {
       setFormData({
@@ -39,6 +42,7 @@ export default function CompetitionFormDialog({ open, onClose, competition, onSa
         players_per_rink: 4,
         home_rinks: 2,
         away_rinks: 0,
+        show_rinks_on_scorecards: true,
       });
     }
   }, [competition, open]);
@@ -119,6 +123,16 @@ export default function CompetitionFormDialog({ open, onClose, competition, onSa
               <Label>Away Rinks</Label>
               <Input type="number" value={formData.away_rinks} onChange={(e) => setFormData({ ...formData, away_rinks: e.target.value })} />
             </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+            <div>
+              <Label className="text-sm font-medium">Show rink numbers on scorecards by default</Label>
+              <p className="text-xs text-gray-500 mt-0.5">Applied to new selections of this competition</p>
+            </div>
+            <Switch
+              checked={formData.show_rinks_on_scorecards !== false}
+              onCheckedChange={(v) => setFormData({ ...formData, show_rinks_on_scorecards: v })}
+            />
           </div>
         </div>
         <DialogFooter>

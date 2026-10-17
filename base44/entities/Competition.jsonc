@@ -52,6 +52,11 @@
       ],
       "default": "n/a",
       "description": "Age group restriction for player selection"
+    },
+    "show_rinks_on_scorecards": {
+      "type": "boolean",
+      "default": true,
+      "description": "Default for new selections of this competition \u2014 whether booked rink numbers are printed on their scorecards"
     }
   },
   "required": [

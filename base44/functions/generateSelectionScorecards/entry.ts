@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { selectionId, clubId } = await req.json();
+    const { selectionId, clubId, showRinks: showRinksParam } = await req.json();
 
     if (!selectionId || !clubId) {
       return Response.json({ error: 'Missing selectionId or clubId' }, { status: 400 });
@@ -28,6 +28,12 @@ Deno.serve(async (req) => {
     if (!selection || !club) {
       return Response.json({ error: 'Selection or club not found' }, { status: 404 });
     }
+
+    // Whether booked rink numbers are printed. Explicit param from the editor wins,
+    // then the saved selection value, then true (older selections always print rinks).
+    const showRinks = showRinksParam !== undefined && showRinksParam !== null
+      ? !!showRinksParam
+      : selection.show_rinks_on_scorecards !== false;
 
     const selectionNames = selection.selection_names || {};
     const getMemberName = (email, positionKey) => {
@@ -103,7 +109,8 @@ Deno.serve(async (req) => {
           dateStr,
           dayName,
           time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
-          rink: rinkLabel,
+          rink: showRinks ? rinkLabel : '',
+          eventLine: showRinks ? `${selection.competition} · Rink ${rinkLabel} (${tag})` : `${selection.competition} · ${tag}`,
           tag,
           players,
           logoUrl: club.logo_url || '',

@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { selectionId, clubId } = await req.json();
+    const { selectionId, clubId, showRinks: showRinksParam } = await req.json();
     if (!selectionId || !clubId) return Response.json({ error: 'Missing selectionId or clubId' }, { status: 400 });
 
     const [selectionArr, clubs, memberships, layouts] = await Promise.all([
@@ -116,6 +116,12 @@ Deno.serve(async (req) => {
     const layout = layouts[0];
 
     if (!selection || !club) return Response.json({ error: 'Selection or club not found' }, { status: 404 });
+
+    // Whether booked rink numbers are printed. Explicit param from the editor wins,
+    // then the saved selection value, then true (older selections always print rinks).
+    const showRinks = showRinksParam !== undefined && showRinksParam !== null
+      ? !!showRinksParam
+      : selection.show_rinks_on_scorecards !== false;
 
     const elements = layout?.layout_config?.elements || [];
 
@@ -179,14 +185,17 @@ Deno.serve(async (req) => {
           position: posToNumber[pos] || pos,
           name: (selection.selections[`rink${rinkNum}_${pos}`] ? getMemberName(selection.selections[`rink${rinkNum}_${pos}`], `rink${rinkNum}_${pos}`) : '')
         }));
+        const tag = rinkNum <= homeRinks ? 'Home' : 'Away';
+        const rinkLabel = selectedRinks[rinkNum - 1] || rinkNum;
         return {
           competition: selection.competition,
           matchName: selection.match_name || '',
           dateStr,
           dayName,
           time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
-          rink: selectedRinks[rinkNum - 1] || rinkNum,
-          tag: rinkNum <= homeRinks ? 'Home' : 'Away',
+          rink: showRinks ? rinkLabel : '',
+          eventLine: showRinks ? `${selection.competition} · Rink ${rinkLabel} (${tag})` : `${selection.competition} · ${tag}`,
+          tag,
           players,
           logoUrl: club.logo_url || '',
           clubName: club.name || '',

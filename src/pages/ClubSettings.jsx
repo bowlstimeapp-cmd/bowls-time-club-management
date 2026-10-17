@@ -100,7 +100,7 @@ export default function ClubSettings() {
   const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [competitionForm, setCompetitionForm] = useState({
-    name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, gender: 'mixed', age_group: 'n/a',
+    name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, gender: 'mixed', age_group: 'n/a', show_rinks_on_scorecards: true,
   });
   const [kioskModeEnabled, setKioskModeEnabled] = useState(false);
   const [kioskAccountEmail, setKioskAccountEmail] = useState('');
@@ -280,7 +280,7 @@ export default function ClubSettings() {
   const handleRemoveMembershipType = (name) => setMembershipTypes(membershipTypes.filter(t => t !== name));
 
   const resetCompetitionForm = () =>
-    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: 'indoor', gender: 'mixed', age_group: 'n/a' });
+    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: 'indoor', gender: 'mixed', age_group: 'n/a', show_rinks_on_scorecards: true });
 
   const handleEditCompetition = (comp) => {
     setEditingCompetition(comp);
@@ -292,6 +292,7 @@ export default function ClubSettings() {
       season: comp.season || 'indoor',
       gender: comp.gender || 'mixed',
       age_group: comp.age_group || 'n/a',
+      show_rinks_on_scorecards: comp.show_rinks_on_scorecards !== false,
     });
     setCompetitionModalOpen(true);
   };
@@ -981,6 +982,16 @@ export default function ClubSettings() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+                  <div>
+                    <Label className="text-sm font-medium">Show rink numbers on scorecards by default</Label>
+                    <p className="text-xs text-gray-500 mt-0.5">Applied to new selections of this competition</p>
+                  </div>
+                  <Switch
+                    checked={competitionForm.show_rinks_on_scorecards !== false}
+                    onCheckedChange={(v) => setCompetitionForm({ ...competitionForm, show_rinks_on_scorecards: v })}
+                  />
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => { setCompetitionModalOpen(false); setEditingCompetition(null); resetCompetitionForm(); }}>Cancel</Button>
