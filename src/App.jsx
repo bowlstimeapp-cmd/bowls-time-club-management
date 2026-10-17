@@ -12,6 +12,7 @@ import { KioskProvider } from '@/lib/KioskContext';
 import { LayoutThemeProvider } from '@/lib/layoutTheme.jsx';
 import { AccessibilityProvider } from '@/lib/AccessibilityContext';
 import { SeniorModeProvider } from '@/lib/SeniorModeContext';
+import PullToRefresh from '@/components/PullToRefresh';
 import SeniorHome from './pages/senior/SeniorHome';
 import SeniorBookRink from './pages/senior/SeniorBookRink';
 import SeniorFixtures from './pages/senior/SeniorFixtures';
@@ -164,6 +165,7 @@ function App() {
         <LayoutThemeProvider>
           <QueryClientProvider client={queryClientInstance}>
             <Router>
+              <PullToRefresh />
               <NavigationTracker />
               <AuthenticatedApp />
             </Router>

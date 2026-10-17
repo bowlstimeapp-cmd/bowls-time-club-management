@@ -15,6 +15,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Disable the browser's native pull-to-refresh so the app's own gesture takes over */
+body {
+  overscroll-behavior-y: none;
+}
+
 /* Prevent body scroll when modals open */
 body {
   overflow-x: hidden;
