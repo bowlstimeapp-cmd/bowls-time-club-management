@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { isTopClubEventSelection, buildTopClubScorecards } from '../../shared/topClubScorecards.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -65,32 +66,51 @@ Deno.serve(async (req) => {
     const homeRinks = selection.home_rinks || 2;
     const selectedRinks = selection.selected_rinks || [];
 
-    const scorecards = rinkNumbers.map(rinkNum => {
-      const positions = positionsForRink(rinkNum);
-      const players = positions.map(pos => {
-        const email = selection.selections[`rink${rinkNum}_${pos}`];
-        return {
-          position: posToNumber[pos] || pos,
-          name: email ? getMemberName(email, `rink${rinkNum}_${pos}`) : ''
-        };
-      });
-
-      const tag = rinkNum <= homeRinks ? 'Home' : 'Away';
-      const rinkLabel = selectedRinks[rinkNum - 1] || rinkNum;
-
-      return {
+    let scorecards;
+    if (isTopClubEventSelection(selection)) {
+      // Top Club: one scorecard per EVENT (event-style keys, no rink numbers)
+      const base = {
         competition: selection.competition,
-        matchName: selection.match_name || '',
+        matchName: selection.opponent || selection.match_name || '',
         dateStr,
         dayName,
         time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
-        rink: rinkLabel,
-        tag,
-        players,
+        tag: selection.friendly_location || '',
         logoUrl: club.logo_url || '',
         clubName: club.name || ''
       };
-    });
+      scorecards = buildTopClubScorecards(selection, getMemberName, base);
+      if (scorecards.length === 0) {
+        return Response.json({ error: 'No players selected – nothing to print' }, { status: 400 });
+      }
+    } else {
+      scorecards = rinkNumbers.map(rinkNum => {
+        const positions = positionsForRink(rinkNum);
+        const players = positions.map(pos => {
+          const email = selection.selections[`rink${rinkNum}_${pos}`];
+          return {
+            position: posToNumber[pos] || pos,
+            name: email ? getMemberName(email, `rink${rinkNum}_${pos}`) : ''
+          };
+        });
+
+        const tag = rinkNum <= homeRinks ? 'Home' : 'Away';
+        const rinkLabel = selectedRinks[rinkNum - 1] || rinkNum;
+
+        return {
+          competition: selection.competition,
+          matchName: selection.match_name || '',
+          dateStr,
+          dayName,
+          time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
+          rink: rinkLabel,
+          tag,
+          players,
+          logoUrl: club.logo_url || '',
+          clubName: club.name || ''
+        };
+      });
+    }
 
     const html = `<!DOCTYPE html>
 <html>
@@ -232,7 +252,7 @@ ${scorecards.map((card, idx) => {
     </div>
     <div class="match-details">
       <div>${card.dayName} - ${card.dateStr}</div>
-      <div>${card.competition} · Rink ${card.rink} (${card.tag})</div>
+      <div>${card.eventLine || `${card.competition} · Rink ${card.rink} (${card.tag})`}</div>
     </div>
     <div class="teams-row">
       <span style="text-align:left;">${card.clubName}</span>

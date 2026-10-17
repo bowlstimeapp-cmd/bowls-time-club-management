@@ -1257,7 +1257,8 @@ export default function SelectionEditor() {
                         };
                         toast.success('Scorecards ready — use Print > Save as PDF');
                       } catch (error) {
-                        toast.error('Failed to generate scorecards');
+                        const errMsg = error?.response?.data?.error || error?.message || 'Unknown error';
+                        toast.error('Failed to generate scorecards: ' + errMsg);
                         console.error(error);
                       }
                     }}>

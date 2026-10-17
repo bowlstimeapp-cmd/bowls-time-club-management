@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { isTopClubEventSelection, buildTopClubScorecards } from '../../shared/topClubScorecards.ts';
 
 // Convert canvas px (268px = 67mm) to mm
 const pxToMm = (px) => ((px * 67) / 268).toFixed(3);
@@ -28,7 +29,7 @@ function renderElement(elem, card) {
     case 'matchDetailsBar':
       return `<div style="${base}display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.3;padding:1mm;">
         <div>${card.dayName} - ${card.dateStr}</div>
-        <div>${card.competition} · Rink ${card.rink} (${card.tag})</div>
+        <div>${card.eventLine || `${card.competition} · Rink ${card.rink} (${card.tag})`}</div>
       </div>`;
 
     case 'teamsRow':
@@ -154,25 +155,44 @@ Deno.serve(async (req) => {
     const homeRinks = selection.home_rinks || 2;
     const selectedRinks = selection.selected_rinks || [];
 
-    const scorecards = rinkNumbers.map(rinkNum => {
-      const positions = positionsForRink(rinkNum);
-      const players = positions.map(pos => ({
-        position: posToNumber[pos] || pos,
-        name: (selection.selections[`rink${rinkNum}_${pos}`] ? getMemberName(selection.selections[`rink${rinkNum}_${pos}`], `rink${rinkNum}_${pos}`) : '')
-      }));
-      return {
+    let scorecards;
+    if (isTopClubEventSelection(selection)) {
+      // Top Club: one scorecard per EVENT (event-style keys, no rink numbers)
+      const base = {
         competition: selection.competition,
-        matchName: selection.match_name || '',
+        matchName: selection.opponent || selection.match_name || '',
         dateStr,
         dayName,
         time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
-        rink: selectedRinks[rinkNum - 1] || rinkNum,
-        tag: rinkNum <= homeRinks ? 'Home' : 'Away',
-        players,
+        tag: selection.friendly_location || '',
         logoUrl: club.logo_url || '',
         clubName: club.name || '',
       };
-    });
+      scorecards = buildTopClubScorecards(selection, getMemberName, base);
+      if (scorecards.length === 0) {
+        return Response.json({ error: 'No players selected – nothing to print' }, { status: 400 });
+      }
+    } else {
+      scorecards = rinkNumbers.map(rinkNum => {
+        const positions = positionsForRink(rinkNum);
+        const players = positions.map(pos => ({
+          position: posToNumber[pos] || pos,
+          name: (selection.selections[`rink${rinkNum}_${pos}`] ? getMemberName(selection.selections[`rink${rinkNum}_${pos}`], `rink${rinkNum}_${pos}`) : '')
+        }));
+        return {
+          competition: selection.competition,
+          matchName: selection.match_name || '',
+          dateStr,
+          dayName,
+          time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
+          rink: selectedRinks[rinkNum - 1] || rinkNum,
+          tag: rinkNum <= homeRinks ? 'Home' : 'Away',
+          players,
+          logoUrl: club.logo_url || '',
+          clubName: club.name || '',
+        };
+      });
+    }
 
     const html = `<!DOCTYPE html>
 <html>
