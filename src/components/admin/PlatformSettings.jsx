@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, RotateCcw, Layout } from 'lucide-react';
+import { Settings, RotateCcw, Layout, Smartphone } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { usePlatformSetting, setPlatformSetting } from '@/hooks/usePlatformSetting';
 import { useLayoutTheme, LAYOUTS } from '@/lib/layoutTheme.jsx';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,25 @@ export default function PlatformSettings() {
   const [resetting, setResetting] = useState(false);
   const { layout, setLayout } = useLayoutTheme();
   const [altLayoutEnabled, setAltLayoutEnabled] = useState(layout !== 'default');
+
+  const { value: bottomNavEnabled } = usePlatformSetting('mobile_bottom_nav_enabled', false);
+  const [bottomNavOverride, setBottomNavOverride] = useState(undefined); // set while saving, so a failed save reverts
+  const [savingBottomNav, setSavingBottomNav] = useState(false);
+  const bottomNavChecked = bottomNavOverride !== undefined ? bottomNavOverride : bottomNavEnabled;
+
+  const handleToggleBottomNav = async (enabled) => {
+    setBottomNavOverride(enabled);
+    setSavingBottomNav(true);
+    try {
+      await setPlatformSetting('mobile_bottom_nav_enabled', enabled);
+      toast.success(enabled ? 'Bottom tab bar enabled' : 'Hamburger menu restored');
+    } catch (e) {
+      toast.error('Could not save the setting — please try again.');
+    } finally {
+      setBottomNavOverride(undefined);
+      setSavingBottomNav(false);
+    }
+  };
 
   const handleResetTour = async () => {
     setResetting(true);
@@ -133,6 +153,38 @@ export default function PlatformSettings() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Mobile Navigation — platform-wide setting */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-gray-600" />
+            Mobile Navigation
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label className="text-base">Bottom tab bar on mobile</Label>
+              <p className="text-sm text-gray-500 mt-0.5">
+                On: phones show a bottom tab bar with a More menu. Off: phones use the hamburger menu in the top bar. Applies to all clubs and members and does not affect desktop.
+              </p>
+            </div>
+            <Switch
+              checked={bottomNavChecked}
+              onCheckedChange={handleToggleBottomNav}
+              disabled={savingBottomNav}
+            />
+          </div>
+          <div className="rounded-lg border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
+            Unlike Alternative Layouts, which is stored per-browser, this setting is saved for the whole platform and applies to every club and member.
+          </div>
+          <div className="rounded-lg border bg-gray-50 p-3 text-xs text-gray-500 space-y-1">
+            <p><span className="font-semibold text-gray-700">Off:</span> the hamburger menu in the top bar opens the full navigation panel.</p>
+            <p><span className="font-semibold text-gray-700">On:</span> four quick tabs plus a More button sit along the bottom of the screen.</p>
+          </div>
         </CardContent>
       </Card>
     </div>

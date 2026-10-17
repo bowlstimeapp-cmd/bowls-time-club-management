@@ -1,0 +1,40 @@
+{
+  "name": "PlatformSetting",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Unique setting key, e.g. 'mobile_bottom_nav_enabled'"
+    },
+    "bool_value": {
+      "type": "boolean",
+      "default": false,
+      "description": "Boolean value of the setting"
+    },
+    "text_value": {
+      "type": "string",
+      "description": "Optional text value for future settings"
+    }
+  },
+  "required": [
+    "key"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

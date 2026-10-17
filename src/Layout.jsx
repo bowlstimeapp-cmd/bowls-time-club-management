@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -45,8 +45,12 @@ import {
   Receipt,
   Rocket,
   Star,
+  MoreHorizontal,
+  ChevronUp,
   Coffee
 } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { usePlatformSetting } from '@/hooks/usePlatformSetting';
 import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import LiveMatchBanner from '@/components/LiveMatchBanner';
@@ -75,6 +79,11 @@ const MODULE_PAGE_MAP = {
   ScorecardLayoutEditor: { key: 'module_custom_branding', name: 'Custom Branding', desc: 'Design custom scorecard layouts with your club branding, colours, and logo.' },
   ClubMessaging: { key: 'module_messaging', name: 'Club Messaging', desc: 'Chat with members in dedicated channels for announcements, social events, and selection discussions.' },
 };
+
+// Pages where the bottom tab bar starts hidden (revealed on scroll-up or via the floating handle)
+const TAB_BAR_HIDDEN_BY_DEFAULT = ['BookRink', 'LeagueAdmin', 'SelectionEditor', 'ScorecardLayoutEditor', 'ClubSettings'];
+// Pages where the bottom tab bar never shows
+const TAB_BAR_NEVER_SHOW = ['RinkDisplayTV', 'LiveScoring'];
 
 // TODO: Replace with the real Stripe Payment Link URL once created in the Stripe dashboard
 const STRIPE_PAYMENT_LINK_URL = 'https://buy.stripe.com/28EfZjgiC0K81Hb5mKak000';
@@ -134,6 +143,52 @@ export default function Layout({ children, currentPageName }) {
 
   const memberClubIds = new Set(allMemberships.map(m => m.club_id));
   const allMyClubs = allClubs.filter(c => c.id !== clubId && memberClubIds.has(c.id));
+
+  const queryClient = useQueryClient();
+  const { value: bottomNavEnabled } = usePlatformSetting('mobile_bottom_nav_enabled', false);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [tabBarHidden, setTabBarHidden] = useState(TAB_BAR_HIDDEN_BY_DEFAULT.includes(currentPageName));
+  const [atTop, setAtTop] = useState(true);
+  const lastScrollYRef = useRef(0);
+  const scrollRafRef = useRef(null);
+  const reducedMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
+
+  // Reset the tab bar visibility when navigating between pages
+  useEffect(() => {
+    setTabBarHidden(TAB_BAR_HIDDEN_BY_DEFAULT.includes(currentPageName));
+  }, [currentPageName]);
+
+  // Auto-hide the tab bar on scroll-down, reveal on scroll-up or back at the top
+  useEffect(() => {
+    if (!bottomNavEnabled) return;
+    if (TAB_BAR_NEVER_SHOW.includes(currentPageName)) return;
+    const onScroll = () => {
+      if (scrollRafRef.current) return;
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        if (window.innerWidth >= 768) return;
+        const y = window.scrollY;
+        const last = lastScrollYRef.current;
+        setAtTop(y <= 24);
+        if (y <= 24) {
+          setTabBarHidden(TAB_BAR_HIDDEN_BY_DEFAULT.includes(currentPageName));
+        } else if (y > last + 1) {
+          setTabBarHidden(true);
+        } else if (y < last - 1) {
+          setTabBarHidden(false);
+        }
+        lastScrollYRef.current = y;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    };
+  }, [bottomNavEnabled, currentPageName]);
 
   // Pages that don't need club context
   const noClubPages = ['ClubSelector', 'PlatformAdmin', 'ClubAnalyticsDashboard', 'PlatformInvoices', 'InvoiceView', 'CountyHome', 'CountyMembers', 'CountySelections', 'CountySquads', 'CountyAffiliations', 'CountyAdmin', 'CountyTournaments', 'CountyTournamentEditor', 'CountyTournamentView', 'CountyRegistration', 'CountyEntriesAdmin'];
@@ -247,6 +302,96 @@ export default function Layout({ children, currentPageName }) {
     ? mobileMenuSections.filter(s => s.title === 'Rink Booking')
     : mobileMenuSections;
 
+  // ---- Mobile bottom tab bar (when the platform setting is ON) ----
+  // Unread notifications come from the cache shared with NotificationDropdown — no extra query
+  const cachedNotifications = queryClient.getQueryData(['notifications', user?.email]);
+  const unreadCount = Array.isArray(cachedNotifications) ? cachedNotifications.filter(n => !n.is_read).length : 0;
+
+  const tabCandidates = [
+    ...(showHome ? [{ label: 'Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 }] : []),
+    ...(showRinkBooking ? [{ label: 'Book', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar }] : []),
+    ...(showSelection ? [{ label: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList }] : []),
+    ...(showLeagues ? [{ label: 'Fixtures', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 }] : []),
+    ...((club?.module_messaging || isFreeClub) ? [{ label: 'Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare, unread: unreadCount > 0 }] : []),
+  ];
+  // Kiosk: only Book a Rink and My Bookings, no More tab
+  const tabItems = isKioskSession
+    ? [
+        { label: 'Book', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
+        { label: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
+      ]
+    : tabCandidates.slice(0, 4);
+  const tabHrefs = new Set(tabItems.map(t => t.href));
+  const showMoreTab = !isKioskSession;
+
+  const moreSheetGroups = (!isKioskSession && bottomNavEnabled) ? [
+    ...(showRinkBooking ? [{
+      title: 'Play',
+      items: [
+        { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
+        { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
+      ],
+    }] : []),
+    ...(showSelection || showLeagues ? [{
+      title: 'Teams',
+      items: [
+        ...(showSelection ? [
+          { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
+          { name: 'Competition Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
+        ] : []),
+        ...(showLeagues ? [
+          { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
+          { name: 'Fixtures', href: createPageUrl('ClubFixtures') + `?clubId=${clubId}`, icon: CalendarDays },
+          { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
+        ] : []),
+        { name: 'Score Prediction', href: createPageUrl('ScorePrediction') + `?clubId=${clubId}`, icon: Target },
+      ],
+    }] : []),
+    ...(showCompetitions ? [{
+      title: 'Competitions',
+      items: [
+        { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+        ...(club?.competition_registration_enabled ? [{ name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks }] : []),
+      ],
+    }] : []),
+    {
+      title: 'Club',
+      items: [
+        ...(showHome ? [{ name: 'Club Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 }] : []),
+        { name: 'Club Officers', href: createPageUrl('ClubOfficers') + `?clubId=${clubId}`, icon: Award },
+        { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
+        ...((club?.module_messaging || isFreeClub) ? [{ name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare }] : []),
+        { name: 'Help Centre', href: createPageUrl('HelpCentre'), icon: LifeBuoy },
+      ],
+    },
+    ...((isClubAdmin || isClubSteward) ? [{
+      title: 'Admin',
+      items: [
+        ...(isClubSteward ? [{ name: 'Bookings', href: createPageUrl('AdminBookings') + `?clubId=${clubId}`, icon: ShieldCheck }] : []),
+        ...(isClubAdmin ? [
+          { name: 'Bookings Admin', href: createPageUrl('AdminBookings') + `?clubId=${clubId}`, icon: ShieldCheck },
+          { name: 'Members', href: createPageUrl('ClubAdmin') + `?clubId=${clubId}`, icon: Users },
+          { name: 'Open Competitions', href: createPageUrl('OpenCompetitions') + `?clubId=${clubId}`, icon: Trophy },
+          ...((club?.module_function_rooms || isFreeClub) ? [{ name: 'Function Rooms', href: createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`, icon: Building2 }] : []),
+          { name: 'Dashboard', href: createPageUrl('AdminDashboard') + `?clubId=${clubId}`, icon: LayoutDashboard },
+        ] : []),
+      ],
+    }] : []),
+    ...((!isKioskSession && allMyClubs.length > 0) ? [{
+      title: 'Switch club',
+      items: [
+        ...allMyClubs.map(c => ({ name: c.name, href: createPageUrl('BookRink') + `?clubId=${c.id}`, icon: Building2 })),
+        { name: 'All Clubs', href: createPageUrl('ClubSelector') + '?switchClubs=true', icon: Building2 },
+      ],
+    }] : []),
+  ].map(g => ({ ...g, items: g.items.filter(i => !tabHrefs.has(i.href)) })).filter(g => g.items.length > 0) : [];
+
+  const tabBarNeverShow = !bottomNavEnabled || !needsClub || !clubId || isModuleLocked || TAB_BAR_NEVER_SHOW.includes(currentPageName);
+  const showTabBar = !tabBarNeverShow && tabItems.length > 0 && (moreSheetOpen || !tabBarHidden);
+  const tabBarPaddingClass = !tabBarNeverShow && tabItems.length > 0 && (showTabBar || (!TAB_BAR_HIDDEN_BY_DEFAULT.includes(currentPageName) && atTop))
+    ? 'pb-[calc(4.5rem+env(safe-area-inset-bottom))]'
+    : '';
+
   const isActive = (href) => {
     const [path] = href.split('?');
     return location.pathname === path;
@@ -260,29 +405,31 @@ export default function Layout({ children, currentPageName }) {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className={cn("flex items-center justify-between", bottomNavEnabled ? "h-12 md:h-16" : "h-16")}>
             {/* Logo */}
             <Link to={createPageUrl('ClubSelector')} className="flex items-center gap-3 shrink-0">
               <img 
                 src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6995ed6ffddbd0f64bc9d1e8/61b3b45da_BTZoomed.png"
                 alt="BowlsTime"
-                className="w-10 h-10 rounded-xl object-cover"
+                className={bottomNavEnabled ? "w-8 h-8 md:w-10 md:h-10 rounded-xl object-cover" : "w-10 h-10 rounded-xl object-cover"}
               />
-              <div className="hidden sm:block">
-                <span className="font-semibold text-gray-900 whitespace-nowrap">
+              <div className={bottomNavEnabled ? "min-w-0 max-w-[9rem] md:max-w-none" : "hidden sm:block"}>
+                <span className={cn("block font-semibold text-gray-900", bottomNavEnabled ? "truncate" : "whitespace-nowrap")}>
                   {club?.name || 'BowlsTime'}
                 </span>
               </div>
             </Link>
 
-            {/* Help Centre — mobile only, next to logo */}
-            <Link
-              to={createPageUrl('HelpCentre')}
-              className="sm:hidden flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-full shadow-md transition-all hover:scale-105 ml-1"
-            >
-              <LifeBuoy className="w-4 h-4" />
-              <span className="text-sm font-medium">Help Centre</span>
-            </Link>
+            {/* Help Centre — mobile only, next to logo (hidden when the bottom tab bar is on) */}
+            {!bottomNavEnabled && (
+              <Link
+                to={createPageUrl('HelpCentre')}
+                className="sm:hidden flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-full shadow-md transition-all hover:scale-105 ml-1"
+              >
+                <LifeBuoy className="w-4 h-4" />
+                <span className="text-sm font-medium">Help Centre</span>
+              </Link>
+            )}
 
             {/* Desktop Navigation */}
             {needsClub && clubId && (
@@ -710,8 +857,8 @@ export default function Layout({ children, currentPageName }) {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Mobile Menu Button */}
-              {needsClub && clubId && (
+              {/* Mobile Menu Button — hidden when the bottom tab bar is on */}
+              {needsClub && clubId && !bottomNavEnabled && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -729,8 +876,8 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        {/* Mobile Navigation — collapsible sections mirroring the desktop dropdown groups */}
-        {mobileMenuOpen && needsClub && clubId && (
+        {/* Mobile Navigation — collapsible sections mirroring the desktop dropdown groups (hamburger mode) */}
+        {mobileMenuOpen && needsClub && clubId && !bottomNavEnabled && (
           <div className="md:hidden border-t border-gray-200 bg-white">
             <div className="px-4 py-3">
               {(!isKioskSession ? mobilePlainLinks : []).map((item) => (
@@ -797,7 +944,7 @@ export default function Layout({ children, currentPageName }) {
       </header>
 
       {/* Main Content */}
-      <main className="min-h-0 pb-safe">
+      <main className={cn('min-h-0 pb-safe', tabBarPaddingClass)}>
         {isModuleLocked ? (
           <ModuleLockedNotice moduleKey={lockedModule.key} moduleName={lockedModule.name} description={lockedModule.desc} clubId={clubId} />
         ) : children}
@@ -810,6 +957,106 @@ export default function Layout({ children, currentPageName }) {
             Enjoying Bowls Time? Show your appreciation
           </a>
         </footer>
+      )}
+
+      {/* Mobile Bottom Tab Bar (bottom navigation mode) */}
+      {!tabBarNeverShow && tabItems.length > 0 && (
+        <nav
+          aria-label="Main"
+          className={cn(
+            "fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-200",
+            !reducedMotion && "transition-transform duration-200 ease-out",
+            showTabBar ? "translate-y-0" : "translate-y-full"
+          )}
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className={cn("grid", showMoreTab ? "grid-cols-5" : "grid-cols-2")}>
+            {tabItems.map(tab => {
+              const active = isActive(tab.href);
+              return (
+                <Link
+                  key={tab.label}
+                  to={tab.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1.5 focus:outline-none focus-visible:bg-emerald-50",
+                    active ? "text-emerald-700" : "text-gray-500"
+                  )}
+                >
+                  {active && <span className="absolute top-0 h-0.5 w-8 bg-emerald-700 rounded-full" />}
+                  <tab.icon className="w-[22px] h-[22px]" />
+                  <span className="text-[11px] font-medium leading-none">{tab.label}</span>
+                  {tab.unread && (
+                    <span className="absolute top-1.5 left-1/2 translate-x-3 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
+            {showMoreTab && (
+              <button
+                type="button"
+                onClick={() => setMoreSheetOpen(true)}
+                aria-current={moreSheetOpen ? "page" : undefined}
+                className={cn(
+                  "relative flex flex-col items-center justify-center gap-0.5 min-h-[44px] py-1.5 focus:outline-none focus-visible:bg-emerald-50",
+                  moreSheetOpen ? "text-emerald-700" : "text-gray-500"
+                )}
+              >
+                {moreSheetOpen && <span className="absolute top-0 h-0.5 w-8 bg-emerald-700 rounded-full" />}
+                <MoreHorizontal className="w-[22px] h-[22px]" />
+                <span className="text-[11px] font-medium leading-none">More</span>
+                {unreadCount > 0 && !tabItems.some(t => t.unread) && (
+                  <span className="absolute top-1.5 left-1/2 translate-x-3 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+            )}
+          </div>
+        </nav>
+      )}
+
+      {/* Floating handle to reveal the tab bar when it is hidden */}
+      {!tabBarNeverShow && tabItems.length > 0 && !showTabBar && !moreSheetOpen && (
+        <button
+          type="button"
+          aria-label="Show navigation"
+          onClick={() => setTabBarHidden(false)}
+          className="fixed bottom-2 left-1/2 -translate-x-1/2 z-40 md:hidden w-11 h-11 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* More bottom sheet (bottom navigation mode) */}
+      {bottomNavEnabled && !isKioskSession && (
+        <Drawer open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
+          <DrawerContent className="max-h-[80vh] overflow-y-auto">
+            <DrawerTitle className="sr-only">More</DrawerTitle>
+            <div className="px-4 pb-6">
+              {moreSheetGroups.map(group => (
+                <div key={group.title} className="mb-3 last:mb-0">
+                  <div className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">{group.title}</div>
+                  {group.items.map(item => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setMoreSheetOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 min-h-[48px] rounded-lg text-sm font-medium",
+                        isActive(item.href)
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "text-gray-600 hover:bg-gray-100"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      {item.name}
+                      {isActive(item.href) && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600" />}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </DrawerContent>
+        </Drawer>
       )}
 
       {/* Floating Feedback Button */}
