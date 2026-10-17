@@ -11,6 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { 
   Calendar, 
   CalendarCheck, 
@@ -165,36 +171,81 @@ export default function Layout({ children, currentPageName }) {
   const isSelector = (membership?.role === 'selector' || membership?.role === 'admin') && membership?.status === 'approved';
   const isPlatformAdmin = user?.role === 'admin';
 
-  const clubNavigation = [
-    ...((club?.module_homepage || isFreeClub) ? [
-      { name: 'Club Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 },
-    ] : []),
-    ...((club?.module_rink_booking !== false || isFreeClub) ? [
-      { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
-      { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
-    ] : []),
-    ...((club?.module_selection !== false || isFreeClub) ? [
-      { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
-      { name: 'Competition Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
-    ] : []),
-    ...((club?.module_competitions !== false || isFreeClub) ? [
-      { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
-    ] : []),
-    ...(club?.competition_registration_enabled ? [
-      { name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks },
-    ] : []),
-    ...((club?.module_leagues !== false || isFreeClub) ? [
-      { name: 'Leagues', href: createPageUrl(isClubAdmin ? 'LeagueAdmin' : 'LeagueView') + `?clubId=${clubId}`, icon: Table2 },
-      { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
-      { name: 'Fixtures', href: createPageUrl('ClubFixtures') + `?clubId=${clubId}`, icon: CalendarDays },
-    ] : []),
-    { name: 'Club Officers', href: createPageUrl('ClubOfficers') + `?clubId=${clubId}`, icon: Award },
-    { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
-    { name: 'Score Prediction', href: createPageUrl('ScorePrediction') + `?clubId=${clubId}`, icon: Target },
-    ...((club?.module_messaging || isFreeClub) ? [
-      { name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare },
-    ] : []),
+  const showHome = club?.module_homepage || isFreeClub;
+  const showRinkBooking = club?.module_rink_booking !== false || isFreeClub;
+  const showSelection = club?.module_selection !== false || isFreeClub;
+  const showCompetitions = club?.module_competitions !== false || isFreeClub;
+  const showLeagues = club?.module_leagues !== false || isFreeClub;
+
+  // Mobile menu — sections mirror the desktop dropdown groups
+  const mobilePlainLinks = [
+    ...(showHome ? [{ name: 'Home', href: createPageUrl('ClubHome') + `?clubId=${clubId}`, icon: Building2 }] : []),
+    ...(showLeagues ? [{ name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users }] : []),
+    ...(isClubSteward ? [{ name: 'Bookings', href: createPageUrl('AdminBookings') + `?clubId=${clubId}`, icon: ShieldCheck }] : []),
   ];
+
+  const mobileMenuSections = [
+    ...(showRinkBooking ? [{
+      title: 'Rink Booking', icon: Calendar,
+      items: [
+        { name: 'Book a Rink', href: createPageUrl('BookRink') + `?clubId=${clubId}`, icon: Calendar },
+        { name: 'My Bookings', href: createPageUrl('MyBookings') + `?clubId=${clubId}`, icon: CalendarCheck },
+      ],
+    }] : []),
+    ...(showSelection ? [{
+      title: 'Selection', icon: ClipboardList,
+      items: [
+        { name: 'Match Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
+        { name: 'Competition Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
+        ...(showLeagues ? [{ name: 'Club Fixtures', href: createPageUrl('ClubFixtures') + `?clubId=${clubId}`, icon: CalendarDays }] : []),
+      ],
+    }] : []),
+    ...(showCompetitions ? [{
+      title: 'Competitions', icon: Trophy,
+      items: [
+        { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+        ...(club?.competition_registration_enabled ? [{ name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks }] : []),
+        ...(club?.competition_registration_enabled && isClubAdmin ? [{ name: 'Entries Admin', href: createPageUrl('CompetitionEntriesAdmin') + `?clubId=${clubId}`, icon: Download }] : []),
+      ],
+    }] : []),
+    {
+      title: 'My Club', icon: Users,
+      items: [
+        ...(isClubAdmin ? [{ name: 'Getting Started', href: createPageUrl('OnboardingChecklist') + `?clubId=${clubId}`, icon: Rocket, badge: onboardingRemaining }] : []),
+        { name: 'Club Officers', href: createPageUrl('ClubOfficers') + `?clubId=${clubId}`, icon: Award },
+        { name: 'Member Directory', href: createPageUrl('MemberDirectory') + `?clubId=${clubId}`, icon: BookOpen },
+        { name: 'Score Prediction', href: createPageUrl('ScorePrediction') + `?clubId=${clubId}`, icon: Target },
+        ...((club?.module_messaging || isFreeClub) ? [{ name: 'Club Chat', href: createPageUrl('ClubMessaging') + `?clubId=${clubId}`, icon: MessagesSquare }] : []),
+      ],
+    },
+    ...(isClubAdmin ? [{
+      title: 'Admin', icon: ShieldCheck,
+      items: [
+        ...(showLeagues ? [{ name: 'Leagues', href: createPageUrl('LeagueAdmin') + `?clubId=${clubId}`, icon: Table2 }] : []),
+        ...(showLeagues ? [{ name: 'Fixtures', href: createPageUrl('ClubFixtures') + `?clubId=${clubId}`, icon: CalendarDays }] : []),
+        { name: 'Bookings Admin', href: createPageUrl('AdminBookings') + `?clubId=${clubId}`, icon: ShieldCheck },
+        { name: 'TV Display', href: createPageUrl('RinkDisplayTV') + `?clubId=${clubId}`, icon: Calendar },
+        { name: 'Members', href: createPageUrl('ClubAdmin') + `?clubId=${clubId}`, icon: Users },
+        { name: 'Open Competitions', href: createPageUrl('OpenCompetitions') + `?clubId=${clubId}`, icon: Trophy },
+        ...((club?.module_function_rooms || isFreeClub) ? [{ name: 'Function Rooms', href: createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`, icon: Building2 }] : []),
+        { name: 'Dashboard', href: createPageUrl('AdminDashboard') + `?clubId=${clubId}`, icon: LayoutDashboard },
+        { name: 'Club Admin', href: createPageUrl('Clubsettings') + `?clubId=${clubId}`, icon: Settings },
+        { name: 'Bowls Time Invoices', href: createPageUrl('BowlsTimeInvoices') + `?clubId=${clubId}`, icon: Receipt },
+      ],
+    }] : []),
+    ...(!isKioskSession && allMyClubs.length > 0 ? [{
+      title: 'Switch Club', icon: Building2,
+      items: [
+        ...allMyClubs.map(c => ({ name: c.name, href: createPageUrl('BookRink') + `?clubId=${c.id}`, icon: Building2 })),
+        { name: 'All Clubs', href: createPageUrl('ClubSelector') + '?switchClubs=true', icon: Building2 },
+      ],
+    }] : []),
+  ];
+
+  // Kiosk members only get the Rink Booking section
+  const visibleMobileSections = isKioskSession
+    ? mobileMenuSections.filter(s => s.title === 'Rink Booking')
+    : mobileMenuSections;
 
   const isActive = (href) => {
     const [path] = href.split('?');
@@ -678,17 +729,11 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation — collapsible sections mirroring the desktop dropdown groups */}
         {mobileMenuOpen && needsClub && clubId && (
           <div className="md:hidden border-t border-gray-200 bg-white">
-            <div className="px-4 py-3 space-y-1">
-              {clubNavigation
-                .filter(item => {
-                  if (!isKioskSession) return true;
-                  // In kiosk mode only allow Book a Rink and My Bookings
-                  return item.name === 'Book a Rink' || item.name === 'My Bookings';
-                })
-                .map((item) => (
+            <div className="px-4 py-3">
+              {(!isKioskSession ? mobilePlainLinks : []).map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
@@ -704,116 +749,48 @@ export default function Layout({ children, currentPageName }) {
                   {item.name}
                 </Link>
               ))}
-              {!isKioskSession && isClubSteward && (
-                <Link
-                  to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                    isActive(createPageUrl('AdminBookings'))
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  )}
-                >
-                  <ShieldCheck className="w-5 h-5" />
-                  Bookings
-                </Link>
-              )}
-              {!isKioskSession && isClubAdmin && (
-                <>
-                  <Link
-                    to={createPageUrl('AdminBookings') + `?clubId=${clubId}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                      isActive(createPageUrl('AdminBookings'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    <ShieldCheck className="w-5 h-5" />
-                    Bookings Admin
-                  </Link>
-                  <Link
-                    to={createPageUrl('ClubAdmin') + `?clubId=${clubId}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                      isActive(createPageUrl('ClubAdmin'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    <Users className="w-5 h-5" />
-                    Members
-                  </Link>
-                  <Link
-                    to={createPageUrl('OpenCompetitions') + `?clubId=${clubId}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                      isActive(createPageUrl('OpenCompetitions'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    <Trophy className="w-5 h-5" />
-                    Open Competitions
-                  </Link>
-                  {(club?.module_function_rooms || isFreeClub) && (
-                    <Link
-                      to={createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                        isActive(createPageUrl('FunctionRoomAdmin'))
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "text-gray-600 hover:bg-gray-100"
-                      )}
-                    >
-                      <Building2 className="w-5 h-5" />
-                      Function Rooms
-                    </Link>
-                  )}
-                  <Link
-                    to={createPageUrl('AdminDashboard') + `?clubId=${clubId}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-                      isActive(createPageUrl('AdminDashboard'))
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    <LayoutDashboard className="w-5 h-5" />
-                    Dashboard
-                  </Link>
-                </>
-              )}
-              {!isKioskSession && (
-                <>
-                  <div className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Switch Club</div>
-                  {allMyClubs.map(c => (
-                    <Link
-                      key={c.id}
-                      to={createPageUrl('BookRink') + `?clubId=${c.id}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
-                    >
-                      <Building2 className="w-5 h-5" />
-                      {c.name}
-                    </Link>
-                  ))}
-                  <Link
-                    to={createPageUrl('ClubSelector') + '?switchClubs=true'}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100"
-                  >
-                    <Building2 className="w-5 h-5" />
-                    All Clubs
-                  </Link>
-                </>
-              )}
+              <Accordion
+                type="single"
+                collapsible
+                defaultValue={visibleMobileSections.find(s => s.items.some(i => isActive(i.href)))?.title}
+                className="mt-1"
+              >
+                {visibleMobileSections.map(section => (
+                  <AccordionItem key={section.title} value={section.title} className="border-b border-gray-100 last:border-0">
+                    <AccordionTrigger className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-700 hover:no-underline hover:bg-gray-50 rounded-lg">
+                      <span className="flex items-center gap-3">
+                        <section.icon className="w-5 h-5 text-gray-500" />
+                        {section.title}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2 pt-0">
+                      <div className="pl-4 space-y-0.5">
+                        {section.items.map(item => (
+                          <Link
+                            key={item.name}
+                            to={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
+                              isActive(item.href)
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "text-gray-600 hover:bg-gray-100"
+                            )}
+                          >
+                            <item.icon className="w-5 h-5" />
+                            {item.name}
+                            {item.badge > 0 && (
+                              <span className="ml-auto bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full px-2 py-0.5">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </div>
           </div>
         )}
