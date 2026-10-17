@@ -5,9 +5,9 @@ import { sendPushToEmails } from '../../shared/webPush.ts';
 // Saves live match scores for a team selection.
 // Permission is based on the caller's club membership role (admin/selector/live_scorer),
 // not on who originally created the score record.
-// scope: 'home' saves only club_scores/ends (+opposition_players when sent),
-//        'away' saves only opposition_scores (+opposition_players when sent),
-//        'all' (default) saves everything — kept for compatibility.
+// scope: 'home' / 'away' saves BOTH teams' scores, ends and opposition players
+// for match_keys taken from the matching venue labels in the scoring table.
+// 'all' (default) saves everything, kept for compatibility.
 // Each venue keeps its own version stamp (home_updated_date / away_updated_date),
 // so home and away scorers never block or overwrite each other.
 // When the saved score is not 0-0, a live score push notification is sent to club members.
@@ -18,7 +18,7 @@ export default async function(req) {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { selectionId, clubId, opposition_players, club_scores, opposition_scores, ends, version, scope } = body;
+    const { selectionId, clubId, opposition_players, club_scores, opposition_scores, ends, version, scope, match_keys } = body;
     if (!selectionId || !clubId) {
       return Response.json({ error: 'selectionId and clubId are required' }, { status: 400 });
     }
@@ -33,47 +33,56 @@ export default async function(req) {
       return Response.json({ error: 'Not permitted to save scores' }, { status: 403 });
     }
 
-    const stampField = scope === 'home' ? 'home_updated_date' : scope === 'away' ? 'away_updated_date' : null;
-    const stamp = new Date().toISOString();
-
-    const data = {};
-    if (scope === 'home') {
-      data.club_scores = club_scores || {};
-      data.ends = ends || {};
-    } else if (scope === 'away') {
-      data.opposition_scores = opposition_scores || {};
-    } else {
-      data.opposition_players = opposition_players || {};
-      data.club_scores = club_scores || {};
-      data.opposition_scores = opposition_scores || {};
-      data.ends = ends || {};
-    }
-    // Opposition team players are shared: only updated when the caller actually edited them.
-    if (opposition_players !== undefined) {
-      data.opposition_players = opposition_players;
-    }
-
     const service = base44.asServiceRole;
-    const existing = await service.entities.MatchScore.filter({ selection_id: selectionId });
+    const { items: selections } = await service.entities.TeamSelection.filter({ id: selectionId, club_id: clubId }, { limit: 1 });
+    const selection = selections[0];
+    if (!selection) return Response.json({ error: 'Selection not found for this club' }, { status: 404 });
+    const scoped = scope === 'home' || scope === 'away';
+    if (scoped && (!Array.isArray(match_keys) || !match_keys.length || match_keys.some(key =>
+      typeof key !== 'string' || !/^[a-zA-Z0-9_]+$/.test(key) ||
+      !Object.keys(selection.selections || {}).some(position => position.startsWith(`${key}_`))
+    ))) {
+      return Response.json({ error: 'Choose the rink rows for this venue' }, { status: 400 });
+    }
+    if (scoped && [club_scores, opposition_scores, ends].some(value => !value || typeof value !== 'object' || Array.isArray(value))) {
+      return Response.json({ error: 'Both teams scores and ends are required for a venue save' }, { status: 400 });
+    }
+    const stampField = scoped ? `${scope}_updated_date` : null;
+    const stamp = new Date().toISOString();
+    const data = {};
+    for (const field of ['club_scores', 'opposition_scores', 'ends', 'opposition_players']) {
+      if (scoped && body[field] === undefined) continue;
+      data[field] = scoped ? Object.fromEntries(Object.entries(body[field] || {}).filter(([key]) =>
+        field === 'opposition_players'
+          ? match_keys.some(matchKey => key.startsWith(`${matchKey}_`) && ['Skip', '3', '2', 'Lead', 'Player'].includes(key.slice(matchKey.length + 1)))
+          : match_keys.includes(key)
+      )) : body[field] || {};
+    }
+    const { items: existing } = await service.entities.MatchScore.filter({ selection_id: selectionId, club_id: clubId }, { limit: 1 });
     let scoreId;
     if (existing[0]) {
-      // Stale-save guard per venue: if the venue's own data changed since the
-      // caller loaded it, refuse the save so an older screen can't overwrite it.
       const recordedVersion = stampField ? existing[0][stampField] : null;
       if (recordedVersion && version && recordedVersion !== version) {
-        return Response.json({
-          error: 'conflict: newer scores were saved by someone else',
-        }, { status: 409 });
+        return Response.json({ error: 'conflict: newer scores were saved by someone else' }, { status: 409 });
       }
-      const updateData = stampField ? { ...data, [stampField]: stamp } : data;
-      await service.entities.MatchScore.update(existing[0].id, updateData);
+      if (scoped) {
+        // Set individual rink keys atomically: a simultaneous save at the other
+        // venue cannot replace either team's scores, ends or player names here.
+        const fields = { [stampField]: stamp };
+        for (const [field, values] of Object.entries(data)) {
+          for (const [key, value] of Object.entries(values)) fields[`${field}.${key}`] = value;
+        }
+        await service.entities.MatchScore.updateMany({ id: existing[0].id, club_id: clubId }, { $set: fields });
+        // Single-record updates retain the existing realtime subscription event.
+        await service.entities.MatchScore.update(existing[0].id, { [stampField]: stamp });
+      } else {
+        await service.entities.MatchScore.update(existing[0].id, data);
+      }
       scoreId = existing[0].id;
     } else {
-      const createData = stampField ? { ...data, [stampField]: stamp } : data;
       const created = await service.entities.MatchScore.create({
-        selection_id: selectionId,
-        club_id: clubId,
-        ...createData,
+        selection_id: selectionId, club_id: clubId, ...data,
+        ...(scoped ? { [stampField]: stamp } : {}),
       });
       scoreId = created.id;
     }
@@ -83,8 +92,8 @@ export default async function(req) {
       try {
         const merged = existing[0] || {};
         const total = (scores) => Object.values(scores || {}).reduce((sum, s) => sum + (parseInt(s) || 0), 0);
-        const clubTotal = total(data.club_scores !== undefined ? data.club_scores : merged.club_scores);
-        const oppositionTotal = total(data.opposition_scores !== undefined ? data.opposition_scores : merged.opposition_scores);
+        const clubTotal = total(scoped ? { ...merged.club_scores, ...data.club_scores } : data.club_scores);
+        const oppositionTotal = total(scoped ? { ...merged.opposition_scores, ...data.opposition_scores } : data.opposition_scores);
         if (clubTotal === 0 && oppositionTotal === 0) return;
 
         const clubs = await service.entities.Club.filter({ id: clubId });

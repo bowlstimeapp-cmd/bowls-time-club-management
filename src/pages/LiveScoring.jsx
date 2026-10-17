@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -26,23 +26,9 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, parseISO } from 'date-fns';
 
-const POSITIONS = ['Skip', '3', '2', 'Lead'];
-
-// A server payload may lag behind a just-completed save (refetch race),
-// so ignore data for a venue older than the version stamp of our last save.
-const isNewerThanLastSave = (stampRef, serverStamp) =>
-  !stampRef.current || !serverStamp || serverStamp >= stampRef.current;
-
-// Top Club events (indoor + outdoor) — selection keys are `${eventId}_${position}`
-const TOP_CLUB_EVENTS = [
-  { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
-  { id: 'ladies_two_wood', name: "Ladies' Two Wood", positions: ['Player'] },
-  { id: 'two_wood_singles', name: '2 Wood Singles', positions: ['Player'] },
-  { id: 'four_wood_singles', name: '4 Wood Singles', positions: ['Player'] },
-  { id: 'pairs', name: 'Pairs', positions: ['Lead', 'Skip'] },
-  { id: 'triple', name: 'Triple', positions: ['Lead', '2', 'Skip'] },
-  { id: 'fours', name: 'Fours', positions: ['Lead', '2', '3', 'Skip'] },
-];
+import scoringMatches from '@/components/scoring/scoringMatches';
+import useVenueScores from '@/components/scoring/useVenueScores';
+import { venueOf } from '@/components/scoring/venueScoreData';
 
 export default function LiveScoring() {
   const [searchParams] = useSearchParams();
@@ -52,18 +38,9 @@ export default function LiveScoring() {
   const queryClient = useQueryClient();
 
   const [user, setUser] = useState(null);
-  const [oppositionPlayers, setOppositionPlayers] = useState({});
-  const [clubScores, setClubScores] = useState({});
-  const [oppositionScores, setOppositionScores] = useState({});
-  const [ends, setEnds] = useState({});
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [editedSelections, setEditedSelections] = useState({});
   const [editedNames, setEditedNames] = useState({});
-  const homeDirtyRef = useRef(false);
-  const awayDirtyRef = useRef(false);
-  const oppDirtyRef = useRef(false);
-  const lastHomeStampRef = useRef(null);
-  const lastAwayStampRef = useRef(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -118,50 +95,8 @@ export default function LiveScoring() {
     enabled: !!clubId,
   });
 
-  const { data: matchScore } = useQuery({
-    queryKey: ['matchScore', selectionId],
-    queryFn: async () => {
-      const scores = await base44.entities.MatchScore.filter({ selection_id: selectionId });
-      return scores[0];
-    },
-    enabled: !!selectionId,
-  });
-
-  useEffect(() => {
-    if (!matchScore) return;
-    // Merge per venue so unsaved edits are never clobbered by a refetch,
-    // and skip any refetched data older than our own last save.
-    if (!homeDirtyRef.current && isNewerThanLastSave(lastHomeStampRef, matchScore.home_updated_date)) {
-      setClubScores(matchScore.club_scores || {});
-      setEnds(matchScore.ends || {});
-    }
-    if (!awayDirtyRef.current && isNewerThanLastSave(lastAwayStampRef, matchScore.away_updated_date)) {
-      setOppositionScores(matchScore.opposition_scores || {});
-    }
-    if (!oppDirtyRef.current) {
-      setOppositionPlayers(matchScore.opposition_players || {});
-    }
-  }, [matchScore]);
-
-  // Realtime: when another scorer saves, receive the change without polling.
-  // Merge per venue: each scorer keeps their own unsaved edits for their venue.
-  useEffect(() => {
-    if (!selectionId) return;
-    const unsubscribe = base44.entities.MatchScore.subscribe((event) => {
-      if (event.data?.selection_id !== selectionId) return;
-      if (!homeDirtyRef.current && isNewerThanLastSave(lastHomeStampRef, event.data.home_updated_date)) {
-        setClubScores(event.data.club_scores || {});
-        setEnds(event.data.ends || {});
-      }
-      if (!awayDirtyRef.current && isNewerThanLastSave(lastAwayStampRef, event.data.away_updated_date)) {
-        setOppositionScores(event.data.opposition_scores || {});
-      }
-      if (!oppDirtyRef.current) {
-        setOppositionPlayers(event.data.opposition_players || {});
-      }
-    });
-    return unsubscribe;
-  }, [selectionId]);
+  const matches = useMemo(() => scoringMatches(selection), [selection]);
+  const { clubScores, oppositionScores, ends, oppositionPlayers, updateField, saveVenue, isSaving } = useVenueScores(selectionId, clubId, matches);
 
   useEffect(() => {
     if (selection?.selections) {
@@ -170,44 +105,7 @@ export default function LiveScoring() {
     }
   }, [selection]);
 
-  // Saving goes through a backend function so any club admin/selector/live scorer
-  // can save, regardless of who originally created the score record.
-  const saveScoreMutation = useMutation({
-    mutationFn: (data) => base44.functions.invoke('saveMatchScore', data),
-    onSuccess: (result, variables) => {
-      const saved = result?.data || {};
-      if (variables.scope === 'home') {
-        homeDirtyRef.current = false;
-        if (saved.home_updated_date) lastHomeStampRef.current = saved.home_updated_date;
-      }
-      if (variables.scope === 'away') {
-        awayDirtyRef.current = false;
-        if (saved.away_updated_date) lastAwayStampRef.current = saved.away_updated_date;
-      }
-      if (variables.opposition_players !== undefined) oppDirtyRef.current = false;
-      // Write the saved values straight into the cache so the screen reflects
-      // the save immediately instead of waiting for (and racing) the refetch.
-      queryClient.setQueryData(['matchScore', selectionId], (old) => {
-        if (!old) return old;
-        const next = { ...old };
-        if (variables.scope === 'home') {
-          next.club_scores = variables.club_scores;
-          next.ends = variables.ends;
-          if (saved.home_updated_date) next.home_updated_date = saved.home_updated_date;
-        } else if (variables.scope === 'away') {
-          next.opposition_scores = variables.opposition_scores;
-          if (saved.away_updated_date) next.away_updated_date = saved.away_updated_date;
-        }
-        if (variables.opposition_players !== undefined) next.opposition_players = variables.opposition_players;
-        return next;
-      });
-      queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
-      toast.success('Scores saved');
-    },
-    onError: () => {
-      toast.error('Failed to save scores');
-    },
-  });
+
 
   const updateSelectionMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.TeamSelection.update(id, data),
@@ -251,28 +149,8 @@ export default function LiveScoring() {
     return (exact || matches[0])?.id || '';
   };
 
-  const handleSaveHome = () => {
-    saveScoreMutation.mutate({
-      selectionId,
-      clubId,
-      scope: 'home',
-      club_scores: clubScores,
-      ends: ends,
-      ...(oppDirtyRef.current ? { opposition_players: oppositionPlayers } : {}),
-    });
-  };
-
-  const handleSaveAway = () => {
-    saveScoreMutation.mutate({
-      selectionId,
-      clubId,
-      scope: 'away',
-      opposition_scores: oppositionScores,
-      ...(oppDirtyRef.current ? { opposition_players: oppositionPlayers } : {}),
-    });
-  };
-
-  const isSaving = saveScoreMutation.isPending;
+  const handleSaveHome = () => saveVenue('home');
+  const handleSaveAway = () => saveVenue('away');
 
   // Calculate totals
   const calculateTotal = (scores) => {
@@ -283,62 +161,7 @@ export default function LiveScoring() {
   const oppositionTotal = calculateTotal(oppositionScores);
   const totalEnds = calculateTotal(ends);
 
-  // Build scoring rows: rinks for standard competitions, events for Top Club
-  const getMatches = () => {
-    if (!selection?.selections) return [];
 
-    if (isTopClub) {
-      const matches = [];
-      for (const event of TOP_CLUB_EVENTS) {
-        const positions = {};
-        let hasPlayers = false;
-        for (const pos of event.positions) {
-          const key = `${event.id}_${pos}`;
-          if (selection.selections[key]) {
-            hasPlayers = true;
-          }
-          positions[pos] = selection.selections[key];
-        }
-        if (hasPlayers) {
-          matches.push({
-            key: event.id,
-            label: event.name,
-            badge: null,
-            positions,
-            positionsList: event.positions,
-          });
-        }
-      }
-      return matches;
-    }
-
-    // Standard competitions: check all possible rink numbers 1-6
-    const matches = [];
-    const homeRinksCount = selection.home_rinks || 2;
-    for (let rinkNum = 1; rinkNum <= 6; rinkNum++) {
-      const rinkPositions = {};
-      let hasPlayers = false;
-      for (const pos of POSITIONS) {
-        const key = `rink${rinkNum}_${pos}`;
-        if (selection.selections[key]) {
-          hasPlayers = true;
-        }
-        rinkPositions[pos] = selection.selections[key];
-      }
-      if (hasPlayers) {
-        matches.push({
-          key: `rink${rinkNum}`,
-          label: String(rinkNum),
-          badge: matches.length < homeRinksCount ? 'Home' : 'Away',
-          positions: rinkPositions,
-          positionsList: POSITIONS,
-        });
-      }
-    }
-    return matches;
-  };
-
-  const matches = getMatches();
 
   if (!selection) {
     return (
@@ -385,7 +208,7 @@ export default function LiveScoring() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={handleSaveHome}
-                  disabled={isSaving}
+                  disabled={isSaving || !matches.some(match => venueOf(match) === 'home')}
                   className="bg-emerald-600 hover:bg-emerald-700"
                 >
                   {isSaving ? (
@@ -397,7 +220,7 @@ export default function LiveScoring() {
                 </Button>
                 <Button
                   onClick={handleSaveAway}
-                  disabled={isSaving}
+                  disabled={isSaving || !matches.some(match => venueOf(match) === 'away')}
                   variant="outline"
                   className="border-emerald-600 text-emerald-700 hover:bg-emerald-50"
                 >
@@ -486,13 +309,7 @@ export default function LiveScoring() {
                                       placeholder={pos}
                                       className={`h-7 ${['Skip', 'Player'].includes(pos) ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
                                       value={oppositionPlayers[posKey] || ''}
-                                      onChange={(e) => {
-                                        oppDirtyRef.current = true;
-                                        setOppositionPlayers(prev => ({
-                                        ...prev,
-                                        [posKey]: e.target.value
-                                      }));
-                                      }}
+                                      onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
                                       disabled={!canEdit}
                                     />
                                     {idx < match.positionsList.length - 1 && <span className="text-gray-300">•</span>}
@@ -534,13 +351,7 @@ export default function LiveScoring() {
                              min="0"
                              className="w-16 text-center h-8"
                              value={clubScores[match.key] || ''}
-                             onChange={(e) => {
-                               homeDirtyRef.current = true;
-                               setClubScores(prev => ({
-                               ...prev,
-                               [match.key]: e.target.value
-                             }));
-                             }}
+                             onChange={(e) => updateField('club_scores', match.key, e.target.value, venueOf(match))}
                              disabled={!canEdit}
                            />
                           </td>
@@ -550,13 +361,7 @@ export default function LiveScoring() {
                              min="0"
                              className="w-14 text-center h-8"
                              value={ends[match.key] || ''}
-                             onChange={(e) => {
-                               homeDirtyRef.current = true;
-                               setEnds(prev => ({
-                               ...prev,
-                               [match.key]: e.target.value
-                             }));
-                             }}
+                             onChange={(e) => updateField('ends', match.key, e.target.value, venueOf(match))}
                              disabled={!canEdit}
                            />
                           </td>
@@ -566,13 +371,7 @@ export default function LiveScoring() {
                              min="0"
                              className="w-16 text-center h-8"
                              value={oppositionScores[match.key] || ''}
-                             onChange={(e) => {
-                               awayDirtyRef.current = true;
-                               setOppositionScores(prev => ({
-                               ...prev,
-                               [match.key]: e.target.value
-                             }));
-                             }}
+                             onChange={(e) => updateField('opposition_scores', match.key, e.target.value, venueOf(match))}
                              disabled={!canEdit}
                            />
                           </td>
