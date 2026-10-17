@@ -108,8 +108,10 @@ export async function sendPushToEmails(base44, emails, { title, body, url, unrea
         'Authorization': `vapid t=${jwt},k=${vapidPublicKey}`,
         'Content-Type': 'application/octet-stream',
         'Content-Encoding': 'aes128gcm',
-        'TTL': '86400'
+        'TTL': '86400',
+        'Urgency': 'high'
       },
+      signal: AbortSignal.timeout(10000),
       body: encryptedBody
     });
 
@@ -118,9 +120,9 @@ export async function sendPushToEmails(base44, emails, { title, body, url, unrea
       results.push({ endpoint: sub.endpoint, status: 'expired' });
     } else if (response.status >= 400) {
       const text = await response.text();
-      results.push({ endpoint: sub.endpoint, status: 'error', detail: text });
+      results.push({ endpoint: sub.endpoint, status: 'error', http_status: response.status, detail: text });
     } else {
-      results.push({ endpoint: sub.endpoint, status: 'sent' });
+      results.push({ endpoint: sub.endpoint, status: 'sent', http_status: response.status });
     }
   }
 

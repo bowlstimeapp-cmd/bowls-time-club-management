@@ -12,7 +12,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     // Clear any previously cached data from old SW versions
     caches.keys().then(keys =>
-      Promise.all(keys.map(key => caches.delete(key)))
+      Promise.all(keys.filter(key => key !== 'bowls-time-push-status').map(key => caches.delete(key)))
     ).then(() => self.clients.claim())
   );
 });
@@ -40,57 +40,56 @@ self.addEventListener('fetch', (event) => {
 
 // ── Push Notifications ────────────────────────────────────────────────────────
 
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received');
+const notificationIcon = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6995ed6ffddbd0f64bc9d1e8/61b3b45da_BTZoomed.png';
+const pushStatusUrl = new URL('/__push_status__', self.location.origin).href;
 
-  let data = { title: 'New notification', body: '', url: '/' };
+async function recordPushStatus(status) {
+  const cache = await caches.open('bowls-time-push-status');
+  await cache.put(pushStatusUrl, new Response(JSON.stringify(status), {
+    headers: { 'Content-Type': 'application/json' },
+  }));
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  windows.forEach(client => client.postMessage({ type: 'PUSH_STATUS', status }));
+}
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'GET_PUSH_STATUS' || !event.ports[0]) return;
+  event.waitUntil((async () => {
+    const cache = await caches.open('bowls-time-push-status');
+    const response = await cache.match(pushStatusUrl);
+    event.ports[0].postMessage(response ? await response.json() : null);
+  })());
+});
+
+self.addEventListener('push', (event) => {
+  let data = {};
   if (event.data) {
     try {
-      data = event.data.json();
-      console.log('[SW] Push payload parsed:', data);
+      data = event.data.json() || {};
     } catch {
-      data.body = event.data.text();
-      console.log('[SW] Push payload as text:', data.body);
+      data = { body: event.data.text() };
     }
-  } else {
-    console.log('[SW] Push event had no data');
   }
+  const receivedAt = new Date().toISOString();
 
-  const unreadCount = data.unreadCount || 0;
-  console.log('[SW] unreadCount from payload:', unreadCount);
-
-  const hasBadgeAPI = 'setAppBadge' in self;
-  console.log('[SW] setAppBadge available on self:', hasBadgeAPI);
-
-  event.waitUntil(
-    (async () => {
-      if (hasBadgeAPI) {
-        try {
-          if (unreadCount > 0) {
-            await self.setAppBadge(unreadCount);
-            console.log('[SW] Badge set to', unreadCount);
-          } else {
-            await self.clearAppBadge();
-            console.log('[SW] Badge cleared');
-          }
-        } catch (err) {
-          console.error('[SW] Badge update failed:', err);
-        }
-      } else {
-        console.log('[SW] Badging API not available in this SW context');
-      }
-
-      await self.registration.showNotification(data.title, {
-        body: data.body || '',
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        data: { url: data.url || '/' },
-        vibrate: [200, 100, 200],
-      });
-
-      console.log('[SW] Notification shown');
-    })()
+  // Safari requires an immediate visible notification. Never wait for badges,
+  // storage or network requests before starting showNotification.
+  const display = self.registration.showNotification(data.title || 'Bowls Time', {
+    body: data.body || '',
+    icon: notificationIcon,
+    data: { url: data.url || '/' },
+  }).then(
+    () => recordPushStatus({ receivedAt, displayedAt: new Date().toISOString() }),
+    error => recordPushStatus({ receivedAt, error: error.message || String(error) })
   );
+
+  const badge = (async () => {
+    const count = Number(data.unreadCount) || 0;
+    if (count > 0 && self.navigator.setAppBadge) await self.navigator.setAppBadge(count);
+    else if (self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
+  })().catch(error => console.warn('[SW] Badge update failed:', error));
+
+  event.waitUntil(Promise.all([display, badge]));
 });
 
 self.addEventListener('notificationclick', (event) => {

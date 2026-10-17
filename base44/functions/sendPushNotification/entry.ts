@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { sendPushToEmails } from '../../shared/webPush.ts';
 
 // Sends a Web Push notification to one or more app users.
-Deno.serve(async (req) => {
+export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -28,8 +28,8 @@ Deno.serve(async (req) => {
     });
 
     if (results.length === 0) return Response.json({ success: false, reason: 'no_subscription' });
-    return Response.json({ success: true, results });
+    return Response.json({ success: results.some(result => result.status === 'sent'), delivery: 'provider_response_only', results });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+}

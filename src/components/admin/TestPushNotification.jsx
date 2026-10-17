@@ -38,13 +38,17 @@ export default function TestPushNotification() {
       });
       const data = res.data;
       const sent = data?.results?.filter(r => r.status === 'sent').length || 0;
+      const failures = (data?.results || []).filter(r => r.status !== 'sent').map(r =>
+        r.status === 'expired' ? 'A device subscription expired. Enable notifications again on that device.'
+          : `Push service rejected the request${r.http_status ? ` (${r.http_status})` : ''}: ${r.detail || r.status}`
+      );
       if (sent > 0) {
-        setResult({ success: true, message: `Sent to ${sent} device(s)` });
+        setResult({ success: true, message: `Accepted by the push service for ${sent} device(s), not confirmed delivered. Check My Profile on the receiving device for its latest push receipt.${failures.length ? ' ' + failures.join(' ') : ''}` });
       } else {
-        setResult({ success: false, message: data?.reason || 'No active subscriptions found for this email' });
+        setResult({ success: false, message: failures.join(' ') || data?.error || (data?.reason === 'no_subscription' ? 'No active subscriptions found for this email' : data?.reason) || 'No notification was accepted by the push service.' });
       }
     } catch (err) {
-      setResult({ success: false, message: err.message });
+      setResult({ success: false, message: err.response?.data?.error || err.message });
     }
     setLoading(false);
   };
