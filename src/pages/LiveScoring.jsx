@@ -55,8 +55,9 @@ export default function LiveScoring() {
   const [editedSelections, setEditedSelections] = useState({});
   const [editedNames, setEditedNames] = useState({});
   const [showNewerVersion, setShowNewerVersion] = useState(false);
-  const isDirtyRef = useRef(false);
-  const lastSavedRef = useRef(null);
+  const homeDirtyRef = useRef(false);
+  const awayDirtyRef = useRef(false);
+  const oppDirtyRef = useRef(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -120,52 +121,49 @@ export default function LiveScoring() {
     enabled: !!selectionId,
   });
 
-  const applyScoreData = (data) => {
-    setOppositionPlayers(data.opposition_players || {});
-    setClubScores(data.club_scores || {});
-    setOppositionScores(data.opposition_scores || {});
-    setEnds(data.ends || {});
-  };
-
   useEffect(() => {
-    if (matchScore) {
-      applyScoreData(matchScore);
-      isDirtyRef.current = false;
-      setShowNewerVersion(false);
+    if (!matchScore) return;
+    // Merge per venue so unsaved edits are never clobbered by a refetch.
+    if (!homeDirtyRef.current) {
+      setClubScores(matchScore.club_scores || {});
+      setEnds(matchScore.ends || {});
+    }
+    if (!awayDirtyRef.current) {
+      setOppositionScores(matchScore.opposition_scores || {});
+    }
+    if (!oppDirtyRef.current) {
+      setOppositionPlayers(matchScore.opposition_players || {});
     }
   }, [matchScore]);
 
   // Realtime: when another scorer saves, receive the change without polling.
-  // If this screen has unsaved edits, show a banner instead of overwriting them.
+  // Merge per venue: each scorer keeps their own unsaved edits for their venue.
   useEffect(() => {
     if (!selectionId) return;
     const unsubscribe = base44.entities.MatchScore.subscribe((event) => {
       if (event.data?.selection_id !== selectionId) return;
-      const incoming = {
-        opposition_players: event.data.opposition_players || {},
-        club_scores: event.data.club_scores || {},
-        opposition_scores: event.data.opposition_scores || {},
-        ends: event.data.ends || {},
-      };
-      const incomingJson = JSON.stringify(incoming);
-      if (lastSavedRef.current === incomingJson) {
-        // This was our own save echoing back
-        applyScoreData(incoming);
-        isDirtyRef.current = false;
-        setShowNewerVersion(false);
-        return;
-      }
-      if (isDirtyRef.current) {
-        setShowNewerVersion(true);
+      if (!homeDirtyRef.current) {
+        setClubScores(event.data.club_scores || {});
+        setEnds(event.data.ends || {});
       } else {
-        applyScoreData(incoming);
+        setShowNewerVersion(true);
+      }
+      if (!awayDirtyRef.current) {
+        setOppositionScores(event.data.opposition_scores || {});
+      } else {
+        setShowNewerVersion(true);
+      }
+      if (!oppDirtyRef.current) {
+        setOppositionPlayers(event.data.opposition_players || {});
       }
     });
     return unsubscribe;
   }, [selectionId]);
 
   const loadLatestScores = () => {
-    isDirtyRef.current = false;
+    homeDirtyRef.current = false;
+    awayDirtyRef.current = false;
+    oppDirtyRef.current = false;
     setShowNewerVersion(false);
     queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
   };
@@ -182,13 +180,10 @@ export default function LiveScoring() {
   const saveScoreMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('saveMatchScore', data),
     onSuccess: (result, variables) => {
-      lastSavedRef.current = JSON.stringify({
-        opposition_players: variables.opposition_players || {},
-        club_scores: variables.club_scores || {},
-        opposition_scores: variables.opposition_scores || {},
-        ends: variables.ends || {},
-      });
-      isDirtyRef.current = false;
+      if (variables.scope === 'home') homeDirtyRef.current = false;
+      if (variables.scope === 'away') awayDirtyRef.current = false;
+      if (variables.opposition_players !== undefined) oppDirtyRef.current = false;
+      setShowNewerVersion(false);
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
       toast.success('Scores saved');
     },
@@ -244,15 +239,26 @@ export default function LiveScoring() {
     return (exact || matches[0])?.id || '';
   };
 
-  const handleSave = async () => {
-    await saveScoreMutation.mutateAsync({
+  const handleSaveHome = () => {
+    saveScoreMutation.mutate({
       selectionId,
       clubId,
-      opposition_players: oppositionPlayers,
+      scope: 'home',
       club_scores: clubScores,
-      opposition_scores: oppositionScores,
       ends: ends,
-      version: matchScore?.updated_date,
+      ...(oppDirtyRef.current ? { opposition_players: oppositionPlayers } : {}),
+      version: matchScore?.home_updated_date || matchScore?.updated_date,
+    });
+  };
+
+  const handleSaveAway = () => {
+    saveScoreMutation.mutate({
+      selectionId,
+      clubId,
+      scope: 'away',
+      opposition_scores: oppositionScores,
+      ...(oppDirtyRef.current ? { opposition_players: oppositionPlayers } : {}),
+      version: matchScore?.away_updated_date || matchScore?.updated_date,
     });
   };
 
@@ -366,18 +372,33 @@ export default function LiveScoring() {
               </div>
             </div>
             {canEdit && (
-              <Button 
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Save Scores
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleSaveHome}
+                  disabled={isSaving}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Home Scores
+                </Button>
+                <Button
+                  onClick={handleSaveAway}
+                  disabled={isSaving}
+                  variant="outline"
+                  className="border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Away Scores
+                </Button>
+              </div>
             )}
           </div>
         </motion.div>
@@ -385,7 +406,7 @@ export default function LiveScoring() {
         {showNewerVersion && (
           <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
             <span className="text-sm text-amber-800">
-              Another scorer has saved newer scores. Your unsaved edits are still on this screen.
+              Another scorer has saved newer scores for a venue you've edited. Your unsaved edits are still on this screen.
             </span>
             <Button size="sm" variant="outline" className="border-amber-400 text-amber-800 hover:bg-amber-100" onClick={loadLatestScores}>
               Load latest scores
@@ -467,7 +488,7 @@ export default function LiveScoring() {
                                       className={`h-7 ${['Skip', 'Player'].includes(pos) ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
                                       value={oppositionPlayers[posKey] || ''}
                                       onChange={(e) => {
-                                        isDirtyRef.current = true;
+                                        oppDirtyRef.current = true;
                                         setOppositionPlayers(prev => ({
                                         ...prev,
                                         [posKey]: e.target.value
@@ -515,7 +536,7 @@ export default function LiveScoring() {
                              className="w-16 text-center h-8"
                              value={clubScores[match.key] || ''}
                              onChange={(e) => {
-                               isDirtyRef.current = true;
+                               homeDirtyRef.current = true;
                                setClubScores(prev => ({
                                ...prev,
                                [match.key]: e.target.value
@@ -531,7 +552,7 @@ export default function LiveScoring() {
                              className="w-14 text-center h-8"
                              value={ends[match.key] || ''}
                              onChange={(e) => {
-                               isDirtyRef.current = true;
+                               homeDirtyRef.current = true;
                                setEnds(prev => ({
                                ...prev,
                                [match.key]: e.target.value
@@ -547,7 +568,7 @@ export default function LiveScoring() {
                              className="w-16 text-center h-8"
                              value={oppositionScores[match.key] || ''}
                              onChange={(e) => {
-                               isDirtyRef.current = true;
+                               awayDirtyRef.current = true;
                                setOppositionScores(prev => ({
                                ...prev,
                                [match.key]: e.target.value

@@ -25,6 +25,16 @@
     "ends": {
       "type": "object",
       "description": "JSON object mapping rink positions to number of ends played"
+    },
+    "home_updated_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Version stamp for the home venue's scores (club scores and ends) \u2014 used for per-venue conflict detection"
+    },
+    "away_updated_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Version stamp for the away venue's scores (opposition scores) \u2014 used for per-venue conflict detection"
     }
   },
   "required": [
