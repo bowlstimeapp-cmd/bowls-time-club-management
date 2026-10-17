@@ -13,7 +13,7 @@ export default async function(req) {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { selectionId, clubId, opposition_players, club_scores, opposition_scores, ends } = body;
+    const { selectionId, clubId, opposition_players, club_scores, opposition_scores, ends, version } = body;
     if (!selectionId || !clubId) {
       return Response.json({ error: 'selectionId and clubId are required' }, { status: 400 });
     }
@@ -39,6 +39,13 @@ export default async function(req) {
     const existing = await service.entities.MatchScore.filter({ selection_id: selectionId });
     let scoreId;
     if (existing[0]) {
+      // Stale-save guard: if the record has changed since the caller loaded it,
+      // refuse the save so an older screen can't overwrite newer scores.
+      if (version && existing[0].updated_date && existing[0].updated_date !== version) {
+        return Response.json({
+          error: 'conflict: newer scores were saved by someone else',
+        }, { status: 409 });
+      }
       await service.entities.MatchScore.update(existing[0].id, data);
       scoreId = existing[0].id;
     } else {

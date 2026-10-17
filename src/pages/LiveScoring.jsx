@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -54,6 +54,9 @@ export default function LiveScoring() {
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [editedSelections, setEditedSelections] = useState({});
   const [editedNames, setEditedNames] = useState({});
+  const [showNewerVersion, setShowNewerVersion] = useState(false);
+  const isDirtyRef = useRef(false);
+  const lastSavedRef = useRef(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -117,14 +120,55 @@ export default function LiveScoring() {
     enabled: !!selectionId,
   });
 
+  const applyScoreData = (data) => {
+    setOppositionPlayers(data.opposition_players || {});
+    setClubScores(data.club_scores || {});
+    setOppositionScores(data.opposition_scores || {});
+    setEnds(data.ends || {});
+  };
+
   useEffect(() => {
     if (matchScore) {
-      setOppositionPlayers(matchScore.opposition_players || {});
-      setClubScores(matchScore.club_scores || {});
-      setOppositionScores(matchScore.opposition_scores || {});
-      setEnds(matchScore.ends || {});
+      applyScoreData(matchScore);
+      isDirtyRef.current = false;
+      setShowNewerVersion(false);
     }
   }, [matchScore]);
+
+  // Realtime: when another scorer saves, receive the change without polling.
+  // If this screen has unsaved edits, show a banner instead of overwriting them.
+  useEffect(() => {
+    if (!selectionId) return;
+    const unsubscribe = base44.entities.MatchScore.subscribe((event) => {
+      if (event.data?.selection_id !== selectionId) return;
+      const incoming = {
+        opposition_players: event.data.opposition_players || {},
+        club_scores: event.data.club_scores || {},
+        opposition_scores: event.data.opposition_scores || {},
+        ends: event.data.ends || {},
+      };
+      const incomingJson = JSON.stringify(incoming);
+      if (lastSavedRef.current === incomingJson) {
+        // This was our own save echoing back
+        applyScoreData(incoming);
+        isDirtyRef.current = false;
+        setShowNewerVersion(false);
+        return;
+      }
+      if (isDirtyRef.current) {
+        setShowNewerVersion(true);
+      } else {
+        applyScoreData(incoming);
+      }
+    });
+    return unsubscribe;
+  }, [selectionId]);
+
+  const loadLatestScores = () => {
+    isDirtyRef.current = false;
+    setShowNewerVersion(false);
+    queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
+  };
 
   useEffect(() => {
     if (selection?.selections) {
@@ -137,12 +181,24 @@ export default function LiveScoring() {
   // can save, regardless of who originally created the score record.
   const saveScoreMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('saveMatchScore', data),
-    onSuccess: () => {
+    onSuccess: (result, variables) => {
+      lastSavedRef.current = JSON.stringify({
+        opposition_players: variables.opposition_players || {},
+        club_scores: variables.club_scores || {},
+        opposition_scores: variables.opposition_scores || {},
+        ends: variables.ends || {},
+      });
+      isDirtyRef.current = false;
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
       toast.success('Scores saved');
     },
-    onError: () => {
-      toast.error('Failed to save scores');
+    onError: (err) => {
+      if (String(err?.message || '').includes('conflict')) {
+        toast.error('Someone else just saved newer scores');
+        setShowNewerVersion(true);
+      } else {
+        toast.error('Failed to save scores');
+      }
     },
   });
 
@@ -196,6 +252,7 @@ export default function LiveScoring() {
       club_scores: clubScores,
       opposition_scores: oppositionScores,
       ends: ends,
+      version: matchScore?.updated_date,
     });
   };
 
@@ -325,6 +382,17 @@ export default function LiveScoring() {
           </div>
         </motion.div>
 
+        {showNewerVersion && (
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+            <span className="text-sm text-amber-800">
+              Another scorer has saved newer scores. Your unsaved edits are still on this screen.
+            </span>
+            <Button size="sm" variant="outline" className="border-amber-400 text-amber-800 hover:bg-amber-100" onClick={loadLatestScores}>
+              Load latest scores
+            </Button>
+          </div>
+        )}
+
         {/* Score Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -398,10 +466,13 @@ export default function LiveScoring() {
                                       placeholder={pos}
                                       className={`h-7 ${['Skip', 'Player'].includes(pos) ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
                                       value={oppositionPlayers[posKey] || ''}
-                                      onChange={(e) => setOppositionPlayers(prev => ({
+                                      onChange={(e) => {
+                                        isDirtyRef.current = true;
+                                        setOppositionPlayers(prev => ({
                                         ...prev,
                                         [posKey]: e.target.value
-                                      }))}
+                                      }));
+                                      }}
                                       disabled={!canEdit}
                                     />
                                     {idx < match.positionsList.length - 1 && <span className="text-gray-300">•</span>}
@@ -443,10 +514,13 @@ export default function LiveScoring() {
                              min="0"
                              className="w-16 text-center h-8"
                              value={clubScores[match.key] || ''}
-                             onChange={(e) => setClubScores(prev => ({
+                             onChange={(e) => {
+                               isDirtyRef.current = true;
+                               setClubScores(prev => ({
                                ...prev,
                                [match.key]: e.target.value
-                             }))}
+                             }));
+                             }}
                              disabled={!canEdit}
                            />
                           </td>
@@ -456,10 +530,13 @@ export default function LiveScoring() {
                              min="0"
                              className="w-14 text-center h-8"
                              value={ends[match.key] || ''}
-                             onChange={(e) => setEnds(prev => ({
+                             onChange={(e) => {
+                               isDirtyRef.current = true;
+                               setEnds(prev => ({
                                ...prev,
                                [match.key]: e.target.value
-                             }))}
+                             }));
+                             }}
                              disabled={!canEdit}
                            />
                           </td>
@@ -469,10 +546,13 @@ export default function LiveScoring() {
                              min="0"
                              className="w-16 text-center h-8"
                              value={oppositionScores[match.key] || ''}
-                             onChange={(e) => setOppositionScores(prev => ({
+                             onChange={(e) => {
+                               isDirtyRef.current = true;
+                               setOppositionScores(prev => ({
                                ...prev,
                                [match.key]: e.target.value
-                             }))}
+                             }));
+                             }}
                              disabled={!canEdit}
                            />
                           </td>
