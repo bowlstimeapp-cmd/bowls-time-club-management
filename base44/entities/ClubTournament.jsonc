@@ -130,6 +130,11 @@
       ],
       "default": "draft",
       "description": "Whether the tournament is visible to members"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Archived tournaments are hidden from club members and shown under the Archived tab for club admins"
     }
   },
   "required": [
