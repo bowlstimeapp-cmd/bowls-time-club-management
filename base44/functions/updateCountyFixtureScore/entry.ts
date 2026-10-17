@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     if (resolve) {
       await requireCountyRole(base44, user, countyId, ['admin', 'secretary']);
       const hs = parseInt(homeScore), as_ = parseInt(awayScore);
-      const hsS = isSetsLeague ? parseInt(homeSets) : null, asS = isSetsLeague ? parseInt(awaySets) : null;
+      const hsS = isSetsLeague ? parseFloat(homeSets) : null, asS = isSetsLeague ? parseFloat(awaySets) : null;
       await base44.asServiceRole.entities.CountyLeagueFixture.update(fixtureId, {
         home_score: hs, away_score: as_,
         home_sets: isSetsLeague ? hsS : null, away_sets: isSetsLeague ? asS : null,
@@ -41,8 +41,12 @@ Deno.serve(async (req) => {
     if (!submitterTeamId) return Response.json({ error: 'Missing submitterTeamId' }, { status: 400 });
     const hs = parseInt(homeScore), as_ = parseInt(awayScore);
     if (isNaN(hs) || isNaN(as_)) return Response.json({ error: 'Invalid scores' }, { status: 400 });
-    const hsS = isSetsLeague ? parseInt(homeSets) : null;
-    const asS = isSetsLeague ? parseInt(awaySets) : null;
+    // Sets support 0.5 steps for drawn sets (0.5 to each side)
+    const hsS = isSetsLeague ? parseFloat(homeSets) : null;
+    const asS = isSetsLeague ? parseFloat(awaySets) : null;
+    if (isSetsLeague && (isNaN(hsS) || isNaN(asS) || hsS < 0 || asS < 0 || !Number.isInteger(hsS * 2) || !Number.isInteger(asS * 2))) {
+      return Response.json({ error: 'Sets must be in 0.5 steps (e.g. 2.5)' }, { status: 400 });
+    }
 
     const submitterTeam = (await base44.asServiceRole.entities.CountyTeam.filter({ id: submitterTeamId, county_id: countyId }))[0];
     if (!submitterTeam) return Response.json({ error: 'Submitter team not found' }, { status: 404 });

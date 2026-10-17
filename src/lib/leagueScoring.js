@@ -11,9 +11,21 @@
  *  - Points for highest combined shots across all sets
  *
  * For sets leagues, fixtures store sets data as:
- *   home_sets / away_sets (number of sets won each)
+ *   home_sets / away_sets (sets won each, in 0.5 steps — a drawn set is
+ *   stored as 0.5 to each side, e.g. 3.5 – 2.5 means one set was drawn)
  *   home_score / away_score (total shots, used for shots-based point)
  */
+
+/**
+ * Parse and validate a sets entry. Drawn sets are recorded in 0.5 steps.
+ * Returns the parsed number (e.g. 2.5), or NaN when invalid/empty.
+ */
+export function parseSetsValue(raw) {
+  if (raw === '' || raw === null || raw === undefined) return NaN;
+  const n = parseFloat(raw);
+  if (isNaN(n) || n < 0 || !Number.isInteger(n * 2)) return NaN;
+  return n;
+}
 /**
  * Determine the game winner of a sets fixture: "home", "away" or null.
  * The tiebreak decides when one was played; otherwise the sets won.
@@ -81,16 +93,13 @@ export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
         awayEntry.drawn++;
       }
 
-      // Points per set win
+      // Points per set win. Drawn sets are already stored as half-sets in
+      // home_sets / away_sets (0.5 each), so multiplying by the set value
+      // awards half the set value to each team with no special handling.
       if (league.scoring_points_per_set) {
         const setVal = league.scoring_points_per_set_value ?? 1;
         homeEntry.points += homeSets * setVal;
         awayEntry.points += awaySets * setVal;
-
-        // Drawn sets: award half set value to each team
-        // (sets already counted individually above, so no extra action needed for drawn games
-        //  as long as individual set draws give 0.5 each — but we only store total sets won,
-        //  so drawn game overall = equal sets, handled by the value split naturally)
       }
 
       // Points for game win (sets + tiebreak decide the game)
@@ -177,6 +186,9 @@ export function calculateLeagueTable(league, leagueTeams, leagueFixtures) {
 
   table.forEach(entry => {
     entry.pointsDiff = entry.pointsFor - entry.pointsAgainst;
+    // Half-set points can leave float drift (e.g. 7.499999…) — round so the
+    // table shows clean values like 7.5
+    entry.points = Math.round(entry.points * 100) / 100;
   });
 
   return table.sort((a, b) => {

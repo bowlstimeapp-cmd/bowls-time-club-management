@@ -85,6 +85,7 @@ import { createPageUrl } from '@/utils';
 import { format, parseISO, addDays, eachWeekOfInterval, isBefore } from 'date-fns';
 import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
 import { buildFixtureList as buildFixturesForLeague, reassignRinkAllocations } from '@/lib/leagueFixtureGenerator';
+import { parseSetsValue } from '@/lib/leagueScoring';
 import LeagueSearchSelect from '@/components/leagues/LeagueSearchSelect';
 import LeagueFocusView from '@/components/leagues/LeagueFocusView';
 import LeagueTeamsSection from '@/components/leagues/LeagueTeamsSection';
@@ -993,7 +994,13 @@ export default function LeagueAdmin() {
       return;
     }
     if (isSetsLeague) {
-      const setsLevel = parseInt(homeSets) === parseInt(awaySets);
+      const hsS = parseSetsValue(homeSets);
+      const asS = parseSetsValue(awaySets);
+      if (isNaN(hsS) || isNaN(asS)) {
+        toast.error('Sets must be in 0.5 steps (e.g. 2.5 — enter 0.5 for each drawn set)');
+        return;
+      }
+      const setsLevel = hsS === asS;
       if (!hadTiebreak && setsLevel) {
         toast.error('Sets are level – switch on Tiebreak and choose the winner');
         return;
@@ -1014,8 +1021,8 @@ export default function LeagueAdmin() {
       status: 'completed',
     };
     if (isSetsLeague) {
-      updateData.home_sets = parseInt(homeSets);
-      updateData.away_sets = parseInt(awaySets);
+      updateData.home_sets = parseSetsValue(homeSets);
+      updateData.away_sets = parseSetsValue(awaySets);
       updateData.had_tiebreak = hadTiebreak;
       updateData.tiebreak_winner = hadTiebreak ? tiebreakWinner : null;
     }
@@ -2210,15 +2217,16 @@ export default function LeagueAdmin() {
                       <div className="grid grid-cols-3 gap-4 items-center">
                         <div className="text-right">
                           <Label className="block mb-2 text-xs">{homeTeam?.name}</Label>
-                          <Input type="number" min="0" value={homeSets} onChange={(e) => setHomeSets(e.target.value)} className="text-center" placeholder="0" />
+                          <Input type="number" min="0" step="0.5" inputMode="decimal" value={homeSets} onChange={(e) => setHomeSets(e.target.value)} className="text-center" placeholder="0" />
                         </div>
                         <div className="text-center text-gray-400 pt-6 text-sm">sets</div>
                         <div className="text-left">
                           <Label className="block mb-2 text-xs">{awayTeam?.name}</Label>
-                          <Input type="number" min="0" value={awaySets} onChange={(e) => setAwaySets(e.target.value)} className="text-center" placeholder="0" />
+                          <Input type="number" min="0" step="0.5" inputMode="decimal" value={awaySets} onChange={(e) => setAwaySets(e.target.value)} className="text-center" placeholder="0" />
                         </div>
                       </div>
-                      {homeSets !== '' && awaySets !== '' && parseInt(homeSets) === parseInt(awaySets) && (
+                      <p className="text-xs text-gray-400 text-center mt-1">Enter 0.5 for each drawn set (e.g. 2.5 – 1.5 means one set was drawn)</p>
+                      {homeSets !== '' && awaySets !== '' && parseSetsValue(homeSets) === parseSetsValue(awaySets) && (
                         <p className="text-xs text-red-600 font-medium text-center mt-2">Sets level – add tiebreak winner</p>
                       )}
                       <div className="flex flex-col items-center gap-2 mt-3">

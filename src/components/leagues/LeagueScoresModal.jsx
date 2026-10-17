@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
 import { AlertTriangle, X, AlertCircle } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
-import { getSetsGameWinner } from '@/lib/leagueScoring';
+import { getSetsGameWinner, parseSetsValue } from '@/lib/leagueScoring';
 
 export default function LeagueScoresModal({ open, onClose, league, fixtures, teams, clubId }) {
   const queryClient = useQueryClient();
@@ -37,9 +37,13 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
     const s = scores[fixture.id];
     if (!s || s.home === '' || s.away === '') return;
     if (isSetsLeague) {
-      const hsSets = s.home_sets !== '' ? parseInt(s.home_sets) : null;
-      const asSets = s.away_sets !== '' ? parseInt(s.away_sets) : null;
-      const setsLevel = hsSets !== null && asSets !== null && hsSets === asSets;
+      const hsSets = parseSetsValue(s.home_sets);
+      const asSets = parseSetsValue(s.away_sets);
+      if (isNaN(hsSets) || isNaN(asSets)) {
+        toast.error('Sets must be in 0.5 steps (e.g. 2.5 — enter 0.5 for each drawn set)');
+        return;
+      }
+      const setsLevel = hsSets === asSets;
       if (!s.tb_on && setsLevel) {
         toast.error('Sets are level – switch on Tiebreak and choose the winner');
         return;
@@ -57,8 +61,8 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       home_score: parseInt(s.home),
       away_score: parseInt(s.away),
       ...(isSetsLeague ? {
-        home_sets: s.home_sets !== '' ? parseInt(s.home_sets) : null,
-        away_sets: s.away_sets !== '' ? parseInt(s.away_sets) : null,
+        home_sets: parseSetsValue(s.home_sets),
+        away_sets: parseSetsValue(s.away_sets),
         had_tiebreak: !!s.tb_on,
         tiebreak_winner: s.tb_on ? (s.tb_winner || null) : null,
       } : {}),
@@ -160,6 +164,9 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
       <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{league?.name} — Scores</DialogTitle>
+          {isSetsLeague && (
+            <p className="text-xs text-gray-400">Enter 0.5 for each drawn set (e.g. 2.5 – 1.5 means one set was drawn)</p>
+          )}
         </DialogHeader>
 
         {/* Conflict banner — mismatched scores from both teams */}
@@ -216,15 +223,15 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                 const hasResult = hScore !== null && aScore !== null;
                 const result = hasResult ? `${hScore} – ${aScore}` : '—';
                 const setsLevelWarn = isSetsLeague && fixture.status === 'completed' && hasResult &&
-                  s.home_sets !== '' && s.away_sets !== '' && parseInt(s.home_sets) === parseInt(s.away_sets);
+                  s.home_sets !== '' && s.away_sets !== '' && parseSetsValue(s.home_sets) === parseSetsValue(s.away_sets);
                 const winner = hasResult
                   ? (isSetsLeague
                       ? (() => {
                           const gw = getSetsGameWinner({
                             had_tiebreak: !!s.tb_on,
                             tiebreak_winner: s.tb_winner || null,
-                            home_sets: s.home_sets !== '' ? parseInt(s.home_sets) : null,
-                            away_sets: s.away_sets !== '' ? parseInt(s.away_sets) : null,
+                            home_sets: parseSetsValue(s.home_sets),
+                            away_sets: parseSetsValue(s.away_sets),
                           });
                           return gw === 'home' ? homeTeam?.name : gw === 'away' ? awayTeam?.name : '—';
                         })()
@@ -253,7 +260,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                       {isSetsLeague && (
                         <td className="p-3">
                           <Input
-                            type="number" min="0"
+                            type="number" min="0" step="0.5" inputMode="decimal"
                             value={s.home_sets}
                             onChange={(e) => setScores(prev => ({ ...prev, [fixture.id]: { ...s, home_sets: e.target.value } }))}
                             className="w-16 text-center h-8 text-sm"
@@ -264,7 +271,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                       {isSetsLeague && (
                         <td className="p-3">
                           <Input
-                            type="number" min="0"
+                            type="number" min="0" step="0.5" inputMode="decimal"
                             value={s.away_sets}
                             onChange={(e) => setScores(prev => ({ ...prev, [fixture.id]: { ...s, away_sets: e.target.value } }))}
                             className="w-16 text-center h-8 text-sm"
@@ -289,8 +296,8 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                               const gw = getSetsGameWinner({
                                 had_tiebreak: !!s.tb_on,
                                 tiebreak_winner: s.tb_winner || null,
-                                home_sets: s.home_sets !== '' ? parseInt(s.home_sets) : null,
-                                away_sets: s.away_sets !== '' ? parseInt(s.away_sets) : null,
+                                home_sets: parseSetsValue(s.home_sets),
+                                away_sets: parseSetsValue(s.away_sets),
                               });
                               if (!gw) return null;
                               const gwName = gw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');

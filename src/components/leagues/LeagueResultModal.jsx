@@ -63,8 +63,8 @@ export default function LeagueResultModal({
   // Small preview shown before saving: game winner and shots point
   let previewLine = null;
   if (isSetsLeague && homeScore !== '' && awayScore !== '' && homeSets !== '' && awaySets !== '') {
-    const hsNum = parseInt(homeSets);
-    const asNum = parseInt(awaySets);
+    const hsNum = parseFloat(homeSets);
+    const asNum = parseFloat(awaySets);
     const gw = tiebreakOn ? tiebreakWinner : (hsNum > asNum ? 'home' : asNum > hsNum ? 'away' : null);
     if (gw) {
       const gwName = gw === 'home' ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');
@@ -125,10 +125,14 @@ export default function LeagueResultModal({
 
     const hs = parseInt(homeScore);
     const as_ = parseInt(awayScore);
-    const hsS = isSetsLeague ? parseInt(homeSets) : null;
-    const asS = isSetsLeague ? parseInt(awaySets) : null;
+    const hsS = isSetsLeague ? parseFloat(homeSets) : null;
+    const asS = isSetsLeague ? parseFloat(awaySets) : null;
 
     if (isSetsLeague) {
+      if (isNaN(hsS) || isNaN(asS) || hsS < 0 || asS < 0 || !Number.isInteger(hsS * 2) || !Number.isInteger(asS * 2)) {
+        toast.error('Sets must be in 0.5 steps (e.g. 2.5 — enter 0.5 for each drawn set)');
+        return;
+      }
       const setsLevel = hsS === asS;
       if (!tiebreakOn && setsLevel) {
         toast.error('Sets are level – switch on Tiebreak and choose the winner');
@@ -296,7 +300,7 @@ export default function LeagueResultModal({
                     <div>
                       <Label className="text-xs block mb-1">{homeTeam?.name || 'Home'}</Label>
                       <Input
-                        type="number" min="0"
+                        type="number" min="0" step="0.5" inputMode="decimal"
                         value={homeSets}
                         onChange={(e) => setHomeSets(e.target.value)}
                         className="text-center"
@@ -307,7 +311,7 @@ export default function LeagueResultModal({
                     <div>
                       <Label className="text-xs block mb-1">{awayTeam?.name || 'Away'}</Label>
                       <Input
-                        type="number" min="0"
+                        type="number" min="0" step="0.5" inputMode="decimal"
                         value={awaySets}
                         onChange={(e) => setAwaySets(e.target.value)}
                         className="text-center"
@@ -315,6 +319,7 @@ export default function LeagueResultModal({
                       />
                     </div>
                   </div>
+                  <p className="text-xs text-gray-400 mt-2">Enter 0.5 for each drawn set (e.g. 2.5 – 1.5 means one set was drawn)</p>
                 </div>
               )}
 

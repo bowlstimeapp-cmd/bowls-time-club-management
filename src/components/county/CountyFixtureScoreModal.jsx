@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { Trophy, Calendar, MapPin, Loader2, CheckCircle2, AlertCircle, ShieldAlert } from 'lucide-react';
+import { parseSetsValue } from '@/lib/leagueScoring';
 
 export default function CountyFixtureScoreModal({ countyId, fixture, league, teams, canAdmin, onClose }) {
   const qc = useQueryClient();
@@ -32,15 +33,21 @@ export default function CountyFixtureScoreModal({ countyId, fixture, league, tea
 
   const submit = async (asResolve) => {
     if (homeScore === '' || awayScore === '') { toast.error('Enter both scores'); return; }
-    if (isSets && (homeSets === '' || awaySets === '')) { toast.error('Enter both set counts'); return; }
+    if (isSets) {
+      if (homeSets === '' || awaySets === '') { toast.error('Enter both set counts'); return; }
+      if (isNaN(parseSetsValue(homeSets)) || isNaN(parseSetsValue(awaySets))) {
+        toast.error('Sets must be in 0.5 steps (e.g. 2.5 — enter 0.5 for each drawn set)');
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
         countyId, fixtureId: fixture.id,
         homeScore: parseInt(homeScore), awayScore: parseInt(awayScore),
         isSetsLeague: isSets,
-        homeSets: isSets ? parseInt(homeSets) : null,
-        awaySets: isSets ? parseInt(awaySets) : null,
+        homeSets: isSets ? parseSetsValue(homeSets) : null,
+        awaySets: isSets ? parseSetsValue(awaySets) : null,
       };
       if (asResolve) {
         payload.resolve = true;
@@ -120,11 +127,12 @@ export default function CountyFixtureScoreModal({ countyId, fixture, league, tea
               )}
               {isSets && (
                 <div className="grid grid-cols-3 gap-3 items-center">
-                  <div><Label className="text-xs block mb-1">{homeTeam?.name || 'Home'}</Label><Input type="number" min="0" value={homeSets} onChange={e => setHomeSets(e.target.value)} className="text-center" placeholder="0" /></div>
+                  <div><Label className="text-xs block mb-1">{homeTeam?.name || 'Home'}</Label><Input type="number" min="0" step="0.5" inputMode="decimal" value={homeSets} onChange={e => setHomeSets(e.target.value)} className="text-center" placeholder="0" /></div>
                   <div className="text-center text-gray-400 text-sm pt-5">sets</div>
-                  <div><Label className="text-xs block mb-1">{awayTeam?.name || 'Away'}</Label><Input type="number" min="0" value={awaySets} onChange={e => setAwaySets(e.target.value)} className="text-center" placeholder="0" /></div>
+                  <div><Label className="text-xs block mb-1">{awayTeam?.name || 'Away'}</Label><Input type="number" min="0" step="0.5" inputMode="decimal" value={awaySets} onChange={e => setAwaySets(e.target.value)} className="text-center" placeholder="0" /></div>
                 </div>
               )}
+              {isSets && <p className="text-xs text-gray-400 -mt-2">Enter 0.5 for each drawn set (e.g. 2.5 – 1.5 means one set was drawn)</p>}
               <div className="grid grid-cols-3 gap-3 items-center">
                 <div><Input type="number" min="0" value={homeScore} onChange={e => setHomeScore(e.target.value)} className="text-center text-lg font-bold" placeholder="0" /></div>
                 <div className="text-center text-gray-400 font-bold pt-4">–</div>
