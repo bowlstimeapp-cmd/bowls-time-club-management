@@ -38,6 +38,7 @@ import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import SmsNotificationControl from '@/components/selection/SmsNotificationControl';
+import sendSelectionPush from '@/components/selection/sendSelectionPush';
 
 const APP_BASE_URL = window.location.origin;
 
@@ -402,15 +403,6 @@ export default function SelectionEditor() {
           console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
           continue;
         }
-        // Also send a push notification
-        try {
-          await base44.functions.invoke('sendPushNotification', {
-            userEmail: member.user_email,
-            title: `Match Selection — ${competition}`,
-            message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-            url: matchUrl
-          });
-        } catch {/* push is best-effort */}
         await base44.entities.EmailLog.create({
           club_id: clubId,
           club_name: club?.name || '',
@@ -538,8 +530,10 @@ export default function SelectionEditor() {
       await updateMutation.mutateAsync({ id: selectionId, data });
       toast.success(publish ? 'Selection published!' : 'Selection saved');
       if (publish && !isRepublish) {
-        // Create notifications for selected players
+        // Push is independent of email preferences and email delivery failures.
         const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+        await sendSelectionPush({ emails: selectedPlayerEmails, competition, matchName, matchDate, clubId, selectionId });
+        // Create notifications for selected players
         const notificationsToCreate = selectedPlayerEmails.map((email) => ({
           user_email: email,
           type: 'team_selection',
@@ -592,6 +586,7 @@ export default function SelectionEditor() {
         const newlyAddedEmails = currentPlayerEmails.filter((email) => !originalPlayerEmails.includes(email));
 
         if (newlyAddedEmails.length > 0) {
+          await sendSelectionPush({ emails: newlyAddedEmails, competition, matchName, matchDate, clubId, selectionId });
           const notificationsToCreate = newlyAddedEmails.map((email) => ({
             user_email: email,
             type: 'team_selection',
@@ -621,8 +616,9 @@ export default function SelectionEditor() {
       const newId = result?.data?.id || result?.id;
       if (publish) {
         toast.success('Selection published!');
-        // Create notifications for selected players
+        // Push is independent of email preferences and email delivery failures.
         const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+        await sendSelectionPush({ emails: selectedPlayerEmails, competition, matchName, matchDate, clubId, selectionId: newId });
         const notificationsToCreate = selectedPlayerEmails.map((email) => ({
           user_email: email,
           type: 'team_selection',

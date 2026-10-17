@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { sendPushToEmails } from '../../shared/webPush.ts';
 
-// Sends a Web Push notification to one or more app users.
+// Sends RFC 8291-encrypted Web Push messages; provider acceptance is not a device receipt.
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);

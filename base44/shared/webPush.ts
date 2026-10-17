@@ -58,8 +58,10 @@ async function encryptPayload(subscriptionKeys, payloadStr) {
     prkKeyMaterial, 256
   );
   const ikmKey = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
-  const cekBits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: authSecret, info: enc.encode('Content-Encoding: aes128gcm\0') }, ikmKey, 128);
-  const nonceBits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: authSecret, info: enc.encode('Content-Encoding: nonce\0') }, ikmKey, 96);
+  // RFC 8291: this stage uses the random salt transmitted in the header,
+  // not the subscription auth secret used in the initial HKDF stage.
+  const cekBits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info: enc.encode('Content-Encoding: aes128gcm\0') }, ikmKey, 128);
+  const nonceBits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info: enc.encode('Content-Encoding: nonce\0') }, ikmKey, 96);
 
   const aesKey = await crypto.subtle.importKey('raw', cekBits, 'AES-GCM', false, ['encrypt']);
   const plaintext = enc.encode(payloadStr);
