@@ -20,7 +20,8 @@ export default async function(req) {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { clubId, sourceEmail, targetEmail } = await req.json();
+    const { clubId, sourceEmail, targetEmail, migrateFields } = await req.json();
+    const mf = (migrateFields && typeof migrateFields === 'object' && !Array.isArray(migrateFields)) ? migrateFields : null;
 
     if (!clubId || !sourceEmail || !targetEmail) {
       return Response.json({ error: 'Missing required fields: clubId, sourceEmail, targetEmail' }, { status: 400 });
@@ -74,8 +75,7 @@ export default async function(req) {
       repointField(sr, 'BookingAuditLog', 'booker_email', sourceEmail, targetEmail, clubId, true),
       // MemberAvailability (user_email) — club-scoped
       repointField(sr, 'MemberAvailability', 'user_email', sourceEmail, targetEmail, clubId, true),
-      // UserUnavailability (user_email) — NOT club-scoped
-      repointField(sr, 'UserUnavailability', 'user_email', sourceEmail, targetEmail, clubId, false),
+      // UserUnavailability handled conditionally below (see migrateFields)
       // TeamSelection (selector_email, home_captain_email, away_captain_email) — club-scoped
       repointField(sr, 'TeamSelection', 'selector_email', sourceEmail, targetEmail, clubId, true),
       repointField(sr, 'TeamSelection', 'home_captain_email', sourceEmail, targetEmail, clubId, true),
@@ -111,6 +111,25 @@ export default async function(req) {
       repointTournaments(sr, clubId, sourceEmail, targetEmail),
     ];
 
+    // ── Unavailability handling — conditional on migrateFields.unavailability ──
+    if (!mf || mf.unavailability !== false) {
+      // Default behaviour (no migrateFields) and explicit keep: repoint to the target email
+      tasks.push(repointField(sr, 'UserUnavailability', 'user_email', sourceEmail, targetEmail, clubId, false));
+    } else {
+      // Do not migrate: delete the source's records (service role) so they are not orphaned
+      tasks.push((async () => {
+        try {
+          const stale = await sr.entities.UserUnavailability.filter({ user_email: sourceEmail });
+          if (stale.length > 0) {
+            await sr.entities.UserUnavailability.deleteMany({ user_email: sourceEmail });
+          }
+          return { key: 'UserUnavailability_deleted', count: stale.length, success: true };
+        } catch (e) {
+          return { key: 'UserUnavailability_deleted', count: 0, success: false, error: e.message };
+        }
+      })());
+    }
+
     const results = await Promise.allSettled(tasks);
     results.forEach((r) => {
       if (r.status === 'fulfilled') {
@@ -123,17 +142,57 @@ export default async function(req) {
       }
     });
 
-    // ── Delete source ClubMembership (after all data is repointed) ──
-    let deletedCount = 0;
-    for (const sm of sourceMemberships) {
-      try {
-        await sr.entities.ClubMembership.delete(sm.id);
-        deletedCount++;
-      } catch (e) {
-        errors.push(`ClubMembership.delete: ${e.message}`);
+    // ── Migrate profile information (opt-in via migrateFields) ──
+    // Runs before the source membership is deleted so nothing is lost.
+    let profileUpdateSucceeded = true;
+    const migratedAudit = [];
+    if (mf) {
+      const payload = {};
+      const copyFields = ['date_of_birth', 'membership_start_date', 'locker_number', 'locker_number_2'];
+      for (const field of copyFields) {
+        if (mf[field] === true) {
+          const srcVal = sourceMembership[field];
+          if (srcVal !== undefined && srcVal !== null && String(srcVal).trim() !== '') {
+            payload[field] = srcVal;
+            migratedAudit.push(`${field}: ${targetMembership[field] || 'none'} -> ${srcVal}`);
+          }
+        }
+      }
+      if (mf.membership_groups === true) {
+        const targetGroups = Array.isArray(targetMembership.membership_groups) ? targetMembership.membership_groups : [];
+        const sourceGroups = Array.isArray(sourceMembership.membership_groups) ? sourceMembership.membership_groups : [];
+        if (sourceGroups.length > 0) {
+          const union = Array.from(new Set([...targetGroups, ...sourceGroups]));
+          payload.membership_groups = union;
+          migratedAudit.push(`membership_groups: [${targetGroups.join(', ')}] -> [${union.join(', ')}]`);
+        }
+      }
+      if (Object.keys(payload).length > 0) {
+        try {
+          await sr.entities.ClubMembership.update(targetMembership.id, payload);
+        } catch (e) {
+          profileUpdateSucceeded = false;
+          errors.push(`ClubMembership profile update: ${e.message}`);
+        }
       }
     }
-    summary['ClubMembership_deleted'] = deletedCount;
+
+    // ── Delete source ClubMembership (only if the profile update succeeded) ──
+    let deletedCount = 0;
+    if (profileUpdateSucceeded) {
+      for (const sm of sourceMemberships) {
+        try {
+          await sr.entities.ClubMembership.delete(sm.id);
+          deletedCount++;
+        } catch (e) {
+          errors.push(`ClubMembership.delete: ${e.message}`);
+        }
+      }
+      summary['ClubMembership_deleted'] = deletedCount;
+    } else {
+      summary['ClubMembership_deleted'] = 0;
+      summary['ClubMembership_delete_skipped'] = 1;
+    }
 
     // ── Write AuditLog entry ──
     try {
@@ -146,7 +205,9 @@ export default async function(req) {
         performed_by_name: user.first_name && user.surname ? `${user.first_name} ${user.surname}` : user.email,
         old_value: sourceEmail,
         new_value: targetEmail,
-        details: `Merged ${sourceEmail} into ${targetEmail}. Updated: ${JSON.stringify(summary)}`,
+        details: `Merged ${sourceEmail} into ${targetEmail}. Updated: ${JSON.stringify(summary)}`
+          + (migratedAudit.length > 0 ? `. Migrated profile fields: ${migratedAudit.join('; ')}` : '')
+          + (mf ? `. Unavailability: ${mf.unavailability === false ? 'deleted (not migrated)' : 'repointed to target'}` : ''),
       });
     } catch (e) {
       errors.push(`AuditLog: ${e.message}`);
