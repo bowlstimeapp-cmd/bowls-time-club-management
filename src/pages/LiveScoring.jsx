@@ -54,7 +54,6 @@ export default function LiveScoring() {
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [editedSelections, setEditedSelections] = useState({});
   const [editedNames, setEditedNames] = useState({});
-  const [showNewerVersion, setShowNewerVersion] = useState(false);
   const homeDirtyRef = useRef(false);
   const awayDirtyRef = useRef(false);
   const oppDirtyRef = useRef(false);
@@ -145,13 +144,9 @@ export default function LiveScoring() {
       if (!homeDirtyRef.current) {
         setClubScores(event.data.club_scores || {});
         setEnds(event.data.ends || {});
-      } else {
-        setShowNewerVersion(true);
       }
       if (!awayDirtyRef.current) {
         setOppositionScores(event.data.opposition_scores || {});
-      } else {
-        setShowNewerVersion(true);
       }
       if (!oppDirtyRef.current) {
         setOppositionPlayers(event.data.opposition_players || {});
@@ -159,14 +154,6 @@ export default function LiveScoring() {
     });
     return unsubscribe;
   }, [selectionId]);
-
-  const loadLatestScores = () => {
-    homeDirtyRef.current = false;
-    awayDirtyRef.current = false;
-    oppDirtyRef.current = false;
-    setShowNewerVersion(false);
-    queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
-  };
 
   useEffect(() => {
     if (selection?.selections) {
@@ -183,17 +170,11 @@ export default function LiveScoring() {
       if (variables.scope === 'home') homeDirtyRef.current = false;
       if (variables.scope === 'away') awayDirtyRef.current = false;
       if (variables.opposition_players !== undefined) oppDirtyRef.current = false;
-      setShowNewerVersion(false);
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
       toast.success('Scores saved');
     },
-    onError: (err) => {
-      if (String(err?.message || '').includes('conflict')) {
-        toast.error('Someone else just saved newer scores');
-        setShowNewerVersion(true);
-      } else {
-        toast.error('Failed to save scores');
-      }
+    onError: () => {
+      toast.error('Failed to save scores');
     },
   });
 
@@ -247,7 +228,6 @@ export default function LiveScoring() {
       club_scores: clubScores,
       ends: ends,
       ...(oppDirtyRef.current ? { opposition_players: oppositionPlayers } : {}),
-      version: matchScore?.home_updated_date || matchScore?.updated_date,
     });
   };
 
@@ -258,7 +238,6 @@ export default function LiveScoring() {
       scope: 'away',
       opposition_scores: oppositionScores,
       ...(oppDirtyRef.current ? { opposition_players: oppositionPlayers } : {}),
-      version: matchScore?.away_updated_date || matchScore?.updated_date,
     });
   };
 
@@ -402,17 +381,6 @@ export default function LiveScoring() {
             )}
           </div>
         </motion.div>
-
-        {showNewerVersion && (
-          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-            <span className="text-sm text-amber-800">
-              Another scorer has saved newer scores for a venue you've edited. Your unsaved edits are still on this screen.
-            </span>
-            <Button size="sm" variant="outline" className="border-amber-400 text-amber-800 hover:bg-amber-100" onClick={loadLatestScores}>
-              Load latest scores
-            </Button>
-          </div>
-        )}
 
         {/* Score Header */}
         <motion.div
