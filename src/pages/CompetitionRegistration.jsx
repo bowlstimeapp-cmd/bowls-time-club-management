@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Trophy, Plus, Calendar, Users, Loader2, CheckCircle, AlertCircle,
-  MoreVertical, Pencil, Trash2, Download, ClipboardList, UserPlus, Shuffle, ExternalLink
+  MoreVertical, Pencil, Trash2, Download, ClipboardList, UserPlus, Shuffle, ExternalLink,
+  Archive, ArchiveRestore
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AddEntrantsModal from '@/components/competitions/AddEntrantsModal';
 import { generateKnockoutBracket, buildDrawEntries } from '@/lib/bracketGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -68,6 +70,7 @@ export default function CompetitionRegistration() {
   const [addEntrantsComp, setAddEntrantsComp] = useState(null);
   const [isAddingEntrants, setIsAddingEntrants] = useState(false);
   const [isDrawing, setIsDrawing] = useState(null); // comp.id being drawn
+  const [activeTab, setActiveTab] = useState('published');
   const [formData, setFormData] = useState({
     name: '', type: 'singles', description: '', rules: '',
     max_entries: '', price_per_entry: '', registration_deadline: ''
@@ -114,16 +117,31 @@ export default function CompetitionRegistration() {
   });
 
   const isAdmin = myMembership?.role === 'admin' || myMembership?.role === 'steward';
+  const canArchive = myMembership?.role === 'admin' || user?.role === 'admin';
 
-  // My entries: entries where I'm the lead OR in team_members
-  const myEntries = allEntries.filter(e =>
-    e.user_email === user?.email ||
-    (e.team_members || []).some(m => m.email === user?.email)
-  );
+  const archiveMutation = useMutation({
+    mutationFn: ({ id, is_archived }) => base44.entities.CompetitionRegistration.update(id, { is_archived }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['compRegs'] });
+      toast.success(vars.is_archived ? 'Competition archived' : 'Competition restored');
+    },
+    onError: () => toast.error('Failed to update competition'),
+  });
 
-  // Total cost — only count entries where I'm the lead (avoid double-counting)
+  // My entries: entries where I'm the lead OR in team_members (archived competitions excluded)
+  const myEntries = allEntries.filter(e => {
+    if (e.user_email !== user?.email && !(e.team_members || []).some(m => m.email === user?.email)) return false;
+    const comp = competitions.find(c => c.id === e.competition_id);
+    return comp && !comp.is_archived;
+  });
+
+  // Total cost — only count entries where I'm the lead (avoid double-counting); archived excluded
   const totalCost = allEntries
-    .filter(e => e.user_email === user?.email)
+    .filter(e => {
+      if (e.user_email !== user?.email) return false;
+      const comp = competitions.find(c => c.id === e.competition_id);
+      return comp && !comp.is_archived;
+    })
     .reduce((sum, entry) => {
       const comp = competitions.find(c => c.id === entry.competition_id);
       return sum + (comp?.price_per_entry || 0);
@@ -337,7 +355,9 @@ export default function CompetitionRegistration() {
     setIsDrawing(null);
   };
 
-  const sortedComps = [...competitions].sort((a, b) => {
+  const archivedComps = canArchive ? competitions.filter(c => c.is_archived) : [];
+
+  const sortedComps = [...competitions.filter(c => !c.is_archived)].sort((a, b) => {
     if (!a.registration_deadline) return 1;
     if (!b.registration_deadline) return -1;
     return a.registration_deadline.localeCompare(b.registration_deadline);
@@ -453,133 +473,185 @@ export default function CompetitionRegistration() {
             )}
           </div>
 
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-xl" />
-              ))}
-            </div>
-          ) : sortedComps.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-500">No competitions available yet.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {sortedComps.map(comp => {
-                const open = isEntriesOpen(comp.registration_deadline);
-                const entryCount = allEntries.filter(e => e.competition_id === comp.id).length;
-                const full = entryCount >= (comp.max_entries || Infinity);
-                const myEntry = allEntries.find(e =>
-                  e.competition_id === comp.id &&
-                  (e.user_email === user?.email || (e.team_members || []).some(m => m.email === user?.email))
-                );
-                return (
-                  <Card key={comp.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <h3 className="text-lg font-bold text-gray-900">{comp.name}</h3>
-                            <Badge className={TYPE_COLORS[comp.type]}>{TYPE_LABELS[comp.type]}</Badge>
-                            {open ? (
-                              <Badge className="bg-emerald-100 text-emerald-800">Entries Open</Badge>
-                            ) : (
-                              <Badge className="bg-red-100 text-red-800">Entries Closed</Badge>
-                            )}
-                            {myEntry && (
-                              <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">You are entered</Badge>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                            {comp.registration_deadline && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5" />
-                                Closes {format(parseISO(comp.registration_deadline), 'd MMM yyyy')}
-                              </span>
-                            )}
-                            <span>{formatPrice(comp.price_per_entry)}</span>
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5" />
-                              {entryCount} / {comp.max_entries} entered
-                              {full && <span className="text-red-600 font-medium ml-1">(Full)</span>}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => { setSelectedComp(comp); setDetailOpen(true); }}
-                          >
-                            View Details
-                          </Button>
-                          {isAdmin && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1"
-                                onClick={() => setAddEntrantsComp(comp)}
-                              >
-                                <UserPlus className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Add Entrants</span>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1"
-                                onClick={() => handleDrawCompetition(comp)}
-                                disabled={!!comp.linked_tournament_id || isDrawing === comp.id}
-                                title={comp.linked_tournament_id ? 'Competition already drawn' : 'Generate tournament draw'}
-                              >
-                                {isDrawing === comp.id ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            {canArchive && (
+              <TabsList className="mb-4">
+                <TabsTrigger value="published">Open Competitions</TabsTrigger>
+                <TabsTrigger value="archived">Archived{archivedComps.length > 0 ? ` (${archivedComps.length})` : ''}</TabsTrigger>
+              </TabsList>
+            )}
+            <TabsContent value="published" className="mt-0">
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-xl" />
+                  ))}
+                </div>
+              ) : sortedComps.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-gray-500">No competitions available yet.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {sortedComps.map(comp => {
+                    const open = isEntriesOpen(comp.registration_deadline);
+                    const entryCount = allEntries.filter(e => e.competition_id === comp.id).length;
+                    const full = entryCount >= (comp.max_entries || Infinity);
+                    const myEntry = allEntries.find(e =>
+                      e.competition_id === comp.id &&
+                      (e.user_email === user?.email || (e.team_members || []).some(m => m.email === user?.email))
+                    );
+                    return (
+                      <Card key={comp.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <h3 className="text-lg font-bold text-gray-900">{comp.name}</h3>
+                                <Badge className={TYPE_COLORS[comp.type]}>{TYPE_LABELS[comp.type]}</Badge>
+                                {open ? (
+                                  <Badge className="bg-emerald-100 text-emerald-800">Entries Open</Badge>
                                 ) : (
-                                  <Shuffle className="w-3.5 h-3.5" />
+                                  <Badge className="bg-red-100 text-red-800">Entries Closed</Badge>
                                 )}
-                                <span className="hidden sm:inline">
-                                  {comp.linked_tournament_id ? 'Already Drawn' : 'Draw Competition'}
+                                {myEntry && (
+                                  <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">You are entered</Badge>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                                {comp.registration_deadline && (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    Closes {format(parseISO(comp.registration_deadline), 'd MMM yyyy')}
+                                  </span>
+                                )}
+                                <span>{formatPrice(comp.price_per_entry)}</span>
+                                <span className="flex items-center gap-1">
+                                  <Users className="w-3.5 h-3.5" />
+                                  {entryCount} / {comp.max_entries} entered
+                                  {full && <span className="text-red-600 font-medium ml-1">(Full)</span>}
                                 </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setSelectedComp(comp); setDetailOpen(true); }}
+                              >
+                                View Details
                               </Button>
-                              {comp.linked_tournament_id && (
-                                <Link to={createPageUrl('TournamentView') + `?clubId=${clubId}&tournamentId=${comp.linked_tournament_id}`}>
-                                  <Button size="sm" variant="ghost" className="gap-1 text-emerald-700">
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                    <span className="hidden sm:inline">View Draw</span>
-                                  </Button>
-                                </Link>
-                              )}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleOpenEdit(comp)}>
-                                    <Pencil className="w-4 h-4 mr-2" /> Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={() => setDeleteConfirm(comp)}
+                              {isAdmin && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1"
+                                    onClick={() => setAddEntrantsComp(comp)}
                                   >
-                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Add Entrants</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1"
+                                    onClick={() => handleDrawCompetition(comp)}
+                                    disabled={!!comp.linked_tournament_id || isDrawing === comp.id}
+                                    title={comp.linked_tournament_id ? 'Competition already drawn' : 'Generate tournament draw'}
+                                  >
+                                    {isDrawing === comp.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Shuffle className="w-3.5 h-3.5" />
+                                    )}
+                                    <span className="hidden sm:inline">
+                                      {comp.linked_tournament_id ? 'Already Drawn' : 'Draw Competition'}
+                                    </span>
+                                  </Button>
+                                  {comp.linked_tournament_id && (
+                                    <Link to={createPageUrl('TournamentView') + `?clubId=${clubId}&tournamentId=${comp.linked_tournament_id}`}>
+                                      <Button size="sm" variant="ghost" className="gap-1 text-emerald-700">
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">View Draw</span>
+                                      </Button>
+                                    </Link>
+                                  )}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleOpenEdit(comp)}>
+                                        <Pencil className="w-4 h-4 mr-2" /> Edit
+                                      </DropdownMenuItem>
+                                      {canArchive && (
+                                        <DropdownMenuItem onClick={() => archiveMutation.mutate({ id: comp.id, is_archived: true })}>
+                                          <Archive className="w-4 h-4 mr-2" /> Archive
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={() => setDeleteConfirm(comp)}
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+            {canArchive && (
+              <TabsContent value="archived" className="mt-0">
+                {archivedComps.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Archive className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-gray-500">No archived competitions.</p>
                     </CardContent>
                   </Card>
-                );
-              })}
-            </div>
-          )}
+                ) : (
+                  <div className="space-y-4">
+                    {archivedComps.map(comp => (
+                      <Card key={comp.id}>
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-lg font-bold text-gray-600">{comp.name}</h3>
+                              <Badge className={TYPE_COLORS[comp.type]}>{TYPE_LABELS[comp.type]}</Badge>
+                              <Badge variant="secondary">Archived</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline" onClick={() => archiveMutation.mutate({ id: comp.id, is_archived: false })}>
+                                <ArchiveRestore className="w-4 h-4 mr-1" />
+                                Unarchive
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteConfirm(comp)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            )}
+          </Tabs>
         </motion.div>
       </div>
 

@@ -140,12 +140,17 @@ export default function CompetitionEntriesAdmin() {
     );
   }
 
-  const filteredComps = filterComp === 'all' ? competitions : competitions.filter(c => c.id === filterComp);
+  // Archived competitions are excluded from entries admin entirely
+  const activeComps = competitions.filter(c => !c.is_archived);
+  const activeCompIds = new Set(activeComps.map(c => c.id));
+  const activeEntries = allEntries.filter(e => activeCompIds.has(e.competition_id));
 
-  // Summary stats
-  const totalEntries = allEntries.length;
-  const totalRevenue = allEntries.reduce((sum, entry) => {
-    const comp = competitions.find(c => c.id === entry.competition_id);
+  const filteredComps = filterComp === 'all' ? activeComps : activeComps.filter(c => c.id === filterComp);
+
+  // Summary stats (archived competitions excluded)
+  const totalEntries = activeEntries.length;
+  const totalRevenue = activeEntries.reduce((sum, entry) => {
+    const comp = activeComps.find(c => c.id === entry.competition_id);
     return sum + (comp?.price_per_entry || 0);
   }, 0);
 
@@ -165,9 +170,9 @@ export default function CompetitionEntriesAdmin() {
             <p className="text-sm text-gray-500">{club?.name}</p>
           </div>
           <Button
-            onClick={() => downloadExcel(competitions, allEntries, filterComp)}
+            onClick={() => downloadExcel(activeComps, activeEntries, filterComp)}
             className="bg-emerald-600 hover:bg-emerald-700 gap-2"
-            disabled={isLoading || competitions.length === 0}
+            disabled={isLoading || activeComps.length === 0}
           >
             <Download className="w-4 h-4" />
             Download Excel
@@ -179,7 +184,7 @@ export default function CompetitionEntriesAdmin() {
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-gray-500 mb-1">Competitions</p>
-              <p className="text-2xl font-bold text-gray-900">{competitions.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{activeComps.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -198,7 +203,7 @@ export default function CompetitionEntriesAdmin() {
             <CardContent className="p-4">
               <p className="text-xs text-gray-500 mb-1">Unique Entrants</p>
               <p className="text-2xl font-bold text-gray-900">
-                {new Set(allEntries.map(e => e.user_email)).size}
+                {new Set(activeEntries.map(e => e.user_email)).size}
               </p>
             </CardContent>
           </Card>
@@ -213,7 +218,7 @@ export default function CompetitionEntriesAdmin() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Competitions</SelectItem>
-              {competitions.map(c => (
+              {activeComps.map(c => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>

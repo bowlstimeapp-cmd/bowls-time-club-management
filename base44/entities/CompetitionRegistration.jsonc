@@ -57,6 +57,11 @@
     "linked_tournament_id": {
       "type": "string",
       "description": "ID of the ClubTournament created from this competition's draw"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Archived competitions are hidden from club members, excluded from entries pages and from members' entry summaries"
     }
   },
   "required": [
