@@ -110,7 +110,11 @@ export default async function(req) {
       }
     })());
 
-    return Response.json({ ok: true, id: scoreId });
+    return Response.json({
+      ok: true,
+      id: scoreId,
+      ...(scope === 'home' ? { home_updated_date: stamp } : scope === 'away' ? { away_updated_date: stamp } : {}),
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -28,6 +28,11 @@ import { format, parseISO } from 'date-fns';
 
 const POSITIONS = ['Skip', '3', '2', 'Lead'];
 
+// A server payload may lag behind a just-completed save (refetch race),
+// so ignore data for a venue older than the version stamp of our last save.
+const isNewerThanLastSave = (stampRef, serverStamp) =>
+  !stampRef.current || !serverStamp || serverStamp >= stampRef.current;
+
 // Top Club events (indoor + outdoor) — selection keys are `${eventId}_${position}`
 const TOP_CLUB_EVENTS = [
   { id: 'mens_two_wood', name: "Men's Two Wood", positions: ['Player'] },
@@ -57,6 +62,8 @@ export default function LiveScoring() {
   const homeDirtyRef = useRef(false);
   const awayDirtyRef = useRef(false);
   const oppDirtyRef = useRef(false);
+  const lastHomeStampRef = useRef(null);
+  const lastAwayStampRef = useRef(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -122,12 +129,13 @@ export default function LiveScoring() {
 
   useEffect(() => {
     if (!matchScore) return;
-    // Merge per venue so unsaved edits are never clobbered by a refetch.
-    if (!homeDirtyRef.current) {
+    // Merge per venue so unsaved edits are never clobbered by a refetch,
+    // and skip any refetched data older than our own last save.
+    if (!homeDirtyRef.current && isNewerThanLastSave(lastHomeStampRef, matchScore.home_updated_date)) {
       setClubScores(matchScore.club_scores || {});
       setEnds(matchScore.ends || {});
     }
-    if (!awayDirtyRef.current) {
+    if (!awayDirtyRef.current && isNewerThanLastSave(lastAwayStampRef, matchScore.away_updated_date)) {
       setOppositionScores(matchScore.opposition_scores || {});
     }
     if (!oppDirtyRef.current) {
@@ -141,11 +149,11 @@ export default function LiveScoring() {
     if (!selectionId) return;
     const unsubscribe = base44.entities.MatchScore.subscribe((event) => {
       if (event.data?.selection_id !== selectionId) return;
-      if (!homeDirtyRef.current) {
+      if (!homeDirtyRef.current && isNewerThanLastSave(lastHomeStampRef, event.data.home_updated_date)) {
         setClubScores(event.data.club_scores || {});
         setEnds(event.data.ends || {});
       }
-      if (!awayDirtyRef.current) {
+      if (!awayDirtyRef.current && isNewerThanLastSave(lastAwayStampRef, event.data.away_updated_date)) {
         setOppositionScores(event.data.opposition_scores || {});
       }
       if (!oppDirtyRef.current) {
@@ -167,9 +175,32 @@ export default function LiveScoring() {
   const saveScoreMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('saveMatchScore', data),
     onSuccess: (result, variables) => {
-      if (variables.scope === 'home') homeDirtyRef.current = false;
-      if (variables.scope === 'away') awayDirtyRef.current = false;
+      const saved = result?.data || {};
+      if (variables.scope === 'home') {
+        homeDirtyRef.current = false;
+        if (saved.home_updated_date) lastHomeStampRef.current = saved.home_updated_date;
+      }
+      if (variables.scope === 'away') {
+        awayDirtyRef.current = false;
+        if (saved.away_updated_date) lastAwayStampRef.current = saved.away_updated_date;
+      }
       if (variables.opposition_players !== undefined) oppDirtyRef.current = false;
+      // Write the saved values straight into the cache so the screen reflects
+      // the save immediately instead of waiting for (and racing) the refetch.
+      queryClient.setQueryData(['matchScore', selectionId], (old) => {
+        if (!old) return old;
+        const next = { ...old };
+        if (variables.scope === 'home') {
+          next.club_scores = variables.club_scores;
+          next.ends = variables.ends;
+          if (saved.home_updated_date) next.home_updated_date = saved.home_updated_date;
+        } else if (variables.scope === 'away') {
+          next.opposition_scores = variables.opposition_scores;
+          if (saved.away_updated_date) next.away_updated_date = saved.away_updated_date;
+        }
+        if (variables.opposition_players !== undefined) next.opposition_players = variables.opposition_players;
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
       toast.success('Scores saved');
     },
