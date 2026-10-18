@@ -3,6 +3,7 @@ import {
   repointField,
   repointArrayField,
   repointObjectValues,
+  repointReserves,
   repointTournaments,
 } from '../../shared/memberEmailHelpers.ts';
 
@@ -123,6 +124,8 @@ export default async function(req) {
       repointField(sr, 'TeamSelection', 'away_captain_email', oldEmail, email, clubId, true),
       // TeamSelection.selections — position → member email map (club-scoped)
       repointObjectValues(sr, 'TeamSelection', 'selections', oldEmail, email, clubId),
+      // TeamSelection.reserves — array of {slot,email,type} (own fields, not the selections map)
+      repointReserves(sr, clubId, oldEmail, email),
       // TeamBoardPost (poster_email) — club-scoped
       repointField(sr, 'TeamBoardPost', 'poster_email', oldEmail, email, clubId, true),
       // TeamMatchRequest (from_email, to_email) — club-scoped

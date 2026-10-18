@@ -11,7 +11,9 @@ import { Loader2, ChevronRight, CheckCircle2, Clock, Calendar } from 'lucide-rea
 
 function FixtureCard({ selection, clubId, userEmail }) {
   const [expanded, setExpanded] = useState(false);
-  const isSelected = selection.selections && Object.values(selection.selections).includes(userEmail);
+  const isPlayer = selection.selections && Object.values(selection.selections).includes(userEmail);
+  const isReserve = !isPlayer && selection.pick_reserves === true && selection.reserves_mode === 'named' &&
+    (selection.reserves || []).some(r => r && r.email === userEmail);
   const dateObj = parseISO(selection.match_date);
 
   return (
@@ -22,9 +24,14 @@ function FixtureCard({ selection, clubId, userEmail }) {
             <p className="text-xl font-bold text-gray-900">{selection.competition}</p>
             {selection.match_name && <p className="text-base text-gray-600">{selection.match_name}</p>}
           </div>
-          {isSelected && (
+          {isPlayer && (
             <span className="flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-sm shrink-0">
               <CheckCircle2 className="w-4 h-4" /> Selected
+            </span>
+          )}
+          {isReserve && (
+            <span className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-sm shrink-0">
+              Reserve
             </span>
           )}
         </div>
@@ -44,9 +51,13 @@ function FixtureCard({ selection, clubId, userEmail }) {
       </div>
       {expanded && (
         <div className="border-t-2 border-gray-100 bg-gray-50 p-5">
-          {isSelected ? (
+          {isPlayer ? (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-3">
               <p className="text-emerald-800 font-bold text-base">✅ You have been selected for this match!</p>
+            </div>
+          ) : isReserve ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3">
+              <p className="text-amber-800 font-bold text-base">You are a named reserve for this match.</p>
             </div>
           ) : (
             <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 mb-3">

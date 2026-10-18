@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import {
   repointField,
+  repointReserves,
   repointTournaments,
 } from '../../shared/memberEmailHelpers.ts';
 
@@ -80,6 +81,8 @@ export default async function(req) {
       repointField(sr, 'TeamSelection', 'selector_email', sourceEmail, targetEmail, clubId, true),
       repointField(sr, 'TeamSelection', 'home_captain_email', sourceEmail, targetEmail, clubId, true),
       repointField(sr, 'TeamSelection', 'away_captain_email', sourceEmail, targetEmail, clubId, true),
+      // TeamSelection.reserves — array of {slot,email,type} (own fields, not the selections map)
+      repointReserves(sr, clubId, sourceEmail, targetEmail),
       // TeamBoardPost (poster_email) — club-scoped
       repointField(sr, 'TeamBoardPost', 'poster_email', sourceEmail, targetEmail, clubId, true),
       // TeamMatchRequest (from_email, to_email) — club-scoped

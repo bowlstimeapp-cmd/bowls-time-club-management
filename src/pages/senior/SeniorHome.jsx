@@ -75,7 +75,10 @@ export default function SeniorHome() {
         .filter(s => {
           if (s.match_date < todayStr) return false;
           const sels = s.selections || {};
-          return Object.values(sels).includes(user.email);
+          if (Object.values(sels).includes(user.email)) return true;
+          // Named reserves also see the match
+          return s.pick_reserves === true && s.reserves_mode === 'named' &&
+            (s.reserves || []).some(r => r && r.email === user.email);
         })
         .sort((a, b) => a.match_date.localeCompare(b.match_date))
         .slice(0, 2);
@@ -135,13 +138,19 @@ export default function SeniorHome() {
           <p className="text-gray-600 text-lg mb-3">You are not currently selected for any upcoming matches.</p>
         ) : (
           <div className="mb-3 space-y-2">
-            {mySelections.map(s => (
-              <div key={s.id} className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-lg font-bold text-blue-900">{s.competition}</p>
-                <p className="text-base text-gray-700">{format(parseISO(s.match_date), 'EEEE, d MMMM')}</p>
-                {s.match_start_time && <p className="text-sm text-gray-500">Start: {s.match_start_time}</p>}
-              </div>
-            ))}
+            {mySelections.map(s => {
+              const isReserve = !(s.selections && Object.values(s.selections).includes(user.email));
+              return (
+                <div key={s.id} className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-lg font-bold text-blue-900">
+                    {s.competition}
+                    {isReserve && <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-bold align-middle">Reserve</span>}
+                  </p>
+                  <p className="text-base text-gray-700">{format(parseISO(s.match_date), 'EEEE, d MMMM')}</p>
+                  {s.match_start_time && <p className="text-sm text-gray-500">Start: {s.match_start_time}</p>}
+                </div>
+              );
+            })}
           </div>
         )}
         <BigActionButton to={`/SeniorFixtures?clubId=${clubId}`} color="navy">
