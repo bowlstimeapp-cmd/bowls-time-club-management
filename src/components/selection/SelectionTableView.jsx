@@ -29,9 +29,17 @@ export default function SelectionTableView({
   onSetAvailability,
   isSettingAvailability,
   onDelete,
+  myReserveIds = [],
 }) {
   const navigate = useNavigate();
   if (selections.length === 0) return null;
+
+  const reservesLabel = (selection) => {
+    if (selection.pick_reserves !== true) return null;
+    if ((selection.reserves_mode || 'squad') === 'squad') return 'Reserves from squad';
+    const n = (selection.reserves || []).filter(r => r && r.email).length;
+    return n > 0 ? `+${n} reserve${n > 1 ? 's' : ''}` : null;
+  };
 
   return (
     <div className="border rounded-xl overflow-hidden bg-white">
@@ -64,6 +72,9 @@ export default function SelectionTableView({
                   <Badge className={cn('text-xs', competitionColors[selection.competition] || 'bg-gray-100 text-gray-700')}>
                     {selection.competition}
                   </Badge>
+                  {myReserveIds.includes(selection.id) && (
+                    <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs ml-1.5">Reserve</Badge>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                   {selection.match_name || <span className="text-gray-400">—</span>}
@@ -78,7 +89,7 @@ export default function SelectionTableView({
                   ) : <span className="text-gray-400">—</span>}
                 </td>
                 <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
-                  {playerCount} selected
+                  {playerCount} selected{reservesLabel(selection) ? ` · ${reservesLabel(selection)}` : ''}
                 </td>
                 <td className="px-4 py-3">
                   {selection.status === 'published' && onSetAvailability ? (

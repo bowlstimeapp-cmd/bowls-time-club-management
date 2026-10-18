@@ -2,14 +2,14 @@ import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-export default async function sendSelectionPush({ emails, competition, matchName, matchDate, clubId, selectionId }) {
+export default async function sendSelectionPush({ emails, competition, matchName, matchDate, clubId, selectionId, message }) {
   const recipients = [...new Set(emails.filter(Boolean))];
   if (!recipients.length) return;
   try {
     const { data } = await base44.functions.invoke('sendPushNotification', {
       userEmails: recipients,
       title: `Match Selection — ${competition}`,
-      message: `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
+      message: message || `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
       url: `/SelectionView?clubId=${encodeURIComponent(clubId)}&selectionId=${encodeURIComponent(selectionId)}`,
     });
     if (data?.error) throw new Error(data.error);

@@ -111,6 +111,47 @@
       "type": "boolean",
       "default": true,
       "description": "Whether booked rink numbers are printed on scorecards generated from this selection"
+    },
+    "pick_reserves": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether reserves are picked for this selection"
+    },
+    "reserves_mode": {
+      "type": "string",
+      "enum": [
+        "squad",
+        "named"
+      ],
+      "default": "squad",
+      "description": "Squad mode shows 'Reserves from squad'; named mode lists up to 5 named reserves"
+    },
+    "reserves": {
+      "type": "array",
+      "default": [],
+      "maxItems": 5,
+      "description": "Named reserves (max 5) \u2014 NOT players; ignored by scorecards, live scoring, predictions, Elo and accolades",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "number",
+            "description": "Reserve slot number 1-5"
+          },
+          "email": {
+            "type": "string",
+            "description": "Reserve member email"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "home",
+              "away"
+            ],
+            "description": "Whether this is a home or away reserve"
+          }
+        }
+      }
     }
   },
   "required": [

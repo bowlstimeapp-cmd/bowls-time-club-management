@@ -189,6 +189,12 @@ export default function SelectionView() {
   const isFantastic5s = selection.competition === 'Fantastic 5s';
   const selections = selection.selections || {};
 
+  // Reserves — stored in their own fields, never players
+  const reserveList = selection.pick_reserves && selection.reserves_mode === 'named'
+    ? (selection.reserves || []).filter(r => r && r.email).sort((a, b) => (a.slot || 0) - (b.slot || 0))
+    : [];
+  const reserveEmails = reserveList.map(r => r.email);
+
   const activeComp = allCompetitions.find(c => c.name === selection?.competition);
   // Use competition entity as source of truth when available, fall back to selection fields
   const homeRinksCount = activeComp ? activeComp.home_rinks : (selection?.home_rinks || 2);
@@ -254,7 +260,7 @@ export default function SelectionView() {
             </div>
             <div className="flex items-center gap-2">
               {(() => {
-                const allEmails = Object.values(selection.selections || {}).filter(Boolean);
+                const allEmails = [...Object.values(selection.selections || {}).filter(Boolean), ...reserveEmails];
                 const isSelected = user && allEmails.includes(user.email);
                 if (!isSelected) return null;
                 const myAvailability = availabilities.find(a => a.user_email === user.email);
@@ -455,6 +461,45 @@ export default function SelectionView() {
                 </Card>
               ))}
             </div>
+          )}
+
+          {/* Reserves card — inside print-content so it prints with the page */}
+          {selection.pick_reserves && (
+            <Card className="mt-4">
+              <CardHeader className="bg-emerald-50 py-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-600" />
+                  Reserves
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {selection.reserves_mode === 'named' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {reserveList.map((r) => (
+                      <div key={r.slot} className="flex items-center justify-between py-2 border-b last:border-0">
+                        <span className="font-medium flex items-center gap-2">
+                          {getAvailability(r.email) === true ? (
+                            <CheckCircle className="w-4 h-4 text-emerald-600" />
+                          ) : getAvailability(r.email) === false ? (
+                            <XCircle className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <User className="w-4 h-4 text-gray-400" />
+                          )}
+                          <PlayerAccoladeHover email={r.email} accolades={accoladeList} assignments={accoladeAssignments}>
+                            {getMemberName(r.email, `reserve_${r.slot}`)}
+                          </PlayerAccoladeHover>
+                        </span>
+                        <Badge variant="outline" className={r.type === 'away' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
+                          {r.type === 'away' ? 'Away reserve' : 'Home reserve'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">Reserves from squad</p>
+                )}
+              </CardContent>
+            </Card>
           )}
           </div>
         </motion.div>

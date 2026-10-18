@@ -39,37 +39,17 @@ import RinkClashModal from '@/components/booking/RinkClashModal';
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import SmsNotificationControl from '@/components/selection/SmsNotificationControl';
 import sendSelectionPush from '@/components/selection/sendSelectionPush';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import ReservesEditor from '@/components/selection/ReservesEditor';
+import {
+  sendSelectionEmails as sendSelectionEmailsFor,
+  buildFullPlayerList as buildFullPlayerListFor,
+  sendSmsToMembers as sendSmsFor,
+} from '@/components/selection/selectionNotifications';
 
 const APP_BASE_URL = window.location.origin;
 
-const buildFormattedTeamList = (selectionsObj, membersArr, namesObj = {}) => {
-  const positionOrder = ['Lead', '2', '3', 'Skip'];
-  const rinkMap = {};
-  for (const [pos, email] of Object.entries(selectionsObj)) {
-    if (!email) continue;
-    const match = pos.match(/^rink(\d+)_(.+)$/);
-    if (!match) continue;
-    const rinkNum = parseInt(match[1]);
-    const position = match[2];
-    if (!rinkMap[rinkNum]) rinkMap[rinkNum] = {};
-    const storedName = namesObj[pos];
-    const member = membersArr.find((m) => m.user_email === email);
-    rinkMap[rinkNum][position] = storedName || (member?.first_name && member?.surname ?
-    `${member.first_name} ${member.surname}` :
-    member?.user_name || email);
-  }
-  return Object.keys(rinkMap).
-  sort((a, b) => parseInt(a) - parseInt(b)).
-  map((rinkNum) => {
-    const positions = rinkMap[rinkNum];
-    const lines = [`Rink ${rinkNum}`];
-    for (const pos of positionOrder) {
-      if (positions[pos] !== undefined) lines.push(`${pos}: ${positions[pos]}`);
-    }
-    return lines.join('\n');
-  }).
-  join('\n\n');
-};
+
 
 export default function SelectionEditor() {
   const [searchParams] = useSearchParams();
@@ -102,6 +82,11 @@ export default function SelectionEditor() {
   const [sendSmsNotification, setSendSmsNotification] = useState(false);
   const [smsResultsModal, setSmsResultsModal] = useState(null);
   const [showRinksOnScorecards, setShowRinksOnScorecards] = useState(true);
+  // Reserves state — stored in their own fields, never inside `selections`
+  const [pickReserves, setPickReserves] = useState(false);
+  const [reservesMode, setReservesMode] = useState('squad');
+  const [reserves, setReserves] = useState([]);
+  const [originalReserves, setOriginalReserves] = useState([]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -153,6 +138,11 @@ export default function SelectionEditor() {
       setHomeCaptainEmail(existingSelection.home_captain_email || '');
       setAwayCaptainEmail(existingSelection.away_captain_email || '');
       setShowRinksOnScorecards(existingSelection.show_rinks_on_scorecards !== false);
+      setPickReserves(existingSelection.pick_reserves === true);
+      setReservesMode(existingSelection.reserves_mode === 'named' ? 'named' : 'squad');
+      const loadedReserves = (existingSelection.reserves || []).filter((r) => r && r.email);
+      setReserves(loadedReserves);
+      setOriginalReserves(loadedReserves);
       if (existingSelection.competition === 'Friendly') {
         setFriendlyLocation(existingSelection.friendly_location || '');
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
@@ -274,229 +264,36 @@ export default function SelectionEditor() {
     return slots;
   };
 
-  const sendSelectionEmails = async (savedSelectionId) => {
-    // Get all selected player emails
-    const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
+  // Notification helpers live in @/components/selection/selectionNotifications
+  const smsContext = () => ({
+    club,
+    clubId,
+    user,
+    competition,
+    matchDate,
+    matchName,
+    matchStartTime,
+    matchEndTime,
+    selections,
+    members,
+    selectionNames,
+    sendSmsEnabled: sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications,
+  });
 
-    // Build team list for email
-    const teamList = buildFormattedTeamList(selections, members, selectionNames);
-
-    const matchUrl = `https://app.bowls-time.com${createPageUrl('SelectionView')}?clubId=${clubId}&selectionId=${savedSelectionId}`;
-
-    // Email notifications
-    if (club?.email_member_notifications) {
-      const emailMembers = members.filter((m) =>
-      selectedPlayerEmails.includes(m.user_email) &&
-      m.email_notifications !== false
-      );
-
-      for (const member of emailMembers) {
-        const emailBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4; padding: 30px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          
-          <!-- Header -->
-          <tr>
-            <td style="background-color:#1a5276; padding: 24px 32px; text-align:center;">
-              <h1 style="margin:0; color:#ffffff; font-size:22px; font-weight:600;">
-                ${club?.name || 'Your Bowls Club'}
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding: 32px;">
-              <p style="margin: 0 0 16px; font-size:16px; color:#333;">
-                Dear ${member.first_name || 'Member'},
-              </p>
-              <p style="margin: 0 0 24px; font-size:16px; color:#333;">
-                You have been selected to play in an upcoming match!
-              </p>
-
-              <!-- Match Details -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:20px; margin-bottom:24px;">
-                <tr>
-                  <td>
-                    <h2 style="margin: 0 0 16px; font-size:16px; color:#1a5276; text-transform:uppercase; letter-spacing:0.5px;">Match Details</h2>
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Competition</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${competition}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Date</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${format(new Date(matchDate), 'd MMMM yyyy')}</td>
-                      </tr>
-                      ${matchName ? `
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Match</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${matchName}</td>
-                      </tr>` : ''}
-                      ${matchStartTime ? `
-                      <tr>
-                        <td style="padding: 4px 16px 4px 0; color:#666; font-size:14px; white-space:nowrap;">Time</td>
-                        <td style="padding: 4px 0; color:#333; font-size:14px; font-weight:600;">${matchStartTime} – ${matchEndTime}</td>
-                      </tr>` : ''}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Team Selection -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:20px; margin-bottom:24px;">
-                <tr>
-                  <td>
-                    <h2 style="margin: 0 0 12px; font-size:16px; color:#1a5276; text-transform:uppercase; letter-spacing:0.5px;">Team Selection</h2>
-                    <p style="margin:0; font-size:14px; color:#333; white-space:pre-line; line-height:1.7;">${teamList}</p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${matchUrl}" style="display:inline-block; background-color:#1a5276; color:#ffffff; text-decoration:none; padding:12px 32px; border-radius:6px; font-size:15px; font-weight:600;">
-                      Confirm Availability
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color:#f4f4f4; padding:16px 32px; text-align:center; border-top:1px solid #e0e0e0;">
-              <p style="margin:0; font-size:12px; color:#999;">
-                ${club?.name || 'Your Bowls Club'}
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `.trim();
-
-        const subject = `Match Selection - ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}`;
-        try {
-          await base44.integrations.Core.SendEmail({
-            to: member.user_email,
-            subject,
-            body: emailBody
-          });
-        } catch (emailErr) {
-          console.warn(`Skipped email to ${member.user_email}:`, emailErr.message);
-          continue;
-        }
-        await base44.entities.EmailLog.create({
-          club_id: clubId,
-          club_name: club?.name || '',
-          to_email: member.user_email,
-          to_name: member.user_name || member.first_name || '',
-          subject,
-          type: 'selection',
-          related_id: savedSelectionId,
-          related_label: `${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`,
-          sent_by: user?.email || ''
-        });
-      }
-
-      if (emailMembers.length > 0) {
-        toast.success(`Emails sent to ${emailMembers.length} players`);
-      }
-    }
-
-    // SMS notifications
-    if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
-      const smsResults = await sendSmsToMembers(selectedPlayerEmails);
-      return smsResults;
-    }
-    return null;
-  };
-
-  const buildFullPlayerList = (emailList, smsResults) => {
-    return emailList.map((email) => {
-      const member = members.find((m) => m.user_email === email);
-      const name = member?.first_name && member?.surname ?
-      `${member.first_name} ${member.surname}` :
-      member?.user_name || email;
-      // If SMS was attempted, find the result
-      const smsResult = smsResults?.find((r) => r.email === email);
-      if (smsResult) return smsResult;
-      // SMS not attempted — figure out why
-      let smsSentStatus = null;
-      if (!sendSmsNotification || !club?.module_sms_notifications || !club?.sms_member_notifications) {
-        smsSentStatus = { name, email, sent: false, reason: 'SMS notifications not enabled' };
-      } else {
-        smsSentStatus = { name, email, sent: false, reason: 'Not included in SMS batch' };
-      }
-      return smsSentStatus;
-    });
-  };
-
-  const sendSmsToMembers = async (selectedPlayerEmails) => {
-    const results = [];
-
-    // Categorise all selected members
-    for (const email of selectedPlayerEmails) {
-      const member = members.find((m) => m.user_email === email);
-      if (!member) continue;
-      const name = member.first_name && member.surname ? `${member.first_name} ${member.surname}` : member.user_name || email;
-
-      if (!member.sms_notifications) {
-        results.push({ name, email, sent: false, reason: 'Not opted into SMS notifications' });
-        continue;
-      }
-      if (!member.phone) {
-        results.push({ name, email, sent: false, reason: 'No phone number registered' });
-        continue;
-      }
-      if (!member.phone.replace(/\s/g, '').startsWith('07')) {
-        results.push({ name, email, sent: false, reason: 'Invalid mobile number (must start with 07)' });
-        continue;
-      }
-
-      const smsMessage = `You've been selected for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}${matchStartTime ? ` at ${matchStartTime}` : ''}. View details at app.bowls-time.com`;
-
-      try {
-        const result = await base44.functions.invoke('sendSMS', {
-          to: member.phone,
-          message: smsMessage,
-          clubId
-        });
-        if (result?.data?.blocked) {
-          results.push({ name, email, sent: false, reason: 'Monthly SMS allowance exceeded' });
-        } else if (result?.data?.success) {
-          results.push({ name, email, sent: true });
-        } else {
-          results.push({ name, email, sent: false, reason: 'Send failed' });
-        }
-      } catch (error) {
-        results.push({ name, email, sent: false, reason: 'Send failed' });
-      }
-    }
-
-    return results;
-  };
+  const sendSelectionEmails = (savedSelectionId, reserveEntries = []) => sendSelectionEmailsFor(smsContext(), savedSelectionId, reserveEntries);
+  const buildFullPlayerList = (emailList, smsResults, reserveTypeMap = {}) => buildFullPlayerListFor(smsContext(), emailList, smsResults, reserveTypeMap);
+  const sendSmsToMembers = (emailList, reserveTypeMap = {}) => sendSmsFor(smsContext(), emailList, reserveTypeMap);
 
   const handleSave = async (publish = false, isRepublish = false) => {
     if (!competition) {
       toast.error('Please select a competition');
+      return;
+    }
+
+    const reserveEntries = pickReserves && reservesMode === 'named' ? reserves.filter((r) => r && r.email) : [];
+
+    if (publish && pickReserves && reservesMode === 'named' && reserveEntries.length === 0) {
+      toast.error('Select at least one reserve before publishing');
       return;
     }
 
@@ -514,6 +311,9 @@ export default function SelectionEditor() {
       status: publish ? 'published' : 'draft',
       selector_email: user.email,
       show_rinks_on_scorecards: showRinksOnScorecards,
+      pick_reserves: pickReserves,
+      reserves_mode: pickReserves ? reservesMode : 'squad',
+      reserves: pickReserves ? reserveEntries : [],
       home_captain_email: homeCaptainEmail || null,
       away_captain_email: awayCaptainEmail || null,
       ...(competition === 'Friendly' ? {
@@ -544,9 +344,29 @@ export default function SelectionEditor() {
           related_id: selectionId
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
-        const smsResults = await sendSelectionEmails(selectionId);
-        const allSelected = [...new Set(Object.values(selections).filter(Boolean))];
-        const fullList = buildFullPlayerList(allSelected, smsResults);
+
+        // Reserve notifications (named reserves only) — push, in-app, email and SMS
+        const reserveTypeMap = Object.fromEntries(reserveEntries.map((r) => [r.email, r.type]));
+        for (const type of ['home', 'away']) {
+          const typeEmails = reserveEntries.filter((r) => (r.type || 'home') === type).map((r) => r.email);
+          if (typeEmails.length > 0) {
+            await sendSelectionPush({ emails: typeEmails, competition, matchName, matchDate, clubId, selectionId, message: `You've been selected as ${type === 'away' ? 'an away' : 'a home'} reserve for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}` });
+          }
+        }
+        const reserveNotifications = reserveEntries.map((r) => ({
+          user_email: r.email,
+          type: 'team_selection',
+          title: 'Selected as Reserve',
+          message: `You've been selected as ${r.type === 'away' ? 'an away' : 'a home'} reserve for ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}. Click to view team`,
+          link_page: 'SelectionView',
+          link_params: `clubId=${clubId}&selectionId=${selectionId}`,
+          related_id: selectionId
+        }));
+        if (reserveNotifications.length > 0) {
+          await base44.entities.Notification.bulkCreate(reserveNotifications);
+        }
+        const smsResults = await sendSelectionEmails(selectionId, reserveEntries);
+        const fullList = buildFullPlayerList([...selectedPlayerEmails, ...reserveEntries.map((r) => r.email)], smsResults, reserveTypeMap);
         setSmsResultsModal(fullList);
       } else if (isRepublish) {
         // If the ticked rinks changed since the previous publish, move the
@@ -580,10 +400,16 @@ export default function SelectionEditor() {
             console.warn(moveErr);
           }
         }
-        // Only notify newly added players
+        // Only notify newly added players (plus new or changed reserves)
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
         const originalPlayerEmails = [...new Set(Object.values(originalSelections).filter(Boolean))];
         const newlyAddedEmails = currentPlayerEmails.filter((email) => !originalPlayerEmails.includes(email));
+
+        const prevReserveMap = new Map((originalReserves || []).filter((r) => r && r.email).map((r) => [r.email, r.type]));
+        const newlyAddedReserves = reserveEntries.filter((r) => !prevReserveMap.has(r.email));
+        const typeChangedReserves = reserveEntries.filter((r) => prevReserveMap.has(r.email) && prevReserveMap.get(r.email) !== r.type);
+        const reserveNotify = [...newlyAddedReserves, ...typeChangedReserves];
+        const reserveNotifyTypeMap = Object.fromEntries(reserveNotify.map((r) => [r.email, r.type]));
 
         if (newlyAddedEmails.length > 0) {
           await sendSelectionPush({ emails: newlyAddedEmails, competition, matchName, matchDate, clubId, selectionId });
@@ -597,19 +423,44 @@ export default function SelectionEditor() {
             related_id: selectionId
           }));
           await base44.entities.Notification.bulkCreate(notificationsToCreate);
+        }
 
-          // SMS notifications for newly added players
+        if (reserveNotify.length > 0) {
+          for (const type of ['home', 'away']) {
+            const typeEmails = reserveNotify.filter((r) => (r.type || 'home') === type).map((r) => r.email);
+            if (typeEmails.length > 0) {
+              await sendSelectionPush({ emails: typeEmails, competition, matchName, matchDate, clubId, selectionId, message: `You've been selected as ${type === 'away' ? 'an away' : 'a home'} reserve for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}` });
+            }
+          }
+          const reserveNotifications = reserveNotify.map((r) => ({
+            user_email: r.email,
+            type: 'team_selection',
+            title: 'Selected as Reserve',
+            message: `You've been selected as ${r.type === 'away' ? 'an away' : 'a home'} reserve for ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}. Click to view team`,
+            link_page: 'SelectionView',
+            link_params: `clubId=${clubId}&selectionId=${selectionId}`,
+            related_id: selectionId
+          }));
+          await base44.entities.Notification.bulkCreate(reserveNotifications);
+        }
+
+        const notifyEmails = [...newlyAddedEmails, ...reserveNotify.map((r) => r.email)];
+
+        if (notifyEmails.length > 0) {
+          // SMS notifications for newly added players and reserves
           if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
-            const smsResults = await sendSmsToMembers(newlyAddedEmails);
-            const fullList = buildFullPlayerList(newlyAddedEmails, smsResults);
+            const smsResults = await sendSmsToMembers(notifyEmails, reserveNotifyTypeMap);
+            const fullList = buildFullPlayerList(notifyEmails, smsResults, reserveNotifyTypeMap);
             setSmsResultsModal(fullList);
             return;
           }
+          setSmsResultsModal(buildFullPlayerList(notifyEmails, null, reserveNotifyTypeMap));
+          return;
         }
 
-        // Show modal with all current players, no SMS sent
-        const allSelected = [...new Set(Object.values(selections).filter(Boolean))];
-        setSmsResultsModal(buildFullPlayerList(allSelected, null));
+        // Show modal with all current players and reserves, no SMS sent
+        const allSelected = [...new Set([...currentPlayerEmails, ...reserveEntries.map((r) => r.email)])];
+        setSmsResultsModal(buildFullPlayerList(allSelected, null, Object.fromEntries(reserveEntries.map((r) => [r.email, r.type]))));
       }
     } else {
       const result = await createMutation.mutateAsync(data);
@@ -629,9 +480,30 @@ export default function SelectionEditor() {
           related_id: newId
         }));
         await base44.entities.Notification.bulkCreate(notificationsToCreate);
-        const smsResults2 = await sendSelectionEmails(newId);
-        const allSelected2 = [...new Set(Object.values(selections).filter(Boolean))];
-        setSmsResultsModal(buildFullPlayerList(allSelected2, smsResults2));
+
+        // Reserve notifications (named reserves only)
+        const reserveTypeMap2 = Object.fromEntries(reserveEntries.map((r) => [r.email, r.type]));
+        for (const type of ['home', 'away']) {
+          const typeEmails = reserveEntries.filter((r) => (r.type || 'home') === type).map((r) => r.email);
+          if (typeEmails.length > 0) {
+            await sendSelectionPush({ emails: typeEmails, competition, matchName, matchDate, clubId, selectionId: newId, message: `You've been selected as ${type === 'away' ? 'an away' : 'a home'} reserve for ${competition}${matchName ? ' vs ' + matchName : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}` });
+          }
+        }
+        const reserveNotifications2 = reserveEntries.map((r) => ({
+          user_email: r.email,
+          type: 'team_selection',
+          title: 'Selected as Reserve',
+          message: `You've been selected as ${r.type === 'away' ? 'an away' : 'a home'} reserve for ${competition} on ${format(new Date(matchDate), 'd MMMM yyyy')}. Click to view team`,
+          link_page: 'SelectionView',
+          link_params: `clubId=${clubId}&selectionId=${newId}`,
+          related_id: newId
+        }));
+        if (reserveNotifications2.length > 0) {
+          await base44.entities.Notification.bulkCreate(reserveNotifications2);
+        }
+        const smsResults2 = await sendSelectionEmails(newId, reserveEntries);
+        const fullList2 = buildFullPlayerList([...selectedPlayerEmails, ...reserveEntries.map((r) => r.email)], smsResults2, reserveTypeMap2);
+        setSmsResultsModal(fullList2);
       } else {
         toast.success('Selection saved as draft');
         navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${newId}`);
@@ -781,6 +653,59 @@ export default function SelectionEditor() {
       }
       return next;
     });
+  };
+
+  // ── Reserve handlers (reserves stored in their own fields, never in `selections`) ──
+  const handleReserveChange = (slot, email, member) => {
+    setReserves((prev) => prev.map((r) => r.slot === slot ? { ...r, email: email || '', type: r.type || 'home' } : r));
+    setSelectionNames((prev) => {
+      const next = { ...prev };
+      if (email && member) {
+        next[`reserve_${slot}`] = member.first_name && member.surname
+          ? `${member.first_name} ${member.surname}`
+          : member.user_name || email;
+      } else {
+        delete next[`reserve_${slot}`];
+      }
+      return next;
+    });
+  };
+
+  const handleReserveRemove = (slot) => {
+    setReserves((prev) => prev.filter((r) => r.slot !== slot));
+    setSelectionNames((prev) => {
+      const next = { ...prev };
+      delete next[`reserve_${slot}`];
+      return next;
+    });
+  };
+
+  const handleReserveTypeChange = (slot, type) => {
+    setReserves((prev) => prev.map((r) => r.slot === slot ? { ...r, type } : r));
+  };
+
+  const handleAddReserve = (defaultType) => {
+    setReserves((prev) => {
+      const used = new Set(prev.map((r) => r.slot));
+      let slot = 1;
+      while (used.has(slot) && slot < 5) slot++;
+      return [...prev, { slot, email: '', type: defaultType }];
+    });
+  };
+
+  const handlePickReservesChange = (next) => {
+    if (!next && reserves.some((r) => r.email)) {
+      const ok = window.confirm('Reserves have already been chosen. Turning off Pick reserves will remove them. Continue?');
+      if (!ok) return;
+      setReserves([]);
+      setReservesMode('squad');
+      setSelectionNames((prev) => {
+        const nextNames = { ...prev };
+        reserves.forEach((r) => { delete nextNames[`reserve_${r.slot}`]; });
+        return nextNames;
+      });
+    }
+    setPickReserves(next);
   };
 
   const handleCompetitionChange = (compName) => {
@@ -1384,6 +1309,30 @@ export default function SelectionEditor() {
                 </CardContent>
               </Card>
             }
+
+            {/* Reserves card — sits directly below the team grid, every competition type */}
+            {competition &&
+            <div className="mt-4">
+              <ReservesEditor
+                pickReserves={pickReserves}
+                onPickReservesChange={handlePickReservesChange}
+                reservesMode={reservesMode}
+                onReservesModeChange={setReservesMode}
+                reserves={reserves}
+                onReserveChange={handleReserveChange}
+                onReserveRemove={handleReserveRemove}
+                onReserveTypeChange={handleReserveTypeChange}
+                onAddReserve={handleAddReserve}
+                playerEmails={selectedEmails}
+                members={filteredMembers}
+                matchDate={matchDate}
+                unavailabilities={unavailabilities}
+                interestedEmails={interestedEmails}
+                selectionNames={selectionNames}
+                defaultReserveType={(friendlyLocation === 'Away' || fantastic5sVenue === 'Away') ? 'away' : 'home'}
+              />
+            </div>
+            }
           </motion.div>
         </div>
       </div>
@@ -1407,7 +1356,10 @@ export default function SelectionEditor() {
                 }
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {r.name}
+                      {r.reserveLabel && <span className="ml-2 text-xs font-semibold text-blue-700">{r.reserveLabel}</span>}
+                    </p>
                     {!r.sent &&
                 <p className="text-xs text-gray-500">{r.reason}</p>
                 }

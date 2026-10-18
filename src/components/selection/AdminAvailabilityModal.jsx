@@ -34,7 +34,19 @@ export default function AdminAvailabilityModal({
     setLocalAvailability(init);
   }, [open, selection, availabilities]);
 
-  const selectedEmails = Object.values(selection?.selections || {}).filter(Boolean);
+  const playerEmails = Object.values(selection?.selections || {}).filter(Boolean);
+  const reserveRows = selection?.pick_reserves && selection?.reserves_mode === 'named'
+    ? (selection.reserves || []).filter(r => r && r.email).sort((a, b) => (a.slot || 0) - (b.slot || 0))
+    : [];
+  const selectedEmails = [
+    ...playerEmails,
+    ...reserveRows.map(r => r.email).filter(e => !playerEmails.includes(e)),
+  ];
+  const reserveLabelFor = (email) => {
+    const r = reserveRows.find(x => x.email === email);
+    if (!r) return null;
+    return r.type === 'away' ? 'Reserve (Away)' : 'Reserve (Home)';
+  };
 
   const getMemberName = (email) => {
     const member = members.find(m => m.user_email === email);
@@ -85,6 +97,9 @@ export default function AdminAvailabilityModal({
                     {statusIcon(status)}
                     <div>
                       <p className="text-sm font-medium text-gray-900">{getMemberName(email)}</p>
+                      {reserveLabelFor(email) && (
+                        <p className="text-xs font-semibold text-blue-700">{reserveLabelFor(email)}</p>
+                      )}
                       <div className="mt-0.5">{statusLabel(status)}</div>
                     </div>
                   </div>

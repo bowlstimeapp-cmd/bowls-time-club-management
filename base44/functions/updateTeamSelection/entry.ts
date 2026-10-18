@@ -64,6 +64,64 @@ async function logSelectionChanges(base44, user, clubId, selectionId, before, af
   }
 }
 
+/**
+ * Reserve audit logging — records reserve additions, removals and home/away
+ * changes in the same SelectionAuditLog used for team sheet changes.
+ * Reserve positions are keyed as reserve_${slot}.
+ */
+async function logReserveChanges(base44, user, clubId, selectionId, before, after, data) {
+  const prevMap = new Map(
+    (Array.isArray(before) ? before : []).filter(r => r && r.email).map(r => [r.email, r])
+  );
+  const nextList = (Array.isArray(after) ? after : []).filter(r => r && r.email);
+  const nextMap = new Map(nextList.map(r => [r.email, r]));
+  const names = data.selection_names || {};
+  const entries = [];
+
+  nextList.forEach((r) => {
+    const prev = prevMap.get(r.email);
+    if (prev && prev.type === r.type) return;
+    const key = `reserve_${r.slot}`;
+    entries.push({
+      club_id: clubId,
+      selection_id: selectionId,
+      competition: data.competition || null,
+      match_date: data.match_date || null,
+      match_name: data.match_name || null,
+      change: prev ? 'replaced' : 'added',
+      position: key,
+      member_name: names[key] || r.email,
+      member_email: r.email,
+      previous_member_email: prev ? r.email : null,
+      performed_by_email: user.email,
+      performed_by_name: user.full_name || user.email,
+    });
+  });
+
+  [...prevMap.keys()].forEach((email) => {
+    if (nextMap.has(email)) return;
+    const prev = prevMap.get(email);
+    entries.push({
+      club_id: clubId,
+      selection_id: selectionId,
+      competition: data.competition || null,
+      match_date: data.match_date || null,
+      match_name: data.match_name || null,
+      change: 'removed',
+      position: `reserve_${prev.slot}`,
+      member_name: names[`reserve_${prev.slot}`] || email,
+      member_email: null,
+      previous_member_email: email,
+      performed_by_email: user.email,
+      performed_by_name: user.full_name || user.email,
+    });
+  });
+
+  if (entries.length > 0) {
+    await base44.asServiceRole.entities.SelectionAuditLog.bulkCreate(entries);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -105,6 +163,7 @@ Deno.serve(async (req) => {
       if (!data) return Response.json({ error: 'Missing data for create' }, { status: 400 });
       const created = await base44.asServiceRole.entities.TeamSelection.create({ ...data, club_id: clubId });
       await logSelectionChanges(base44, user, clubId, created.id, {}, data.selections, data);
+      await logReserveChanges(base44, user, clubId, created.id, [], data.reserves || [], data);
       return Response.json({ success: true, id: created.id, record: created });
     }
 
@@ -119,6 +178,7 @@ Deno.serve(async (req) => {
       }
       await base44.asServiceRole.entities.TeamSelection.update(selectionId, data);
       await logSelectionChanges(base44, user, clubId, selectionId, existing[0].selections, data.selections, data, existing[0].selection_names);
+      await logReserveChanges(base44, user, clubId, selectionId, existing[0].reserves || [], data.reserves || [], data);
       return Response.json({ success: true });
     }
 

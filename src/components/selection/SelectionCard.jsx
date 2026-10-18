@@ -33,6 +33,7 @@ export default function SelectionCard({
   onLiveScoreClick,
   onAdminSetAvailability,
   competitionColours = {},
+  isReserve = false,
 }) {
   const [showAvailability, setShowAvailability] = useState(false);
   const { layout } = useLayoutTheme();
@@ -40,6 +41,19 @@ export default function SelectionCard({
   const headerColour = competitionColours[selection.competition] || '#10b981';
 
   const countSelected = () => Object.values(selection.selections || {}).filter(Boolean).length;
+
+  // Reserves shown as a small label — never counted as players
+  const reservesLabel = selection.pick_reserves === true
+    ? ((selection.reserves_mode || 'squad') === 'squad'
+      ? 'Reserves from squad'
+      : (() => {
+          const n = (selection.reserves || []).filter(r => r && r.email).length;
+          return n > 0 ? `+${n} reserve${n > 1 ? 's' : ''}` : null;
+        })())
+    : null;
+  const ReserveBadge = ({ className = '' }) => isReserve ? (
+    <Badge className={`bg-amber-100 text-amber-800 border-amber-200 ${className}`}>Reserve</Badge>
+  ) : null;
 
   const getMemberName = (email) => {
     const member = members.find(m => m.user_email === email);
@@ -165,13 +179,14 @@ export default function SelectionCard({
               <Badge variant={selection.status === 'published' ? 'default' : 'secondary'} className="text-xs">
                 {selection.status === 'published' ? 'Published' : 'Draft'}
               </Badge>
+              <ReserveBadge className="text-xs" />
               {selection.status === 'draft' && selection.rinks_booked && (
                 <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" /> Rinks Booked
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{countSelected()} selected</p>
+            <p className="text-xs text-gray-400 mt-0.5">{countSelected()} selected{reservesLabel ? ` · ${reservesLabel}` : ''}</p>
           </div>
           <div className="flex flex-wrap gap-1.5 shrink-0">
             <ActionButtons size="sm" />
@@ -202,6 +217,7 @@ export default function SelectionCard({
             <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
               <span className="flex items-center gap-1"><Trophy className="w-3 h-3" />{selection.competition}</span>
               <span>· {countSelected()} players</span>
+              {reservesLabel && <span>· {reservesLabel}</span>}
               {selection.status === 'draft' && <span className="text-amber-600">· Draft</span>}
             </div>
           </div>
@@ -239,7 +255,7 @@ export default function SelectionCard({
         {selection.opponent && (
           <p className="text-base text-gray-600 font-medium">vs {selection.opponent}</p>
         )}
-        <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected</p>
+        <p className="text-sm text-gray-400 mt-1">{countSelected()} players selected{reservesLabel ? ` · ${reservesLabel}` : ''}</p>
       </div>
       <div className="flex flex-wrap gap-2 shrink-0">
         <ActionButtons />
@@ -268,6 +284,7 @@ return (
                 <Badge variant={selection.status === 'published' ? 'default' : 'secondary'}>
                   {selection.status === 'published' ? 'Published' : 'Draft'}
                 </Badge>
+                <ReserveBadge className="text-xs" />
                 {selection.status === 'draft' && selection.rinks_booked && (
                   <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
                     <CheckCircle className="w-3 h-3 mr-1" /> Rinks Booked
@@ -287,7 +304,7 @@ return (
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-gray-500">{countSelected()} players selected</p>
+              <p className="text-sm text-gray-500">{countSelected()} players selected{reservesLabel ? ` · ${reservesLabel}` : ''}</p>
             </div>
             <div className="flex gap-2 flex-wrap shrink-0">
               <ActionButtons />

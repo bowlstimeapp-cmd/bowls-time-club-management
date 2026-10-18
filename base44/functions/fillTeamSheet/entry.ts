@@ -151,7 +151,18 @@ Deno.serve(async (req) => {
       nullGetter: () => '',
     });
 
-    const safeData = new Proxy(data || {}, {
+    // Reserve placeholders: {{reserves}}, {{reserve1_name}}..{{reserve5_name}},
+    // {{reserve1_type}}..{{reserve5_type}} — blank when reserves are not enabled
+    const reservesEnabled = data?.reservesEnabled === true;
+    const reserveList = reservesEnabled ? (data.reserves || []) : [];
+    const mergedData = { ...data };
+    mergedData.reserves = reservesEnabled ? (data.reservesText || '') : '';
+    for (let i = 1; i <= 5; i++) {
+      mergedData[`reserve${i}_name`] = reserveList[i - 1]?.name || '';
+      mergedData[`reserve${i}_type`] = reserveList[i - 1]?.type || '';
+    }
+
+    const safeData = new Proxy(mergedData, {
       get(target, prop) {
         if (typeof prop === 'string' && !(prop in target)) return '';
         return target[prop];

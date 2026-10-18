@@ -193,10 +193,13 @@ export default function MemberDashboard() {
     if (!user?.email || !allSelections.length) return [];
     return allSelections
       .filter(sel => {
-        if (!sel.selections || !sel.match_date) return false;
+        if (!sel.match_date) return false;
         if (sel.match_date < todayStr) return false;
         if (sel.is_archived) return false;
-        return Object.values(sel.selections).includes(user.email);
+        // Players and named reserves both appear; reserves are never players
+        if (sel.selections && Object.values(sel.selections).includes(user.email)) return true;
+        return sel.pick_reserves === true && sel.reserves_mode === 'named' &&
+          (sel.reserves || []).some(r => r && r.email === user.email);
       })
       .sort((a, b) => a.match_date.localeCompare(b.match_date));
   }, [allSelections, user?.email, todayStr]);
@@ -311,6 +314,7 @@ export default function MemberDashboard() {
             <div className="divide-y">
               {mySelections.map(sel => {
                 const avail = getMyAvailability(sel.id);
+                const isReserveSel = !(sel.selections && Object.values(sel.selections).includes(user?.email));
                 return (
                   <div key={sel.id} className="p-4">
                     <div className="flex items-start justify-between gap-3 mb-2">
@@ -318,6 +322,7 @@ export default function MemberDashboard() {
                         <p className="font-semibold text-gray-900 text-sm truncate">{sel.match_name || sel.competition}</p>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
                           <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{format(parseISO(sel.match_date), 'd MMM yyyy')}</span>
+                          {isReserveSel && <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Reserve</Badge>}
                           {sel.match_start_time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{sel.match_start_time}</span>}
                           {sel.friendly_location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{sel.friendly_location}</span>}
                         </div>

@@ -234,10 +234,18 @@ export default function Selection() {
     setArchiveRun(true);
   }, [selections, isSelector, archiveRun]);
 
-  // Check if user is selected for a match
+  // Check if user is a named reserve for a match (reserves are never players)
+  const isUserReserveForMatch = (selection) => {
+    if (!user?.email || selection.pick_reserves !== true) return false;
+    if ((selection.reserves_mode || 'squad') !== 'named') return false;
+    return (selection.reserves || []).some(r => r && r.email === user.email);
+  };
+
+  // Check if user is selected for a match (players + named reserves)
   const isUserSelectedForMatch = (selection) => {
-    if (!selection.selections || !user?.email) return false;
-    return Object.values(selection.selections).includes(user.email);
+    if (!user?.email) return false;
+    if (selection.selections && Object.values(selection.selections).includes(user.email)) return true;
+    return isUserReserveForMatch(selection);
   };
 
   // Filter selections based on competition type
@@ -497,6 +505,7 @@ export default function Selection() {
                     }
                     isSettingAvailability={setAvailabilityMutation.isPending}
                     onDelete={handleDeleteSelection}
+                    myReserveIds={mySelections.filter(s => isUserReserveForMatch(s)).map(s => s.id)}
                   />
                 ) : (
                   <div className="space-y-4">
@@ -506,6 +515,7 @@ export default function Selection() {
                         selection={selection}
                         isSelector={isSelector}
                         clubId={clubId}
+                        isReserve={isUserReserveForMatch(selection)}
                         myAvailability={getMyAvailability(selection.id)}
                         onSetAvailability={(isAvailable) =>
                           setAvailabilityMutation.mutate({ selectionId: selection.id, isAvailable })

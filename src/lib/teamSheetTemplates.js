@@ -65,9 +65,19 @@ function classicTemplate(data) {
       </div>
     </div>`).join('');
 
-  return `<html><head><title>Team Sheet</title><style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Georgia,serif;padding:24px;color:#111;font-size:${fs.base}}
+  const reservesHtml = data.reservesEnabled ? `
+    <div style="margin-top:16px;border:1px solid #ddd;border-radius:8px;overflow:hidden;break-inside:avoid">
+      <div style="background:${light};border-bottom:2px solid ${primaryColour};padding:10px 14px;font-size:${fs.sub};font-weight:700">Reserves</div>
+      <div style="padding:10px 14px;font-size:${fs.base}">
+        ${data.reservesMode === 'squad'
+          ? 'Reserves from squad'
+          : data.reserves.map(r => `${r.name} <span class="rink-tag ${r.type === 'Home' ? 'tag-home' : 'tag-away'}">${r.type} reserve</span>`).join(', ')}
+      </div>
+    </div>` : '';
+
+   return `<html><head><title>Team Sheet</title><style>
+     *{box-sizing:border-box;margin:0;padding:0}
+     body{font-family:Georgia,serif;padding:24px;color:#111;font-size:${fs.base}}
     .sheet-header{text-align:center;margin-bottom:24px}
     .logo{max-height:72px;margin-bottom:10px}
     .club-name{font-weight:bold;margin-bottom:4px}
@@ -87,10 +97,10 @@ function classicTemplate(data) {
     .tag-home{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
     .tag-away{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
     @media print{body{padding:12px}}
-  </style></head><body>${headerBlock(data)}<div class="grid">${cards}</div></body></html>`;
-}
+  </style></head><body>${headerBlock(data)}<div class="grid">${cards}</div>${reservesHtml}</body></html>`;
+  }
 
-// ── Compact ────────────────────────────────────────────────────────────────
+  // ── Compact ────────────────────────────────────────────────────────────────
 function compactTemplate(data) {
   const { primaryColour, fontSize, rinks, isTopClub, topClubEvents } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
@@ -110,6 +120,18 @@ function compactTemplate(data) {
         <td style="padding:3px 10px;font-weight:600;font-size:${fs.base}">${p.name}</td>
       </tr>`).join('')}`).join('');
 
+  const reservesRows = data.reservesEnabled ? `
+    <tr>
+      <td colspan="2" style="background:${light};font-weight:700;padding:6px 10px;font-size:${fs.sub};color:${primaryColour}">Reserves</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:3px 10px;font-size:${fs.base}">
+        ${data.reservesMode === 'squad'
+          ? 'Reserves from squad'
+          : data.reserves.map(r => `${r.name} <span style="font-size:10px;padding:1px 6px;border-radius:3px;${r.type === 'Home' ? 'background:#eff6ff;color:#1d4ed8' : 'background:#fff7ed;color:#c2410c'}">${r.type} reserve</span>`).join(', ')}
+      </td>
+    </tr>` : '';
+
   return `<html><head><title>Team Sheet</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;padding:20px;color:#111;font-size:${fs.base}}
@@ -123,7 +145,7 @@ function compactTemplate(data) {
     table{width:100%;border-collapse:collapse;margin-top:12px}
     tr{border-bottom:1px solid #f0f0f0}
     @media print{body{padding:8px}}
-  </style></head><body>${headerBlock(data)}<table><tbody>${rows}</tbody></table></body></html>`;
+  </style></head><body>${headerBlock(data)}<table><tbody>${rows}${reservesRows}</tbody></table></body></html>`;
 }
 
 // ── Modern ─────────────────────────────────────────────────────────────────
@@ -149,6 +171,19 @@ function modernTemplate(data) {
       </div>
     </div>`).join('');
 
+  const reservesCard = data.reservesEnabled ? `
+    <div class="card" style="margin-top:14px">
+      <div class="card-accent" style="background:${primaryColour}"></div>
+      <div class="card-inner">
+        <div class="card-title" style="color:${primaryColour};font-size:${fs.sub}">Reserves</div>
+        <div class="pos-name" style="font-size:${fs.base}">
+          ${data.reservesMode === 'squad'
+            ? 'Reserves from squad'
+            : data.reserves.map(r => `${r.name} <span class="rink-tag ${r.type === 'Home' ? 'tag-home' : 'tag-away'}">${r.type} reserve</span>`).join(', ')}
+        </div>
+      </div>
+    </div>` : '';
+
   return `<html><head><title>Team Sheet</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;padding:24px;color:#1a1a2e;background:#f8f9fa;font-size:${fs.base}}
@@ -172,10 +207,10 @@ function modernTemplate(data) {
     .tag-home{background:#eff6ff;color:#1d4ed8}
     .tag-away{background:#fff7ed;color:#c2410c}
     @media print{body{background:white;padding:12px}.card,.sheet-header{box-shadow:none;border:1px solid #e5e7eb}}
-  </style></head><body>${headerBlock(data)}<div class="grid">${cards}</div></body></html>`;
-}
+  </style></head><body>${headerBlock(data)}<div class="grid">${cards}</div>${reservesCard}</body></html>`;
+  }
 
-// ── Bowls (stacked) ────────────────────────────────────────────────────────
+  // ── Bowls (stacked) ────────────────────────────────────────────────────────
 function bowlsTemplate(data) {
   const { primaryColour, fontSize, rinks, isTopClub, topClubEvents } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
@@ -199,6 +234,22 @@ function bowlsTemplate(data) {
       </div>
     </div>`).join('');
 
+  const reservesBlock = data.reservesEnabled ? `
+    <div class="rink-block">
+      <div class="rink-header" style="background:${primaryColour}">Reserves</div>
+      <div class="rink-body" style="background:${light}">
+        <table class="player-table">
+          ${data.reservesMode === 'squad'
+            ? `<tr><td class="player-name" style="font-size:${fs.base};padding:6px 14px">Reserves from squad</td></tr>`
+            : data.reserves.map(r => `
+            <tr>
+              <td class="player-pos" style="font-size:${fs.pos}">${r.type} reserve</td>
+              <td class="player-name" style="font-size:${fs.base}">${r.name}</td>
+            </tr>`).join('')}
+        </table>
+      </div>
+    </div>` : '';
+
   return `<html><head><title>Team Sheet</title><style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Courier New',monospace;padding:20px;color:#111;font-size:${fs.base}}
@@ -218,8 +269,8 @@ function bowlsTemplate(data) {
     .player-pos{padding:6px 14px;font-weight:bold;width:70px;color:#555;text-transform:uppercase}
     .player-name{padding:6px 4px;font-weight:bold}
     @media print{body{padding:8px}}
-  </style></head><body>${headerBlock(data)}${blocks}</body></html>`;
-}
+  </style></head><body>${headerBlock(data)}${blocks}${reservesBlock}</body></html>`;
+  }
 
 // ── Custom HTML renderer ───────────────────────────────────────────────────
 function renderCustomHtml(template, data) {
@@ -233,7 +284,13 @@ function renderCustomHtml(template, data) {
     dress_code: data.dressCode || '',
     logo_url: data.logoUrl || '',
     club_header_img: data.headerImgUrl || '',
+    reserves: data.reservesText || '',
   };
+  for (let i = 1; i <= 5; i++) {
+    const r = (data.reserves || [])[i - 1];
+    flatData[`reserve${i}_name`] = r ? r.name : '';
+    flatData[`reserve${i}_type`] = r ? r.type : '';
+  }
   data.rinks.forEach(rink => {
     flatData[`rink${rink.number}_tag`] = rink.tag;
     rink.positions.forEach(p => { flatData[`rink${rink.number}_${p.label}`] = p.name; });
@@ -255,8 +312,25 @@ function renderCustomHtml(template, data) {
     }
   );
 
+  // Reserves block — removed when reserves are not enabled
+  const withReservesBlock = processedHtml.replace(
+    /\{\{#block reserves\}\}([\s\S]*?)\{\{\/block reserves\}\}/g,
+    (_, blockContent) => (data.reservesEnabled ? blockContent : '')
+  );
+
   // Step 2: Replace all remaining {{placeholders}} with data values
-  return processedHtml.replace(/\{\{(\w+)\}\}/g, (_, k) => flatData[k] ?? '');
+  let result = withReservesBlock.replace(/\{\{(\w+)\}\}/g, (_, k) => flatData[k] ?? '');
+
+  // Step 3: if reserves are enabled but the custom template has no reserve
+  // placeholders, append a simple Reserves section just before </body>
+  const hasReservePlaceholder = /\{\{reserves\}\}|\{\{reserve\d_(name|type)\}\}|\{\{#block reserves\}\}/.test(template);
+  if (data.reservesEnabled && !hasReservePlaceholder) {
+    const fallback = `<div style="margin-top:18px;font-family:Arial,sans-serif;font-size:14px"><strong style="color:${data.primaryColour}">Reserves:</strong> ${data.reservesText || ''}</div>`;
+    result = result.includes('</body>')
+      ? result.replace(/<\/body>/i, `${fallback}</body>`)
+      : result + fallback;
+  }
+  return result;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
@@ -289,6 +363,25 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     if (positionKey && selNames[positionKey]) return selNames[positionKey];
     const member = members.find(m => m.user_email === email);
     return member?.user_name || email;
+  };
+
+  // Reserves — stored in their own fields, resolved like position names
+  const reservesEnabled = selection.pick_reserves === true;
+  const reservesMode = selection.reserves_mode === 'named' ? 'named' : 'squad';
+  const reservesList = (selection.reserves || []).filter(r => r && r.email).sort((a, b) => (a.slot || 0) - (b.slot || 0)).map(r => ({
+    name: getMemberName(r.email, `reserve_${r.slot}`),
+    type: r.type === 'away' ? 'Away' : 'Home',
+  }));
+  const reservesText = reservesEnabled
+    ? (reservesMode === 'squad'
+        ? 'Reserves from squad'
+        : reservesList.map(r => `${r.name} (${r.type})`).join(', '))
+    : '';
+  const reservesFields = {
+    reservesEnabled,
+    reservesMode,
+    reserves: reservesList,
+    reservesText,
   };
 
   const rinks = [
@@ -349,6 +442,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
       isTopClub: false,
       rinks: f5RinkData,
       topClubEvents: [],
+      ...reservesFields,
     };
   }
 
@@ -373,6 +467,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     isTopClub,
     rinks,
     topClubEvents,
+    ...reservesFields,
   };
 }
 

@@ -92,6 +92,28 @@ export async function repointObjectValues(sr, entityName, field, sourceEmail, ta
   }
 }
 
+// Helper: repoint a member's email inside TeamSelection.reserves (array of {slot,email,type})
+// Reserves are stored in their own field, NOT in the selections position map.
+export async function repointReserves(sr, clubId, sourceEmail, targetEmail) {
+  const key = 'TeamSelection.reserves';
+  try {
+    const records = await sr.entities.TeamSelection.filter({ club_id: clubId });
+    let count = 0;
+    for (const rec of records) {
+      if (!Array.isArray(rec.reserves) || rec.reserves.length === 0) continue;
+      if (!rec.reserves.some(r => r && r.email === sourceEmail)) continue;
+      const updated = rec.reserves.map(r =>
+        (r && r.email === sourceEmail) ? { ...r, email: targetEmail } : r
+      );
+      await sr.entities.TeamSelection.update(rec.id, { reserves: updated });
+      count++;
+    }
+    return { key, count, success: true };
+  } catch (e) {
+    return { key, count: 0, success: false, error: e.message };
+  }
+}
+
 // Helper: replace email in a pipe-separated bracket entry (teams are "email1|email2|...")
 export function replaceInEntry(entry, sourceEmail, targetEmail) {
   if (!entry || typeof entry !== 'string') return entry;

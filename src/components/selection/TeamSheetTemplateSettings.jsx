@@ -182,6 +182,7 @@ export default function TeamSheetTemplateSettings({ club, onChange }) {
                 <p>If your template fails, the Classic template will be used as a fallback.</p>
                 <p className="font-mono mt-1">Available placeholders: {'{{club_name}}'} {'{{competition}}'} {'{{match_name}}'} {'{{match_date}}'} {'{{start_time}}'} {'{{venue}}'} {'{{dress_code}}'} {'{{logo_url}}'} {'{{club_header_img}}'}</p>
                 <p className="font-mono">Player positions: {'{{rink1_Lead}}'} {'{{rink1_2}}'} {'{{rink2_Skip}}'} {'{{rink1_tag}}'} etc.</p>
+                <p className="font-mono">Reserves: {'{{reserves}}'} {'{{reserve1_name}}'} {'{{reserve1_type}}'} … {'{{reserve5_name}}'} {'{{reserve5_type}}'} or {'{{#block reserves}}'}...{'{{/block reserves}}'} (removed when reserves are off)</p>
               </div>
               {/* Club Header Image Upload */}
               <div>
