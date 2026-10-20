@@ -1031,6 +1031,11 @@ export default function SelectionEditor() {
                     setMatchName(text);
                     setOpponentName(clubPicked ? clubPicked.club_name : '');
                     setOpponentClub(clubPicked);
+                    if (!clubPicked) {
+                      // Club removed — clear any auto-filled venue address
+                      setVenueAddress('');
+                      lastAutoFillRef.current = '';
+                    }
                   }}
                   clubId={clubId}
                 />
@@ -1046,6 +1051,11 @@ export default function SelectionEditor() {
                         if (checked) {
                           const loc = String(friendlyLocation || fantastic5sVenue || '').toLowerCase();
                           setVenueLocation(loc === 'away' ? 'away' : 'home');
+                        } else {
+                          // Toggled off — clear the address fields and options
+                          setVenueAddress('');
+                          setVenueLocation('home');
+                          lastAutoFillRef.current = '';
                         }
                       }}
                     />
