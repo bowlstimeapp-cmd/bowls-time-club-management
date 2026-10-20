@@ -12,7 +12,10 @@
         "Bramley",
         "Wessex League",
         "Denny",
-        "Top Club"
+        "Top Club",
+        "Top Club (Outdoor)",
+        "Fantastic 5s",
+        "Friendly"
       ],
       "description": "Competition type"
     },
@@ -27,7 +30,7 @@
     },
     "opponent": {
       "type": "string",
-      "description": "Opponent club or team name (populated from fixture)"
+      "description": "Opponent club or team name (populated from fixture or picked from the club list)"
     },
     "selections": {
       "type": "object",
@@ -152,6 +155,24 @@
           }
         }
       }
+    },
+    "show_venue_address": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the venue address is shown on SelectionView and printed team sheets"
+    },
+    "venue_location": {
+      "type": "string",
+      "enum": [
+        "home",
+        "away"
+      ],
+      "default": "home",
+      "description": "Which venue the address refers to"
+    },
+    "venue_address": {
+      "type": "string",
+      "description": "Snapshot of the venue address, shown on SelectionView and team sheets"
     }
   },
   "required": [

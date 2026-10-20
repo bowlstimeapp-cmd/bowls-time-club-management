@@ -195,7 +195,7 @@
     },
     "membership_fee_amount_pence": {
       "type": "number",
-      "description": "Default membership fee in pence (e.g. 5000 = \u00a350)"
+      "description": "Default membership fee in pence (e.g. 5000 = £50)"
     },
     "membership_fee_description": {
       "type": "string",
@@ -379,7 +379,7 @@
         "free"
       ],
       "default": "standard",
-      "description": "Club subscription tier \u2014 'free' clubs have all modules locked until upgraded to 'standard'"
+      "description": "Club subscription tier — 'free' clubs have all modules locked until upgraded to 'standard'"
     },
     "affiliated_club_ids": {
       "type": "array",
@@ -404,6 +404,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "venue_address": {
+      "type": "string",
+      "description": "Club address, shown on selections and team sheets when 'Display venue address' is ticked"
     }
   },
   "required": [
