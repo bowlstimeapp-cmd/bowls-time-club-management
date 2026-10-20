@@ -24,9 +24,17 @@ function hexToRgb(hex) {
   return `${parseInt(hex.slice(1,3),16)}, ${parseInt(hex.slice(3,5),16)}, ${parseInt(hex.slice(5,7),16)}`;
 }
 
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function headerBlock(data) {
   const { clubName, logoUrl, competition, matchName, matchDate, startTime, venue, dressCode,
-          primaryColour, fontSize, showStartTime, showVenue, showDressCode } = data;
+          primaryColour, fontSize, showStartTime, showVenue, showDressCode, venueLabel } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   return `
     <div class="sheet-header">
@@ -36,7 +44,7 @@ function headerBlock(data) {
       <div class="match-title" style="font-size:${fs.sub}">${matchName || 'Team Selection'}</div>
       <div class="match-date">${matchDate}</div>
       ${showStartTime && startTime ? `<div class="meta-row">⏰ Start Time: <strong>${startTime}</strong></div>` : ''}
-      ${showVenue && venue       ? `<div class="meta-row">📍 Venue: <strong>${venue}</strong></div>` : ''}
+      ${showVenue && venue       ? `<div class="meta-row">📍 ${venueLabel || 'Venue'}: <strong>${venue}</strong></div>` : ''}
       ${showDressCode && dressCode ? `<div class="meta-row">👔 Dress Code: <strong>${dressCode}</strong></div>` : ''}
     </div>`;
 }
@@ -281,6 +289,7 @@ function renderCustomHtml(template, data) {
     match_date: data.matchDate,
     start_time: data.startTime || '',
     venue: data.venue || '',
+    venue_label: data.venueLabel || '',
     dress_code: data.dressCode || '',
     logo_url: data.logoUrl || '',
     club_header_img: data.headerImgUrl || '',
@@ -384,6 +393,19 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     reservesText,
   };
 
+  // Venue address — shown when the selection's "Display venue address" option
+  // is on and an address was saved; single-line (line breaks -> ", ") for the
+  // print header, HTML-escaped so custom templates are safe.
+  const venueAddrRaw = selection.show_venue_address === true && selection.venue_address
+    ? String(selection.venue_address).trim() : '';
+  const venueOnSheet = venueAddrRaw ? escapeHtml(venueAddrRaw.replace(/\r?\n/g, ', ')) : '';
+  const venueLabel = selection.venue_location === 'away' ? 'Away venue' : 'Home venue';
+  const venueFields = {
+    venue: venueOnSheet,
+    venueLabel,
+    showVenue: venueAddrRaw ? true : (club?.team_sheet_show_venue || false),
+  };
+
   const rinks = [
     ...Array.from({ length: homeRinksCount }, (_, i) => ({
       number: i + 1,
@@ -432,17 +454,16 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
       matchName: selection.match_name || '',
       matchDate,
       startTime: selection.match_start_time || '',
-      venue: '',
       dressCode: '',
       primaryColour: club?.team_sheet_primary_colour || '#10b981',
       fontSize: club?.team_sheet_font_size || 'medium',
       showStartTime: club?.team_sheet_show_start_time !== false,
-      showVenue: club?.team_sheet_show_venue || false,
       showDressCode: club?.team_sheet_show_dress_code || false,
       isTopClub: false,
       rinks: f5RinkData,
       topClubEvents: [],
       ...reservesFields,
+      ...venueFields,
     };
   }
 
@@ -457,17 +478,16 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     matchName: selection.match_name || '',
     matchDate,
     startTime: selection.match_start_time || '',
-    venue: '',
     dressCode: '',
     primaryColour: club?.team_sheet_primary_colour || '#10b981',
     fontSize: club?.team_sheet_font_size || 'medium',
     showStartTime: club?.team_sheet_show_start_time !== false,
-    showVenue: club?.team_sheet_show_venue || false,
     showDressCode: club?.team_sheet_show_dress_code || false,
     isTopClub,
     rinks,
     topClubEvents,
     ...reservesFields,
+    ...venueFields,
   };
 }
 

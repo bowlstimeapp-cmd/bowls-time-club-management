@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy,
   Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette,
-  ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush, Bell, Layers, Newspaper
+  ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush, Bell, Layers, Newspaper, MapPin
 } from 'lucide-react';
 import ClubNewsAdmin from '@/components/club/ClubNewsAdmin';
 import { Textarea } from "@/components/ui/textarea";
@@ -110,6 +110,7 @@ export default function ClubSettings() {
   const [competitionPageHeader, setCompetitionPageHeader] = useState('');
   const [clubTheme, setClubTheme] = useState('emerald');
   const [memberLandingPageEnabled, setMemberLandingPageEnabled] = useState(false);
+  const [venueAddress, setVenueAddress] = useState('');
 
   // ── Auth / routing ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,6 +179,7 @@ export default function ClubSettings() {
     setCompetitionPageHeader(club.competition_page_header || '');
     setClubTheme(club.club_theme || 'emerald');
     setMemberLandingPageEnabled(club.member_landing_page_enabled || false);
+    setVenueAddress(club.venue_address || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id]);
 
@@ -339,6 +341,7 @@ export default function ClubSettings() {
       competition_page_header: competitionPageHeader || null,
       club_theme: clubTheme,
       member_landing_page_enabled: memberLandingPageEnabled,
+      venue_address: venueAddress || null,
       ...teamSheetSettings,
     };
     updateMutation.mutate(payload);
@@ -379,6 +382,25 @@ export default function ClubSettings() {
               )}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Club Address */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><MapPin className="w-5 h-5" />Club Address</CardTitle>
+          <CardDescription>Shown on selections and team sheets when 'Display venue address' is ticked</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="club-venue-address">Address</Label>
+          <Textarea
+            id="club-venue-address"
+            rows={3}
+            className="mt-1.5"
+            value={venueAddress}
+            onChange={(e) => setVenueAddress(e.target.value)}
+            placeholder="e.g. Bowls Club House, Recreation Road, Andover, Hampshire SP10 1AA"
+          />
         </CardContent>
       </Card>
 

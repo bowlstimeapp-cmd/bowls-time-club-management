@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -24,6 +24,8 @@ import {
   Printer } from
 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import OpponentClubInput from '@/components/selection/OpponentClubInput';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -87,6 +89,14 @@ export default function SelectionEditor() {
   const [reservesMode, setReservesMode] = useState('squad');
   const [reserves, setReserves] = useState([]);
   const [originalReserves, setOriginalReserves] = useState([]);
+  // Opponent club + venue address state
+  const [opponentName, setOpponentName] = useState('');
+  const [opponentClub, setOpponentClub] = useState(null);
+  const [showVenueAddress, setShowVenueAddress] = useState(false);
+  const [venueLocation, setVenueLocation] = useState('home');
+  const [venueAddress, setVenueAddress] = useState('');
+  const lastAutoFillRef = useRef('');
+  const venueAddressRef = useRef('');
 
   useEffect(() => {
     const loadUser = async () => {
@@ -143,6 +153,11 @@ export default function SelectionEditor() {
       const loadedReserves = (existingSelection.reserves || []).filter((r) => r && r.email);
       setReserves(loadedReserves);
       setOriginalReserves(loadedReserves);
+      setOpponentName(existingSelection.opponent || '');
+      setShowVenueAddress(existingSelection.show_venue_address === true);
+      setVenueLocation(existingSelection.venue_location === 'away' ? 'away' : 'home');
+      setVenueAddress(existingSelection.venue_address || '');
+      lastAutoFillRef.current = '';
       if (existingSelection.competition === 'Friendly') {
         setFriendlyLocation(existingSelection.friendly_location || '');
         setFriendlyNumRinks(existingSelection.friendly_num_rinks || 2);
@@ -156,6 +171,30 @@ export default function SelectionEditor() {
       }
     }
   }, [existingSelection]);
+
+  // Keep a ref of the address for the auto-fill guard below
+  useEffect(() => {
+    venueAddressRef.current = venueAddress;
+  }, [venueAddress]);
+
+  // Auto-fill the venue address from the club (home) or the picked opponent
+  // club (away) — only when the field is empty or still holds the previous
+  // auto-filled value, so text the user typed is never overwritten.
+  useEffect(() => {
+    if (!showVenueAddress) return;
+    const auto = venueLocation === 'home'
+      ? (club?.venue_address || '')
+      : (opponentClub
+        ? [opponentClub.address, opponentClub.town, opponentClub.county, opponentClub.postcode]
+            .filter(Boolean).join(', ')
+        : '');
+    if (!auto) return;
+    const current = venueAddressRef.current;
+    if (!current.trim() || current === lastAutoFillRef.current) {
+      setVenueAddress(auto);
+      lastAutoFillRef.current = auto;
+    }
+  }, [showVenueAddress, venueLocation, club, opponentClub]);
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
@@ -297,11 +336,20 @@ export default function SelectionEditor() {
       return;
     }
 
+    // Non-blocking warning — the save still goes ahead
+    if (showVenueAddress && !(venueAddress || '').trim()) {
+      toast.warning("Venue address is empty and won't show");
+    }
+
     const data = {
       club_id: clubId,
       competition,
       match_date: matchDate,
       match_name: matchName,
+      opponent: opponentName || null,
+      show_venue_address: showVenueAddress,
+      venue_location: venueLocation,
+      venue_address: venueAddress || null,
       selections,
       selection_names: selectionNames,
       home_rinks: competition === 'Friendly' ? friendlyNumRinks : homeRinks,
@@ -977,13 +1025,60 @@ export default function SelectionEditor() {
                     onChange={(e) => setMatchDate(e.target.value)} />
                   
                 </div>
+                <OpponentClubInput
+                  value={matchName}
+                  onChange={(text, clubPicked) => {
+                    setMatchName(text);
+                    setOpponentName(clubPicked ? clubPicked.club_name : '');
+                    setOpponentClub(clubPicked);
+                  }}
+                  clubId={clubId}
+                />
+
+                {/* Venue address */}
                 <div>
-                  <Label>Opponent</Label>
-                  <Input
-                    value={matchName}
-                    onChange={(e) => setMatchName(e.target.value)}
-                    placeholder="e.g., vs Springfield BC" />
-                  
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="show-venue-address"
+                      checked={showVenueAddress}
+                      onCheckedChange={(checked) => {
+                        setShowVenueAddress(checked);
+                        if (checked) {
+                          const loc = String(friendlyLocation || fantastic5sVenue || '').toLowerCase();
+                          setVenueLocation(loc === 'away' ? 'away' : 'home');
+                        }
+                      }}
+                    />
+                    <Label htmlFor="show-venue-address" className="cursor-pointer">Display venue address</Label>
+                  </div>
+                  {showVenueAddress &&
+                  <div className="mt-3 space-y-3 pl-6">
+                      <RadioGroup value={venueLocation} onValueChange={setVenueLocation} className="flex flex-wrap gap-4">
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="home" id="venue-loc-home" />
+                          <Label htmlFor="venue-loc-home" className="font-normal cursor-pointer">Home venue (our club)</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="away" id="venue-loc-away" />
+                          <Label htmlFor="venue-loc-away" className="font-normal cursor-pointer">Away venue (opponent's club)</Label>
+                        </div>
+                      </RadioGroup>
+                      <Textarea
+                        rows={3}
+                        value={venueAddress}
+                        onChange={(e) => setVenueAddress(e.target.value)}
+                        placeholder="e.g. Bowls Club House, Recreation Road, Andover, Hampshire SP10 1AA" />
+                      
+                      {venueLocation === 'home' && !(club?.venue_address || '').trim() &&
+                  <p className="text-xs text-amber-700">
+                          No club address saved.{' '}
+                          <Link to={createPageUrl('Clubsettings') + `?clubId=${clubId}`} className="underline font-medium">
+                            Add one in Club Settings
+                          </Link>
+                        </p>
+                  }
+                    </div>
+                  }
                 </div>
 
                 {/* Fantastic 5s venue */}

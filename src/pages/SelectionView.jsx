@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Printer } from 'lucide-react';
+import { ArrowLeft, Calendar, Trophy, User, Users, CheckCircle, XCircle, Printer, MapPin } from 'lucide-react';
 import { buildTeamSheetData, printTeamSheet } from '@/lib/teamSheetTemplates';
 import PlayerAccoladeHover from '@/components/accolades/PlayerAccoladeHover';
 import { format, parseISO } from 'date-fns';
@@ -257,6 +257,25 @@ export default function SelectionView() {
                 <Calendar className="w-4 h-4" />
                 {format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}
               </p>
+              {selection.show_venue_address === true && selection.venue_address && (
+                <div className="mt-2 flex items-start gap-2 text-sm text-gray-600">
+                  <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      {selection.venue_location === 'away' ? 'Away venue' : 'Home venue'}
+                    </span>
+                    <span className="whitespace-pre-line">{selection.venue_address}</span>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selection.venue_address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 hover:underline inline-block mt-0.5"
+                    >
+                      Directions
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {(() => {

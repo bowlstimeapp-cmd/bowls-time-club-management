@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
     const reservesEnabled = data?.reservesEnabled === true;
     const reserveList = reservesEnabled ? (data.reserves || []) : [];
     const mergedData = { ...data };
+    mergedData.venue_label = data.venueLabel || '';
     mergedData.reserves = reservesEnabled ? (data.reservesText || '') : '';
     for (let i = 1; i <= 5; i++) {
       mergedData[`reserve${i}_name`] = reserveList[i - 1]?.name || '';

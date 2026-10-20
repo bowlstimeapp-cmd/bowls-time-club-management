@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 
 // ---------------------------------------------------------------------------
 // Search the scraped Play Bowls club list (ProspectClub) for opponent clubs.
@@ -21,11 +21,11 @@ async function getClubMembership(base44, userEmail, clubId) {
 }
 
 // In-memory cache of the slimmed-down club list (~10 minutes, per isolate)
-let CACHE = { list: [], loadedAt: 0 };
+let CACHE_V2 = { list: [], loadedAt: 0 };
 const CACHE_TTL = 10 * 60 * 1000;
 
 async function loadClubList(base44) {
-  if (Date.now() - CACHE.loadedAt < CACHE_TTL) return CACHE.list;
+  if (Date.now() - CACHE_V2.loadedAt < CACHE_TTL) return CACHE_V2.list;
   const all = [];
   let cursor = null;
   let hasMore = true;
@@ -34,7 +34,7 @@ async function loadClubList(base44) {
     const page = await base44.asServiceRole.entities.ProspectClub.list(
       cursor ? { limit: 200, cursor } : { limit: 200 }
     );
-    const items = page.items || [];
+    const items = Array.isArray(page) ? page : (page.items || []);
     for (const c of items) {
       all.push({
         id: c.id,
@@ -49,7 +49,8 @@ async function loadClubList(base44) {
     hasMore = !!page.has_more && !!cursor;
     guard++;
   }
-  CACHE = { list: all, loadedAt: Date.now() };
+  // Don't cache an empty list — a transient failure shouldn't stick for 10 minutes
+  if (all.length > 0) CACHE_V2 = { list: all, loadedAt: Date.now() };
   return all;
 }
 

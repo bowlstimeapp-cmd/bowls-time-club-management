@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
 
     // Fields a club admin can update
     const clubAdminFields = [
-      'name', 'description', 'logo_url', 'rink_count',
+      'name', 'description', 'logo_url', 'rink_count', 'venue_address',
       'opening_time', 'closing_time', 'session_duration',
       'use_custom_sessions', 'custom_sessions',
       'auto_approve_bookings', 'open_rollups', 'private_rollups',
