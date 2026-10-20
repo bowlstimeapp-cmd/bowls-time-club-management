@@ -172,6 +172,15 @@ export default function SelectionEditor() {
     }
   }, [existingSelection]);
 
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId
+  });
+
   // Keep a ref of the address for the auto-fill guard below
   useEffect(() => {
     venueAddressRef.current = venueAddress;
@@ -202,15 +211,6 @@ export default function SelectionEditor() {
       club_id: clubId,
       status: 'approved'
     }),
-    enabled: !!clubId
-  });
-
-  const { data: club } = useQuery({
-    queryKey: ['club', clubId],
-    queryFn: async () => {
-      const clubs = await base44.entities.Club.filter({ id: clubId });
-      return clubs[0];
-    },
     enabled: !!clubId
   });
 
