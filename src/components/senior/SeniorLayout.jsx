@@ -8,6 +8,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
 import { useSeniorMode } from '@/lib/SeniorModeContext';
+import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
 import {
   Home, Calendar, ClipboardList, Trophy, Users, MessageSquare,
   HelpCircle, Settings, Menu, X, ChevronRight, LogOut
@@ -154,6 +155,9 @@ export default function SeniorLayout({ children }) {
           >
             <Home className="w-4 h-4" /> Home
           </Link>
+        </div>
+        <div className="max-w-4xl mx-auto px-4 mt-3">
+          <LegalFooterLinks />
         </div>
       </footer>
     </div>

@@ -58,6 +58,7 @@ import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
 import { useKiosk } from '@/lib/KioskContext';
 import ModuleLockedNotice from '@/components/club/ModuleLockedNotice';
 import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
+import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
 
 const MODULE_PAGE_MAP = {
   BookRink: { key: 'module_rink_booking', name: 'Rink Booking', desc: 'Book rinks, manage sessions, and track availability across your club facilities.' },
@@ -950,14 +951,15 @@ export default function Layout({ children, currentPageName }) {
         ) : children}
       </main>
       
-      {currentPageName !== 'ClubHome' && (
-        <footer className="py-4 text-center border-t border-gray-100">
+      <footer className="py-4 text-center border-t border-gray-100 space-y-2">
+        {currentPageName !== 'ClubHome' && (
           <a href={STRIPE_PAYMENT_LINK_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
             <Coffee className="w-3.5 h-3.5" />
             Enjoying Bowls Time? Show your appreciation
           </a>
-        </footer>
-      )}
+        )}
+        <LegalFooterLinks />
+      </footer>
 
       {/* Mobile Bottom Tab Bar (bottom navigation mode) */}
       {!tabBarNeverShow && tabItems.length > 0 && (
