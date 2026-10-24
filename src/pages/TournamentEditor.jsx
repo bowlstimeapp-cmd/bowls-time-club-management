@@ -158,15 +158,15 @@ export default function TournamentEditor() {
     if (selectedPlayers.includes(email)) {
       setSelectedPlayers(selectedPlayers.filter(e => e !== email));
       setPlayerTeams(prev => prev.map(t => t.filter(e => e !== email)).filter(t => t.length > 0));
-    } else if (selectedPlayers.length < 32) {
+    } else if (selectedPlayers.length < 64) {
       setSelectedPlayers([...selectedPlayers, email]);
     } else {
-      toast.error('Maximum 32 players allowed');
+      toast.error('Maximum 64 players allowed');
     }
   };
 
   const addAno = () => {
-    if (selectedPlayers.length >= 32) { toast.error('Maximum 32 entries allowed'); return; }
+    if (selectedPlayers.length >= 64) { toast.error('Maximum 64 entries allowed'); return; }
     setSelectedPlayers(prev => [...prev, createAnoInstance()]);
   };
 
@@ -342,10 +342,14 @@ export default function TournamentEditor() {
     }
     setFixtures(allFixturesFinal);
     const totalQualifiers = numGroups * qualifiersPerGroup;
+    const stageNamesByQualifiers = { 32: 'Round of 32', 16: 'Round of 16', 8: 'Quarter Final', 4: 'Semi Final' };
     const knockoutStage = [];
-    if (totalQualifiers >= 8) { knockoutStage.push({ round: 'Quarter Final', matches: 4 }, { round: 'Semi Final', matches: 2 }, { round: 'Final', matches: 1 }); }
-    else if (totalQualifiers >= 4) { knockoutStage.push({ round: 'Semi Final', matches: 2 }, { round: 'Final', matches: 1 }); }
-    else { knockoutStage.push({ round: 'Final', matches: 1 }); }
+    let stageQualifiers = 32;
+    while (stageQualifiers >= 4) {
+      if (totalQualifiers >= stageQualifiers) knockoutStage.push({ round: stageNamesByQualifiers[stageQualifiers], matches: stageQualifiers / 2 });
+      stageQualifiers /= 2;
+    }
+    knockoutStage.push({ round: 'Final', matches: 1 });
     let knockoutId = 0;
     const knockoutList = [];
     knockoutStage.forEach(stage => {
@@ -514,14 +518,14 @@ export default function TournamentEditor() {
                   <>
                     <div>
                       <Label>Number of Teams</Label>
-                      <select value={teamCount} onChange={(e) => { const val = Number(e.target.value); setTeamCount(val); if (val === 8) { setNumGroups(2); setTeamsPerGroup(4); } else if (val === 12) { setNumGroups(3); setTeamsPerGroup(4); } else if (val === 16) { setNumGroups(4); setTeamsPerGroup(4); } }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                        {[4, 6, 8, 12, 16, 20, 24, 32].map(n => <option key={n} value={n}>{n} Teams</option>)}
+                      <select value={teamCount} onChange={(e) => { const val = Number(e.target.value); setTeamCount(val); const defaults = { 8: [2, 4], 12: [3, 4], 16: [4, 4], 24: [4, 6], 32: [4, 8], 40: [5, 8], 48: [6, 8], 56: [7, 8], 64: [8, 8] }; if (defaults[val]) { setNumGroups(defaults[val][0]); setTeamsPerGroup(defaults[val][1]); } }} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                        {[4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64].map(n => <option key={n} value={n}>{n} Teams</option>)}
                       </select>
                     </div>
                     <div>
                       <Label>Number of Groups</Label>
                       <select value={numGroups} onChange={(e) => setNumGroups(Number(e.target.value))} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                        {[2, 3, 4, 5, 6, 8].map(n => <option key={n} value={n}>{n} Groups</option>)}
+                        {[2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n} Groups</option>)}
                       </select>
                     </div>
                     <div>
@@ -653,7 +657,7 @@ export default function TournamentEditor() {
                     <CardHeader><CardTitle>Knockout Stage</CardTitle></CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {['Quarter Final', 'Semi Final', 'Final'].map(round => {
+                        {[...new Set(knockoutFixtures.map(f => f.round))].map(round => {
                           const roundFixtures = knockoutFixtures.filter(f => f.round === round);
                           if (roundFixtures.length === 0) return null;
                           return (
