@@ -292,7 +292,7 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
                                 <Button size="sm" variant={s.tb_winner === 'away' ? 'default' : 'outline'} className={`h-6 text-xs px-1 ${s.tb_winner === 'away' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`} onClick={() => setScores(prev => ({ ...prev, [fixture.id]: { ...s, tb_winner: 'away' } }))}>{awayTeam?.name || 'Away'}</Button>
                               </div>
                             )}
-                            {hasResult && (() => {
+                            {hasResult && !(s.tb_on && s.tb_winner) && (() => {
                               const gw = getSetsGameWinner({
                                 had_tiebreak: !!s.tb_on,
                                 tiebreak_winner: s.tb_winner || null,

@@ -62,7 +62,7 @@ export default function LeagueResultModal({
 
   // Small preview shown before saving: game winner and shots point
   let previewLine = null;
-  if (isSetsLeague && homeScore !== '' && awayScore !== '' && homeSets !== '' && awaySets !== '') {
+  if (isSetsLeague && !(tiebreakOn && tiebreakWinner) && homeScore !== '' && awayScore !== '' && homeSets !== '' && awaySets !== '') {
     const hsNum = parseFloat(homeSets);
     const asNum = parseFloat(awaySets);
     const gw = tiebreakOn ? tiebreakWinner : (hsNum > asNum ? 'home' : asNum > hsNum ? 'away' : null);
