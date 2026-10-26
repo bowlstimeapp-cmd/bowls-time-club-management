@@ -30,6 +30,14 @@
       "default": "singles",
       "description": "Competition format for knockout tournaments"
     },
+    "season": {
+      "type": "string",
+      "enum": [
+        "indoor",
+        "outdoor"
+      ],
+      "description": "Green the tournament is played on. Only used by clubs with both an indoor and an outdoor green"
+    },
     "players": {
       "type": "array",
       "description": "Array of player emails (for knockout tournaments)"

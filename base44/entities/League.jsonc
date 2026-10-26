@@ -32,6 +32,14 @@
       "default": "fours",
       "description": "League format"
     },
+    "green_type": {
+      "type": "string",
+      "enum": [
+        "indoor",
+        "outdoor"
+      ],
+      "description": "Green the league's fixtures are booked on. Only used by clubs with both an indoor and an outdoor green; otherwise the club's own green applies"
+    },
     "start_date": {
       "type": "string",
       "format": "date",

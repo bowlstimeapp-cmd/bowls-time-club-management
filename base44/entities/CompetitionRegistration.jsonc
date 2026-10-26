@@ -41,6 +41,14 @@
       "format": "date",
       "description": "Closing date for entries"
     },
+    "season": {
+      "type": "string",
+      "enum": [
+        "indoor",
+        "outdoor"
+      ],
+      "description": "Green the competition is played on. Only used by clubs with both an indoor and an outdoor green"
+    },
     "status": {
       "type": "string",
       "enum": [
