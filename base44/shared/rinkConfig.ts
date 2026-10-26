@@ -1,7 +1,8 @@
 // Indoor / outdoor green helpers shared by the booking backend functions.
 //
 // A club with `dual_greens_enabled` runs separate rink configurations per green.
-// Indoor bookings block the whole building, so they also clash with the outdoor green.
+// The two greens are independent: a rink booked indoors can still be booked outdoors
+// in the same slot, so only bookings on the same green can clash.
 
 export function isDualGreens(club: any): boolean {
   return !!club?.dual_greens_enabled;
@@ -54,13 +55,11 @@ export function greenConfig(club: any, greenType?: string | null) {
   };
 }
 
-/** True when two bookings could clash, taking greens into account. */
+/** True when two bookings could clash. The indoor and outdoor greens are independent, so only
+ *  bookings on the same green can clash. */
 export function greensClash(bookingA: any, bookingB: any, club: any): boolean {
   if (!isDualGreens(club)) return true;
-  const a = bookingGreen(bookingA, club);
-  const b = bookingGreen(bookingB, club);
-  if (a === 'indoor' || b === 'indoor') return true;
-  return a === b;
+  return bookingGreen(bookingA, club) === bookingGreen(bookingB, club);
 }
 
 /** Club object with one green's rink settings laid over the top-level fields. */

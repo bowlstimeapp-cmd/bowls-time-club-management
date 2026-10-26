@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
         if (b.status === 'cancelled' || b.status === 'rejected') return false;
         // Time overlap: newStart < existingEnd AND newEnd > existingStart
         if (!(start_time < b.end_time && end_time > b.start_time)) return false;
-        // Different greens only clash when one of them is the indoor green (it blocks the building)
+        // The indoor and outdoor greens are independent, so a booking on the other green doesn't clash
         if (cid === club_id && !greensClash({ green_type: green }, b, club)) return false;
         return true;
       });

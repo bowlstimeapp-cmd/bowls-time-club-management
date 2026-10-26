@@ -39,15 +39,10 @@ export function getBookingGreen(booking, club) {
   return getPrimaryGreen(club);
 }
 
-/** Indoor bookings span the whole building, so they also block the outdoor green. */
-export function blocksAllGreens(booking, club) {
-  return isDualGreens(club) && getBookingGreen(booking, club) === 'indoor';
-}
-
-/** True when two bookings could clash, taking greens into account. */
+/** True when two bookings could clash. The indoor and outdoor greens are independent, so only
+ *  bookings on the same green can clash. */
 export function greensClash(bookingA, bookingB, club) {
   if (!isDualGreens(club)) return true;
-  if (blocksAllGreens(bookingA, club) || blocksAllGreens(bookingB, club)) return true;
   return getBookingGreen(bookingA, club) === getBookingGreen(bookingB, club);
 }
 
