@@ -241,8 +241,8 @@ export default function SelectionEditor() {
 
   const allCompetitions = [...platformCompetitions, ...clubCompetitions];
 
-  // Filter competitions by club's season (indoor/outdoor)
-  const competitions = allCompetitions.filter((comp) => comp.season === club?.season);
+  // Filter competitions by club's season (indoor/outdoor) — dual-green clubs run both
+  const competitions = allCompetitions.filter((comp) => isDualGreens(club) || comp.season === club?.season);
 
   // Rink booking green: dual-green clubs pick a green, single-green clubs use their own
   const availableRinkGreens = getGreenTypes(club);

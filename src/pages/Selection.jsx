@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import GreenFilter from '@/components/common/GreenFilter';
+import { matchesGreenFilter, seasonForCompetition } from '@/lib/greenFilters';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +50,7 @@ export default function Selection() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('published');
   const [competitionFilter, setCompetitionFilter] = useState('all');
+  const [greenFilter, setGreenFilter] = useState('all');
   const [upcomingOnly, setUpcomingOnly] = useState(false);
   const [tourStep, setTourStep] = useState(-1);
   const tourDemoCardRef = useRef(null);
@@ -129,6 +132,13 @@ export default function Selection() {
       const clubs = await base44.entities.Club.filter({ id: clubId });
       return clubs[0];
     },
+    enabled: !!clubId,
+  });
+
+  // Selections follow their competition's green
+  const { data: competitions = [] } = useQuery({
+    queryKey: ['competitions', clubId],
+    queryFn: () => base44.entities.Competition.list(),
     enabled: !!clubId,
   });
 
@@ -248,25 +258,28 @@ export default function Selection() {
     return isUserReserveForMatch(selection);
   };
 
-  // Filter selections based on competition type
+  // Filter selections based on competition type and green
   const filterByCompetition = (selectionsList) => {
-    if (competitionFilter === 'all') return selectionsList;
-    return selectionsList.filter(s => s.competition === competitionFilter);
+    const byGreen = selectionsList.filter(s =>
+      matchesGreenFilter(seasonForCompetition(s.competition, competitions), greenFilter)
+    );
+    if (competitionFilter === 'all') return byGreen;
+    return byGreen.filter(s => s.competition === competitionFilter);
   };
 
   const publishedSelections = useMemo(() => 
     filterByCompetition(selections.filter(s => s.status === 'published' && !s.is_archived)),
-    [selections, competitionFilter]
+    [selections, competitionFilter, competitions, greenFilter]
   );
   
   const draftSelections = useMemo(() => 
     filterByCompetition(selections.filter(s => s.status === 'draft' && !s.is_archived)),
-    [selections, competitionFilter]
+    [selections, competitionFilter, competitions, greenFilter]
   );
   
   const archivedSelections = useMemo(() =>
     filterByCompetition(selections.filter(s => s.is_archived)),
-    [selections, competitionFilter]
+    [selections, competitionFilter, competitions, greenFilter]
   );
 
   const mySelections = useMemo(() => {
@@ -278,7 +291,7 @@ export default function Selection() {
       });
     }
     return list;
-  }, [selections, competitionFilter, user?.email, upcomingOnly]);
+  }, [selections, competitionFilter, competitions, greenFilter, user?.email, upcomingOnly]);
 
   // Get unique competition types from selections
   const competitionTypes = useMemo(() => {
@@ -367,6 +380,7 @@ export default function Selection() {
                 ))}
               </SelectContent>
             </Select>
+            <GreenFilter club={club} value={greenFilter} onChange={setGreenFilter} label="Green" />
           </div>
         </motion.div>
 

@@ -8,10 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getPrimaryGreen, getRinkConfig } from '@/lib/rinkConfig';
+import { getPrimaryGreen, getRinkConfig, isDualGreens, getGreenTypes, getBookingGreen } from '@/lib/rinkConfig';
+import GreenSelector from '@/components/booking/GreenSelector';
+import GreenFilter from '@/components/common/GreenFilter';
+import { matchesGreenFilter } from '@/lib/greenFilters';
 
-/** League fixtures are played on the club's primary green, so they use that green's rinks. */
-const primaryRinkCount = (club) => getRinkConfig(club, getPrimaryGreen(club)).rink_count || 6;
+/** The green a league's fixtures are played and booked on. */
+const greenForLeague = (club, league) => {
+  if (!isDualGreens(club)) return getPrimaryGreen(club);
+  return league?.green_type === 'indoor' || league?.green_type === 'outdoor'
+    ? league.green_type
+    : getPrimaryGreen(club);
+};
+const rinkCountForGreen = (club, green) => getRinkConfig(club, green).rink_count || 6;
+const primaryRinkCount = (club) => rinkCountForGreen(club, getPrimaryGreen(club));
 import {
   Dialog,
   DialogContent,
@@ -117,6 +127,8 @@ export default function LeagueAdmin() {
   const [leagueStartTime, setLeagueStartTime] = useState('18:00');
   const [leagueEndTime, setLeagueEndTime] = useState('21:00');
   const [leagueFormat, setLeagueFormat] = useState('fours');
+  const [leagueGreenType, setLeagueGreenType] = useState('indoor');
+  const [leagueGreenFilter, setLeagueGreenFilter] = useState('all');
   const [leagueIsSets, setLeagueIsSets] = useState(false);
   const [leagueIsDoubleRink, setLeagueIsDoubleRink] = useState(false);
   const [leagueSetsEnds, setLeagueSetsEnds] = useState(8);
@@ -270,7 +282,10 @@ export default function LeagueAdmin() {
   };
 
   // Leagues split into active and archived (completed) sections
-  const activeLeagues = leagues.filter(l => l.status !== 'completed').sort(leagueDayTimeSort);
+  const activeLeagues = leagues
+    .filter(l => matchesGreenFilter(greenForLeague(club, l), leagueGreenFilter))
+    .filter(l => l.status !== 'completed')
+    .sort(leagueDayTimeSort);
   const archivedLeagues = leagues.filter(l => l.status === 'completed').sort(leagueDayTimeSort);
 
   // If the focused league is later archived or deleted, fall back to "See all"
@@ -463,6 +478,7 @@ export default function LeagueAdmin() {
     setLeagueStartTime('18:00');
     setLeagueEndTime('21:00');
     setLeagueFormat('fours');
+    setLeagueGreenType(getPrimaryGreen(club));
     setLeagueIsSets(false);
     setLeagueIsDoubleRink(false);
     setLeagueSetsEnds(8);
@@ -498,6 +514,7 @@ export default function LeagueAdmin() {
     setLeagueStartTime(league.start_time || '18:00');
     setLeagueEndTime(league.end_time || '21:00');
     setLeagueFormat(league.format || 'fours');
+    setLeagueGreenType(greenForLeague(club, league));
     setLeagueCreationMode(league.creation_mode || 'auto');
     setLeagueIsSets(league.is_sets || false);
     setLeagueIsDoubleRink(league.is_double_rink || false);
@@ -548,6 +565,7 @@ export default function LeagueAdmin() {
       end_time: leagueEndTime || null,
       session_time: leagueSessionTime.trim() || null,
       format: leagueFormat,
+      green_type: greenForLeague(club, { green_type: leagueGreenType }),
       is_sets: leagueIsSets,
       is_double_rink: leagueIsDoubleRink,
       sets_ends: leagueIsSets ? (parseInt(leagueSetsEnds) || 8) : null,
@@ -573,7 +591,7 @@ export default function LeagueAdmin() {
   };
 
   const buildFixtureList = (league, leagueTeams, shuffleSeed = 0) =>
-    buildFixturesForLeague(league, leagueTeams, primaryRinkCount(club), shuffleSeed);
+    buildFixturesForLeague(league, leagueTeams, rinkCountForGreen(club, greenForLeague(club, league)), shuffleSeed);
 
   const handleGenerateFixtures = async (league) => {
     const leagueTeams = teams.filter(t => t.league_id === league.id);
@@ -763,7 +781,7 @@ export default function LeagueAdmin() {
       return;
     }
     setReallocSourceFixtures(leagueFixturesList);
-    setPendingFixtures(reassignRinkAllocations(league, leagueFixturesList, primaryRinkCount(club), Math.floor(Math.random() * 999983) + 1));
+    setPendingFixtures(reassignRinkAllocations(league, leagueFixturesList, rinkCountForGreen(club, greenForLeague(club, league)), Math.floor(Math.random() * 999983) + 1));
     setPendingFixtureLeague(league);
     setPendingFixtureTeams(teams.filter(t => t.league_id === league.id));
     setPendingIsRegeneration(false);
@@ -774,7 +792,7 @@ export default function LeagueAdmin() {
   // Regenerate button inside the modal during a rink-allocation redraw
   const handleRegenerateAllocations = () => {
     const nextSeed = Math.floor(Math.random() * 999983) + 1;
-    setPendingFixtures(reassignRinkAllocations(pendingFixtureLeague, reallocSourceFixtures, primaryRinkCount(club), nextSeed));
+    setPendingFixtures(reassignRinkAllocations(pendingFixtureLeague, reallocSourceFixtures, rinkCountForGreen(club, greenForLeague(club, pendingFixtureLeague)), nextSeed));
   };
 
   const handleBookRinks = async (league, fixtureListOverride) => {
@@ -797,7 +815,10 @@ export default function LeagueAdmin() {
     const schedulingRes = await base44.functions.invoke('listBookingsForScheduling', { clubId, dates: uniqueDates });
     let allExistingBookings = schedulingRes.data.bookings || [];
 
-    const rinkCount = primaryRinkCount(club);
+    // The green this league is played on — indoor and outdoor rinks are independent
+    const green = greenForLeague(club, league);
+    const greenConfig = getRinkConfig(club, green);
+    const rinkCount = greenConfig.rink_count || 6;
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
     // For custom sessions: expand each fixture into multiple bookings (one per session in range)
@@ -809,11 +830,11 @@ export default function LeagueAdmin() {
       if (league.multi_session && league.selected_sessions && league.selected_sessions.length > 0) {
         return league.selected_sessions.map(s => ({ start_time: s.start, end_time: s.end }));
       }
-      if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
+      if (greenConfig.use_custom_sessions && greenConfig.custom_sessions?.length > 0) {
         const timeToMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
         const startMins = timeToMins(leagueStartTime);
         const endMins = timeToMins(leagueEndTime);
-        return club.custom_sessions.filter(s => timeToMins(s.start) >= startMins && timeToMins(s.end) <= endMins)
+        return greenConfig.custom_sessions.filter(s => timeToMins(s.start) >= startMins && timeToMins(s.end) <= endMins)
           .map(s => ({ start_time: s.start, end_time: s.end }));
       }
       return [{ start_time: leagueStartTime, end_time: leagueEndTime }];
@@ -831,6 +852,7 @@ export default function LeagueAdmin() {
         end_time: slot.end_time,
         status: 'approved',
         competition_type: 'Club',
+        green_type: green,
         booker_name: `League - ${league.name}`,
         booker_email: user.email,
         notes: notesText,
@@ -851,7 +873,8 @@ export default function LeagueAdmin() {
              b.status === 'approved' &&
              b.rink_number === proposed.rink_number &&
              b.date === proposed.date &&
-             b.start_time === proposed.start_time
+             b.start_time === proposed.start_time &&
+             getBookingGreen(b, club) === green
       );
       if (ownBooking) {
         if (proposed._fixtureId) {
@@ -864,6 +887,7 @@ export default function LeagueAdmin() {
         b => b.rink_number === proposed.rink_number &&
              b.date === proposed.date &&
              b.start_time === proposed.start_time &&
+             getBookingGreen(b, club) === green &&
              b.status !== 'cancelled' &&
              b.status !== 'rejected'
       );
@@ -872,7 +896,7 @@ export default function LeagueAdmin() {
         // Find free rink (not taken by existing bookings or other proposed bookings at same time/date)
         const usedRinks = new Set([
           ...allExistingBookings
-            .filter(b => b.date === proposed.date && b.start_time === proposed.start_time && b.status !== 'cancelled' && b.status !== 'rejected')
+            .filter(b => b.date === proposed.date && b.start_time === proposed.start_time && getBookingGreen(b, club) === green && b.status !== 'cancelled' && b.status !== 'rejected')
             .map(b => b.rink_number),
           ...proposedBookings
             .filter(p => p.date === proposed.date && p.start_time === proposed.start_time && p !== proposed)
@@ -1462,6 +1486,8 @@ export default function LeagueAdmin() {
           </Button>
         </div>
 
+        {!showArchive && <GreenFilter club={club} value={leagueGreenFilter} onChange={setLeagueGreenFilter} className="mb-4" />}
+
         {!showArchive && activeLeagues.length > 0 && (
           <div className="mb-6 -mt-3">
             <LeagueSearchSelect
@@ -1754,7 +1780,7 @@ export default function LeagueAdmin() {
                   {leagueAdjacentRinks && (
                     <div className="space-y-4">
                       {leagueAdjacentPeriods.map((period, idx) => {
-                        const rinkCount = primaryRinkCount(club);
+                        const rinkCount = rinkCountForGreen(club, leagueGreenType);
                         const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
                         // Check overlap with other periods
                         const overlaps = leagueAdjacentPeriods.some((p, i) => {
@@ -1817,6 +1843,22 @@ export default function LeagueAdmin() {
                 </div>
               )}
 
+              {/* Which green the league is played on — dual-green clubs only */}
+              {club && isDualGreens(club) && leagueCreationMode === 'auto' && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <Label className="font-medium">Which green is this league played on?</Label>
+                  <GreenSelector
+                    greens={getGreenTypes(club)}
+                    value={leagueGreenType}
+                    onChange={(green) => {
+                      setLeagueGreenType(green);
+                      setLeagueRinks([]);
+                    }}
+                  />
+                  <p className="text-xs text-gray-500">Fixtures are booked onto this green's rinks.</p>
+                </div>
+              )}
+
               {/* Rink selection — auto mode only, hidden when Adjacent Rinks is on */}
               {leagueCreationMode === 'auto' && club && !leagueAdjacentRinks && (
                 <div className="border rounded-lg p-4 space-y-3">
@@ -1825,7 +1867,7 @@ export default function LeagueAdmin() {
                     <p className="text-xs text-gray-500 mt-0.5">Select which rinks will be used when generating fixtures. Leave all unchecked to use all club rinks.</p>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                    {Array.from({ length: primaryRinkCount(club) }, (_, i) => i + 1).map(rinkNum => (
+                    {Array.from({ length: rinkCountForGreen(club, leagueGreenType) }, (_, i) => i + 1).map(rinkNum => (
                       <label key={rinkNum} className="flex items-center gap-2 cursor-pointer select-none">
                         <Checkbox
                           checked={leagueRinks.includes(rinkNum)}
@@ -2306,7 +2348,7 @@ export default function LeagueAdmin() {
           onClose={() => setDistributionModalOpen(false)}
           fixtures={pendingFixtures}
           teams={pendingFixtureTeams}
-          rinkCount={primaryRinkCount(club)}
+          rinkCount={rinkCountForGreen(club, greenForLeague(club, pendingFixtureLeague))}
           league={pendingFixtureLeague}
           leagueRinks={pendingFixtureLeague?.league_rinks}
           onRegenerate={pendingIsRealloc ? handleRegenerateAllocations : handleRegenerateFixtures}
@@ -2431,7 +2473,7 @@ export default function LeagueAdmin() {
           teams={manualFixturesLeague ? teams.filter(t => t.league_id === manualFixturesLeague.id) : []}
           clubId={clubId}
           existingFixtures={fixtures}
-          rinkCount={primaryRinkCount(club)}
+          rinkCount={rinkCountForGreen(club, greenForLeague(club, manualFixturesLeague))}
           club={club}
         />
       </div>

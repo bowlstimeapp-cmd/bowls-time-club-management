@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CountyNav from '@/components/county/CountyNav';
 import { Plus, Trophy, Eye, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
 import { generateTournamentDrawPdf } from '@/lib/tournamentDrawPdf';
+import { isAno } from '@/lib/tournamentAno';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -56,6 +57,7 @@ export default function CountyTournaments() {
   const getMemberName = (entry) => {
     if (!entry) return '';
     return entry.split('|').map(email => {
+      if (isAno(email)) return 'ANO';
       const m = affiliatedMembers.find(x => x.user_email === email);
       return m?.user_name || email;
     }).join(' / ');

@@ -73,7 +73,7 @@ export default function CompetitionRegistration() {
   const [activeTab, setActiveTab] = useState('published');
   const [formData, setFormData] = useState({
     name: '', type: 'singles', description: '', rules: '',
-    max_entries: '', price_per_entry: '', registration_deadline: ''
+    max_entries: '', price_per_entry: '', registration_deadline: '', season: 'indoor'
   });
 
   useEffect(() => {
@@ -214,7 +214,8 @@ export default function CompetitionRegistration() {
 
   const resetForm = () => setFormData({
     name: '', type: 'singles', description: '', rules: '',
-    max_entries: '', price_per_entry: '', registration_deadline: ''
+    max_entries: '', price_per_entry: '', registration_deadline: '',
+    season: club?.season === 'outdoor' ? 'outdoor' : 'indoor'
   });
 
   const handleOpenAdd = () => {
@@ -233,6 +234,7 @@ export default function CompetitionRegistration() {
       max_entries: comp.max_entries || '',
       price_per_entry: comp.price_per_entry || '',
       registration_deadline: comp.registration_deadline || '',
+      season: comp.season || (club?.season === 'outdoor' ? 'outdoor' : 'indoor'),
     });
     setAddModalOpen(true);
   };
@@ -251,6 +253,7 @@ export default function CompetitionRegistration() {
       max_entries: parseInt(formData.max_entries),
       price_per_entry: formData.price_per_entry ? parseFloat(formData.price_per_entry) : 0,
       registration_deadline: formData.registration_deadline,
+      season: formData.season || null,
     };
 
     if (editingComp) {
@@ -852,6 +855,16 @@ export default function CompetitionRegistration() {
                   <SelectItem value="pairs">Pairs</SelectItem>
                   <SelectItem value="triples">Triples</SelectItem>
                   <SelectItem value="fours">Fours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Green</Label>
+              <Select value={formData.season || 'indoor'} onValueChange={v => setFormData({ ...formData, season: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="indoor">Indoor</SelectItem>
+                  <SelectItem value="outdoor">Outdoor</SelectItem>
                 </SelectContent>
               </Select>
             </div>

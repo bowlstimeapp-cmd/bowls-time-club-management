@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Palette } from 'lucide-react';
 import { toast } from "sonner";
+import { isDualGreens } from '@/lib/rinkConfig';
 
 const PRESET_COLOURS = [
   '#10b981', // emerald
@@ -54,7 +55,7 @@ export default function SelectionColourSettings({ open, onClose, clubId }) {
   });
 
   const allCompetitions = [...platformCompetitions, ...clubCompetitions];
-  const competitions = allCompetitions.filter(comp => comp.season === club?.season);
+  const competitions = allCompetitions.filter(comp => isDualGreens(club) || comp.season === club?.season);
 
   // All competition names including fixed ones
   const competitionNames = [

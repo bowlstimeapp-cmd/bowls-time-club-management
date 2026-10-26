@@ -290,7 +290,7 @@ export default function ClubSettings() {
   const handleRemoveMembershipType = (name) => setMembershipTypes(membershipTypes.filter(t => t !== name));
 
   const resetCompetitionForm = () =>
-    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: 'indoor', gender: 'mixed', age_group: 'n/a', show_rinks_on_scorecards: true });
+    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: club?.season === 'outdoor' ? 'outdoor' : 'indoor', gender: 'mixed', age_group: 'n/a', show_rinks_on_scorecards: true });
 
   const handleEditCompetition = (comp) => {
     setEditingCompetition(comp);
@@ -884,7 +884,7 @@ export default function ClubSettings() {
                 <div key={comp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">{comp.name}</p>
-                    <p className="text-sm text-gray-600">{comp.players_per_rink} players • {comp.home_rinks} home • {comp.away_rinks || 0} away</p>
+                    <p className="text-sm text-gray-600">{comp.season === 'outdoor' ? 'Outdoor' : 'Indoor'} • {comp.players_per_rink} players • {comp.home_rinks} home • {comp.away_rinks || 0} away</p>
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" variant="ghost" size="sm" onClick={() => handleEditCompetition(comp)}><Pencil className="w-4 h-4" /></Button>

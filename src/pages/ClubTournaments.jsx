@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { generateTournamentDrawPdf } from '@/lib/tournamentDrawPdf';
+import { isAno } from '@/lib/tournamentAno';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,6 +115,7 @@ export default function ClubTournaments() {
   const getMemberName = (entry) => {
     if (!entry) return '';
     return entry.split('|').map(email => {
+      if (isAno(email)) return 'ANO';
       const m = members.find(x => x.user_email === email);
       return m?.user_name || email;
     }).join(' / ');
