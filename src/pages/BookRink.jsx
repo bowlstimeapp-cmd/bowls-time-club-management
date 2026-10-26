@@ -12,6 +12,7 @@ import { createPageUrl } from '@/utils';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import { getGreenTypes, isDualGreens, getBookingGreen, withRinkConfig, endTimeForStart, GREEN_LABELS } from '@/lib/rinkConfig';
 import DateSelector from '@/components/booking/DateSelector';
+import GreenSelector from '@/components/booking/GreenSelector';
 import BookingModal from '@/components/booking/BookingModal';
 import BulkBookingModal from '@/components/booking/BulkBookingModal';
 import BookingDetailModal from '@/components/booking/BookingDetailModal';
@@ -350,10 +351,12 @@ useEffect(() => {
 
   const sendBookingChangeNotification = async (booking, type, extraMessage = '') => {
     if (!booking?.booker_email || booking.booker_email === user?.email) return;
+    // Dual-green clubs name the green so the member knows which rink moved
+    const greenLabel = isDualGreens(club) ? `${GREEN_LABELS[getBookingGreen(booking, club)]} ` : '';
     const messages = {
-      moved: `Your booking on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been moved by a club admin.${extraMessage}`,
-      deleted: `Your booking on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been cancelled by a club admin.`,
-      swapped: `Your booking on Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been swapped with another booking by a club admin.${extraMessage}`,
+      moved: `Your booking on ${greenLabel}Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been moved by a club admin.${extraMessage}`,
+      deleted: `Your booking on ${greenLabel}Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been cancelled by a club admin.`,
+      swapped: `Your booking on ${greenLabel}Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been swapped with another booking by a club admin.${extraMessage}`,
     };
     const titles = { moved: 'Booking moved by admin', deleted: 'Booking cancelled by admin', swapped: 'Booking swapped by admin' };
     await Promise.all([
@@ -414,16 +417,7 @@ useEffect(() => {
 
   const handleTourMoveBooking = (booking, newRink, newStartTime) => {
     if (booking.id !== 'tour-booking') return;
-    let newEndTime;
-    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
-      const session = club.custom_sessions.find(s => s.start === newStartTime);
-      newEndTime = session ? session.end : newStartTime;
-    } else {
-      const duration = club?.session_duration || 2;
-      const [startHour, startMin = 0] = newStartTime.split(':').map(Number);
-      const endMins = startHour * 60 + startMin + duration * 60;
-      newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
-    }
+    const newEndTime = endTimeForStart(club, activeGreen, newStartTime);
     setTourBooking(prev => prev ? { ...prev, rink_number: newRink, start_time: newStartTime, end_time: newEndTime } : prev);
     setTourStep(6); // next: move confirmation
   };
@@ -436,24 +430,15 @@ useEffect(() => {
       }
       return;
     }
-    // Find end time from custom sessions or compute from duration
-    let newEndTime;
-    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
-      const session = club.custom_sessions.find(s => s.start === newStartTime);
-      newEndTime = session ? session.end : newStartTime;
-    } else {
-      const duration = club?.session_duration || 2;
-      const [startHour, startMin = 0] = newStartTime.split(':').map(Number);
-      const endMins = startHour * 60 + startMin + duration * 60;
-      newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
-    }
+    // End time comes from the green's own session settings
+    const newEndTime = endTimeForStart(club, getBookingGreen(booking, club), newStartTime);
 
     // Optimistic update — reflect the move immediately in the UI
     queryClient.setQueryData(['bookings', clubId, dateString], (old) =>
       old ? old.map(b => b.id === booking.id ? { ...b, rink_number: newRink, start_time: newStartTime, end_time: newEndTime } : b) : old
     );
 
-    await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: booking.id, data: { rink_number: newRink, start_time: newStartTime, end_time: newEndTime } });
+    await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: booking.id, data: { rink_number: newRink, start_time: newStartTime, end_time: newEndTime, green_type: getBookingGreen(booking, club) } });
 
     if (isPrivileged && booking.booker_email !== user?.email) {
       await sendBookingChangeNotification(
@@ -633,6 +618,7 @@ useEffect(() => {
       id: 'tour-booking',
       club_id: clubId,
       rink_number: slot.rink,
+      green_type: activeGreen,
       date: TOUR_DATE_STRING,
       start_time: slot.slot.start,
       end_time: slot.slot.end,
@@ -659,6 +645,7 @@ useEffect(() => {
       id: `tour-booking-double-${i}`,
       club_id: clubId,
       rink_number: s.rink,
+      green_type: activeGreen,
       date: TOUR_DATE_STRING,
       start_time: s.slot.start,
       end_time: s.slot.end,
@@ -763,6 +750,7 @@ useEffect(() => {
           bookingPayloads.push({
             club_id: clubId,
             rink_number: rinkNumber,
+            green_type: activeGreen,
             date: bookingDateStr,
             start_time: slot.start_time,
             end_time: slot.end_time,
@@ -844,20 +832,12 @@ useEffect(() => {
   };
 
   const handleCopyBooking = async (booking, newRink, newStartTime) => {
-    let newEndTime;
-    if (club?.use_custom_sessions && club?.custom_sessions?.length > 0) {
-      const session = club.custom_sessions.find(s => s.start === newStartTime);
-      newEndTime = session ? session.end : newStartTime;
-    } else {
-      const duration = club?.session_duration || 2;
-      const [startHour, startMin = 0] = newStartTime.split(':').map(Number);
-      const endMins = startHour * 60 + startMin + duration * 60;
-      newEndTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
-    }
+    const newEndTime = endTimeForStart(club, getBookingGreen(booking, club), newStartTime);
 
     await base44.functions.invoke('createBooking', {
       club_id: booking.club_id,
       rink_number: newRink,
+      green_type: getBookingGreen(booking, club),
       date: dateString,
       start_time: newStartTime,
       end_time: newEndTime,
@@ -1006,6 +986,12 @@ useEffect(() => {
         >
           <Card className="shadow-lg border-0">
             <CardHeader className="border-b bg-white/50">
+              <GreenSelector
+                greens={availableGreens}
+                value={activeGreen}
+                onChange={(green) => { setGreenType(green); setSelectedSlots([]); }}
+                className="mb-3"
+              />
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <DateSelector 
                   selectedDate={selectedDate} 
@@ -1093,10 +1079,10 @@ useEffect(() => {
                 </div>
               ) : (
                 <TimeSlotGrid
-                  bookings={bookings}
+                  bookings={greenBookings}
                   selectedDate={selectedDate}
                   currentUserEmail={effectiveEmail}
-                  club={club}
+                  club={cfgClub}
                   selectedSlots={selectedSlots}
                   onMultiSlotSelect={(slots) => {
                     // Step 1: only allow clicking Rink 1 first slot → advance to step 2
@@ -1216,7 +1202,7 @@ useEffect(() => {
           open={bulkModalOpen}
           onClose={() => setBulkModalOpen(false)}
           selectedDate={selectedDate}
-          club={club}
+          club={cfgClub}
           onConfirm={handleBulkBooking}
           isLoading={createBookingMutation.isPending}
         />
@@ -1248,7 +1234,7 @@ useEffect(() => {
           currentUserEmail={effectiveEmail}
           onJoinRollup={handleJoinRollup}
           joinLoading={joiningRollup}
-          club={club}
+          club={cfgClub}
           onDelete={handleDeleteBooking}
           deleteLoading={deletingBooking}
           isPrivileged={isPrivileged}

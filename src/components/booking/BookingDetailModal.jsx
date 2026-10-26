@@ -3,6 +3,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import GreenBadge from '@/components/booking/GreenBadge';
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, User, Trophy, FileText, CheckCircle, XCircle, Loader2, Users, UserPlus, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -146,7 +147,10 @@ export default function BookingDetailModal({
           <div className="pt-2 border-t flex items-center justify-between flex-wrap gap-2">
             <div>
               <p className="text-xs text-gray-500">Rink Number</p>
-              <p className="text-2xl font-bold text-emerald-600">Rink {booking.rink_number}</p>
+              <p className="text-2xl font-bold text-emerald-600 flex items-center gap-2">
+                Rink {booking.rink_number}
+                <GreenBadge booking={booking} />
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {canDelete && (

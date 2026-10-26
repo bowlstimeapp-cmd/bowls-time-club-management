@@ -18,10 +18,11 @@ Deno.serve(async (req) => {
       skip += batchSize;
     }
 
-    // Group by club_id + rink_number + date + start_time + end_time
+    // Group by club_id + green + rink_number + date + start_time + end_time
+    // (the same rink and slot can legitimately be booked on both greens)
     const groups: Record<string, any[]> = {};
     for (const b of allBookings) {
-      const key = `${b.club_id}|${b.rink_number}|${b.date}|${b.start_time}|${b.end_time}`;
+      const key = `${b.club_id}|${b.green_type || 'primary'}|${b.rink_number}|${b.date}|${b.start_time}|${b.end_time}`;
       if (!groups[key]) groups[key] = [];
       groups[key].push(b);
     }

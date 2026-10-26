@@ -11,6 +11,8 @@ import { format, addDays, startOfToday } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import BookingModal from '@/components/booking/BookingModal';
+import GreenSelector from '@/components/booking/GreenSelector';
+import { getGreenTypes, getBookingGreen, withRinkConfig } from '@/lib/rinkConfig';
 
 const SESSION_PERIODS = [
   { id: 'morning',   label: 'Morning',   emoji: '🌅', hint: 'Before 12:00 noon' },
@@ -58,6 +60,7 @@ export default function SeniorBookRink() {
   const [selectedDate, setSelectedDate] = useState(startOfToday());
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null); // {rink, slot:{start,end}}
+  const [greenType, setGreenType] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -95,12 +98,20 @@ export default function SeniorBookRink() {
     },
   });
 
-  const rinkCount = club?.rink_count || 6;
-  const allSlots = generateSlots(club);
+  // Indoor / outdoor greens
+  const availableGreens = getGreenTypes(club);
+  const activeGreen = availableGreens.includes(greenType) ? greenType : availableGreens[0];
+  const cfgClub = withRinkConfig(club, activeGreen);
+  const greenBookings = availableGreens.length > 1
+    ? bookings.filter(b => getBookingGreen(b, club) === activeGreen)
+    : bookings;
+
+  const rinkCount = cfgClub?.rink_count || 6;
+  const allSlots = generateSlots(cfgClub);
 
   // For step 3: slots in chosen period, per rink
   const periodSlots = allSlots.filter(s => slotPeriod(s.start) === selectedPeriod);
-  const bookedKeys = new Set(bookings.filter(b => b.status !== 'cancelled').map(b => `${b.rink_number}-${b.start_time}`));
+  const bookedKeys = new Set(greenBookings.filter(b => b.status !== 'cancelled').map(b => `${b.rink_number}-${b.start_time}`));
 
   const isRinkFullyBooked = (rink) => periodSlots.every(s => bookedKeys.has(`${rink}-${s.start}`));
 
@@ -111,6 +122,7 @@ export default function SeniorBookRink() {
     await createBookingMutation.mutateAsync({
       club_id: clubId,
       rink_number: selectedSlot.rink,
+      green_type: activeGreen,
       date: dateString,
       start_time: selectedSlot.slot.start,
       end_time: selectedSlot.slot.end,
@@ -130,6 +142,14 @@ export default function SeniorBookRink() {
 
   return (
     <SeniorLayout>
+      {/* Green switch for clubs with both an indoor and an outdoor green */}
+      <GreenSelector
+        greens={availableGreens}
+        value={activeGreen}
+        onChange={(green) => { setGreenType(green); setSelectedPeriod(null); setStep(2); }}
+        className="mb-4"
+      />
+
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-6">
         {[1,2,3].map(s => (

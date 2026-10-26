@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import GreenBadge from '@/components/booking/GreenBadge';
 import { 
   Calendar, 
   Clock, 
@@ -104,6 +105,7 @@ export default function BookingCard({
                     <span className="flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-emerald-600" />
                       Rink {booking.rink_number}
+                      <GreenBadge booking={booking} />
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-emerald-600" />

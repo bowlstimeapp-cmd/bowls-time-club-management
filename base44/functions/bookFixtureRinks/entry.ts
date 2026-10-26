@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 import { verifyClubAdmin, verifyBelongsToClub, addHoursToTime, generateSessions } from '../../shared/fixtureHelpers.ts';
+import { primaryGreen, greenConfig, bookingGreen, greensClash } from '../../shared/rinkConfig.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -39,14 +40,19 @@ Deno.serve(async (req) => {
     const club = clubs[0];
     if (!club) return Response.json({ error: 'Club not found' }, { status: 404 });
 
+    // Fixtures are played on the club's primary green; use that green's sessions and rinks
+    const green = primaryGreen(club);
+    const config = greenConfig(club, green);
+    const clubForGreen = { ...club, ...config };
+
     // Calculate end time from finish_time (if set) or start + session_duration
     const startTime = fixture.time;
     const endTime = fixture.finish_time
       ? fixture.finish_time
-      : addHoursToTime(startTime, club.session_duration || 2);
+      : addHoursToTime(startTime, config.session_duration || 2);
 
     // Generate sessions between start and end time
-    const sessions = generateSessions(startTime, endTime, club);
+    const sessions = generateSessions(startTime, endTime, clubForGreen);
     if (sessions.length === 0) {
       return Response.json({ error: 'No sessions found between start and finish time' }, { status: 400 });
     }
@@ -72,6 +78,7 @@ Deno.serve(async (req) => {
       for (const session of sessions) {
         const ownClash = activeOwn.some(b =>
           b.rink_number === rink && session.start < b.end_time && session.end > b.start_time
+          && greensClash({ green_type: green }, b, club)
         );
         if (ownClash) return false;
         const affClash = activeAff.some(b =>
@@ -95,7 +102,7 @@ Deno.serve(async (req) => {
       return null;
     }
 
-    const allRinkNumbers = Array.from({ length: club.rink_count || 6 }, (_, i) => i + 1);
+    const allRinkNumbers = Array.from({ length: config.rink_count || 6 }, (_, i) => i + 1);
 
     // Check each selected rink for clashes
     const clashes = [];
@@ -138,6 +145,7 @@ Deno.serve(async (req) => {
         const booking = await base44.asServiceRole.entities.Booking.create({
           club_id,
           rink_number: rink,
+          green_type: green,
           date: fixture.date,
           start_time: session.start,
           end_time: session.end,

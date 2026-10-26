@@ -33,6 +33,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import EditBookingModal from '@/components/booking/EditBookingModal';
+import { isDualGreens, getBookingGreen, withRinkConfig, GREEN_LABELS } from '@/lib/rinkConfig';
+
+/** "Indoor Rink 3" for dual-green clubs, otherwise "Rink 3". */
+function greenRinkLabel(booking, club) {
+  const green = isDualGreens(club) ? `${GREEN_LABELS[getBookingGreen(booking, club)]} ` : '';
+  return `${green}Rink ${booking.rink_number}`;
+}
 
 export default function AdminBookings() {
   const [searchParams] = useSearchParams();
@@ -176,7 +183,7 @@ export default function AdminBookings() {
       user_email: booking.booker_email,
       type: 'booking_accepted',
       title: 'Booking Approved',
-      message: `Your booking for Rink ${booking.rink_number} on ${booking.date} at ${booking.start_time} has been approved`,
+      message: `Your booking for ${greenRinkLabel(booking, club)} on ${booking.date} at ${booking.start_time} has been approved`,
       link_page: 'MyBookings',
       link_params: `?clubId=${clubId}`,
       related_id: booking.id
@@ -206,7 +213,7 @@ export default function AdminBookings() {
         user_email: bookingToReject.booker_email,
         type: 'booking_rejected',
         title: 'Booking Rejected',
-        message: `Your booking for Rink ${bookingToReject.rink_number} on ${bookingToReject.date} at ${bookingToReject.start_time} has been rejected${rejectReason ? ': ' + rejectReason : ''}`,
+        message: `Your booking for ${greenRinkLabel(bookingToReject, club)} on ${bookingToReject.date} at ${bookingToReject.start_time} has been rejected${rejectReason ? ': ' + rejectReason : ''}`,
         link_page: 'MyBookings',
         link_params: `?clubId=${clubId}`,
         related_id: bookingToReject.id
@@ -500,7 +507,7 @@ export default function AdminBookings() {
           open={!!editBooking}
           onClose={() => setEditBooking(null)}
           booking={editBooking}
-          club={club}
+          club={editBooking ? withRinkConfig(club, getBookingGreen(editBooking, club)) : club}
           allBookings={bookings}
           onSave={handleEditBooking}
           isLoading={updateMutation.isPending}
