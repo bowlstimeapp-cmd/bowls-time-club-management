@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { resolveGreen, greenConfig, greensClash, isDualGreens } from '../../shared/rinkConfig.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -8,7 +9,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { club_id, rink_number, date, start_time, end_time, competition_type, competition_other, booking_format, notes, rollup_members, booker_name, booker_email } = body;
+    const { club_id, rink_number, date, start_time, end_time, competition_type, competition_other, booking_format, notes, rollup_members, booker_name, booker_email, green_type } = body;
 
     if (!club_id || !rink_number || !date || !start_time || !end_time) {
       return Response.json({ error: 'Missing required booking fields' }, { status: 400 });
@@ -32,6 +33,13 @@ Deno.serve(async (req) => {
 
     const affiliatedIds = Array.isArray(club.affiliated_club_ids) ? club.affiliated_club_ids : [];
 
+    // Which green is this booking on, and does that green have this rink?
+    const green = resolveGreen(club, green_type);
+    const greenSettings = greenConfig(club, green);
+    if (Number(rink_number) < 1 || Number(rink_number) > greenSettings.rink_count) {
+      return Response.json({ error: `Rink ${rink_number} does not exist on the ${green} green` }, { status: 400 });
+    }
+
     // ── Clash detection across own club AND all affiliated clubs ──────────
     // A booking conflicts if it's on the same rink + date and the time ranges
     // overlap (and is not cancelled/rejected). This prevents double-booking a
@@ -47,7 +55,10 @@ Deno.serve(async (req) => {
       const overlap = existing.find(b => {
         if (b.status === 'cancelled' || b.status === 'rejected') return false;
         // Time overlap: newStart < existingEnd AND newEnd > existingStart
-        return start_time < b.end_time && end_time > b.start_time;
+        if (!(start_time < b.end_time && end_time > b.start_time)) return false;
+        // Different greens only clash when one of them is the indoor green (it blocks the building)
+        if (cid === club_id && !greensClash({ green_type: green }, b, club)) return false;
+        return true;
       });
       if (overlap) {
         if (cid !== club_id) {
@@ -56,9 +67,10 @@ Deno.serve(async (req) => {
             conflictClubName = ac[0]?.name || null;
           } catch { conflictClubName = null; }
         }
+        const greenLabel = isDualGreens(club) ? ` on the ${green} green` : '';
         const msg = conflictClubName
           ? `This rink is already booked by ${conflictClubName} at this time`
-          : 'This rink is already booked at this time';
+          : `This rink is already booked${greenLabel} at this time`;
         return Response.json({ error: msg }, { status: 409 });
       }
     }
@@ -92,6 +104,7 @@ Deno.serve(async (req) => {
     const booking = await base44.asServiceRole.entities.Booking.create({
       club_id,
       rink_number,
+      green_type: green,
       date,
       start_time,
       end_time,

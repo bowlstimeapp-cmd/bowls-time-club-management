@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
       'name', 'description', 'logo_url', 'rink_count', 'venue_address',
       'opening_time', 'closing_time', 'session_duration',
       'use_custom_sessions', 'custom_sessions',
+      'dual_greens_enabled', 'indoor_rink_config', 'outdoor_rink_config',
       'auto_approve_bookings', 'open_rollups', 'private_rollups',
       'email_member_notifications', 'sms_member_notifications',
       'membership_types', 'default_landing_page',
@@ -90,6 +91,24 @@ Deno.serve(async (req) => {
 
     if (Object.keys(safeUpdates).length === 0) {
       return Response.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    // Keep the top-level rink fields in step with the club's primary green, so any
+    // screen that doesn't know about greens still shows the right rink numbers.
+    const existingClubs = await base44.asServiceRole.entities.Club.filter({ id: clubId });
+    const existingClub = existingClubs[0];
+    const primaryGreen = existingClub?.season === 'outdoor' ? 'outdoor' : 'indoor';
+    const primaryConfigKey = primaryGreen === 'indoor' ? 'indoor_rink_config' : 'outdoor_rink_config';
+    const primaryConfig = safeUpdates[primaryConfigKey] || existingClub?.[primaryConfigKey];
+    const dualGreens = 'dual_greens_enabled' in safeUpdates
+      ? safeUpdates.dual_greens_enabled
+      : existingClub?.dual_greens_enabled;
+    if (dualGreens && primaryConfig) {
+      for (const field of ['rink_count', 'opening_time', 'closing_time', 'session_duration', 'use_custom_sessions', 'custom_sessions']) {
+        if (primaryConfig[field] !== undefined && primaryConfig[field] !== null) {
+          safeUpdates[field] = primaryConfig[field];
+        }
+      }
     }
 
     await base44.asServiceRole.entities.Club.update(clubId, safeUpdates);

@@ -18,6 +18,8 @@ import {
 import ClubNewsAdmin from '@/components/club/ClubNewsAdmin';
 import { Textarea } from "@/components/ui/textarea";
 import CustomSessionEditor from '@/components/booking/CustomSessionEditor';
+import RinkConfigForm from '@/components/club/RinkConfigForm';
+import { getRinkConfig } from '@/lib/rinkConfig';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
 import AffiliatedCountiesSection from '@/components/club/AffiliatedCountiesSection';
 import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
@@ -111,6 +113,9 @@ export default function ClubSettings() {
   const [clubTheme, setClubTheme] = useState('emerald');
   const [memberLandingPageEnabled, setMemberLandingPageEnabled] = useState(false);
   const [venueAddress, setVenueAddress] = useState('');
+  const [dualGreensEnabled, setDualGreensEnabled] = useState(false);
+  const [indoorConfig, setIndoorConfig] = useState({});
+  const [outdoorConfig, setOutdoorConfig] = useState({});
 
   // ── Auth / routing ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -180,6 +185,9 @@ export default function ClubSettings() {
     setClubTheme(club.club_theme || 'emerald');
     setMemberLandingPageEnabled(club.member_landing_page_enabled || false);
     setVenueAddress(club.venue_address || '');
+    setDualGreensEnabled(!!club.dual_greens_enabled);
+    setIndoorConfig(club.indoor_rink_config?.rink_count ? club.indoor_rink_config : getRinkConfig({ ...club, dual_greens_enabled: true }, 'indoor'));
+    setOutdoorConfig(club.outdoor_rink_config?.rink_count ? club.outdoor_rink_config : getRinkConfig({ ...club, dual_greens_enabled: true }, 'outdoor'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id]);
 
@@ -310,13 +318,28 @@ export default function ClubSettings() {
 
   // ── Core save ──────────────────────────────────────────────────────────────
   const handleSave = () => {
+    // When both greens are enabled the top-level rink fields mirror the primary green,
+    // so screens that don't know about greens still show the right numbers.
+    const normaliseGreenConfig = (config) => ({
+      rink_count: parseInt(config.rink_count) || 6,
+      opening_time: config.opening_time || '10:00',
+      closing_time: config.closing_time || '21:00',
+      session_duration: parseFloat(config.session_duration) || 2,
+      use_custom_sessions: !!config.use_custom_sessions,
+      custom_sessions: config.use_custom_sessions ? (config.custom_sessions || []) : [],
+    });
+    const primaryConfig = normaliseGreenConfig(club?.season === 'outdoor' ? outdoorConfig : indoorConfig);
+
     const payload = {
-      rink_count: parseInt(rinkCount) || club?.rink_count || 6,
-      opening_time: openingTime,
-      closing_time: closingTime,
-      session_duration: parseFloat(sessionDuration) || club?.session_duration || 2,
-      use_custom_sessions: useCustomSessions,
-      custom_sessions: useCustomSessions ? customSessions : [],
+      rink_count: dualGreensEnabled ? primaryConfig.rink_count : parseInt(rinkCount) || club?.rink_count || 6,
+      opening_time: dualGreensEnabled ? primaryConfig.opening_time : openingTime,
+      closing_time: dualGreensEnabled ? primaryConfig.closing_time : closingTime,
+      session_duration: dualGreensEnabled ? primaryConfig.session_duration : parseFloat(sessionDuration) || club?.session_duration || 2,
+      use_custom_sessions: dualGreensEnabled ? primaryConfig.use_custom_sessions : useCustomSessions,
+      custom_sessions: dualGreensEnabled ? primaryConfig.custom_sessions : (useCustomSessions ? customSessions : []),
+      dual_greens_enabled: dualGreensEnabled,
+      indoor_rink_config: normaliseGreenConfig(indoorConfig),
+      outdoor_rink_config: normaliseGreenConfig(outdoorConfig),
       auto_approve_bookings: autoApprove,
       open_rollups: openRollups,
       private_rollups: privateRollups,
@@ -591,48 +614,81 @@ export default function ClubSettings() {
   // RINKS & BOOKINGS
   const renderRinks = () => (
     <div className="space-y-6">
-      {/* Rink Configuration */}
+      {/* Indoor / outdoor greens */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Rink Configuration</CardTitle>
-          <CardDescription>Configure the number of rinks and operating hours</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Greens</CardTitle>
+          <CardDescription>Run separate indoor and outdoor greens, each with its own rinks and session times</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Number of Rinks</Label>
-            <Input type="number" min="1" max="20" value={rinkCount} onChange={(e) => setRinkCount(e.target.value)} />
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Both indoor and outdoor greens</Label>
+              <p className="text-sm text-gray-500">Members choose a green before booking. Each green has its own rinks, opening hours and sessions.</p>
+            </div>
+            <Switch checked={dualGreensEnabled} onCheckedChange={setDualGreensEnabled} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Opening Time</Label>
-              <Input type="time" value={openingTime} onChange={(e) => setOpeningTime(e.target.value)} />
-            </div>
-            <div>
-              <Label>Closing Time</Label>
-              <Input type="time" value={closingTime} onChange={(e) => setClosingTime(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div>
-              <Label className="text-base">Custom Session Times</Label>
-              <p className="text-sm text-gray-500">Define specific session time ranges instead of a fixed duration</p>
-            </div>
-            <Switch checked={useCustomSessions} onCheckedChange={setUseCustomSessions} />
-          </div>
-          {!useCustomSessions ? (
-            <div>
-              <Label>Session Duration (hours)</Label>
-              <Input type="number" min="1" max="4" value={sessionDuration} onChange={(e) => setSessionDuration(e.target.value)} />
-            </div>
-          ) : (
-            <div>
-              <Label className="mb-2 block">Session Time Ranges</Label>
-              <p className="text-xs text-gray-500 mb-3">Define sessions within {openingTime}–{closingTime}. Minimum 15-minute intervals.</p>
-              <CustomSessionEditor sessions={customSessions} onChange={setCustomSessions} openingTime={openingTime} closingTime={closingTime} />
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      {dualGreensEnabled ? (
+        <>
+          <RinkConfigForm
+            title="Indoor Green"
+            description="Rinks and session times for the indoor green"
+            value={indoorConfig}
+            onChange={setIndoorConfig}
+          />
+          <RinkConfigForm
+            title="Outdoor Green"
+            description="Rinks and session times for the outdoor green"
+            value={outdoorConfig}
+            onChange={setOutdoorConfig}
+          />
+        </>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Rink Configuration</CardTitle>
+            <CardDescription>Configure the number of rinks and operating hours</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Number of Rinks</Label>
+              <Input type="number" min="1" max="20" value={rinkCount} onChange={(e) => setRinkCount(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Opening Time</Label>
+                <Input type="time" value={openingTime} onChange={(e) => setOpeningTime(e.target.value)} />
+              </div>
+              <div>
+                <Label>Closing Time</Label>
+                <Input type="time" value={closingTime} onChange={(e) => setClosingTime(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div>
+                <Label className="text-base">Custom Session Times</Label>
+                <p className="text-sm text-gray-500">Define specific session time ranges instead of a fixed duration</p>
+              </div>
+              <Switch checked={useCustomSessions} onCheckedChange={setUseCustomSessions} />
+            </div>
+            {!useCustomSessions ? (
+              <div>
+                <Label>Session Duration (hours)</Label>
+                <Input type="number" min="1" max="4" value={sessionDuration} onChange={(e) => setSessionDuration(e.target.value)} />
+              </div>
+            ) : (
+              <div>
+                <Label className="mb-2 block">Session Time Ranges</Label>
+                <p className="text-xs text-gray-500 mb-3">Define sessions within {openingTime}–{closingTime}. Minimum 15-minute intervals.</p>
+                <CustomSessionEditor sessions={customSessions} onChange={setCustomSessions} openingTime={openingTime} closingTime={closingTime} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Booking Settings */}
       <Card>

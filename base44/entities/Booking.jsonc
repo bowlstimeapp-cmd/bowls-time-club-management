@@ -10,6 +10,14 @@
       "type": "number",
       "description": "Rink number"
     },
+    "green_type": {
+      "type": "string",
+      "enum": [
+        "indoor",
+        "outdoor"
+      ],
+      "description": "Which green the booking is on. Legacy bookings without a value sit on the club's primary green"
+    },
     "date": {
       "type": "string",
       "format": "date",

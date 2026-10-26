@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
+import { getGreenTypes, isDualGreens, getBookingGreen, withRinkConfig, endTimeForStart, GREEN_LABELS } from '@/lib/rinkConfig';
 import DateSelector from '@/components/booking/DateSelector';
 import BookingModal from '@/components/booking/BookingModal';
 import BulkBookingModal from '@/components/booking/BulkBookingModal';
@@ -39,6 +40,7 @@ export default function BookRink() {
   const navigate = useNavigate();
   
   const [selectedDate, setSelectedDate] = useState(startOfToday());
+  const [greenType, setGreenType] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
@@ -297,6 +299,14 @@ useEffect(() => {
       ]
     : bookingsFromDB;
 
+  // Indoor / outdoor greens: a club with both shows one green at a time
+  const availableGreens = getGreenTypes(club);
+  const activeGreen = availableGreens.includes(greenType) ? greenType : availableGreens[0];
+  const greenBookings = isDualGreens(club)
+    ? bookings.filter((b) => getBookingGreen(b, club) === activeGreen)
+    : bookings;
+  const cfgClub = withRinkConfig(club, activeGreen);
+
   const createBookingMutation = useMutation({
     mutationFn: async (bookingData) => {
       const res = await base44.functions.invoke('createBooking', bookingData);
@@ -551,6 +561,7 @@ useEffect(() => {
       createBookingMutation.mutateAsync({
         club_id: clubId,
         rink_number: slotData.rink,
+        green_type: activeGreen,
         date: dateString,
         start_time: slotData.slot.start,
         end_time: slotData.slot.end,

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { primaryGreen } from '../../shared/rinkConfig.ts';
 
 // ---------------------------------------------------------------------------
 // Auth helpers (inlined — no local imports in Deno Deploy)
@@ -41,14 +42,20 @@ Deno.serve(async (req) => {
 
     const affiliatedIds = Array.isArray(club.affiliated_club_ids) ? club.affiliated_club_ids : [];
 
-    // Build a club-name map for tagging (own club + all affiliated clubs)
+    // Build a club map for tagging (own club + all affiliated clubs) — also used to
+    // resolve each booking's green, so affiliated bookings show on the right green.
+    const clubRecords = new Map();
+    clubRecords.set(clubId, club);
     const clubNames = new Map();
     clubNames.set(clubId, club.name || 'Unknown');
     for (const aid of affiliatedIds) {
       if (!clubNames.has(aid)) {
         try {
           const ac = await base44.asServiceRole.entities.Club.filter({ id: aid });
-          if (ac[0]) clubNames.set(aid, ac[0].name || 'Unknown');
+          if (ac[0]) {
+            clubNames.set(aid, ac[0].name || 'Unknown');
+            clubRecords.set(aid, ac[0]);
+          }
         } catch { /* ignore lookup failures */ }
       }
     }
@@ -87,6 +94,26 @@ Deno.serve(async (req) => {
           club_name: clubNames.get(cid) || 'Unknown',
           affiliated_club_id: isAffiliated ? cid : null,
         });
+      }
+    }
+
+    // Resolve each booking's green. Legacy bookings without one sit on their club's
+    // primary green; a leftover pair sharing the same rink and slot is split across
+    // both greens so it still shows as an indoor and an outdoor booking.
+    const slotKeys = new Set();
+    for (const b of allBookings) {
+      const owningClub = clubRecords.get(b.club_id);
+      const primary = primaryGreen(owningClub);
+      if (b.green_type === 'indoor' || b.green_type === 'outdoor') {
+        b.green_type = b.green_type;
+      } else {
+        const key = `${b.club_id}|${b.rink_number}|${b.date}|${b.start_time}|${b.end_time}`;
+        if (owningClub?.dual_greens_enabled && slotKeys.has(key)) {
+          b.green_type = primary === 'indoor' ? 'outdoor' : 'indoor';
+        } else {
+          b.green_type = primary;
+        }
+        slotKeys.add(key);
       }
     }
 
