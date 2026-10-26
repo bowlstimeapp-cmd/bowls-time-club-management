@@ -25,6 +25,7 @@ import { createPageUrl } from '@/utils';
 import TournamentBracket from '@/components/tournament/TournamentBracket';
 import PlayerTeamBuilder from '@/components/tournament/PlayerTeamBuilder';
 import { isAno, createAnoInstance } from '@/lib/tournamentAno';
+import { isDualGreens } from '@/lib/rinkConfig';
 
 const FORMAT_SIZES = { singles: 1, pairs: 2, triples: 3, fours: 4 };
 
@@ -40,6 +41,7 @@ export default function TournamentEditor() {
   const [name, setName] = useState('');
   const [tournamentType, setTournamentType] = useState('knockout');
   const [compFormat, setCompFormat] = useState('singles');
+  const [season, setSeason] = useState(null);
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [playerTeams, setPlayerTeams] = useState([]);
   const [bracket, setBracket] = useState(null);
@@ -62,6 +64,15 @@ export default function TournamentEditor() {
   useEffect(() => {
     if (!clubId) navigate(createPageUrl('ClubSelector'));
   }, [clubId, navigate]);
+
+  const { data: club } = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => {
+      const clubs = await base44.entities.Club.filter({ id: clubId });
+      return clubs[0];
+    },
+    enabled: !!clubId,
+  });
 
   const { data: membership } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
@@ -86,6 +97,7 @@ export default function TournamentEditor() {
       setName(existingTournament.name);
       setTournamentType(existingTournament.tournament_type || 'knockout');
       setCompFormat(existingTournament.comp_format || 'singles');
+      setSeason(existingTournament.season || null);
       setSelectedPlayers(existingTournament.players || []);
       setPlayerTeams(existingTournament.player_teams || []);
       setBracket(existingTournament.bracket || null);
@@ -368,6 +380,7 @@ export default function TournamentEditor() {
       club_id: clubId,
       name: name.trim(),
       tournament_type: tournamentType,
+      season: season || null,
       ...(tournamentType === 'knockout' ? {
         comp_format: compFormat,
         players: selectedPlayers,
@@ -426,6 +439,20 @@ export default function TournamentEditor() {
                     <option value="round_robin">Round Robin</option>
                   </select>
                 </div>
+
+                {isDualGreens(club) && (
+                  <div>
+                    <Label>Green</Label>
+                    <select
+                      value={season || (club?.season === 'outdoor' ? 'outdoor' : 'indoor')}
+                      onChange={(e) => setSeason(e.target.value)}
+                      className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    >
+                      <option value="indoor">Indoor</option>
+                      <option value="outdoor">Outdoor</option>
+                    </select>
+                  </div>
+                )}
 
                 {tournamentType === 'knockout' ? (
                   <>

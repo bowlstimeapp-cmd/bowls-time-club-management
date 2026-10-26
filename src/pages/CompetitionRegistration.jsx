@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AddEntrantsModal from '@/components/competitions/AddEntrantsModal';
+import GreenFilter from '@/components/common/GreenFilter';
+import { matchesGreenFilter } from '@/lib/greenFilters';
 import { generateKnockoutBracket, buildDrawEntries } from '@/lib/bracketGenerator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -71,6 +73,7 @@ export default function CompetitionRegistration() {
   const [isAddingEntrants, setIsAddingEntrants] = useState(false);
   const [isDrawing, setIsDrawing] = useState(null); // comp.id being drawn
   const [activeTab, setActiveTab] = useState('published');
+  const [greenFilter, setGreenFilter] = useState('all');
   const [formData, setFormData] = useState({
     name: '', type: 'singles', description: '', rules: '',
     max_entries: '', price_per_entry: '', registration_deadline: '', season: 'indoor'
@@ -339,6 +342,7 @@ export default function CompetitionRegistration() {
       name: comp.name,
       tournament_type: 'knockout',
       comp_format: comp.type,
+      season: comp.season || null,
       players,
       bracket,
       status: 'draft',
@@ -358,9 +362,11 @@ export default function CompetitionRegistration() {
     setIsDrawing(null);
   };
 
-  const archivedComps = canArchive ? competitions.filter(c => c.is_archived) : [];
+  const visibleComps = competitions.filter(c => matchesGreenFilter(c.season || club?.season, greenFilter));
 
-  const sortedComps = [...competitions.filter(c => !c.is_archived)].sort((a, b) => {
+  const archivedComps = canArchive ? visibleComps.filter(c => c.is_archived) : [];
+
+  const sortedComps = [...visibleComps.filter(c => !c.is_archived)].sort((a, b) => {
     if (!a.registration_deadline) return 1;
     if (!b.registration_deadline) return -1;
     return a.registration_deadline.localeCompare(b.registration_deadline);
@@ -458,8 +464,9 @@ export default function CompetitionRegistration() {
 
         {/* Competitions List */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Available Competitions</h2>
+            <GreenFilter club={club} value={greenFilter} onChange={setGreenFilter} />
             {isAdmin && (
               <div className="flex items-center gap-2">
                 <Link to={createPageUrl('CompetitionEntriesAdmin') + `?clubId=${clubId}`}>

@@ -19,6 +19,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { generateTournamentDrawPdf } from '@/lib/tournamentDrawPdf';
 import { isAno } from '@/lib/tournamentAno';
+import GreenFilter from '@/components/common/GreenFilter';
+import { matchesGreenFilter } from '@/lib/greenFilters';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +91,7 @@ export default function ClubTournaments() {
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState(null);
   const [activeTab, setActiveTab] = useState('published');
+  const [greenFilter, setGreenFilter] = useState('all');
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.functions.invoke('updateClubData', { entity: 'ClubTournament', action: 'delete', clubId, id }),
@@ -125,9 +128,11 @@ export default function ClubTournaments() {
     generateTournamentDrawPdf(tournament, club?.name || 'Club', getMemberName);
   };
 
-  const publishedTournaments = tournaments.filter(t => t.status === 'published' && !t.is_archived);
-  const draftTournaments = tournaments.filter(t => t.status === 'draft' && !t.is_archived);
-  const archivedTournaments = canArchive ? tournaments.filter(t => t.is_archived) : [];
+  const visibleTournaments = tournaments.filter(t => matchesGreenFilter(t.season || club?.season, greenFilter));
+
+  const publishedTournaments = visibleTournaments.filter(t => t.status === 'published' && !t.is_archived);
+  const draftTournaments = visibleTournaments.filter(t => t.status === 'draft' && !t.is_archived);
+  const archivedTournaments = canArchive ? visibleTournaments.filter(t => t.is_archived) : [];
 
   if (!clubId) return null;
 
@@ -146,6 +151,7 @@ export default function ClubTournaments() {
             <p className="text-gray-600">
               {club?.name} • Tournaments and competitions
             </p>
+            <GreenFilter club={club} value={greenFilter} onChange={setGreenFilter} className="mt-3" />
           </div>
           {isClubAdmin && (
             <div className="flex gap-2">
