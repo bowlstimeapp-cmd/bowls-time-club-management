@@ -5,6 +5,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import GreenSelector from '@/components/booking/GreenSelector';
+import {
+  getGreenTypes,
+  getPrimaryGreen,
+  getRinkConfig,
+  isDualGreens,
+  greensClash,
+  GREEN_LABELS,
+} from '@/lib/rinkConfig';
 
 function addHoursToTime(timeStr, hours) {
   const [h, m] = timeStr.split(':').map(Number);
@@ -18,7 +27,12 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
   const [selectedRinks, setSelectedRinks] = useState([]);
   const [clashes, setClashes] = useState(null);
   const [booking, setBooking] = useState(false);
+  const [green, setGreen] = useState(getPrimaryGreen(club));
   const initializedRef = useRef(false);
+
+  const greens = getGreenTypes(club);
+  const config = getRinkConfig(club, green);
+  const greenLabel = isDualGreens(club) ? ` (${GREEN_LABELS[green]} Green)` : '';
 
   const { data: bookingsData, isLoading } = useQuery({
     queryKey: ['fixtureBookings', club?.id, fixture?.date],
@@ -28,20 +42,22 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
 
   const bookings = bookingsData?.data?.bookings || [];
   const startTime = fixture?.time || '';
-  const endTime = fixture ? (fixture.finish_time || addHoursToTime(fixture.time, club?.session_duration || 2)) : '';
+  const endTime = fixture ? (fixture.finish_time || addHoursToTime(fixture.time, config.session_duration || 2)) : '';
   const allRinkNumbers = useMemo(
-    () => Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1),
-    [club?.rink_count]
+    () => Array.from({ length: config.rink_count || 6 }, (_, i) => i + 1),
+    [config.rink_count]
   );
+
+  const overlaps = (b) => startTime < b.end_time && endTime > b.start_time;
 
   const isRinkBooked = (rink) => bookings.some(b => {
     if (b.status === 'cancelled' || b.status === 'rejected') return false;
-    return b.rink_number === rink && startTime < b.end_time && endTime > b.start_time;
+    return b.rink_number === rink && overlaps(b) && greensClash({ green_type: green }, b, club);
   });
 
   const getRinkBooking = (rink) => bookings.find(b => {
     if (b.status === 'cancelled' || b.status === 'rejected') return false;
-    return b.rink_number === rink && startTime < b.end_time && endTime > b.start_time;
+    return b.rink_number === rink && overlaps(b) && greensClash({ green_type: green }, b, club);
   });
 
   // Initialize selected rinks when bookings load
@@ -51,7 +67,7 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
       setSelectedRinks(freeRinks.slice(0, competition.home_rinks || 2));
       initializedRef.current = true;
     }
-  }, [isLoading, fixture, competition, bookingsData, allRinkNumbers, startTime, endTime]);
+  }, [isLoading, fixture, competition, bookingsData, allRinkNumbers, startTime, endTime, green]);
 
   // Reset when modal closes
   useEffect(() => {
@@ -59,8 +75,16 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
       initializedRef.current = false;
       setClashes(null);
       setSelectedRinks([]);
+      setGreen(getPrimaryGreen(club));
     }
-  }, [open]);
+  }, [open, club]);
+
+  const handleGreenChange = (nextGreen) => {
+    setGreen(nextGreen);
+    setClashes(null);
+    setSelectedRinks([]);
+    initializedRef.current = false;
+  };
 
   const toggleRink = (rink) => {
     if (isRinkBooked(rink)) return;
@@ -71,9 +95,9 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
     setBooking(true);
     setClashes(null);
     try {
-      const res = await base44.functions.invoke('bookFixtureRinks', { fixtureId: fixture.id, club_id: club.id, rinks });
+      const res = await base44.functions.invoke('bookFixtureRinks', { fixtureId: fixture.id, club_id: club.id, rinks, green });
       if (res.data.success) {
-        toast.success(`Booked ${res.data.bookings.length} rink(s)`);
+        toast.success(`Booked ${res.data.bookings.length} rink(s)${greenLabel}`);
         onBooked?.();
         onClose();
       } else if (res.data.clashes) {
@@ -143,8 +167,11 @@ export default function BookRinksModal({ open, onClose, fixture, competition, cl
           </div>
         ) : (
           <div className="space-y-4 py-4">
+            {isDualGreens(club) && (
+              <GreenSelector greens={greens} value={green} onChange={handleGreenChange} />
+            )}
             <p className="text-sm text-gray-600">
-              Time: {startTime}–{endTime} • {selectedRinks.length} rink(s) selected
+              Time: {startTime}–{endTime}{greenLabel} • {selectedRinks.length} rink(s) selected
             </p>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">

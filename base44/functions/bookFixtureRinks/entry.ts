@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 import { verifyClubAdmin, verifyBelongsToClub, addHoursToTime, generateSessions } from '../../shared/fixtureHelpers.ts';
-import { primaryGreen, greenConfig, bookingGreen, greensClash } from '../../shared/rinkConfig.ts';
+import { primaryGreen, greenConfig, bookingGreen, greensClash, resolveGreen } from '../../shared/rinkConfig.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { fixtureId, club_id, rinks } = await req.json();
+    const { fixtureId, club_id, rinks, green: requestedGreen } = await req.json();
 
     if (!fixtureId || !club_id || !rinks || !Array.isArray(rinks) || rinks.length === 0) {
       return Response.json({ error: 'Missing required fields: fixtureId, club_id, rinks' }, { status: 400 });
@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
     const club = clubs[0];
     if (!club) return Response.json({ error: 'Club not found' }, { status: 404 });
 
-    // Fixtures are played on the club's primary green; use that green's sessions and rinks
-    const green = primaryGreen(club);
+    // Fixtures are booked onto the green the admin picked (primary green when not set)
+    const green = resolveGreen(club, requestedGreen);
     const config = greenConfig(club, green);
     const clubForGreen = { ...club, ...config };
 

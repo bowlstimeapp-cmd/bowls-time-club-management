@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getPrimaryGreen, getRinkConfig } from '@/lib/rinkConfig';
+
+/** League fixtures are played on the club's primary green, so they use that green's rinks. */
+const primaryRinkCount = (club) => getRinkConfig(club, getPrimaryGreen(club)).rink_count || 6;
 import {
   Dialog,
   DialogContent,
@@ -569,7 +573,7 @@ export default function LeagueAdmin() {
   };
 
   const buildFixtureList = (league, leagueTeams, shuffleSeed = 0) =>
-    buildFixturesForLeague(league, leagueTeams, club?.rink_count || 6, shuffleSeed);
+    buildFixturesForLeague(league, leagueTeams, primaryRinkCount(club), shuffleSeed);
 
   const handleGenerateFixtures = async (league) => {
     const leagueTeams = teams.filter(t => t.league_id === league.id);
@@ -759,7 +763,7 @@ export default function LeagueAdmin() {
       return;
     }
     setReallocSourceFixtures(leagueFixturesList);
-    setPendingFixtures(reassignRinkAllocations(league, leagueFixturesList, club?.rink_count || 6, Math.floor(Math.random() * 999983) + 1));
+    setPendingFixtures(reassignRinkAllocations(league, leagueFixturesList, primaryRinkCount(club), Math.floor(Math.random() * 999983) + 1));
     setPendingFixtureLeague(league);
     setPendingFixtureTeams(teams.filter(t => t.league_id === league.id));
     setPendingIsRegeneration(false);
@@ -770,7 +774,7 @@ export default function LeagueAdmin() {
   // Regenerate button inside the modal during a rink-allocation redraw
   const handleRegenerateAllocations = () => {
     const nextSeed = Math.floor(Math.random() * 999983) + 1;
-    setPendingFixtures(reassignRinkAllocations(pendingFixtureLeague, reallocSourceFixtures, club?.rink_count || 6, nextSeed));
+    setPendingFixtures(reassignRinkAllocations(pendingFixtureLeague, reallocSourceFixtures, primaryRinkCount(club), nextSeed));
   };
 
   const handleBookRinks = async (league, fixtureListOverride) => {
@@ -793,7 +797,7 @@ export default function LeagueAdmin() {
     const schedulingRes = await base44.functions.invoke('listBookingsForScheduling', { clubId, dates: uniqueDates });
     let allExistingBookings = schedulingRes.data.bookings || [];
 
-    const rinkCount = club?.rink_count || 6;
+    const rinkCount = primaryRinkCount(club);
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
     // For custom sessions: expand each fixture into multiple bookings (one per session in range)
@@ -1750,7 +1754,7 @@ export default function LeagueAdmin() {
                   {leagueAdjacentRinks && (
                     <div className="space-y-4">
                       {leagueAdjacentPeriods.map((period, idx) => {
-                        const rinkCount = club?.rink_count || 6;
+                        const rinkCount = primaryRinkCount(club);
                         const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
                         // Check overlap with other periods
                         const overlaps = leagueAdjacentPeriods.some((p, i) => {
@@ -1821,7 +1825,7 @@ export default function LeagueAdmin() {
                     <p className="text-xs text-gray-500 mt-0.5">Select which rinks will be used when generating fixtures. Leave all unchecked to use all club rinks.</p>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                    {Array.from({ length: club.rink_count || 6 }, (_, i) => i + 1).map(rinkNum => (
+                    {Array.from({ length: primaryRinkCount(club) }, (_, i) => i + 1).map(rinkNum => (
                       <label key={rinkNum} className="flex items-center gap-2 cursor-pointer select-none">
                         <Checkbox
                           checked={leagueRinks.includes(rinkNum)}
@@ -2302,7 +2306,7 @@ export default function LeagueAdmin() {
           onClose={() => setDistributionModalOpen(false)}
           fixtures={pendingFixtures}
           teams={pendingFixtureTeams}
-          rinkCount={club?.rink_count || 6}
+          rinkCount={primaryRinkCount(club)}
           league={pendingFixtureLeague}
           leagueRinks={pendingFixtureLeague?.league_rinks}
           onRegenerate={pendingIsRealloc ? handleRegenerateAllocations : handleRegenerateFixtures}
@@ -2427,7 +2431,7 @@ export default function LeagueAdmin() {
           teams={manualFixturesLeague ? teams.filter(t => t.league_id === manualFixturesLeague.id) : []}
           clubId={clubId}
           existingFixtures={fixtures}
-          rinkCount={club?.rink_count || 6}
+          rinkCount={primaryRinkCount(club)}
           club={club}
         />
       </div>

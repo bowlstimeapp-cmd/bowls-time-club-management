@@ -38,6 +38,10 @@ import TopClubOutdoorSelectionGrid from '@/components/selection/TopClubOutdoorSe
 import Fantastic5sSelectionGrid from '@/components/selection/Fantastic5sSelectionGrid';
 import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
+import { getPrimaryGreen, getRinkConfig, withRinkConfig } from '@/lib/rinkConfig';
+
+/** Selection rinks are booked onto the club's primary green, using that green's rinks. */
+const primaryRinkCount = (clubData) => getRinkConfig(clubData, getPrimaryGreen(clubData)).rink_count || 6;
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import SmsNotificationControl from '@/components/selection/SmsNotificationControl';
 import sendSelectionPush from '@/components/selection/sendSelectionPush';
@@ -589,10 +593,11 @@ export default function SelectionEditor() {
       return sessions;
     };
 
-    const sessions = generateRinkSessions(matchStartTime, matchEndTime, club);
+    const green = getPrimaryGreen(club);
+    const sessions = generateRinkSessions(matchStartTime, matchEndTime, withRinkConfig(club, green));
 
     const bookerName = `${competition}${matchName ? ` vs ${matchName}` : ''}`;
-    const rinkCount = club?.rink_count || 6;
+    const rinkCount = primaryRinkCount(club);
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
     const clashes = [];
@@ -619,6 +624,7 @@ export default function SelectionEditor() {
       const proposed = {
         club_id: clubId,
         rink_number: rinkNum,
+        green_type: green,
         date: matchDate,
         start_time: slotStart,
         end_time: slotEndStr,
@@ -1182,7 +1188,7 @@ export default function SelectionEditor() {
                         <InfoTooltip content="Choose which rinks will be used for home matches. The number of rinks shown is based on your club's rink count." />
                       </Label>
                       <div className="grid grid-cols-2 gap-2">
-                        {Array.from({ length: club?.rink_count || 6 }, (_, i) => i + 1).slice(0, Math.min(6, club?.rink_count || 6)).map((rink) =>
+                        {Array.from({ length: primaryRinkCount(club) }, (_, i) => i + 1).slice(0, Math.min(6, primaryRinkCount(club))).map((rink) =>
                       <div
                         key={rink}
                         className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
