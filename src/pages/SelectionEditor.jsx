@@ -38,10 +38,9 @@ import TopClubOutdoorSelectionGrid from '@/components/selection/TopClubOutdoorSe
 import Fantastic5sSelectionGrid from '@/components/selection/Fantastic5sSelectionGrid';
 import InfoTooltip from '@/components/InfoTooltip';
 import RinkClashModal from '@/components/booking/RinkClashModal';
-import { getPrimaryGreen, getRinkConfig, withRinkConfig } from '@/lib/rinkConfig';
+import GreenSelector from '@/components/booking/GreenSelector';
+import { getRinkConfig, getGreenTypes, isDualGreens, getBookingGreen } from '@/lib/rinkConfig';
 
-/** Selection rinks are booked onto the club's primary green, using that green's rinks. */
-const primaryRinkCount = (clubData) => getRinkConfig(clubData, getPrimaryGreen(clubData)).rink_count || 6;
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import SmsNotificationControl from '@/components/selection/SmsNotificationControl';
 import sendSelectionPush from '@/components/selection/sendSelectionPush';
@@ -73,6 +72,8 @@ export default function SelectionEditor() {
   const [originalSelections, setOriginalSelections] = useState({});
   const [homeRinks, setHomeRinks] = useState(2);
   const [selectedRinks, setSelectedRinks] = useState([]);
+  // Which green the match rinks are booked on (dual-green clubs only)
+  const [rinkGreen, setRinkGreen] = useState(null);
   // Friendly-specific state
   const [friendlyLocation, setFriendlyLocation] = useState('');
   const [friendlyNumRinks, setFriendlyNumRinks] = useState(2);
@@ -243,6 +244,13 @@ export default function SelectionEditor() {
   // Filter competitions by club's season (indoor/outdoor)
   const competitions = allCompetitions.filter((comp) => comp.season === club?.season);
 
+  // Rink booking green: dual-green clubs pick a green, single-green clubs use their own
+  const availableRinkGreens = getGreenTypes(club);
+  const activeRinkGreen = availableRinkGreens.includes(rinkGreen) ? rinkGreen : availableRinkGreens[0];
+  const activeRinkConfig = getRinkConfig(club, activeRinkGreen);
+  const activeRinkCount = activeRinkConfig.rink_count || 6;
+
+
   const { data: existingBookings = [] } = useQuery({
     queryKey: ['bookings', clubId, matchDate],
     queryFn: async () => {
@@ -296,10 +304,11 @@ export default function SelectionEditor() {
 
   const generateTimeSlots = () => {
     if (!club) return [];
+    const config = getRinkConfig(club, activeRinkGreen);
     const slots = [];
-    const [openHour] = (club.opening_time || '10:00').split(':').map(Number);
-    const [closeHour] = (club.closing_time || '21:00').split(':').map(Number);
-    const duration = club.session_duration || 2;
+    const [openHour] = (config.opening_time || '10:00').split(':').map(Number);
+    const [closeHour] = (config.closing_time || '21:00').split(':').map(Number);
+    const duration = config.session_duration || 2;
 
     for (let hour = openHour; hour + duration <= closeHour; hour += duration) {
       slots.push(`${String(hour).padStart(2, '0')}:00`);
@@ -593,11 +602,12 @@ export default function SelectionEditor() {
       return sessions;
     };
 
-    const green = getPrimaryGreen(club);
-    const sessions = generateRinkSessions(matchStartTime, matchEndTime, withRinkConfig(club, green));
+    const green = activeRinkGreen;
+    const greenSettings = activeRinkConfig;
+    const sessions = generateRinkSessions(matchStartTime, matchEndTime, greenSettings);
 
     const bookerName = `${competition}${matchName ? ` vs ${matchName}` : ''}`;
-    const rinkCount = primaryRinkCount(club);
+    const rinkCount = activeRinkCount;
     const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
 
     const clashes = [];
@@ -617,6 +627,7 @@ export default function SelectionEditor() {
       const existingBooking = existingBookings.find(
         (b) => b.rink_number === rinkNum &&
         b.start_time === slotStart &&
+        getBookingGreen(b, club) === green &&
         b.status !== 'cancelled' &&
         b.status !== 'rejected'
       );
@@ -640,7 +651,7 @@ export default function SelectionEditor() {
         // Find a suggested free rink at the same time
         const usedRinksAtTime = new Set([
         ...existingBookings.
-        filter((b) => b.start_time === slotStart && b.status !== 'cancelled' && b.status !== 'rejected').
+        filter((b) => b.start_time === slotStart && getBookingGreen(b, club) === green && b.status !== 'cancelled' && b.status !== 'rejected').
         map((b) => b.rink_number),
         ...proposedSlots.
         filter((s) => s.startTime === slotStart && s.rink !== rinkNum).
@@ -1185,10 +1196,21 @@ export default function SelectionEditor() {
                       <Label className="flex items-center gap-2 mb-2">
                         <Home className="w-4 h-4" />
                         Select Rinks ({selectedRinks.length}/{homeRinks})
-                        <InfoTooltip content="Choose which rinks will be used for home matches. The number of rinks shown is based on your club's rink count." />
+                        <InfoTooltip content="Choose which rinks will be used for home matches. The rinks shown are the ones on the green you select." />
                       </Label>
+                      {isDualGreens(club) && (
+                        <GreenSelector
+                          greens={availableRinkGreens}
+                          value={activeRinkGreen}
+                          onChange={(nextGreen) => {
+                            setRinkGreen(nextGreen);
+                            setSelectedRinks([]);
+                          }}
+                          className="mb-2"
+                        />
+                      )}
                       <div className="grid grid-cols-2 gap-2">
-                        {Array.from({ length: primaryRinkCount(club) }, (_, i) => i + 1).slice(0, Math.min(6, primaryRinkCount(club))).map((rink) =>
+                        {Array.from({ length: activeRinkCount }, (_, i) => i + 1).map((rink) =>
                       <div
                         key={rink}
                         className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50"
@@ -1225,13 +1247,13 @@ export default function SelectionEditor() {
                           </SelectTrigger>
                           <SelectContent>
                             {(() => {
-                            const duration = club?.session_duration || 2;
+                            const duration = activeRinkConfig.session_duration || 2;
                             const slots = generateTimeSlots().filter((t) => t > matchStartTime);
                             const endTimes = slots.map((time) => {
                               const [hour] = time.split(':').map(Number);
                               return `${String(hour + duration).padStart(2, '0')}:00`;
                             });
-                            const closingTime = club?.closing_time || '21:00';
+                            const closingTime = activeRinkConfig.closing_time || '21:00';
                             if (!endTimes.includes(closingTime)) endTimes.push(closingTime);
                             return [...new Set(endTimes)].map((endTime) =>
                             <SelectItem key={endTime} value={endTime}>{endTime}</SelectItem>
