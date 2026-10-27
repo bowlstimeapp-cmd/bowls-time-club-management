@@ -144,14 +144,12 @@ export default function LeagueScoresModal({ open, onClose, league, fixtures, tea
   const leagueFixtures = fixtures
     .filter(f => f.league_id === league?.id)
     .sort((a, b) => {
-      const dateCmp = a.match_date.localeCompare(b.match_date);
+      // Date first, then rink number, then leg (so both legs of a double rink stay adjacent)
+      const dateCmp = (a.match_date || '').localeCompare(b.match_date || '');
       if (dateCmp !== 0) return dateCmp;
-      if (a.tie_id && b.tie_id) {
-        const tieCmp = a.tie_id.localeCompare(b.tie_id);
-        if (tieCmp !== 0) return tieCmp;
-        return (a.leg || 1) - (b.leg || 1);
-      }
-      return 0;
+      const rinkCmp = (a.rink_number ?? 9999) - (b.rink_number ?? 9999);
+      if (rinkCmp !== 0) return rinkCmp;
+      return (a.leg || 1) - (b.leg || 1);
     });
 
   // Fixtures with a pending (one team submitted, awaiting other)
