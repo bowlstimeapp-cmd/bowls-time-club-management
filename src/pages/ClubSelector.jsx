@@ -353,7 +353,7 @@ export default function ClubSelector() {
                   <CardContent className="p-6 text-center">
                     <Building2 className="w-10 h-10 mx-auto mb-3 text-emerald-600" />
                     <h3 className="font-semibold text-gray-900 mb-1">Start your own club</h3>
-                    <p className="text-sm text-gray-600 mb-4">Create a new club and get started with Bowls Time for free.</p>
+                    <p className="text-sm text-gray-600 mb-4">Create a new club and get full access to every Bowls Time module.</p>
                     <Button onClick={() => setCreateClubOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
                       Create New Club
                     </Button>

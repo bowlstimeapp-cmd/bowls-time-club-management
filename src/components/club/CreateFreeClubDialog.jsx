@@ -5,20 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Lock, Check, CheckCircle } from 'lucide-react';
+import { Loader2, Check, CheckCircle } from 'lucide-react';
 import { toast } from "sonner";
 
 const MODULE_LIST = [
-  { key: 'module_rink_booking', label: 'Rink Booking', included: true },
-  { key: 'module_selection', label: 'Match Selection' },
-  { key: 'module_competitions', label: 'Competitions' },
-  { key: 'module_leagues', label: 'Leagues' },
-  { key: 'module_sms_notifications', label: 'SMS Notifications' },
-  { key: 'module_homepage', label: 'Club Homepage' },
-  { key: 'module_function_rooms', label: 'Function Room Bookings' },
-  { key: 'module_custom_branding', label: 'Custom Branding' },
-  { key: 'module_accolades', label: 'Accolades' },
-  { key: 'module_messaging', label: 'Club Messaging' },
+  'Rink Booking',
+  'Match Selection',
+  'Competitions',
+  'Leagues',
+  'SMS Notifications',
+  'Club Homepage',
+  'Function Room Bookings',
+  'Custom Branding',
+  'Accolades',
+  'Club Messaging',
 ];
 
 export default function CreateFreeClubDialog({ open, onClose, user, onCreated }) {
@@ -73,7 +73,7 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
               <CheckCircle className="w-8 h-8 text-emerald-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-1">{createdClub.name} has been created!</h3>
-            <p className="text-sm text-gray-500 mb-6">Your free-tier club is ready. Rink Booking is enabled — you can start booking rinks right away.</p>
+            <p className="text-sm text-gray-500 mb-6">Your club is ready with full access to every module — you can start booking rinks right away.</p>
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 w-full"
               onClick={() => { handleClose(); onCreated?.(createdClub); }}
@@ -116,23 +116,17 @@ export default function CreateFreeClubDialog({ open, onClose, user, onCreated })
 
           <div className="pt-4 border-t">
             <Label className="text-base font-medium mb-1 block">Available Modules</Label>
-            <p className="text-xs text-gray-500 mb-3">These features are available on the standard (paid) tier.</p>
+            <p className="text-xs text-gray-500 mb-3">Every module is included — turn modules on or off any time in Club Admin.</p>
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-              {MODULE_LIST.map(({ key, label, included }) => (
-                <div key={key} className={`flex items-center justify-between rounded-lg px-3 py-2 ${included ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+              {MODULE_LIST.map((label) => (
+                <div key={label} className="flex items-center justify-between rounded-lg px-3 py-2 bg-emerald-50">
                   <div>
                     <span className="text-sm font-normal text-gray-700">{label}</span>
-                    <p className={`text-xs ${included ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {included ? 'Included in the free tier' : 'Not included in the Bowls Time free tier'}
-                    </p>
+                    <p className="text-xs text-emerald-600">Included</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {included ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : (
-                      <Lock className="w-3.5 h-3.5 text-gray-400" />
-                    )}
-                    <Switch checked={!!included} disabled />
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <Switch checked disabled />
                   </div>
                 </div>
               ))}

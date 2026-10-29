@@ -13,16 +13,15 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Club name is required' }, { status: 400 });
     }
 
-    // Rate-limit free club creation to once per non-platform-admin user
+    // Limit self-serve club creation to one club per non-platform-admin user
     // Platform admins can bypass this to create demo/trial clubs
     const isPlatformAdmin = user.role === 'admin';
     if (!isPlatformAdmin) {
-      const existingFreeClubs = await base44.asServiceRole.entities.Club.filter({
+      const existingClubs = await base44.asServiceRole.entities.Club.filter({
         primary_admin_email: user.email,
-        club_tier: 'free',
       });
-      if (existingFreeClubs.length > 0) {
-        return Response.json({ error: 'You have already created a free club. Free club creation is limited to one per user.' }, { status: 403 });
+      if (existingClubs.length > 0) {
+        return Response.json({ error: 'You have already created a club. Club creation is limited to one per user.' }, { status: 403 });
       }
     }
 
@@ -41,7 +40,7 @@ export default async function(req: Request): Promise<Response> {
       }
     }
 
-    // Create the Club with all modules locked (free tier)
+    // Create the Club with full access to every module
     const club = await base44.asServiceRole.entities.Club.create({
       name: name.trim(),
       slug,
@@ -50,17 +49,17 @@ export default async function(req: Request): Promise<Response> {
       closing_time: closing_time || '21:00',
       primary_admin_email: user.email,
       is_active: true,
-      club_tier: 'free',
+      club_tier: 'standard',
       module_rink_booking: true,
-      module_selection: false,
-      module_competitions: false,
-      module_leagues: false,
-      module_sms_notifications: false,
-      module_homepage: false,
-      module_function_rooms: false,
-      module_custom_branding: false,
-      module_accolades: false,
-      module_messaging: false,
+      module_selection: true,
+      module_competitions: true,
+      module_leagues: true,
+      module_sms_notifications: true,
+      module_homepage: true,
+      module_function_rooms: true,
+      module_custom_branding: true,
+      module_accolades: true,
+      module_messaging: true,
     });
 
     const adminName = user.first_name && user.surname
