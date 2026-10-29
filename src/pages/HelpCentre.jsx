@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LifeBuoy, ChevronDown, ChevronUp } from 'lucide-react';
 
-const SECTIONS = [
+export const SECTIONS = [
   {
     id: 'club-settings',
     icon: '⚙️',

@@ -55,6 +55,7 @@ import { cn } from '@/lib/utils';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import LiveMatchBanner from '@/components/LiveMatchBanner';
 import FloatingFeedbackButton from '@/components/FloatingFeedbackButton';
+import PageHelpPopup from '@/components/help/PageHelpPopup';
 import { useKiosk } from '@/lib/KioskContext';
 import ModuleLockedNotice from '@/components/club/ModuleLockedNotice';
 import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
@@ -1059,6 +1060,18 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </DrawerContent>
         </Drawer>
+      )}
+
+      {/* Context-sensitive help pop-up for club admins and selectors */}
+      {needsClub && clubId && (
+        <PageHelpPopup
+          pageName={currentPageName}
+          user={user}
+          clubId={clubId}
+          isClubAdmin={isClubAdmin}
+          isSelector={isSelector}
+          suppress={isKioskSession || isModuleLocked}
+        />
       )}
 
       {/* Floating Feedback Button */}

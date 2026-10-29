@@ -15,6 +15,7 @@ import PlayerAccolades from '@/components/accolades/PlayerAccolades';
 import PasswordChangeCard from '@/components/profile/PasswordChangeCard';
 import AccessibilitySettingsCard from '@/components/profile/AccessibilitySettingsCard';
 import SeniorModeToggleCard from '@/components/profile/SeniorModeToggleCard';
+import PageHelpSettingsCard from '@/components/profile/PageHelpSettingsCard';
 import PushNotificationsCard from '@/components/profile/PushNotificationsCard';
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -541,6 +542,9 @@ export default function Profile() {
 
             {/* Accessibility / Display settings */}
             <AccessibilitySettingsCard />
+
+            {/* Page help pop-ups (admins & selectors only) */}
+            <PageHelpSettingsCard />
 
             {/* Password Change */}
             <PasswordChangeCard user={user} />

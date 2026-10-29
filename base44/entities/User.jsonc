@@ -30,6 +30,19 @@
     "phone": {
       "type": "string",
       "description": "User's phone number"
+    },
+    "dismissed_help_popups": {
+      "type": "array",
+      "default": [],
+      "description": "Page names whose context-sensitive help pop-up the user has permanently dismissed",
+      "items": {
+        "type": "string"
+      }
+    },
+    "help_popups_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether context-sensitive help pop-ups are shown on admin pages"
     }
   },
   "required": [
