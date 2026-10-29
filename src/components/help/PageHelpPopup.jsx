@@ -58,6 +58,11 @@ function anotherDialogIsOpen() {
   return !!document.querySelector('[role="dialog"][data-state="open"]');
 }
 
+// On phones every step starts collapsed so the guide opens as a short list
+function isMobileViewport() {
+  return typeof window !== 'undefined' && window.innerWidth < 640;
+}
+
 export default function PageHelpPopup({ pageName, user, clubId, isClubAdmin, isSelector, suppress }) {
   const [open, setOpen] = useState(false);
   const [openStep, setOpenStep] = useState('');
@@ -91,7 +96,7 @@ export default function PageHelpPopup({ pageName, user, clubId, isClubAdmin, isS
       if (isPageDismissed(pageName, user)) return;
       if (anotherDialogIsOpen()) return;
       setDontShowAgain(false);
-      setOpenStep(steps[0].heading);
+      setOpenStep(isMobileViewport() ? '' : steps[0].heading);
       setOpen(true);
     }, SHOW_DELAY_MS);
 
