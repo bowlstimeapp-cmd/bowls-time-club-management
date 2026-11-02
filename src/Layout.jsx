@@ -66,15 +66,15 @@ const MODULE_PAGE_MAP = {
   Selection: { key: 'module_selection', name: 'Match Selection', desc: 'Create and publish team selections with availability tracking and automatic notifications.' },
   SelectionEditor: { key: 'module_selection', name: 'Match Selection', desc: 'Create and publish team selections with availability tracking and automatic notifications.' },
   SelectionView: { key: 'module_selection', name: 'Match Selection', desc: 'Create and publish team selections with availability tracking and automatic notifications.' },
-  ClubTournaments: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
-  TournamentEditor: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
-  TournamentView: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
-  OpenCompetitions: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
-  CompetitionRegistration: { key: 'module_competitions', name: 'Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  ClubTournaments: { key: 'module_competitions', name: 'Club Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  TournamentEditor: { key: 'module_competitions', name: 'Club Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  TournamentView: { key: 'module_competitions', name: 'Club Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  OpenCompetitions: { key: 'module_competitions', name: 'Club Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
+  CompetitionRegistration: { key: 'module_competitions', name: 'Club Competitions', desc: 'Run knockout and round-robin tournaments with automatic bracket generation and draw downloads.' },
   LeagueAdmin: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
   LeagueView: { key: 'module_leagues', name: 'Leagues', desc: 'Run full round-robin leagues with automatic fixtures, standings, and printable tables.' },
   ClubFixtures: { key: 'module_leagues', name: 'Fixtures', desc: 'Manage club fixtures with automatic rink booking and draft selection creation.' },
-  CompetitionAvailability: { key: 'module_selection', name: 'Competition Availability', desc: 'Indicate which competitions you want to be considered for.' },
+  CompetitionAvailability: { key: 'module_selection', name: 'Matches Availability', desc: 'Indicate which match types you want to be considered for.' },
   ClubHome: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
   ClubHomepageAdmin: { key: 'module_homepage', name: 'Club Homepage', desc: 'Build a custom public-facing club homepage with news, match results, galleries, and more.' },
   FunctionRoomAdmin: { key: 'module_function_rooms', name: 'Function Room Bookings', desc: 'Manage function room bookings, enquiries, and availability for your club facilities.' },
@@ -253,14 +253,14 @@ export default function Layout({ children, currentPageName }) {
       title: 'Selection', icon: ClipboardList,
       items: [
         { name: 'Match Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
-        { name: 'Competition Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
+        { name: 'Matches Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
         ...(showLeagues ? [{ name: 'Club Fixtures', href: createPageUrl('ClubFixtures') + `?clubId=${clubId}`, icon: CalendarDays }] : []),
       ],
     }] : []),
     ...(showCompetitions ? [{
-      title: 'Competitions', icon: Trophy,
+      title: 'Club Competitions', icon: Trophy,
       items: [
-        { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+        { name: 'Club Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
         ...(club?.competition_registration_enabled ? [{ name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks }] : []),
         ...(club?.competition_registration_enabled && isClubAdmin ? [{ name: 'Entries Admin', href: createPageUrl('CompetitionEntriesAdmin') + `?clubId=${clubId}`, icon: Download }] : []),
       ],
@@ -339,7 +339,7 @@ export default function Layout({ children, currentPageName }) {
       items: [
         ...(showSelection ? [
           { name: 'Selection', href: createPageUrl('Selection') + `?clubId=${clubId}`, icon: ClipboardList },
-          { name: 'Competition Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
+          { name: 'Matches Availability', href: createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`, icon: Star },
         ] : []),
         ...(showLeagues ? [
           { name: 'My Teams', href: createPageUrl('MyLeagueTeam') + `?clubId=${clubId}`, icon: Users },
@@ -350,9 +350,9 @@ export default function Layout({ children, currentPageName }) {
       ],
     }] : []),
     ...(showCompetitions ? [{
-      title: 'Competitions',
+      title: 'Club Competitions',
       items: [
-        { name: 'Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
+        { name: 'Club Competition Draw', href: createPageUrl('ClubTournaments') + `?clubId=${clubId}`, icon: Trophy },
         ...(club?.competition_registration_enabled ? [{ name: 'Competition Entries', href: createPageUrl('CompetitionRegistration') + `?clubId=${clubId}`, icon: ListChecks }] : []),
       ],
     }] : []),
@@ -533,7 +533,7 @@ export default function Layout({ children, currentPageName }) {
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('CompetitionAvailability') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Star className="w-4 h-4 mr-2" />
-                          Competition Availability
+                          Matches Availability
                         </Link>
                       </DropdownMenuItem>
                       {(club?.module_leagues !== false || isFreeClub) && (
@@ -548,13 +548,13 @@ export default function Layout({ children, currentPageName }) {
                   </DropdownMenu>
                 )}
 
-                {/* Competitions Dropdown — hidden in kiosk mode */}
+                {/* Club Competitions Dropdown — hidden in kiosk mode */}
                 {!isKioskSession && (club?.module_competitions !== false || isFreeClub) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
                         <Trophy className="w-4 h-4" />
-                        Competitions
+                        Club Competitions
                         <ChevronDown className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -562,7 +562,7 @@ export default function Layout({ children, currentPageName }) {
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('ClubTournaments') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Trophy className="w-4 h-4 mr-2" />
-                          Competition Draw
+                          Club Competition Draw
                         </Link>
                       </DropdownMenuItem>
                       {club?.competition_registration_enabled && (

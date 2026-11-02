@@ -131,7 +131,7 @@ export default function ClubFixtures() {
           <table className="w-full min-w-[760px]">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Competition</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Match type</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Opponent</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Time</th>

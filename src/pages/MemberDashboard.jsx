@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AdminApprovalSection from '@/components/dashboard/AdminApprovalSection';
 import TodaySummary from '@/components/dashboard/TodaySummary';
+import UpcomingFixturesCard from '@/components/dashboard/UpcomingFixturesCard';
 
 // Section IDs
 const SECTION_SELECTIONS = 'selections';
@@ -23,10 +24,12 @@ const SECTION_FIXTURES   = 'fixtures';
 const SECTION_COMPETITIONS = 'competitions';
 const SECTION_NEWS       = 'news';
 const SECTION_BOOKINGS   = 'bookings';
+const SECTION_CLUB_FIXTURES = 'clubFixtures';
 
 const DEFAULT_ORDER = [
   SECTION_NEWS,
   SECTION_SELECTIONS,
+  SECTION_CLUB_FIXTURES,
   SECTION_FIXTURES,
   SECTION_COMPETITIONS,
   SECTION_BOOKINGS,
@@ -540,8 +543,14 @@ export default function MemberDashboard() {
     </Card>
   );
 
+  const renderClubFixtures = (dragging) => {
+    if (club?.module_leagues === false) return null;
+    return <UpcomingFixturesCard clubId={clubId} userEmail={user.email} dragging={dragging} />;
+  };
+
   const sectionRenderers = {
     [SECTION_SELECTIONS]: renderSelections,
+    [SECTION_CLUB_FIXTURES]: renderClubFixtures,
     [SECTION_FIXTURES]:   renderFixtures,
     [SECTION_COMPETITIONS]: renderCompetitions,
     [SECTION_NEWS]:       renderNews,

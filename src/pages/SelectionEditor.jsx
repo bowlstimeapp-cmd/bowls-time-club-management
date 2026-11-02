@@ -380,7 +380,7 @@ export default function SelectionEditor() {
 
   const handleSave = async (publish = false, isRepublish = false) => {
     if (!competition) {
-      toast.error('Please select a competition');
+      toast.error('Please select a match type');
       return;
     }
 
@@ -402,6 +402,7 @@ export default function SelectionEditor() {
       match_date: matchDate,
       match_name: matchName,
       opponent: opponentName || null,
+      fixture_id: linkedFixtureId || null,
       show_venue_address: showVenueAddress,
       venue_location: venueLocation,
       venue_address: venueAddress || null,
@@ -1011,10 +1012,10 @@ export default function SelectionEditor() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Competition *</Label>
+                  <Label>Match type *</Label>
                   <Select value={competition} onValueChange={handleCompetitionChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select competition" />
+                      <SelectValue placeholder="Select match type" />
                     </SelectTrigger>
                     <SelectContent>
                       {competitions.map((comp) =>
