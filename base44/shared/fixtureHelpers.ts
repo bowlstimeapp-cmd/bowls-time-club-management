@@ -19,6 +19,35 @@ export async function verifyClubAdmin(base44, user, clubId) {
   return !!(membership && membership.role === 'admin');
 }
 
+// Match types (TeamSelection.competition) that a fixture can auto-create a
+// draft selection for. Shared by createFixture and updateFixture.
+export const SELECTION_ENUM = ['Bramley', 'Wessex League', 'Denny', 'Top Club'];
+
+/** Which TeamSelection.competition value a Competition name maps to, if any. */
+export function matchSelectionType(competitionName) {
+  const name = (competitionName || '').trim().toLowerCase();
+  return SELECTION_ENUM.find((e) => e.toLowerCase() === name) || null;
+}
+
+/** Any approved member of the club (platform admins always pass). */
+export async function verifyApprovedMember(base44, user, clubId) {
+  if (isPlatformAdmin(user)) return true;
+  return !!(await getClubMembership(base44, user.email, clubId));
+}
+
+/** Club admin or selector — the same permission the selection editor requires. */
+export async function verifySelectorAccess(base44, user, clubId) {
+  if (isPlatformAdmin(user)) return true;
+  const membership = await getClubMembership(base44, user.email, clubId);
+  return !!(membership && (membership.role === 'admin' || membership.role === 'selector'));
+}
+
+export function memberDisplayName(membership) {
+  if (!membership) return '';
+  if (membership.first_name && membership.surname) return `${membership.first_name} ${membership.surname}`;
+  return membership.user_name || membership.user_email || '';
+}
+
 export async function verifyBelongsToClub(base44, entityName, recordId, clubId) {
   const records = await base44.asServiceRole.entities[entityName].filter({ id: recordId });
   if (!records[0]) return null;

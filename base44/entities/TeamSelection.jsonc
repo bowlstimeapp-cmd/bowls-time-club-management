@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Reference to the club"
     },
+    "fixture_id": {
+      "type": "string",
+      "description": "The club fixture this selection is for"
+    },
     "competition": {
       "type": "string",
       "enum": [
