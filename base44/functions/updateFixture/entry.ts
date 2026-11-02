@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { verifyClubAdmin, verifyBelongsToClub } from '../../shared/fixtureHelpers.ts';
+import { verifyClubAdmin, verifyBelongsToClub, SELECTION_ENUM } from '../../shared/fixtureHelpers.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -35,6 +35,30 @@ Deno.serve(async (req) => {
     }
 
     await base44.asServiceRole.entities.ClubFixture.update(fixtureId, safeUpdates);
+
+    // Keep a linked DRAFT selection in step with its fixture. Published
+    // selections are deliberately left alone.
+    const linkFields = ['competition_id', 'date', 'time', 'finish_time', 'opponent'];
+    if (linkFields.some(f => f in safeUpdates)) {
+      const linked = await base44.asServiceRole.entities.TeamSelection.filter({ fixture_id: fixtureId, club_id });
+      const draft = linked.find(s => s.status === 'draft');
+      if (draft) {
+        const selUpdates = {};
+        if ('date' in safeUpdates) selUpdates.match_date = safeUpdates.date;
+        if ('time' in safeUpdates) selUpdates.match_start_time = safeUpdates.time;
+        if ('finish_time' in safeUpdates) selUpdates.match_end_time = safeUpdates.finish_time;
+        if ('opponent' in safeUpdates) selUpdates.opponent = safeUpdates.opponent;
+        if ('competition_id' in safeUpdates) {
+          const comp = await verifyBelongsToClub(base44, 'Competition', safeUpdates.competition_id, club_id);
+          const matched = SELECTION_ENUM.find(e => e.toLowerCase() === (comp?.name || '').trim().toLowerCase());
+          if (matched) selUpdates.competition = matched;
+        }
+        if (Object.keys(selUpdates).length > 0) {
+          await base44.asServiceRole.entities.TeamSelection.update(draft.id, selUpdates);
+        }
+      }
+    }
+
     return Response.json({ success: true });
   } catch (error) {
     console.error('updateFixture error:', error);

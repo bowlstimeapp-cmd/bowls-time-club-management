@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { verifyClubAdmin, verifyBelongsToClub } from '../../shared/fixtureHelpers.ts';
+import { verifyClubAdmin, verifyBelongsToClub, SELECTION_ENUM } from '../../shared/fixtureHelpers.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -29,7 +29,6 @@ Deno.serve(async (req) => {
     });
 
     // Try to match Competition.name against the TeamSelection competition enum
-    const SELECTION_ENUM = ['Bramley', 'Wessex League', 'Denny', 'Top Club'];
     const compNameLower = (competition.name || '').trim().toLowerCase();
     const matchedEnum = SELECTION_ENUM.find(e => e.toLowerCase() === compNameLower);
 
@@ -48,6 +47,7 @@ Deno.serve(async (req) => {
           home_rinks: competition.home_rinks || 2,
           status: 'draft',
           selector_email: user.email,
+          fixture_id: fixture.id,
         });
         draftSelectionCreated = true;
       } catch (e) {

@@ -60,6 +60,8 @@ export default function SelectionEditor() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
   const selectionId = searchParams.get('selectionId');
+  // Set when the selection is opened to pick a team for a specific club fixture
+  const fixtureId = searchParams.get('fixtureId');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -102,6 +104,9 @@ export default function SelectionEditor() {
   const [venueAddress, setVenueAddress] = useState('');
   const lastAutoFillRef = useRef('');
   const venueAddressRef = useRef('');
+  // Id of the club fixture this selection belongs to (set when picked from Fixtures)
+  const [linkedFixtureId, setLinkedFixtureId] = useState(null);
+  const fixturePrefilledRef = useRef(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -159,6 +164,7 @@ export default function SelectionEditor() {
       setReserves(loadedReserves);
       setOriginalReserves(loadedReserves);
       setOpponentName(existingSelection.opponent || '');
+      setLinkedFixtureId(existingSelection.fixture_id || null);
       setShowVenueAddress(existingSelection.show_venue_address === true);
       setVenueLocation(existingSelection.venue_location === 'away' ? 'away' : 'home');
       setVenueAddress(existingSelection.venue_address || '');
@@ -249,6 +255,42 @@ export default function SelectionEditor() {
   const activeRinkGreen = availableRinkGreens.includes(rinkGreen) ? rinkGreen : availableRinkGreens[0];
   const activeRinkConfig = getRinkConfig(club, activeRinkGreen);
   const activeRinkCount = activeRinkConfig.rink_count || 6;
+
+  // Opened from a fixture (?fixtureId=) — pre-fill the match from it
+  const { data: linkedFixture } = useQuery({
+    queryKey: ['clubFixture', fixtureId],
+    queryFn: async () => {
+      const fixtures = await base44.entities.ClubFixture.filter({ id: fixtureId });
+      return fixtures[0];
+    },
+    enabled: !!fixtureId && !selectionId
+  });
+
+  useEffect(() => {
+    if (!linkedFixture || selectionId || fixturePrefilledRef.current) return;
+    fixturePrefilledRef.current = true;
+    setLinkedFixtureId(linkedFixture.id);
+    setMatchDate(linkedFixture.date);
+    setMatchStartTime(linkedFixture.time || '10:00');
+    setMatchEndTime(linkedFixture.finish_time || '14:00');
+    setMatchName(linkedFixture.opponent || '');
+    setOpponentName(linkedFixture.opponent || '');
+    const comp = allCompetitions.find((c) => c.id === linkedFixture.competition_id);
+    if (comp) handleCompetitionChange(comp.name);
+  }, [linkedFixture, selectionId, allCompetitions]);
+
+  // Members who marked themselves available for the linked fixture — gold star
+  const { data: linkedFixtureInterests } = useQuery({
+    queryKey: ['fixtureInterests', clubId, linkedFixtureId],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('getFixtureInterests', {
+        club_id: clubId,
+        fixture_ids: [linkedFixtureId]
+      });
+      return res.data;
+    },
+    enabled: !!clubId && !!linkedFixtureId
+  });
 
 
   const { data: existingBookings = [] } = useQuery({
@@ -816,14 +858,16 @@ export default function SelectionEditor() {
   const activeCompetition = competitions.find((c) => c.name === competition);
 
   const interestedEmails = useMemo(() => {
-    if (!activeCompetition || !competitionInterests.length) return new Set();
-    const compId = activeCompetition.id;
-    return new Set(
-      competitionInterests.
-      filter((ci) => (ci.competition_ids || []).includes(compId)).
-      map((ci) => ci.user_email)
-    );
-  }, [activeCompetition, competitionInterests]);
+    const compId = activeCompetition?.id;
+    const fromCompetition = compId
+      ? competitionInterests
+        .filter((ci) => (ci.competition_ids || []).includes(compId))
+        .map((ci) => ci.user_email)
+      : [];
+    // Members who marked themselves available for this specific fixture
+    const fromFixture = (linkedFixtureInterests?.interests || []).map((i) => i.user_email);
+    return new Set([...fromCompetition, ...fromFixture]);
+  }, [activeCompetition, competitionInterests, linkedFixtureInterests]);
   const filteredMembers = React.useMemo(() => {
     // Always exclude social-only members from selection
     const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));

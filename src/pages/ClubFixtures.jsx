@@ -2,17 +2,21 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Loader2, CalendarDays, Plus, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Loader2, CalendarDays, Plus, Pencil, Trash2, Calendar, ClipboardList, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
+import { createPageUrl } from '@/utils';
 import FixtureFormModal from '@/components/fixtures/FixtureFormModal';
 import BookRinksModal from '@/components/fixtures/BookRinksModal';
+import FixtureInterestButton from '@/components/fixtures/FixtureInterestButton';
+import useFixtureInterests from '@/hooks/useFixtureInterests';
 
 export default function ClubFixtures() {
   const [searchParams] = useSearchParams();
   const clubId = searchParams.get('clubId');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -54,8 +58,40 @@ export default function ClubFixtures() {
 
   const allCompetitions = useMemo(() => [...competitions, ...platformCompetitions], [competitions, platformCompetitions]);
 
+  // Team selections already linked to a fixture (so the button can open instead of create)
+  const { data: selections = [] } = useQuery({
+    queryKey: ['clubSelectionsForFixtures', clubId],
+    queryFn: () => base44.entities.TeamSelection.filter({ club_id: clubId }),
+    enabled: !!clubId,
+  });
+
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
+  const isSelector = membership?.role === 'selector' || isClubAdmin;
   const competitionMap = useMemo(() => { const map = {}; allCompetitions.forEach(c => { map[c.id] = c; }); return map; }, [allCompetitions]);
+
+  const { interests, canSeeAll, toggle } = useFixtureInterests(clubId);
+
+  const interestsByFixture = useMemo(() => {
+    const map = {};
+    interests.forEach(i => { (map[i.fixture_id] = map[i.fixture_id] || []).push(i); });
+    return map;
+  }, [interests]);
+
+  const selectionByFixture = useMemo(() => {
+    const map = {};
+    selections.forEach(s => { if (s.fixture_id && !map[s.fixture_id]) map[s.fixture_id] = s; });
+    return map;
+  }, [selections]);
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  const openSelection = (fixture) => {
+    const linked = selectionByFixture[fixture.id];
+    const query = linked
+      ? `?clubId=${clubId}&selectionId=${linked.id}`
+      : `?clubId=${clubId}&fixtureId=${fixture.id}`;
+    navigate(createPageUrl('SelectionEditor') + query);
+  };
 
   const handleDelete = async (fixture) => {
     if (!window.confirm('Delete this fixture? Linked selections and bookings will NOT be deleted.')) return;
@@ -91,8 +127,8 @@ export default function ClubFixtures() {
           <p>No fixtures yet{isClubAdmin ? '. Click "Add Fixture" to create one.' : '.'}</p>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden bg-white">
-          <table className="w-full">
+        <div className="border rounded-lg overflow-hidden bg-white overflow-x-auto">
+          <table className="w-full min-w-[760px]">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Competition</th>
@@ -100,6 +136,7 @@ export default function ClubFixtures() {
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Time</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Venue</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Interested</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Notes</th>
                 {isClubAdmin && <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">Actions</th>}
               </tr>
@@ -107,6 +144,10 @@ export default function ClubFixtures() {
             <tbody className="divide-y">
               {fixtures.map(fixture => {
                 const comp = competitionMap[fixture.competition_id];
+                const rowInterests = interestsByFixture[fixture.id] || [];
+                const iAmInterested = rowInterests.some(i => i.user_email === user.email);
+                const isPast = fixture.date < today;
+                const linkedSelection = selectionByFixture[fixture.id];
                 return (
                   <tr key={fixture.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{comp?.name || '—'}</td>
@@ -120,10 +161,36 @@ export default function ClubFixtures() {
                         'bg-purple-100 text-purple-700'
                       }`}>{fixture.venue}</span>
                     </td>
+                    <td className="px-4 py-3 text-sm align-top">
+                      {canSeeAll ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                            {rowInterests.length}
+                          </div>
+                          {rowInterests.length > 0 && (
+                            <p className="text-xs text-gray-500 max-w-[14rem]">
+                              {rowInterests.slice(0, 3).map(i => i.member_name).join(', ')}
+                              {rowInterests.length > 3 ? ` +${rowInterests.length - 3} more` : ''}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <FixtureInterestButton
+                          interested={iAmInterested}
+                          onToggle={() => toggle(fixture.id)}
+                          disabled={isPast}
+                        />
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500">{fixture.notes || '—'}</td>
-                    {isClubAdmin && (
+                    {(isClubAdmin || isSelector) && (
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        {fixture.venue !== 'Away' && (
+                        <Button size="sm" variant="outline" className="mr-1" onClick={() => openSelection(fixture)}>
+                          <ClipboardList className="w-3 h-3 mr-1" />
+                          {linkedSelection ? 'Selection' : 'Pick Team'}
+                        </Button>
+                        {isClubAdmin && fixture.venue !== 'Away' && (
                           <Button size="sm" variant="outline" className="mr-1" onClick={() => { setBookRinksFixture(fixture); setShowBookRinksModal(true); }}>
                             <Calendar className="w-3 h-3 mr-1" /> Book Rinks
                           </Button>
