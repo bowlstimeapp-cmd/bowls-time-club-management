@@ -110,7 +110,9 @@ Deno.serve(async (req) => {
           dayName,
           time: `${selection.match_start_time || ''} to ${selection.match_end_time || ''}`,
           rink: showRinks ? rinkLabel : '',
-          eventLine: showRinks ? `${selection.competition} · Rink ${rinkLabel} (${tag})` : `${selection.competition} · ${tag}`,
+          eventLine: showRinks
+            ? `${selection.competition} · Rink ${rinkLabel} (${tag})`
+            : `${selection.competition} · Rink <span style="display:inline-block;width:12mm;border-bottom:1px solid #000;">&nbsp;</span> (${tag})`,
           tag,
           players,
           logoUrl: club.logo_url || '',
