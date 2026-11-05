@@ -367,7 +367,7 @@ export default function Selection() {
           transition={{ delay: 0.05 }}
           className="mb-4"
         >
-          <div className="flex items-center gap-2">
+          <div className="min-w-0 flex items-center justify-center gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm whitespace-nowrap">
             <Filter className="w-4 h-4 text-gray-500" />
             <Select value={competitionFilter} onValueChange={setCompetitionFilter}>
               <SelectTrigger className="w-48">
@@ -390,17 +390,17 @@ export default function Selection() {
           transition={{ delay: 0.1 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`grid w-full mb-6 h-auto ${isSelector ? 'grid-cols-4' : 'grid-cols-2'}`}>
-              <TabsTrigger value="published" className="flex items-center gap-2">
+            <TabsList className={`grid w-full mb-6 h-auto gap-1 ${isSelector ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
+              <TabsTrigger value="published" className="min-w-0 flex items-center justify-center gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm whitespace-nowrap">
                 <Eye className="w-4 h-4" />
                 Published ({publishedSelections.length})
               </TabsTrigger>
-              <TabsTrigger value="myselections" className="flex items-center gap-2">
+              <TabsTrigger value="myselections" className="min-w-0 flex items-center justify-center gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm whitespace-nowrap">
                 <User className="w-4 h-4" />
                 My Matches ({mySelections.length})
               </TabsTrigger>
               {isSelector && (
-                <TabsTrigger value="drafts" className="flex items-center gap-2">
+                <TabsTrigger value="drafts" className="min-w-0 flex items-center justify-center gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm whitespace-nowrap">
                   <Calendar className="w-4 h-4" />
                   Drafts ({draftSelections.length})
                 </TabsTrigger>
