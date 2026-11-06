@@ -67,6 +67,7 @@ import SmsUsageTab from '@/components/admin/SmsUsageTab';
 import TestPushNotification from '@/components/admin/TestPushNotification';
 import CountiesTab from '@/components/admin/CountiesTab';
 import MarketingPlanTab from '@/components/admin/marketing/MarketingPlanTab';
+import EmailClubAdminsTab from '@/components/admin/EmailClubAdminsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -545,7 +546,7 @@ export default function PlatformAdmin() {
         >
           <Tabs defaultValue="clubs" className="w-full">
             <div className="overflow-x-auto mb-6">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-10">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-11">
                     <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
                     <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
                     <TabsTrigger value="counties" className="whitespace-nowrap">Counties</TabsTrigger>
@@ -560,6 +561,10 @@ export default function PlatformAdmin() {
                      )}
                    </TabsTrigger>
                    <TabsTrigger value="emails" className="whitespace-nowrap">Sent Emails</TabsTrigger>
+                   <TabsTrigger value="email-admins" className="whitespace-nowrap">
+                     <Mail className="w-3.5 h-3.5 mr-1.5" />
+                     Email Admins
+                   </TabsTrigger>
                    <TabsTrigger value="sms" className="whitespace-nowrap">SMS Usage</TabsTrigger>
                    <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
                    <TabsTrigger value="documents" className="whitespace-nowrap">Documents</TabsTrigger>
@@ -943,6 +948,10 @@ export default function PlatformAdmin() {
             {/* ── MARKETING ── */}
             <TabsContent value="marketing">
               <MarketingPlanTab />
+            </TabsContent>
+
+            <TabsContent value="email-admins">
+              <EmailClubAdminsTab />
             </TabsContent>
           </Tabs>
         </motion.div>
