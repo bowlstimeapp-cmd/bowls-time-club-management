@@ -1,0 +1,105 @@
+{
+  "name": "AdminBroadcast",
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string",
+      "description": "Subject line as written by the platform admin (merge tags included)"
+    },
+    "body": {
+      "type": "string",
+      "description": "Body as written by the platform admin (merge tags included)"
+    },
+    "recipients": {
+      "type": "array",
+      "default": [],
+      "description": "One entry per individual email sent, with the outcome for that person",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Recipient email address"
+          },
+          "name": {
+            "type": "string",
+            "description": "Recipient display name at time of send"
+          },
+          "club_names": {
+            "type": "array",
+            "default": [],
+            "description": "Clubs this admin administers",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "failed"
+            ],
+            "description": "Whether this individual email was accepted by Resend"
+          },
+          "error": {
+            "type": "string",
+            "description": "Resend error message when the send failed"
+          },
+          "resend_email_id": {
+            "type": "string",
+            "description": "Resend id for a successful send"
+          }
+        }
+      }
+    },
+    "total_recipients": {
+      "type": "number",
+      "description": "Number of recipients in this broadcast"
+    },
+    "sent_count": {
+      "type": "number",
+      "description": "Number of emails successfully sent"
+    },
+    "failed_count": {
+      "type": "number",
+      "description": "Number of emails that failed"
+    },
+    "invalid_addresses": {
+      "type": "array",
+      "default": [],
+      "description": "Addresses dropped during validation",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sent_by": {
+      "type": "string",
+      "description": "Email of the platform admin who sent the broadcast"
+    }
+  },
+  "required": [
+    "subject"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
