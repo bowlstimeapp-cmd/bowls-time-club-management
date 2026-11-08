@@ -986,12 +986,14 @@ useEffect(() => {
         >
           <Card className="shadow-lg border-0">
             <CardHeader className="border-b bg-white/50">
-              <GreenSelector
-                greens={availableGreens}
-                value={activeGreen}
-                onChange={(green) => { setGreenType(green); setSelectedSlots([]); }}
-                className="mb-3"
-              />
+<div className="w-full md:w-fit">
+  <GreenSelector
+    greens={availableGreens}
+    value={activeGreen}
+    onChange={(green) => { setGreenType(green); setSelectedSlots([]); }}
+    className="mb-3"
+  />
+</div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <DateSelector 
                   selectedDate={selectedDate} 
