@@ -27,6 +27,14 @@ export default function useClubCompetitions(clubId) {
     },
   });
 
+  // The club can hide platform-wide competitions everywhere with one switch in Club Settings
+  const clubSettingsQuery = useQuery({
+    queryKey: ['club', clubId],
+    queryFn: async () => (await base44.entities.Club.filter({ id: clubId }))[0],
+    enabled: !!clubId,
+  });
+  const showPlatformCompetitions = clubSettingsQuery.data?.show_platform_competitions !== false;
+
   const invalidateAll = () => {
     INVALIDATE_KEYS.forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
   };
@@ -63,7 +71,7 @@ export default function useClubCompetitions(clubId) {
 
   return {
     clubCompetitions: clubQuery.data || [],
-    platformCompetitions: platformQuery.data || [],
+    platformCompetitions: showPlatformCompetitions ? (platformQuery.data || []) : [],
     isLoading: clubQuery.isLoading || platformQuery.isLoading,
     createCompetition,
     updateCompetition,

@@ -111,6 +111,7 @@ export default function ClubSettings() {
   const [memberIdAssignResult, setMemberIdAssignResult] = useState(null);
   const [competitionRegistrationEnabled, setCompetitionRegistrationEnabled] = useState(false);
   const [competitionPageHeader, setCompetitionPageHeader] = useState('');
+  const [showPlatformCompetitions, setShowPlatformCompetitions] = useState(true);
   const [clubTheme, setClubTheme] = useState('emerald');
   const [memberLandingPageEnabled, setMemberLandingPageEnabled] = useState(false);
   const [venueAddress, setVenueAddress] = useState('');
@@ -184,6 +185,7 @@ export default function ClubSettings() {
     setKioskAccountEmail(club.kiosk_account_email || '');
     setCompetitionRegistrationEnabled(club.competition_registration_enabled || false);
     setCompetitionPageHeader(club.competition_page_header || '');
+    setShowPlatformCompetitions(club.show_platform_competitions !== false);
     setClubTheme(club.club_theme || 'emerald');
     setMemberLandingPageEnabled(club.member_landing_page_enabled || false);
     setVenueAddress(club.venue_address || '');
@@ -327,6 +329,7 @@ export default function ClubSettings() {
       kiosk_account_email: kioskAccountEmail || null,
       competition_registration_enabled: competitionRegistrationEnabled,
       competition_page_header: competitionPageHeader || null,
+      show_platform_competitions: showPlatformCompetitions,
       club_theme: clubTheme,
       member_landing_page_enabled: memberLandingPageEnabled,
       venue_address: venueAddress || null,
@@ -859,6 +862,29 @@ export default function ClubSettings() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Platform competitions visibility */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5" />Platform Competitions</CardTitle>
+          <CardDescription>Competitions run by Bowls Time that are available to every club</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-4">
+            <Label htmlFor="show-platform-competitions" className="text-base">Show platform competitions</Label>
+            <Switch
+              id="show-platform-competitions"
+              checked={showPlatformCompetitions}
+              onCheckedChange={setShowPlatformCompetitions}
+            />
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            {showPlatformCompetitions
+              ? 'On: platform competitions appear everywhere competitions are used — Match Selection, the Selection Editor, Club Fixtures and Games I Want To Play In.'
+              : 'Off: platform competitions are hidden across the app, so your members only see your club\'s own Match Types.'}
+          </p>
         </CardContent>
       </Card>
 

@@ -482,6 +482,11 @@
         "type": "string"
       }
     },
+    "show_platform_competitions": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether platform-wide competitions appear across the club's app (Match Selection, Selection Editor, Club Fixtures, Games I Want To Play In). When off they are hidden everywhere for this club"
+    },
     "venue_address": {
       "type": "string",
       "description": "Club address, shown on selections and team sheets when 'Display venue address' is ticked"
