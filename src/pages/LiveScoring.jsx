@@ -41,6 +41,13 @@ export default function LiveScoring() {
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [editedSelections, setEditedSelections] = useState({});
   const [editedNames, setEditedNames] = useState({});
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 64);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -161,6 +168,40 @@ export default function LiveScoring() {
   const oppositionTotal = calculateTotal(oppositionScores);
   const totalEnds = calculateTotal(ends);
 
+  const getTeamDisplay = (match, isOpposition = false) => {
+    if (isOpposition) {
+      return (
+        <div className="flex flex-wrap gap-1 items-center">
+          {match.positionsList.map((pos, idx) => {
+            const posKey = `${match.key}_${pos}`;
+            return (
+              <React.Fragment key={pos}>
+                <Input
+                  placeholder={pos}
+                  className={`h-7 ${['Skip', 'Player'].includes(pos) ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
+                  value={oppositionPlayers[posKey] || ''}
+                  onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
+                  disabled={!canEdit}
+                />
+                {idx < match.positionsList.length - 1 && <span className="text-gray-300">•</span>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      );
+    }
+
+    const names = match.positionsList.map((pos) => getMemberName(match.positions[pos], `${match.key}_${pos}`));
+    return (
+      <div className="text-sm">
+        <span className="font-bold text-base uppercase">{names[0]}</span>
+        {names.slice(1).filter(Boolean).length > 0 && (
+          <span className="text-gray-600">, {names.slice(1).filter(Boolean).join(', ')}</span>
+        )}
+      </div>
+    );
+  };
+
 
 
   if (!selection) {
@@ -173,7 +214,7 @@ export default function LiveScoring() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8 ${canEdit ? 'pb-28 md:pb-8' : ''}`}>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -181,16 +222,16 @@ export default function LiveScoring() {
         >
           <Link 
             to={createPageUrl('Selection') + `?clubId=${clubId}`}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center min-h-[44px] text-gray-600 hover:text-gray-900 mb-1 sm:mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Selections
           </Link>
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-gray-900">Live Scoring</h1>
-              <div className="flex items-center gap-3 mt-1 text-gray-600">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-gray-600">
                 <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
                   <Trophy className="w-3 h-3 mr-1" />
                   {selection.competition}
@@ -205,7 +246,7 @@ export default function LiveScoring() {
               </div>
             </div>
             {canEdit && (
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden md:flex flex-wrap gap-2">
                 <Button
                   onClick={handleSaveHome}
                   disabled={isSaving || !matches.some(match => venueOf(match) === 'home')}
@@ -242,25 +283,33 @@ export default function LiveScoring() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="mb-6 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 relative">
-              <div className="absolute top-4 right-4 text-white text-sm">
-                <span className="text-emerald-200">Total Ends:</span>{' '}
-                <span className="font-bold text-lg">{totalEnds}</span>
+          <Card className="mb-4 sm:mb-6 overflow-hidden sticky top-14 md:top-16 z-30 rounded-none sm:rounded-xl shadow-md">
+            {scrolled ? (
+              <div className="bg-emerald-800 px-3 py-2">
+                <p className="text-center text-[30px] leading-none font-bold text-white tabular-nums truncate">
+                  {club?.name || 'Home'} {clubTotal} – {oppositionTotal} Opposition
+                </p>
               </div>
-              <h2 className="text-center text-white text-lg font-medium mb-4">Score</h2>
-              <div className="flex items-center justify-center gap-8">
-                <div className="text-center">
-                  <p className="text-emerald-100 text-sm mb-1">{club?.name || 'Home'}</p>
-                  <p className="text-5xl font-bold text-white">{clubTotal}</p>
+            ) : (
+              <div className="bg-emerald-800 px-3 py-4 sm:p-6">
+                <div className="flex items-center justify-center gap-3 sm:gap-8">
+                  <div className="text-center min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white mb-1 truncate">{club?.name || 'Home'}</p>
+                    <p className="text-[64px] leading-none font-bold text-white tabular-nums">{clubTotal}</p>
+                  </div>
+                  <div className="text-xl font-light text-white shrink-0">vs</div>
+                  <div className="text-center min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white mb-1 truncate">Opposition</p>
+                    <p className="text-[64px] leading-none font-bold text-white tabular-nums">{oppositionTotal}</p>
+                  </div>
                 </div>
-                <div className="text-2xl text-emerald-200 font-light">vs</div>
-                <div className="text-center">
-                  <p className="text-emerald-100 text-sm mb-1">Opposition</p>
-                  <p className="text-5xl font-bold text-white">{oppositionTotal}</p>
+                <div className="mt-3 border-t border-white/30 pt-2 text-center">
+                  <p className="text-sm text-white">
+                    Total ends: <span className="font-semibold tabular-nums">{totalEnds}</span>
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
           </Card>
         </motion.div>
 
@@ -275,7 +324,83 @@ export default function LiveScoring() {
               <CardTitle className="text-lg">{isTopClub ? 'Match Scores' : 'Rink Scores'}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Mobile: one card per match */}
+              <div className="md:hidden space-y-3">
+                {matches.map((match) => (
+                  <div key={match.key} className="rounded-xl border bg-white p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold text-gray-800">
+                        {isTopClub ? match.label : `Rink ${match.label}`}
+                      </span>
+                      {match.badge && (
+                        <Badge className={`text-xs ${match.badge === 'Home' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {match.badge}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="mb-3">{getTeamDisplay(match, false)}</div>
+
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Our score</p>
+                        <Input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          className="h-12 w-full text-center text-xl font-bold tabular-nums disabled:bg-gray-100 disabled:text-gray-700 disabled:opacity-100"
+                          value={clubScores[match.key] || ''}
+                          onChange={(e) => updateField('club_scores', match.key, e.target.value, venueOf(match))}
+                          disabled={!canEdit}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Ends</p>
+                        <Input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          className="h-12 w-full text-center text-xl font-bold tabular-nums disabled:bg-gray-100 disabled:text-gray-700 disabled:opacity-100"
+                          value={ends[match.key] || ''}
+                          onChange={(e) => updateField('ends', match.key, e.target.value, venueOf(match))}
+                          disabled={!canEdit}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Their score</p>
+                        <Input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          className="h-12 w-full text-center text-xl font-bold tabular-nums disabled:bg-gray-100 disabled:text-gray-700 disabled:opacity-100"
+                          value={oppositionScores[match.key] || ''}
+                          onChange={(e) => updateField('opposition_scores', match.key, e.target.value, venueOf(match))}
+                          disabled={!canEdit}
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Opposition team</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {match.positionsList.map((pos) => {
+                        const posKey = `${match.key}_${pos}`;
+                        return (
+                          <Input
+                            key={pos}
+                            placeholder={pos}
+                            className="h-11 w-full text-[15px] text-left disabled:bg-gray-100 disabled:text-gray-700 disabled:opacity-100"
+                            value={oppositionPlayers[posKey] || ''}
+                            onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
+                            disabled={!canEdit}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                    <tr className="border-b">
@@ -289,47 +414,6 @@ export default function LiveScoring() {
                   </thead>
                   <tbody>
                     {matches.map((match) => {
-                      const getTeamDisplay = (positions, isOpposition = false) => {
-                        const names = match.positionsList.map((pos) => {
-                          if (isOpposition) {
-                            const posKey = `${match.key}_${pos}`;
-                            return oppositionPlayers[posKey] || '';
-                          }
-                          return getMemberName(positions[pos], `${match.key}_${pos}`);
-                        });
-
-                        if (isOpposition) {
-                          return (
-                            <div className="flex flex-wrap gap-1 items-center">
-                              {match.positionsList.map((pos, idx) => {
-                                const posKey = `${match.key}_${pos}`;
-                                return (
-                                  <React.Fragment key={pos}>
-                                    <Input
-                                      placeholder={pos}
-                                      className={`h-7 ${['Skip', 'Player'].includes(pos) ? 'w-28 font-bold text-sm uppercase' : 'w-20 text-xs'}`}
-                                      value={oppositionPlayers[posKey] || ''}
-                                      onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
-                                      disabled={!canEdit}
-                                    />
-                                    {idx < match.positionsList.length - 1 && <span className="text-gray-300">•</span>}
-                                  </React.Fragment>
-                                );
-                              })}
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="text-sm">
-                            <span className="font-bold text-base uppercase">{names[0]}</span>
-                            {names.slice(1).filter(Boolean).length > 0 && (
-                              <span className="text-gray-600">, {names.slice(1).filter(Boolean).join(', ')}</span>
-                            )}
-                          </div>
-                        );
-                      };
-
                       return (
                         <tr key={match.key} className="border-b last:border-0">
                           <td className="py-3 px-2 w-24">
@@ -343,7 +427,7 @@ export default function LiveScoring() {
                             </div>
                           </td>
                           <td className="py-3 px-2">
-                            {getTeamDisplay(match.positions, false)}
+                            {getTeamDisplay(match, false)}
                           </td>
                           <td className="py-3 px-2">
                            <Input
@@ -376,7 +460,7 @@ export default function LiveScoring() {
                            />
                           </td>
                           <td className="py-3 px-2">
-                            {getTeamDisplay(match.positions, true)}
+                            {getTeamDisplay(match, true)}
                           </td>
                         </tr>
                       );
@@ -399,6 +483,40 @@ export default function LiveScoring() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Mobile save bar */}
+        {canEdit && (
+          <div
+            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex gap-2"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+          >
+            <Button
+              onClick={handleSaveHome}
+              disabled={isSaving || !matches.some(match => venueOf(match) === 'home')}
+              className="flex-1 h-[52px] bg-emerald-600 hover:bg-emerald-700"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Home Scores
+            </Button>
+            <Button
+              onClick={handleSaveAway}
+              disabled={isSaving || !matches.some(match => venueOf(match) === 'away')}
+              variant="outline"
+              className="flex-1 h-[52px] border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Away Scores
+            </Button>
+          </div>
+        )}
 
         {/* Edit Team Dialog */}
         <Dialog open={editTeamOpen} onOpenChange={setEditTeamOpen}>
