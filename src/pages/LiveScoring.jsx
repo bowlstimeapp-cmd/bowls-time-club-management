@@ -95,7 +95,7 @@ export default function LiveScoring() {
   });
 
   const matches = useMemo(() => scoringMatches(selection), [selection]);
-  const { clubScores, oppositionScores, ends, oppositionPlayers, updateField, saveVenue, savePlayers, isSaving } = useVenueScores(selectionId, clubId, matches);
+  const { clubScores, oppositionScores, ends, oppositionPlayers, updateField, saveVenue, savePlayers, hasUnsavedPlayers, isSaving } = useVenueScores(selectionId, clubId, matches);
 
   useEffect(() => {
     if (selection?.selections) {
@@ -397,7 +397,6 @@ export default function LiveScoring() {
                                   className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-[15px] font-semibold text-gray-900 shadow-none placeholder:font-normal placeholder:text-gray-400 focus-visible:ring-0"
                                   value={oppositionPlayers[posKey] || ''}
                                   onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
-                                  onBlur={() => savePlayers(venueOf(match))}
                                   disabled={!canEdit}
                                 />
                               ) : (
@@ -409,6 +408,19 @@ export default function LiveScoring() {
                             </div>
                           );
                         })}
+                        {canEdit && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 w-full min-h-[40px] border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => savePlayers(venueOf(match))}
+                            disabled={isSaving || !hasUnsavedPlayers(venueOf(match))}
+                          >
+                            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Save {opponentName} players
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
