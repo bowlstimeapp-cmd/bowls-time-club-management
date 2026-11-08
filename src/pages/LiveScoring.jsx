@@ -95,7 +95,7 @@ export default function LiveScoring() {
   });
 
   const matches = useMemo(() => scoringMatches(selection), [selection]);
-  const { clubScores, oppositionScores, ends, oppositionPlayers, updateField, saveVenue, isSaving } = useVenueScores(selectionId, clubId, matches);
+  const { clubScores, oppositionScores, ends, oppositionPlayers, updateField, saveVenue, savePlayers, isSaving } = useVenueScores(selectionId, clubId, matches);
 
   useEffect(() => {
     if (selection?.selections) {
@@ -124,7 +124,10 @@ export default function LiveScoring() {
 
   const canEdit = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
   const isTopClub = selection?.competition === 'Top Club';
-  const opponentName = selection?.opponent?.trim() || 'Opposition';
+  // Prefer the opponent saved in the selection; fall back to the match name (minus any "vs ") for older selections
+  const opponentName = selection?.opponent?.trim()
+    || selection?.match_name?.replace(/^\s*(vs\.?|v)\s+/i, '').trim()
+    || 'Opposition';
 
   const selectionNames = selection?.selection_names || {};
   const getMemberName = (email, positionKey) => {
@@ -394,6 +397,7 @@ export default function LiveScoring() {
                                   className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-[15px] font-semibold text-gray-900 shadow-none placeholder:font-normal placeholder:text-gray-400 focus-visible:ring-0"
                                   value={oppositionPlayers[posKey] || ''}
                                   onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
+                                  onBlur={() => savePlayers(venueOf(match))}
                                   disabled={!canEdit}
                                 />
                               ) : (
