@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 const RINK_POSITIONS = ['Lead', '2', '3', 'Skip'];
 const RINKS = [
@@ -116,17 +117,8 @@ export default function SelectionView() {
     enabled: !!clubId,
   });
 
-  const { data: allCompetitions = [] } = useQuery({
-    queryKey: ['allCompetitions', clubId],
-    queryFn: async () => {
-      const [clubComps, platformComps] = await Promise.all([
-        base44.entities.Competition.filter({ club_id: clubId }),
-        base44.entities.Competition.list().then(all => all.filter(c => !c.club_id)),
-      ]);
-      return [...clubComps, ...platformComps];
-    },
-    enabled: !!clubId,
-  });
+  const { clubCompetitions, platformCompetitions } = useClubCompetitions(clubId);
+  const allCompetitions = [...clubCompetitions, ...platformCompetitions];
 
   const { data: accoladeList = [] } = useQuery({
     queryKey: ['clubAccolades', clubId],

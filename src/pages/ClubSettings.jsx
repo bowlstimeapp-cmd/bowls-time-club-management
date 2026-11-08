@@ -24,6 +24,8 @@ import AccoladesSection from '@/components/accolades/AccoladesSection';
 import AffiliatedCountiesSection from '@/components/club/AffiliatedCountiesSection';
 import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
 import ClubRolesSection from '@/components/club/ClubRolesSection';
+import CompetitionFormDialog from '@/components/selection/CompetitionFormDialog';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -101,11 +103,8 @@ export default function ClubSettings() {
   const [stripeSecretKey, setStripeSecretKey] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [competitionModalOpen, setCompetitionModalOpen] = useState(false);
+  const [compFormOpen, setCompFormOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
-  const [competitionForm, setCompetitionForm] = useState({
-    name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, gender: 'mixed', age_group: 'n/a', show_rinks_on_scorecards: true,
-  });
   const [kioskModeEnabled, setKioskModeEnabled] = useState(false);
   const [kioskAccountEmail, setKioskAccountEmail] = useState('');
   const [assigningMemberIds, setAssigningMemberIds] = useState(false);
@@ -141,11 +140,12 @@ export default function ClubSettings() {
     enabled: !!clubId && !!user?.email,
   });
 
-  const { data: competitions = [] } = useQuery({
-    queryKey: ['competitions', clubId],
-    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
-    enabled: !!clubId,
-  });
+  const {
+    clubCompetitions: competitions,
+    createCompetition,
+    updateCompetition,
+    deleteCompetition,
+  } = useClubCompetitions(clubId);
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
@@ -218,35 +218,6 @@ export default function ClubSettings() {
     },
   });
 
-  const createCompetitionMutation = useMutation({
-    mutationFn: (data) => base44.entities.Competition.create({ ...data, club_id: clubId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitions'] });
-      toast.success('Competition created');
-      setCompetitionModalOpen(false);
-      resetCompetitionForm();
-    },
-  });
-
-  const updateCompetitionMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Competition.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitions'] });
-      toast.success('Competition updated');
-      setCompetitionModalOpen(false);
-      setEditingCompetition(null);
-      resetCompetitionForm();
-    },
-  });
-
-  const deleteCompetitionMutation = useMutation({
-    mutationFn: (id) => base44.entities.Competition.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitions'] });
-      toast.success('Competition deleted');
-    },
-  });
-
   // ── Guards ─────────────────────────────────────────────────────────────────
   const isClubAdmin = membership?.role === 'admin' && membership?.status === 'approved';
 
@@ -291,31 +262,23 @@ export default function ClubSettings() {
 
   const handleRemoveMembershipType = (name) => setMembershipTypes(membershipTypes.filter(t => t !== name));
 
-  const resetCompetitionForm = () =>
-    setCompetitionForm({ name: '', players_per_rink: 4, home_rinks: 2, away_rinks: 0, season: club?.season === 'outdoor' ? 'outdoor' : 'indoor', gender: 'mixed', age_group: 'n/a', show_rinks_on_scorecards: true });
-
-  const handleEditCompetition = (comp) => {
-    setEditingCompetition(comp);
-    setCompetitionForm({
-      name: comp.name,
-      players_per_rink: comp.players_per_rink,
-      home_rinks: comp.home_rinks,
-      away_rinks: comp.away_rinks || 0,
-      season: comp.season || 'indoor',
-      gender: comp.gender || 'mixed',
-      age_group: comp.age_group || 'n/a',
-      show_rinks_on_scorecards: comp.show_rinks_on_scorecards !== false,
-    });
-    setCompetitionModalOpen(true);
+  const handleSaveCompetition = async (data) => {
+    try {
+      if (editingCompetition) {
+        await updateCompetition.mutateAsync({ id: editingCompetition.id, data });
+      } else {
+        await createCompetition.mutateAsync(data);
+      }
+      setCompFormOpen(false);
+      setEditingCompetition(null);
+    } catch {
+      // the shared hook shows the error toast
+    }
   };
 
-  const handleSaveCompetition = () => {
-    if (!competitionForm.name.trim()) { toast.error('Please enter a competition name'); return; }
-    if (editingCompetition) {
-      updateCompetitionMutation.mutate({ id: editingCompetition.id, data: competitionForm });
-    } else {
-      createCompetitionMutation.mutate(competitionForm);
-    }
+  const handleDeleteCompetition = (comp) => {
+    if (!window.confirm(`Delete ${comp.name}? This removes it from match selection and availability.`)) return;
+    deleteCompetition.mutate(comp.id);
   };
 
   // ── Core save ──────────────────────────────────────────────────────────────
@@ -869,7 +832,7 @@ export default function ClubSettings() {
               <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5" />Competitions</CardTitle>
               <CardDescription>Define competitions for match selection</CardDescription>
             </div>
-            <Button type="button" size="sm" onClick={() => { resetCompetitionForm(); setEditingCompetition(null); setCompetitionModalOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="button" size="sm" onClick={() => { setEditingCompetition(null); setCompFormOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="w-4 h-4 mr-2" />Add
             </Button>
           </div>
@@ -889,8 +852,8 @@ export default function ClubSettings() {
                     <p className="text-sm text-gray-600">{comp.season === 'outdoor' ? 'Outdoor' : 'Indoor'} • {comp.players_per_rink} players • {comp.home_rinks} home • {comp.away_rinks || 0} away</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => handleEditCompetition(comp)}><Pencil className="w-4 h-4" /></Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => deleteCompetitionMutation.mutate(comp.id)} className="text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingCompetition(comp); setCompFormOpen(true); }}><Pencil className="w-4 h-4" /></Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => handleDeleteCompetition(comp)} className="text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
               ))}
@@ -1012,84 +975,13 @@ export default function ClubSettings() {
           onSuccess={() => { toast.success('Bookings imported successfully'); setImportBookingsOpen(false); }}
         />
 
-        {competitionModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="max-w-md w-full">
-              <CardHeader>
-                <CardTitle>{editingCompetition ? 'Edit Competition' : 'Add Competition'}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Competition Name *</Label>
-                  <Input value={competitionForm.name} onChange={(e) => setCompetitionForm({ ...competitionForm, name: e.target.value })} placeholder="e.g., Bramley, Wessex League" />
-                </div>
-                <div>
-                  <Label>Players per Rink</Label>
-                  <Input type="number" min="2" max="6" value={competitionForm.players_per_rink} onChange={(e) => setCompetitionForm({ ...competitionForm, players_per_rink: parseInt(e.target.value) })} />
-                </div>
-                <div>
-                  <Label>Number of Home Rinks</Label>
-                  <Input type="number" min="1" max="6" value={competitionForm.home_rinks} onChange={(e) => setCompetitionForm({ ...competitionForm, home_rinks: parseInt(e.target.value) })} />
-                </div>
-                <div>
-                  <Label>Number of Away Rinks</Label>
-                  <Input type="number" min="0" max="6" value={competitionForm.away_rinks} onChange={(e) => setCompetitionForm({ ...competitionForm, away_rinks: parseInt(e.target.value) })} />
-                </div>
-                <div>
-                  <Label>Season *</Label>
-                  <Select value={competitionForm.season} onValueChange={(value) => setCompetitionForm({ ...competitionForm, season: value })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="indoor">Indoor</SelectItem>
-                      <SelectItem value="outdoor">Outdoor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Gender</Label>
-                    <Select value={competitionForm.gender || 'mixed'} onValueChange={(value) => setCompetitionForm({ ...competitionForm, gender: value })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mixed">Mixed</SelectItem>
-                        <SelectItem value="men">Men</SelectItem>
-                        <SelectItem value="women">Women</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Age Group</Label>
-                    <Select value={competitionForm.age_group || 'n/a'} onValueChange={(value) => setCompetitionForm({ ...competitionForm, age_group: value })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="n/a">N/A</SelectItem>
-                        <SelectItem value="u25">Under 25</SelectItem>
-                        <SelectItem value="o60">Over 60</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
-                  <div>
-                    <Label className="text-sm font-medium">Show rink numbers on scorecards by default</Label>
-                    <p className="text-xs text-gray-500 mt-0.5">Applied to new selections of this competition</p>
-                  </div>
-                  <Switch
-                    checked={competitionForm.show_rinks_on_scorecards !== false}
-                    onCheckedChange={(v) => setCompetitionForm({ ...competitionForm, show_rinks_on_scorecards: v })}
-                  />
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => { setCompetitionModalOpen(false); setEditingCompetition(null); resetCompetitionForm(); }}>Cancel</Button>
-                  <Button type="button" className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={handleSaveCompetition} disabled={createCompetitionMutation.isPending || updateCompetitionMutation.isPending}>
-                    {(createCompetitionMutation.isPending || updateCompetitionMutation.isPending) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    {editingCompetition ? 'Update' : 'Create'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <CompetitionFormDialog
+          open={compFormOpen}
+          onClose={() => { setCompFormOpen(false); setEditingCompetition(null); }}
+          competition={editingCompetition}
+          defaultSeason={club?.season === 'outdoor' ? 'outdoor' : 'indoor'}
+          onSaved={handleSaveCompetition}
+        />
       </div>
     </div>
   );

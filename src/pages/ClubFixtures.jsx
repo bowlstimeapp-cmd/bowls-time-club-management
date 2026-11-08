@@ -11,6 +11,7 @@ import FixtureFormModal from '@/components/fixtures/FixtureFormModal';
 import BookRinksModal from '@/components/fixtures/BookRinksModal';
 import FixtureInterestButton from '@/components/fixtures/FixtureInterestButton';
 import useFixtureInterests from '@/hooks/useFixtureInterests';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 export default function ClubFixtures() {
   const [searchParams] = useSearchParams();
@@ -44,17 +45,7 @@ export default function ClubFixtures() {
     enabled: !!clubId,
   });
 
-  const { data: competitions = [] } = useQuery({
-    queryKey: ['clubCompetitions', clubId],
-    queryFn: async () => base44.entities.Competition.filter({ club_id: clubId }, 'name', 200),
-    enabled: !!clubId,
-  });
-
-  const { data: platformCompetitions = [] } = useQuery({
-    queryKey: ['platformCompetitions'],
-    queryFn: async () => base44.entities.Competition.filter({ club_id: null }, 'name', 200),
-    enabled: !!clubId,
-  });
+  const { clubCompetitions: competitions, platformCompetitions } = useClubCompetitions(clubId);
 
   const allCompetitions = useMemo(() => [...competitions, ...platformCompetitions], [competitions, platformCompetitions]);
 

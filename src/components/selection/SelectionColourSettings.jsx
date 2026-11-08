@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Palette } from 'lucide-react';
 import { toast } from "sonner";
 import { isDualGreens } from '@/lib/rinkConfig';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 const PRESET_COLOURS = [
   '#10b981', // emerald
@@ -39,20 +40,7 @@ export default function SelectionColourSettings({ open, onClose, clubId }) {
     enabled: !!clubId && open,
   });
 
-  const { data: clubCompetitions = [] } = useQuery({
-    queryKey: ['competitions', clubId],
-    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
-    enabled: !!clubId && open,
-  });
-
-  const { data: platformCompetitions = [] } = useQuery({
-    queryKey: ['platformCompetitions'],
-    queryFn: async () => {
-      const allComps = await base44.entities.Competition.list();
-      return allComps.filter(c => !c.club_id);
-    },
-    enabled: open,
-  });
+  const { clubCompetitions, platformCompetitions } = useClubCompetitions(clubId);
 
   const allCompetitions = [...platformCompetitions, ...clubCompetitions];
   const competitions = allCompetitions.filter(comp => isDualGreens(club) || comp.season === club?.season);

@@ -46,6 +46,7 @@ import SmsNotificationControl from '@/components/selection/SmsNotificationContro
 import sendSelectionPush from '@/components/selection/sendSelectionPush';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ReservesEditor from '@/components/selection/ReservesEditor';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 import {
   sendSelectionEmails as sendSelectionEmailsFor,
   buildFullPlayerList as buildFullPlayerListFor,
@@ -225,19 +226,7 @@ export default function SelectionEditor() {
     enabled: !!clubId
   });
 
-  const { data: clubCompetitions = [] } = useQuery({
-    queryKey: ['competitions', clubId],
-    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
-    enabled: !!clubId
-  });
-
-  const { data: platformCompetitions = [] } = useQuery({
-    queryKey: ['platformCompetitions'],
-    queryFn: async () => {
-      const allComps = await base44.entities.Competition.list();
-      return allComps.filter((c) => !c.club_id);
-    }
-  });
+  const { clubCompetitions, platformCompetitions } = useClubCompetitions(clubId);
 
   const { data: competitionInterests = [] } = useQuery({
     queryKey: ['competitionInterests', clubId],

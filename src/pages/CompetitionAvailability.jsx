@@ -11,6 +11,7 @@ import { Loader2, Plus, Pencil, Trash2, Save, Users, EyeOff, Eye } from 'lucide-
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import CompetitionFormDialog from '@/components/selection/CompetitionFormDialog';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 export default function CompetitionAvailability() {
   const [searchParams] = useSearchParams();
@@ -38,19 +39,13 @@ export default function CompetitionAvailability() {
     enabled: !!clubId && !!user?.email,
   });
 
-  const { data: clubComps = [] } = useQuery({
-    queryKey: ['clubCompetitions', clubId],
-    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }),
-    enabled: !!clubId,
-  });
-
-  const { data: platformComps = [] } = useQuery({
-    queryKey: ['platformCompetitions'],
-    queryFn: async () => {
-      const all = await base44.entities.Competition.list();
-      return all.filter(c => !c.club_id);
-    },
-  });
+  const {
+    clubCompetitions: clubComps,
+    platformCompetitions: platformComps,
+    createCompetition,
+    updateCompetition,
+    deleteCompetition,
+  } = useClubCompetitions(clubId);
 
   const { data: club } = useQuery({
     queryKey: ['club', clubId],
@@ -131,28 +126,23 @@ export default function CompetitionAvailability() {
   const handleCompSave = async (formData) => {
     try {
       if (editingComp) {
-        await base44.entities.Competition.update(editingComp.id, formData);
-        toast.success('Competition updated');
+        await updateCompetition.mutateAsync({ id: editingComp.id, data: formData });
       } else {
-        await base44.entities.Competition.create({ ...formData, club_id: clubId });
-        toast.success('Competition created');
+        await createCompetition.mutateAsync(formData);
       }
-      queryClient.invalidateQueries({ queryKey: ['clubCompetitions', clubId] });
       setShowCompForm(false);
       setEditingComp(null);
-    } catch (error) {
-      toast.error('Failed to save competition');
+    } catch {
+      // the shared hook shows the error toast
     }
   };
 
   const handleCompDelete = async (comp) => {
     if (!window.confirm(`Delete competition "${comp.name}"?`)) return;
     try {
-      await base44.entities.Competition.delete(comp.id);
-      toast.success('Competition deleted');
-      queryClient.invalidateQueries({ queryKey: ['clubCompetitions', clubId] });
-    } catch (error) {
-      toast.error('Failed to delete competition');
+      await deleteCompetition.mutateAsync(comp.id);
+    } catch {
+      // the shared hook shows the error toast
     }
   };
 

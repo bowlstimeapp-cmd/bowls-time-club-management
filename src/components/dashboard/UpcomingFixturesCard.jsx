@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { createPageUrl } from '@/utils';
 import FixtureInterestButton from '@/components/fixtures/FixtureInterestButton';
 import useFixtureInterests from '@/hooks/useFixtureInterests';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 /** Upcoming club fixtures with the member's "I'm available" star. */
 export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
@@ -24,11 +25,7 @@ export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
     enabled: !!clubId,
   });
 
-  const { data: competitions = [] } = useQuery({
-    queryKey: ['clubCompetitions', clubId],
-    queryFn: () => base44.entities.Competition.filter({ club_id: clubId }, 'name', 200),
-    enabled: !!clubId,
-  });
+  const { clubCompetitions: competitions } = useClubCompetitions(clubId);
 
   const { interests, toggle } = useFixtureInterests(clubId);
 

@@ -8,10 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function CompetitionFormDialog({ open, onClose, competition, onSaved }) {
+export default function CompetitionFormDialog({ open, onClose, competition, onSaved, defaultSeason = 'indoor' }) {
   const [formData, setFormData] = useState({
     name: '',
-    season: 'indoor',
+    season: defaultSeason,
     gender: 'mixed',
     age_group: 'n/a',
     players_per_rink: 4,
@@ -36,7 +36,7 @@ export default function CompetitionFormDialog({ open, onClose, competition, onSa
     } else {
       setFormData({
         name: '',
-        season: 'indoor',
+        season: defaultSeason,
         gender: 'mixed',
         age_group: 'n/a',
         players_per_rink: 4,
@@ -45,7 +45,7 @@ export default function CompetitionFormDialog({ open, onClose, competition, onSa
         show_rinks_on_scorecards: true,
       });
     }
-  }, [competition, open]);
+  }, [competition, open, defaultSeason]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {

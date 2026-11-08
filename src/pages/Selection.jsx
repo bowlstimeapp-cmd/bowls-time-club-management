@@ -41,6 +41,7 @@ import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
 import SelectionColourSettings from '@/components/selection/SelectionColourSettings';
 import SelectionAuditLogDialog from '@/components/selection/SelectionAuditLogDialog';
+import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 export default function Selection() {
   const [searchParams] = useSearchParams();
@@ -136,11 +137,11 @@ export default function Selection() {
   });
 
   // Selections follow their competition's green
-  const { data: competitions = [] } = useQuery({
-    queryKey: ['competitions', clubId],
-    queryFn: () => base44.entities.Competition.list(),
-    enabled: !!clubId,
-  });
+  const { clubCompetitions, platformCompetitions } = useClubCompetitions(clubId);
+  const competitions = useMemo(
+    () => [...clubCompetitions, ...platformCompetitions],
+    [clubCompetitions, platformCompetitions]
+  );
 
   const { data: members = [] } = useQuery({
     queryKey: ['clubMembers', clubId],
