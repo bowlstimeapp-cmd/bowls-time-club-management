@@ -65,15 +65,21 @@ export default function useVenueScores(selectionId, clubId, matches) {
       const saved = result.data;
       const scope = variables.scope;
       const stampField = `${scope}_updated_date`;
+      const record = saved.record;
       if (variables.kind !== 'players') savedEdits.current[scope] = variables.editRevision;
       savedPlayerEdits.current[scope] = variables.playerRevision;
-      stamps.current[scope] = saved[stampField];
-      const savedFields = variables.kind === 'players' ? PLAYER_FIELDS : undefined;
-      queryClient.setQueryData(['matchScore', selectionId], old => ({
-        ...mergeVenueScores(old || {}, variables, matches, scope, savedFields),
-        id: saved.id, selection_id: selectionId, club_id: clubId,
-        [stampField]: saved[stampField],
-      }));
+      stamps.current[scope] = saved[stampField] || record?.[stampField] || null;
+      // Show exactly what the server stored, so the screen matches what a reload will show
+      const savedFields = [
+        ...(variables.kind !== 'players' && variables.editRevision === edits.current[scope] ? RESULT_FIELDS : []),
+        ...(variables.playerRevision === playerEdits.current[scope] ? PLAYER_FIELDS : []),
+      ];
+      if (record) {
+        queryClient.setQueryData(['matchScore', selectionId], record);
+        if (savedFields.length) {
+          setValues(current => mergeVenueScores(current, record, matches, scope, savedFields));
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
       toast.success(variables.kind === 'players' ? 'Opposition players saved' : 'Scores saved');
     },
