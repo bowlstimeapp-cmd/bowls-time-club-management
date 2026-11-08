@@ -2,13 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { emptyScores, mergeVenueScores, venueOf, venuePayload } from '@/components/scoring/venueScoreData';
+import { emptyScores, mergeVenueScores, venueOf, venuePayload, PLAYER_FIELDS, RESULT_FIELDS } from '@/components/scoring/venueScoreData';
 
 export default function useVenueScores(selectionId, clubId, matches) {
   const queryClient = useQueryClient();
   const [values, setValues] = useState(emptyScores);
   const edits = useRef({ home: 0, away: 0 });
   const savedEdits = useRef({ home: 0, away: 0 });
+  const playerEdits = useRef({ home: 0, away: 0 });
+  const savedPlayerEdits = useRef({ home: 0, away: 0 });
   const stamps = useRef({ home: null, away: null });
   const { data: matchScore, isLoading } = useQuery({
     queryKey: ['matchScore', selectionId],
@@ -23,19 +25,30 @@ export default function useVenueScores(selectionId, clubId, matches) {
     setValues(emptyScores());
     edits.current = { home: 0, away: 0 };
     savedEdits.current = { home: 0, away: 0 };
+    playerEdits.current = { home: 0, away: 0 };
+    savedPlayerEdits.current = { home: 0, away: 0 };
     stamps.current = { home: null, away: null };
   }, [selectionId]);
 
   const applyScore = useCallback(score => {
     if (!score) return;
-    const accepted = ['home', 'away'].filter(scope => {
-      const stamp = score[`${scope}_updated_date`];
-      const latest = stamps.current[scope];
-      if (edits.current[scope] !== savedEdits.current[scope] || (latest && (!stamp || stamp < latest))) return false;
-      if (stamp) stamps.current[scope] = stamp;
-      return true;
+    setValues(current => {
+      let next = current;
+      for (const scope of ['home', 'away']) {
+        const stamp = score[`${scope}_updated_date`];
+        const latest = stamps.current[scope];
+        if (latest && (!stamp || stamp < latest)) continue;
+        // Never overwrite fields the person has typed but not yet saved
+        const fields = [
+          ...(edits.current[scope] === savedEdits.current[scope] ? RESULT_FIELDS : []),
+          ...(playerEdits.current[scope] === savedPlayerEdits.current[scope] ? PLAYER_FIELDS : []),
+        ];
+        if (!fields.length) continue;
+        if (stamp) stamps.current[scope] = stamp;
+        next = mergeVenueScores(next, score, matches, scope, fields);
+      }
+      return next;
     });
-    if (accepted.length) setValues(current => accepted.reduce((next, scope) => mergeVenueScores(next, score, matches, scope), current));
   }, [matches]);
 
   useEffect(() => { applyScore(matchScore); }, [matchScore, applyScore]);
@@ -47,26 +60,29 @@ export default function useVenueScores(selectionId, clubId, matches) {
   }, [selectionId, applyScore]);
 
   const mutation = useMutation({
-    mutationFn: ({ editRevision, ...payload }) => base44.functions.invoke('saveMatchScore', payload),
+    mutationFn: ({ editRevision, playerRevision, kind, ...payload }) => base44.functions.invoke('saveMatchScore', payload),
     onSuccess: (result, variables) => {
       const saved = result.data;
       const scope = variables.scope;
       const stampField = `${scope}_updated_date`;
-      savedEdits.current[scope] = variables.editRevision;
+      if (variables.kind !== 'players') savedEdits.current[scope] = variables.editRevision;
+      savedPlayerEdits.current[scope] = variables.playerRevision;
       stamps.current[scope] = saved[stampField];
+      const savedFields = variables.kind === 'players' ? PLAYER_FIELDS : undefined;
       queryClient.setQueryData(['matchScore', selectionId], old => ({
-        ...mergeVenueScores(old || {}, variables, matches, scope),
+        ...mergeVenueScores(old || {}, variables, matches, scope, savedFields),
         id: saved.id, selection_id: selectionId, club_id: clubId,
         [stampField]: saved[stampField],
       }));
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
-      toast.success('Scores saved');
+      if (variables.kind !== 'players') toast.success('Scores saved');
     },
-    onError: () => toast.error('Failed to save scores'),
+    onError: (_err, variables) => toast.error(variables?.kind === 'players' ? 'Failed to save player names' : 'Failed to save scores'),
   });
 
   const updateField = (field, key, value, scope) => {
-    edits.current[scope] += 1;
+    if (field === 'opposition_players') playerEdits.current[scope] += 1;
+    else edits.current[scope] += 1;
     setValues(current => ({ ...current, [field]: { ...current[field], [key]: value } }));
   };
   const saveVenue = scope => {
@@ -75,11 +91,22 @@ export default function useVenueScores(selectionId, clubId, matches) {
     mutation.mutate({
       selectionId, clubId, scope, match_keys: keys,
       ...venuePayload(values, matches, scope), editRevision: edits.current[scope],
+      playerRevision: playerEdits.current[scope],
+    });
+  };
+  // Saves just the opposition player names for a venue (used when leaving a name box)
+  const savePlayers = scope => {
+    if (playerEdits.current[scope] === savedPlayerEdits.current[scope]) return;
+    const keys = matches.filter(match => venueOf(match) === scope).map(match => match.key);
+    if (!keys.length) return;
+    mutation.mutate({
+      selectionId, clubId, scope, match_keys: keys, kind: 'players',
+      ...venuePayload(values, matches, scope, PLAYER_FIELDS), playerRevision: playerEdits.current[scope],
     });
   };
   return {
     clubScores: values.club_scores, oppositionScores: values.opposition_scores,
     ends: values.ends, oppositionPlayers: values.opposition_players,
-    updateField, saveVenue, isSaving: mutation.isPending || isLoading,
+    updateField, saveVenue, savePlayers, isSaving: mutation.isPending || isLoading,
   };
 }
