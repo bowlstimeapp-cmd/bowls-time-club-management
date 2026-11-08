@@ -48,9 +48,12 @@ import ChangeMemberEmailDialog from '@/components/member/ChangeMemberEmailDialog
 
 // Role pill config
 const roleMeta = {
-  admin:    { label: 'Admin',    className: 'bg-violet-100 text-violet-700 border border-violet-200' },
-  selector: { label: 'Selector', className: 'bg-amber-100 text-amber-700 border border-amber-200' },
-  member:   { label: 'Member',   className: 'bg-slate-100 text-slate-600 border border-slate-200' },
+  admin:       { label: 'Admin',       className: 'bg-violet-100 text-violet-700 border border-violet-200' },
+  secretary:   { label: 'Secretary',   className: 'bg-sky-100 text-sky-700 border border-sky-200' },
+  selector:    { label: 'Selector',    className: 'bg-amber-100 text-amber-700 border border-amber-200' },
+  live_scorer: { label: 'Live Scorer', className: 'bg-teal-100 text-teal-700 border border-teal-200' },
+  steward:     { label: 'Steward',     className: 'bg-purple-100 text-purple-700 border border-purple-200' },
+  member:      { label: 'Member',      className: 'bg-slate-100 text-slate-600 border border-slate-200' },
 };
 
 // Membership type dot colours (strip " Member" suffix for display)

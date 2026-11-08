@@ -68,6 +68,19 @@ export default async function(req) {
       }
     }
 
+    // Guard: never leave the club without an admin.
+    if (membership.role === 'admin' && newRole !== 'admin') {
+      const admins = await base44.asServiceRole.entities.ClubMembership.filter({
+        club_id: clubId,
+        role: 'admin',
+        status: 'approved',
+      });
+      const activeAdmins = admins.filter((m) => m.member_status !== 'left');
+      if (activeAdmins.length <= 1) {
+        return Response.json({ error: 'Cannot remove the last remaining club admin' }, { status: 409 });
+      }
+    }
+
     // 6. Apply the role change.
     await base44.asServiceRole.entities.ClubMembership.update(membershipId, { role: newRole });
 

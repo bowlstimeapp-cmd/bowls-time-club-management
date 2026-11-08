@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Settings, Loader2, Save, ShieldAlert, Users, Upload, Image, Trophy,
+  Settings, Loader2, Save, ShieldAlert, ShieldCheck, Users, Upload, Image, Trophy,
   Plus, Pencil, Trash2, CreditCard, Tv, DoorOpen, Key, RefreshCw, Palette,
   ExternalLink, FileUp, Monitor, ClipboardList, Paintbrush, Bell, Layers, Newspaper, MapPin
 } from 'lucide-react';
@@ -23,6 +23,7 @@ import { getRinkConfig } from '@/lib/rinkConfig';
 import AccoladesSection from '@/components/accolades/AccoladesSection';
 import AffiliatedCountiesSection from '@/components/club/AffiliatedCountiesSection';
 import TeamSheetTemplateSettings from '@/components/selection/TeamSheetTemplateSettings';
+import ClubRolesSection from '@/components/club/ClubRolesSection';
 import BulkBookingImportModal from '@/components/booking/BulkBookingImportModal';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
@@ -34,6 +35,7 @@ const TABS = [
   { id: 'general',      label: 'General',                icon: Settings  },
   { id: 'rinks',        label: 'Rinks & Bookings',       icon: Layers    },
   { id: 'members',      label: 'Members',                icon: Users     },
+  { id: 'roles',        label: 'Roles',                  icon: ShieldCheck },
   { id: 'competitions', label: 'Competitions',           icon: Trophy    },
   { id: 'news',         label: 'Club News',              icon: Newspaper },
   { id: 'display',      label: 'Display & Integrations', icon: Tv        },
@@ -944,10 +946,16 @@ export default function ClubSettings() {
     </div>
   );
 
+  // ROLES
+  const renderRoles = () => (
+    <ClubRolesSection clubId={clubId} currentUser={user} />
+  );
+
   const tabContent = {
     general: renderGeneral,
     rinks: renderRinks,
     members: renderMembers,
+    roles: renderRoles,
     competitions: renderCompetitions,
     news: renderNews,
   };
