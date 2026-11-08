@@ -38,7 +38,7 @@ const TABS = [
   { id: 'rinks',        label: 'Rinks & Bookings',       icon: Layers    },
   { id: 'members',      label: 'Members',                icon: Users     },
   { id: 'roles',        label: 'Roles',                  icon: ShieldCheck },
-  { id: 'competitions', label: 'Match Types',            icon: Trophy    },
+  { id: 'competitions', label: 'Match Types & Competitions',            icon: Trophy    },
   { id: 'news',         label: 'Club News',              icon: Newspaper },
   { id: 'display',      label: 'Display & Integrations', icon: Tv        },
 ];
@@ -829,7 +829,7 @@ export default function ClubSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5" />Competitions</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5" />Match Types</CardTitle>
               <CardDescription>Define Match Types for the team selection function</CardDescription>
             </div>
             <Button type="button" size="sm" onClick={() => { setEditingCompetition(null); setCompFormOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700">
