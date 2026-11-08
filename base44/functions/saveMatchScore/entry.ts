@@ -44,7 +44,12 @@ export default async function(req) {
     ))) {
       return Response.json({ error: 'Choose the rink rows for this venue' }, { status: 400 });
     }
-    if (scoped && [club_scores, opposition_scores, ends].some(value => !value || typeof value !== 'object' || Array.isArray(value))) {
+    // A venue save carries either all of the scores/ends, or just the opposition players
+    // (sent when a player name box loses focus).
+    const isObj = value => value && typeof value === 'object' && !Array.isArray(value);
+    const hasResults = [club_scores, opposition_scores, ends].every(isObj);
+    const playersOnly = [club_scores, opposition_scores, ends].every(value => value === undefined) && isObj(opposition_players);
+    if (scoped && !hasResults && !playersOnly) {
       return Response.json({ error: 'Both teams scores and ends are required for a venue save' }, { status: 400 });
     }
     const stampField = scoped ? `${scope}_updated_date` : null;
