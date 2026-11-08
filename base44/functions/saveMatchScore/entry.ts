@@ -84,7 +84,7 @@ export default async function(req) {
             fields[field] = values;
           }
         }
-        await service.entities.MatchScore.updateMany({ id: existing[0].id, club_id: clubId }, { $set: fields });
+        await service.entities.MatchScore.updateMany({ id: existing[0].id }, { $set: fields });
         // Single-record updates retain the existing realtime subscription event.
         await service.entities.MatchScore.update(existing[0].id, { [stampField]: stamp });
       } else {
@@ -134,10 +134,14 @@ export default async function(req) {
       }
     })());
 
+    // Return the record exactly as it is stored now, so the scorer's screen shows
+    // what has really been saved — and therefore what a reload will show.
+    const { items: stored } = await service.entities.MatchScore.filter({ id: scoreId }, { limit: 1 });
     return Response.json({
       ok: true,
       id: scoreId,
       ...(scope === 'home' ? { home_updated_date: stamp } : scope === 'away' ? { away_updated_date: stamp } : {}),
+      record: stored[0] || null,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
