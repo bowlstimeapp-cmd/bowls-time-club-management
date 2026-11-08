@@ -20,14 +20,20 @@ export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
     queryKey: ['upcomingClubFixtures', clubId],
     queryFn: async () => {
       const all = await base44.entities.ClubFixture.filter({ club_id: clubId }, 'date', 200);
-      return all.filter(f => f.date >= todayStr).slice(0, 5);
+      return all.filter(f => f.date >= todayStr && f.broadcast === true).slice(0, 5);
     },
     enabled: !!clubId,
   });
 
   const { clubCompetitions: competitions } = useClubCompetitions(clubId);
 
-  const { interests, toggle } = useFixtureInterests(clubId);
+  const { interests, canSeeAll, toggle } = useFixtureInterests(clubId);
+
+  const signUpCounts = useMemo(() => {
+    const counts = {};
+    interests.forEach(i => { counts[i.fixture_id] = (counts[i.fixture_id] || 0) + 1; });
+    return counts;
+  }, [interests]);
 
   const competitionMap = useMemo(() => {
     const map = {};
@@ -46,14 +52,14 @@ export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
         <CardTitle className="text-base flex items-center gap-2">
           {dragging && <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />}
           <CalendarDays className="w-4 h-4 text-emerald-600" />
-          Upcoming Fixtures
+          Fixture Sign-up
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? (
           <div className="p-4 space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
         ) : fixtures.length === 0 ? (
-          <div className="p-5 text-center text-sm text-gray-400">No upcoming club fixtures.</div>
+          <div className="p-5 text-center text-sm text-gray-400">No fixtures are open for sign-up right now.</div>
         ) : (
           <div className="divide-y">
             {fixtures.map(fixture => (
@@ -71,10 +77,17 @@ export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
                       <span>{fixture.venue}</span>
                     </div>
                   </div>
-                  <FixtureInterestButton
-                    interested={myInterestIds.has(fixture.id)}
-                    onToggle={() => toggle(fixture.id)}
-                  />
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <FixtureInterestButton
+                      interested={myInterestIds.has(fixture.id)}
+                      onToggle={() => toggle(fixture.id)}
+                    />
+                    {canSeeAll && (
+                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                        {signUpCounts[fixture.id] || 0} signed up
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

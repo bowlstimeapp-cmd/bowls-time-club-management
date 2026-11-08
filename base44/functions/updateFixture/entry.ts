@@ -24,11 +24,14 @@ Deno.serve(async (req) => {
     }
 
     // Only allow editable fields
-    const allowedFields = ['competition_id', 'date', 'time', 'finish_time', 'opponent', 'venue', 'notes'];
+    const allowedFields = ['competition_id', 'date', 'time', 'finish_time', 'opponent', 'venue', 'notes', 'broadcast'];
     const safeUpdates = {};
     for (const field of allowedFields) {
       if (field in updates) safeUpdates[field] = updates[field];
     }
+
+    // Broadcast is a plain on/off flag — never store a truthy non-boolean
+    if ('broadcast' in safeUpdates) safeUpdates.broadcast = Boolean(safeUpdates.broadcast);
 
     if (Object.keys(safeUpdates).length === 0) {
       return Response.json({ error: 'No valid fields to update' }, { status: 400 });

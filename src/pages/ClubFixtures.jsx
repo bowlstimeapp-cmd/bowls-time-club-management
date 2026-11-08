@@ -88,7 +88,11 @@ export default function ClubFixtures() {
     if (!window.confirm('Delete this fixture? Linked selections and bookings will NOT be deleted.')) return;
     try {
       const res = await base44.functions.invoke('deleteFixture', { fixtureId: fixture.id, club_id: clubId });
-      if (res.data.success) { toast.success('Fixture deleted'); queryClient.invalidateQueries(['clubFixtures', clubId]); }
+      if (res.data.success) {
+        toast.success('Fixture deleted');
+        queryClient.invalidateQueries({ queryKey: ['clubFixtures', clubId] });
+        queryClient.invalidateQueries({ queryKey: ['upcomingClubFixtures', clubId] });
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete fixture');
     }
@@ -208,7 +212,10 @@ export default function ClubFixtures() {
         fixture={editingFixture}
         competitions={allCompetitions}
         clubId={clubId}
-        onSaved={() => queryClient.invalidateQueries(['clubFixtures', clubId])}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['clubFixtures', clubId] });
+          queryClient.invalidateQueries({ queryKey: ['upcomingClubFixtures', clubId] });
+        }}
       />
       <BookRinksModal
         open={showBookRinksModal}

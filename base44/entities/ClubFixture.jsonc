@@ -39,6 +39,11 @@
     "notes": {
       "type": "string",
       "description": "Optional fixture notes"
+    },
+    "broadcast": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true the fixture is open for member sign-up and appears on the Member Dashboard. Only club admins can change this."
     }
   },
   "required": [

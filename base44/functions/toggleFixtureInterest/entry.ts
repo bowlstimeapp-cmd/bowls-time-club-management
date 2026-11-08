@@ -37,9 +37,15 @@ Deno.serve(async (req) => {
       user_email: user.email,
     });
 
+    // Withdrawing an existing sign-up is always allowed, even if the fixture
+    // has since been un-broadcast — only new sign-ups need an open fixture.
     if (existing[0]) {
       await base44.asServiceRole.entities.FixtureInterest.delete(existing[0].id);
       return Response.json({ success: true, interested: false });
+    }
+
+    if (fixture.broadcast !== true) {
+      return Response.json({ error: 'This fixture is not open for sign-up' }, { status: 400 });
     }
 
     await base44.asServiceRole.entities.FixtureInterest.create({
