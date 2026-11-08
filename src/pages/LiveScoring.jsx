@@ -413,12 +413,12 @@ export default function LiveScoring() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="mt-2 w-full min-h-[40px] border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                            className="mt-2 w-full min-h-[40px] border-emerald-600 text-emerald-700 hover:bg-emerald-50 max-md:h-auto max-md:px-2 max-md:py-2 max-md:text-xs max-md:leading-tight max-md:whitespace-normal"
                             onClick={() => savePlayers(venueOf(match))}
                             disabled={isSaving || !hasUnsavedPlayers(venueOf(match))}
                           >
-                            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                            Save {opponentName} players
+                            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin max-md:mr-1.5 max-md:shrink-0" /> : <Save className="w-4 h-4 mr-2 max-md:mr-1.5 max-md:shrink-0" />}
+                            <span className="max-md:min-w-0 max-md:break-words">Save {opponentName} players</span>
                           </Button>
                         )}
                       </div>
@@ -447,17 +447,21 @@ export default function LiveScoring() {
         {canEdit && (
           <div
             className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex gap-2"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+            style={{
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+              paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1rem, env(safe-area-inset-right))',
+            }}
           >
             <Button
               onClick={handleSaveHome}
               disabled={isSaving || !matches.some(match => venueOf(match) === 'home')}
-              className="flex-1 h-[52px] bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 min-w-0 h-11 px-2 text-[13px] whitespace-nowrap bg-emerald-600 hover:bg-emerald-700"
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 shrink-0 animate-spin" />
               ) : (
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-3.5 h-3.5 mr-1.5 shrink-0" />
               )}
               Save Home Scores
             </Button>
@@ -465,12 +469,12 @@ export default function LiveScoring() {
               onClick={handleSaveAway}
               disabled={isSaving || !matches.some(match => venueOf(match) === 'away')}
               variant="outline"
-              className="flex-1 h-[52px] border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+              className="flex-1 min-w-0 h-11 px-2 text-[13px] whitespace-nowrap border-emerald-600 text-emerald-700 hover:bg-emerald-50"
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 shrink-0 animate-spin" />
               ) : (
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-3.5 h-3.5 mr-1.5 shrink-0" />
               )}
               Save Away Scores
             </Button>
