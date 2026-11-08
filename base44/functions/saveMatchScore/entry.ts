@@ -75,7 +75,14 @@ export default async function(req) {
         // venue cannot replace either team's scores, ends or player names here.
         const fields = { [stampField]: stamp };
         for (const [field, values] of Object.entries(data)) {
-          for (const [key, value] of Object.entries(values)) fields[`${field}.${key}`] = value;
+          // A dotted $set only works inside an existing object. If the field is missing or null
+          // (e.g. the record was first created by a names-only save), set the whole object.
+          const current = existing[0][field];
+          if (current && typeof current === 'object' && !Array.isArray(current)) {
+            for (const [key, value] of Object.entries(values)) fields[`${field}.${key}`] = value;
+          } else {
+            fields[field] = values;
+          }
         }
         await service.entities.MatchScore.updateMany({ id: existing[0].id, club_id: clubId }, { $set: fields });
         // Single-record updates retain the existing realtime subscription event.
@@ -86,7 +93,10 @@ export default async function(req) {
       scoreId = existing[0].id;
     } else {
       const created = await service.entities.MatchScore.create({
-        selection_id: selectionId, club_id: clubId, ...data,
+        selection_id: selectionId, club_id: clubId,
+        // Start every field as an object so later per-key venue saves always have something to write into
+        club_scores: {}, opposition_scores: {}, ends: {}, opposition_players: {},
+        ...data,
         ...(scoped ? { [stampField]: stamp } : {}),
       });
       scoreId = created.id;
