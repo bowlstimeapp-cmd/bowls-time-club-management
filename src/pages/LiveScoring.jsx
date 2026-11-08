@@ -124,6 +124,7 @@ export default function LiveScoring() {
 
   const canEdit = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
   const isTopClub = selection?.competition === 'Top Club';
+  const opponentName = selection?.opponent?.trim() || 'Opposition';
 
   const selectionNames = selection?.selection_names || {};
   const getMemberName = (email, positionKey) => {
@@ -240,22 +241,22 @@ export default function LiveScoring() {
           transition={{ delay: 0.1 }}
           className="mb-4 sm:mb-6"
         >
-          <div className="rounded-2xl bg-emerald-800 px-4 py-5 sm:px-8 sm:py-6 shadow-sm">
+          <div className="rounded-3xl bg-gradient-to-br from-emerald-700 to-emerald-800 px-4 py-5 sm:px-8 sm:py-6 shadow-lg shadow-emerald-900/10 ring-1 ring-emerald-900/10">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-wide text-white mb-1 truncate">
+                <p className="text-sm font-semibold uppercase tracking-wide text-white/90 mb-1 truncate">
                   {club?.name || 'Your club'}
                 </p>
                 <p className="text-[60px] leading-none font-bold text-white tabular-nums">{clubTotal}</p>
               </div>
               <div className="text-center min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-wide text-white mb-1 truncate">Opposition</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-white/90 mb-1 truncate">{opponentName}</p>
                 <p className="text-[60px] leading-none font-bold text-white tabular-nums">{oppositionTotal}</p>
               </div>
             </div>
-            <div className="mt-4 border-t border-white/30 pt-3 text-center">
-              <p className="text-sm font-medium text-white">
-                Total ends played: <span className="font-bold tabular-nums">{totalEnds}</span>
+            <div className="mt-4 border-t border-white/20 pt-3 text-center">
+              <p className="text-sm font-medium text-white/90">
+                Total ends played: <span className="font-bold tabular-nums text-white">{totalEnds}</span>
               </p>
             </div>
           </div>
@@ -277,9 +278,9 @@ export default function LiveScoring() {
               const rinkName = isTopClub ? match.label : `Rink ${match.label}`;
 
               return (
-                <div key={match.key} className="rounded-2xl shadow-sm">
-                  {/* Dark scoreboard panel */}
-                  <div className="rounded-t-2xl bg-[#0F2F23] px-3 pt-3 pb-4 sm:px-4">
+                <div key={match.key} className="rounded-3xl bg-white shadow-lg shadow-emerald-900/5 ring-1 ring-emerald-900/10">
+                  {/* Scoreboard panel */}
+                  <div className="rounded-t-3xl bg-gradient-to-b from-emerald-700 to-emerald-800 px-3 pt-3 pb-4 sm:px-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold uppercase tracking-widest text-white truncate">{rinkName}</span>
                       {match.badge && (
@@ -296,7 +297,7 @@ export default function LiveScoring() {
 
                     <div className="mt-3 grid grid-cols-3 items-end gap-2">
                       <div className="text-center min-w-0">
-                        <p className="mb-1 flex min-h-[2rem] items-end justify-center text-xs font-semibold uppercase tracking-wide leading-tight text-white">
+                        <p className="mb-1 flex min-h-[2rem] items-end justify-center text-xs font-semibold uppercase tracking-wide leading-tight text-white/90">
                           {club?.name || 'Your club'}
                         </p>
                         {canEdit ? (
@@ -305,7 +306,7 @@ export default function LiveScoring() {
                             min="0"
                             inputMode="numeric"
                             aria-label={`${rinkName} club score`}
-                            className={`h-[76px] lg:h-[92px] w-full rounded-xl border-2 border-white/40 bg-white/10 px-0 py-0 text-center text-[60px] lg:text-[76px] leading-none font-bold text-white tabular-nums focus-visible:ring-2 focus-visible:ring-white/70 ${oppLeading ? 'opacity-70' : ''}`}
+                            className={`h-[76px] lg:h-[92px] w-full rounded-2xl border border-white/30 bg-white/10 px-0 py-0 text-center text-[60px] lg:text-[76px] leading-none font-bold text-white tabular-nums focus-visible:ring-2 focus-visible:ring-white/70 ${oppLeading ? 'opacity-70' : ''}`}
                             value={clubScores[match.key] || ''}
                             onChange={(e) => updateField('club_scores', match.key, e.target.value, venueOf(match))}
                             disabled={!canEdit}
@@ -319,7 +320,7 @@ export default function LiveScoring() {
                       </div>
 
                       <div className="text-center min-w-0">
-                        <p className="mb-1 flex min-h-[2rem] items-end justify-center text-xs font-semibold uppercase tracking-wide leading-tight text-white">
+                        <p className="mb-1 flex min-h-[2rem] items-end justify-center text-xs font-semibold uppercase tracking-wide leading-tight text-white/90">
                           Ends
                         </p>
                         {canEdit ? (
@@ -328,13 +329,13 @@ export default function LiveScoring() {
                             min="0"
                             inputMode="numeric"
                             aria-label={`${rinkName} ends`}
-                            className="h-[49px] lg:h-[58px] w-full rounded-xl border-2 border-white/40 bg-white/10 px-0 py-0 text-center text-[33px] lg:text-[42px] leading-none font-bold text-white tabular-nums focus-visible:ring-2 focus-visible:ring-white/70"
+                            className="h-[76px] lg:h-[92px] w-full rounded-2xl border border-white/30 bg-white/10 px-0 py-0 text-center text-[40px] lg:text-[50px] leading-none font-bold text-white tabular-nums focus-visible:ring-2 focus-visible:ring-white/70"
                             value={ends[match.key] || ''}
                             onChange={(e) => updateField('ends', match.key, e.target.value, venueOf(match))}
                             disabled={!canEdit}
                           />
                         ) : (
-                          <p className="text-[33px] lg:text-[42px] leading-none font-bold text-white tabular-nums">
+                          <p className="flex h-[76px] lg:h-[92px] items-center justify-center text-[40px] lg:text-[50px] leading-none font-bold text-white tabular-nums">
                             {ends[match.key] || '–'}
                           </p>
                         )}
@@ -342,16 +343,16 @@ export default function LiveScoring() {
                       </div>
 
                       <div className="text-center min-w-0">
-                        <p className="mb-1 flex min-h-[2rem] items-end justify-center text-xs font-semibold uppercase tracking-wide leading-tight text-white">
-                          Opposition
+                        <p className="mb-1 flex min-h-[2rem] items-end justify-center text-xs font-semibold uppercase tracking-wide leading-tight text-white/90">
+                          {opponentName}
                         </p>
                         {canEdit ? (
                           <Input
                             type="number"
                             min="0"
                             inputMode="numeric"
-                            aria-label={`${rinkName} opposition score`}
-                            className={`h-[76px] lg:h-[92px] w-full rounded-xl border-2 border-white/40 bg-white/10 px-0 py-0 text-center text-[60px] lg:text-[76px] leading-none font-bold text-white tabular-nums focus-visible:ring-2 focus-visible:ring-white/70 ${clubLeading ? 'opacity-70' : ''}`}
+                            aria-label={`${rinkName} ${opponentName} score`}
+                            className={`h-[76px] lg:h-[92px] w-full rounded-2xl border border-white/30 bg-white/10 px-0 py-0 text-center text-[60px] lg:text-[76px] leading-none font-bold text-white tabular-nums focus-visible:ring-2 focus-visible:ring-white/70 ${clubLeading ? 'opacity-70' : ''}`}
                             value={oppositionScores[match.key] || ''}
                             onChange={(e) => updateField('opposition_scores', match.key, e.target.value, venueOf(match))}
                             disabled={!canEdit}
@@ -367,10 +368,10 @@ export default function LiveScoring() {
                   </div>
 
                   {/* Player area */}
-                  <div className="rounded-b-2xl border border-t-0 border-gray-200 bg-white">
-                    <div className="grid grid-cols-2 divide-x divide-gray-200">
+                  <div className="rounded-b-3xl border-t border-gray-100 bg-white">
+                    <div className="grid grid-cols-2 divide-x divide-gray-100">
                       <div className="px-3 py-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Your club players</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 truncate">Your club players</p>
                         {match.positionsList.map((pos) => (
                           <div key={pos} className="flex items-center justify-between gap-2 h-10 border-b border-gray-100 last:border-0">
                             <span className="text-[15px] font-semibold text-gray-900 truncate">
@@ -381,28 +382,25 @@ export default function LiveScoring() {
                         ))}
                       </div>
                       <div className="px-3 py-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Opposition players</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 truncate">{opponentName} players</p>
                         {match.positionsList.map((pos) => {
                           const posKey = `${match.key}_${pos}`;
-                          if (canEdit) {
-                            return (
-                              <div key={pos} className="h-10 flex items-center border-b border-gray-100 last:border-0">
+                          return (
+                            <div key={pos} className="flex items-center justify-between gap-2 h-10 border-b border-gray-100 last:border-0">
+                              {canEdit ? (
                                 <Input
-                                  placeholder={pos}
-                                  aria-label={`${rinkName} opposition ${pos}`}
-                                  className="h-9 w-full rounded-none border-0 border-b-2 border-gray-300 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 focus-visible:border-emerald-600"
+                                  placeholder="Add name"
+                                  aria-label={`${rinkName} ${opponentName} ${pos}`}
+                                  className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-[15px] font-semibold text-gray-900 shadow-none placeholder:font-normal placeholder:text-gray-400 focus-visible:ring-0"
                                   value={oppositionPlayers[posKey] || ''}
                                   onChange={(e) => updateField('opposition_players', posKey, e.target.value, venueOf(match))}
                                   disabled={!canEdit}
                                 />
-                              </div>
-                            );
-                          }
-                          return (
-                            <div key={pos} className="flex items-center justify-between gap-2 h-10 border-b border-gray-100 last:border-0">
-                              <span className="text-[15px] font-semibold text-gray-900 truncate">
-                                {oppositionPlayers[posKey] || '—'}
-                              </span>
+                              ) : (
+                                <span className="text-[15px] font-semibold text-gray-900 truncate">
+                                  {oppositionPlayers[posKey] || '—'}
+                                </span>
+                              )}
                               <span className="text-xs text-gray-500 shrink-0">{pos}</span>
                             </div>
                           );
