@@ -38,7 +38,7 @@ const TABS = [
   { id: 'rinks',        label: 'Rinks & Bookings',       icon: Layers    },
   { id: 'members',      label: 'Members',                icon: Users     },
   { id: 'roles',        label: 'Roles',                  icon: ShieldCheck },
-  { id: 'competitions', label: 'Competitions',           icon: Trophy    },
+  { id: 'competitions', label: 'Match Types',            icon: Trophy    },
   { id: 'news',         label: 'Club News',              icon: Newspaper },
   { id: 'display',      label: 'Display & Integrations', icon: Tv        },
 ];
@@ -830,7 +830,7 @@ export default function ClubSettings() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5" />Competitions</CardTitle>
-              <CardDescription>Define competitions for match selection</CardDescription>
+              <CardDescription>Define Match Types for the team selection function</CardDescription>
             </div>
             <Button type="button" size="sm" onClick={() => { setEditingCompetition(null); setCompFormOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="w-4 h-4 mr-2" />Add
@@ -841,7 +841,7 @@ export default function ClubSettings() {
           {competitions.length === 0 ? (
             <div className="py-8 text-center text-gray-500">
               <Trophy className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No competitions defined yet</p>
+              <p className="text-sm">No Match Types defined yet</p>
             </div>
           ) : (
             <div className="space-y-3">
