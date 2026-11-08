@@ -8,12 +8,13 @@ const PHASE_LABELS = {
   creating: 'Booking rinks',
   linking: 'Linking bookings to fixtures',
   updating: 'Updating rink allocations',
+  deleting_league: 'Deleting league and its data',
 };
 
 // Fixed overlay showing batched booking/booking-cleanup progress
 export default function BookingProgressOverlay({ progress }) {
   if (!progress) return null;
-  const { done, total, phase } = progress;
+  const { done, total, phase, note } = progress;
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return (
     <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4">
@@ -22,6 +23,7 @@ export default function BookingProgressOverlay({ progress }) {
         <p className="font-medium text-gray-900 mb-1">{PHASE_LABELS[phase] || 'Working'}…</p>
         <p className="text-sm text-gray-500 mb-3">{done} of {total}</p>
         <Progress value={pct} className="h-2" />
+        {note && <p className="text-xs text-gray-500 mt-3">{note}</p>}
       </div>
     </div>
   );

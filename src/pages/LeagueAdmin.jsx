@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getPrimaryGreen, getRinkConfig, isDualGreens, getGreenTypes, getBookingGreen } from '@/lib/rinkConfig';
-import GreenSelector from '@/components/booking/GreenSelector';
+import { getPrimaryGreen, getRinkConfig, isDualGreens, getBookingGreen } from '@/lib/rinkConfig';
 import GreenFilter from '@/components/common/GreenFilter';
 import { matchesGreenFilter } from '@/lib/greenFilters';
 
@@ -30,13 +29,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -46,8 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -59,12 +49,10 @@ import {
 import { 
   Plus, 
   Trophy, 
-  Users, 
   Loader2, 
   ShieldAlert,
   Pencil,
   Trash2,
-  UserCircle,
   Calendar,
   Clock,
   Zap,
@@ -76,28 +64,19 @@ import {
   Archive,
   RefreshCw,
   Shuffle,
-  ClipboardList,
   Settings,
   ChevronDown
 } from 'lucide-react';
-import BlacklistDatesDialog from '@/components/leagues/BlacklistDatesDialog';
 import TeamDialog from '@/components/leagues/TeamDialog';
-import ManualFixturesModal from '@/components/leagues/ManualFixturesModal';
-import MemberSearchSelect from '@/components/member/MemberSearchSelect';
-
-import RinkDistributionModal from '@/components/leagues/RinkDistributionModal';
+import LeagueFormDialog from '@/components/leagues/LeagueFormDialog';
+import LeagueAdminDialogs from '@/components/leagues/LeagueAdminDialogs';
 import BookingProgressOverlay from '@/components/leagues/BookingProgressOverlay';
-import RinkClashModal from '@/components/booking/RinkClashModal';
 import LeagueAdminTableView from '@/components/leagues/LeagueAdminTableView';
-import LeagueScoresModal from '@/components/leagues/LeagueScoresModal';
 import LeagueArchiveSection from '@/components/leagues/LeagueArchiveSection';
-import LeagueTableDialog from '@/components/leagues/LeagueTableDialog';
-import TeamFixturesDialog, { printFixtures as printTeamFixtures, printBlankRota as printTeamBlankRota } from '@/components/leagues/TeamFixturesDialog';
 import { toast } from "sonner";
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { format, parseISO, addDays, eachWeekOfInterval, isBefore } from 'date-fns';
-import { filterOutSocialMembers, normaliseMembershipTypes } from '@/lib/membershipUtils';
+import { format, parseISO } from 'date-fns';
 import { buildFixtureList as buildFixturesForLeague, reassignRinkAllocations } from '@/lib/leagueFixtureGenerator';
 import { parseSetsValue } from '@/lib/leagueScoring';
 import LeagueSearchSelect from '@/components/leagues/LeagueSearchSelect';
@@ -165,6 +144,8 @@ export default function LeagueAdmin() {
 
   // Batch booking/cancellation progress {phase, done, total}
   const [bookingProgress, setBookingProgress] = useState(null);
+  // League deletion progress {phase, done, total, note}
+  const [deleteProgress, setDeleteProgress] = useState(null);
 
   const [teamName, setTeamName] = useState('');
   const [captainEmail, setCaptainEmail] = useState('');
@@ -380,33 +361,84 @@ export default function LeagueAdmin() {
     },
   });
 
+  // Deleting a league touches a lot of records (bookings, fixtures, teams), so it runs
+  // in batches of 125 actions with a 60 second pause between batches to stay inside the
+  // platform's rate limits. Progress and the pause countdown show in the overlay.
+  const DELETE_BATCH = 125;
+  const DELETE_COOLDOWN_SECONDS = 60;
+
   const deleteLeagueMutation = useMutation({
     mutationFn: async (id) => {
       // Find the league to get its name for booking lookup
       const leagueToDelete = leagues.find(l => l.id === id);
-      // Delete associated fixtures and cancel their bookings
       const leagueFixturesList = await base44.entities.LeagueFixture.filter({ league_id: id });
-      const bookingIds = leagueFixturesList.map(f => f.booking_id).filter(Boolean);
-      await Promise.all(bookingIds.map(bid => clubData('Booking', 'update', { id: bid, data: { status: 'cancelled' } })));
+      const linkedBookingIds = leagueFixturesList.map(f => f.booking_id).filter(Boolean);
       // Also cancel ALL bookings for this league by booker_name
+      let namedBookingIds = [];
       if (leagueToDelete) {
-        const leagueBookingsRes = await base44.functions.invoke('listBookingsForScheduling', { 
-          clubId, 
-          booker_name: `League - ${leagueToDelete.name}` 
+        const leagueBookingsRes = await base44.functions.invoke('listBookingsForScheduling', {
+          clubId,
+          booker_name: `League - ${leagueToDelete.name}`
         });
-        const leagueBookings = leagueBookingsRes.data.bookings || [];
-        const extraIds = leagueBookings.map(b => b.id).filter(bid => !bookingIds.includes(bid));
-        await Promise.all(extraIds.map(bid => clubData('Booking', 'update', { id: bid, data: { status: 'cancelled' } })));
+        namedBookingIds = (leagueBookingsRes.data?.bookings || []).map(b => b.id);
       }
-      // Delete fixtures
-      const fixtureIds = leagueFixturesList.map(f => f.id);
-      if (fixtureIds.length > 0) await clubData('LeagueFixture', 'bulk_delete', { ids: fixtureIds });
-      // Delete teams
+      const bookingIds = [...new Set([...linkedBookingIds, ...namedBookingIds])];
       const leagueTeamsList = await base44.entities.LeagueTeam.filter({ league_id: id });
-      await Promise.all(leagueTeamsList.map(t => clubData('LeagueTeam', 'delete', { id: t.id })));
-      // Delete league
-      await clubData('League', 'delete', { id });
+
+      // One action per record — the league itself is deleted last
+      const actions = [
+        ...bookingIds.map(bid => ({ type: 'booking', id: bid })),
+        ...leagueFixturesList.map(f => ({ type: 'fixture', id: f.id })),
+        ...leagueTeamsList.map(t => ({ type: 'team', id: t.id })),
+        { type: 'league', id },
+      ];
+      const total = actions.length;
+
+      setDeleteProgress({ phase: 'deleting_league', done: 0, total, note: null });
+      try {
+        for (let i = 0; i < total; i += DELETE_BATCH) {
+          const batch = actions.slice(i, i + DELETE_BATCH);
+          const idsOf = type => batch.filter(a => a.type === type).map(a => a.id);
+
+          const bookings = idsOf('booking');
+          const fixtures = idsOf('fixture');
+          const teams = idsOf('team');
+
+          if (bookings.length > 0) {
+            await clubData('Booking', 'bulk_update', { ids: bookings, data: { status: 'cancelled' } });
+          }
+          if (fixtures.length > 0) {
+            await clubData('LeagueFixture', 'bulk_delete', { ids: fixtures });
+          }
+          for (const teamId of teams) {
+            await clubData('LeagueTeam', 'delete', { id: teamId });
+          }
+          for (const leagueId of idsOf('league')) {
+            await clubData('League', 'delete', { id: leagueId });
+          }
+
+          const done = Math.min(i + DELETE_BATCH, total);
+          setDeleteProgress({ phase: 'deleting_league', done, total, note: null });
+
+          // Pause before the next batch so the rate-limit window resets
+          if (done < total) {
+            for (let seconds = DELETE_COOLDOWN_SECONDS; seconds > 0; seconds--) {
+              setDeleteProgress({
+                phase: 'deleting_league',
+                done,
+                total,
+                note: `Pausing ${seconds}s before the next ${Math.min(DELETE_BATCH, total - done)} records…`,
+              });
+              await sleep(1000);
+            }
+            setDeleteProgress({ phase: 'deleting_league', done, total, note: null });
+          }
+        }
+      } finally {
+        setDeleteProgress(null);
+      }
     },
+    onError: (error) => toast.error('Failed to delete league: ' + (error?.message || error)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
       queryClient.invalidateQueries({ queryKey: ['leagueTeams', clubId] });
@@ -1579,456 +1611,39 @@ export default function LeagueAdmin() {
         )}
 
         {/* League Dialog */}
-        <Dialog open={leagueDialogOpen} onOpenChange={resetLeagueForm}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-            <DialogHeader>
-              <DialogTitle>{editingLeague ? 'Edit League' : 'Create League'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {/* Creation Mode selector — only shown when creating a new league */}
-              {!editingLeague && (
-                <div className="border rounded-lg p-4 space-y-3 bg-slate-50">
-                  <Label className="font-semibold">Fixture Creation Mode</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setLeagueCreationMode('auto')}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${leagueCreationMode === 'auto' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-emerald-600" />
-                        <span className="font-medium text-sm">Automatic</span>
-                      </div>
-                      <p className="text-xs text-slate-500">Generate fixtures from dates & teams using round-robin scheduling</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLeagueCreationMode('manual')}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${leagueCreationMode === 'manual' ? 'border-purple-500 bg-purple-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <List className="w-4 h-4 text-purple-600" />
-                        <span className="font-medium text-sm">Manual</span>
-                      </div>
-                      <p className="text-xs text-slate-500">Enter fixtures yourself — ideal for migrating existing leagues</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-              <div>
-                <Label>League Name *</Label>
-                <Input
-                  value={leagueName}
-                  onChange={(e) => setLeagueName(e.target.value)}
-                  placeholder="e.g., Winter League 2024"
-                />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Input
-                  value={leagueDescription}
-                  onChange={(e) => setLeagueDescription(e.target.value)}
-                  placeholder="Optional description"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={leagueStartDate}
-                    onChange={(e) => setLeagueStartDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={leagueEndDate}
-                    onChange={(e) => setLeagueEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              {club?.use_custom_sessions && club?.custom_sessions?.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Match Session *</Label>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="multi-session"
-                        checked={leagueMultiSession}
-                        onCheckedChange={(checked) => {
-                          setLeagueMultiSession(checked);
-                          setLeagueSelectedSessions([]);
-                          if (!checked) {
-                            // reset to single session defaults
-                            setLeagueStartTime(club.custom_sessions[0]?.start || '18:00');
-                            setLeagueEndTime(club.custom_sessions[0]?.end || '21:00');
-                          }
-                        }}
-                      />
-                      <Label htmlFor="multi-session" className="cursor-pointer text-sm font-normal">League spans multiple sessions</Label>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500">Toggle this for when a league takes up multiple sessions e.g. 6–7pm and 7–8pm.</p>
-                  {leagueMultiSession ? (
-                    <div className="space-y-2">
-                      {club.custom_sessions.map((session, i) => {
-                        const key = `${session.start}|${session.end}`;
-                        const isSelected = leagueSelectedSessions.some(s => s.start === session.start && s.end === session.end);
-                        return (
-                          <label key={i} className="flex items-center gap-2 cursor-pointer">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) => {
-                                setLeagueSelectedSessions(prev =>
-                                  checked
-                                    ? [...prev, { start: session.start, end: session.end }]
-                                    : prev.filter(s => !(s.start === session.start && s.end === session.end))
-                                );
-                              }}
-                            />
-                            <span className="text-sm">{session.start} – {session.end}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <Select
-                      value={`${leagueStartTime}|${leagueEndTime}`}
-                      onValueChange={(v) => {
-                        const [s, e] = v.split('|');
-                        setLeagueStartTime(s);
-                        setLeagueEndTime(e);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a session" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {club.custom_sessions.map((session, i) => (
-                          <SelectItem key={i} value={`${session.start}|${session.end}`}>
-                            {session.start} – {session.end}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Match Start Time *</Label>
-                      <Input
-                        type="time"
-                        value={leagueStartTime}
-                        onChange={(e) => setLeagueStartTime(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Match End Time *</Label>
-                      <Input
-                        type="time"
-                        value={leagueEndTime}
-                        onChange={(e) => setLeagueEndTime(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div>
-                <Label>Format</Label>
-                <Select value={leagueFormat} onValueChange={setLeagueFormat}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="triples">Triples (3 players)</SelectItem>
-                    <SelectItem value="fours">Fours (4 players)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Typical Session Time</Label>
-                <Input
-                  value={leagueSessionTime}
-                  onChange={(e) => setLeagueSessionTime(e.target.value)}
-                  placeholder="e.g. 2:00pm"
-                />
-                <p className="text-xs text-gray-500 mt-1">Shown on printed league tables</p>
-              </div>
-              {/* Adjacent Rinks (outdoor only) — auto mode only */}
-              {leagueCreationMode === 'auto' && club?.season === 'outdoor' && (
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="adjacent-rinks"
-                      checked={leagueAdjacentRinks}
-                      onCheckedChange={(checked) => {
-                        setLeagueAdjacentRinks(checked);
-                        if (checked && leagueAdjacentPeriods.length === 0) {
-                          setLeagueAdjacentPeriods([{ start_date: leagueStartDate || '', end_date: leagueEndDate || '', rinks: [] }]);
-                        }
-                      }}
-                    />
-                    <div>
-                      <Label htmlFor="adjacent-rinks" className="cursor-pointer">Adjacent Rinks</Label>
-                      <p className="text-xs text-gray-500">Cluster fixtures together on adjacent rinks</p>
-                    </div>
-                  </div>
-                  {leagueAdjacentRinks && (
-                    <div className="space-y-4">
-                      {leagueAdjacentPeriods.map((period, idx) => {
-                        const rinkCount = rinkCountForGreen(club, leagueGreenType);
-                        const allRinks = Array.from({ length: rinkCount }, (_, i) => i + 1);
-                        // Check overlap with other periods
-                        const overlaps = leagueAdjacentPeriods.some((p, i) => {
-                          if (i === idx) return false;
-                          return period.start_date && period.end_date && p.start_date && p.end_date &&
-                            period.start_date <= p.end_date && period.end_date >= p.start_date;
-                        });
-                        return (
-                          <div key={idx} className={`border rounded-lg p-3 space-y-3 ${overlaps ? 'border-red-400 bg-red-50' : 'bg-gray-50'}`}>
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-gray-700">Period {idx + 1}</p>
-                              {leagueAdjacentPeriods.length > 1 && (
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500"
-                                  onClick={() => setLeagueAdjacentPeriods(prev => prev.filter((_, i) => i !== idx))}>
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              )}
-                            </div>
-                            {overlaps && <p className="text-xs text-red-600">⚠ This period overlaps with another period</p>}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-xs">Start Date</Label>
-                                <Input type="date" value={period.start_date}
-                                  onChange={(e) => setLeagueAdjacentPeriods(prev => prev.map((p, i) => i === idx ? { ...p, start_date: e.target.value } : p))} />
-                              </div>
-                              <div>
-                                <Label className="text-xs">End Date</Label>
-                                <Input type="date" value={period.end_date}
-                                  onChange={(e) => setLeagueAdjacentPeriods(prev => prev.map((p, i) => i === idx ? { ...p, end_date: e.target.value } : p))} />
-                              </div>
-                            </div>
-                            <div>
-                              <Label className="text-xs mb-2 block">Cluster Rinks</Label>
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                {allRinks.map(rinkNum => (
-                                  <label key={rinkNum} className="flex items-center gap-2 cursor-pointer select-none">
-                                    <Checkbox
-                                      checked={period.rinks.includes(rinkNum)}
-                                      onCheckedChange={(checked) => {
-                                        setLeagueAdjacentPeriods(prev => prev.map((p, i) =>
-                                          i === idx ? { ...p, rinks: checked ? [...p.rinks, rinkNum].sort((a,b)=>a-b) : p.rinks.filter(r => r !== rinkNum) } : p
-                                        ));
-                                      }}
-                                    />
-                                    <span className="text-sm">Rink {rinkNum}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <Button variant="outline" size="sm" onClick={() =>
-                        setLeagueAdjacentPeriods(prev => [...prev, { start_date: '', end_date: '', rinks: [] }])
-                      }>
-                        <Plus className="w-3 h-3 mr-1" /> Add Period
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Which green the league is played on — dual-green clubs only */}
-              {club && isDualGreens(club) && leagueCreationMode === 'auto' && (
-                <div className="border rounded-lg p-4 space-y-2">
-                  <Label className="font-medium">Which green is this league played on?</Label>
-                  <GreenSelector
-                    greens={getGreenTypes(club)}
-                    value={leagueGreenType}
-                    onChange={(green) => {
-                      setLeagueGreenType(green);
-                      setLeagueRinks([]);
-                    }}
-                  />
-                  <p className="text-xs text-gray-500">Fixtures are booked onto this green's rinks.</p>
-                </div>
-              )}
-
-              {/* Rink selection — auto mode only, hidden when Adjacent Rinks is on */}
-              {leagueCreationMode === 'auto' && club && !leagueAdjacentRinks && (
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div>
-                    <Label className="font-medium">Rinks for this league</Label>
-                    <p className="text-xs text-gray-500 mt-0.5">Select which rinks will be used when generating fixtures. Leave all unchecked to use all club rinks.</p>
-                  </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                    {Array.from({ length: rinkCountForGreen(club, leagueGreenType) }, (_, i) => i + 1).map(rinkNum => (
-                      <label key={rinkNum} className="flex items-center gap-2 cursor-pointer select-none">
-                        <Checkbox
-                          checked={leagueRinks.includes(rinkNum)}
-                          onCheckedChange={(checked) => {
-                            setLeagueRinks(prev =>
-                              checked ? [...prev, rinkNum].sort((a, b) => a - b) : prev.filter(r => r !== rinkNum)
-                            );
-                          }}
-                        />
-                        <span className="text-sm">Rink {rinkNum}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {leagueCreationMode === 'auto' && <div className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="force-even"
-                    checked={leagueForceEven}
-                    onCheckedChange={setLeagueForceEven}
-                  />
-                  <div>
-                    <Label htmlFor="force-even" className="cursor-pointer">Force even number of games between teams</Label>
-                    <p className="text-xs text-gray-500">When enabled, each team plays every other team the same number of times. When disabled, fixtures fill the full league duration.</p>
-                  </div>
-                </div>
-              </div>}
-              <div className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="is-double-rink"
-                    checked={leagueIsDoubleRink}
-                    onCheckedChange={setLeagueIsDoubleRink}
-                  />
-                  <div>
-                    <Label htmlFor="is-double-rink" className="cursor-pointer">Double Rink League</Label>
-                    <p className="text-xs text-gray-500">Each meeting produces two matches on adjacent rinks, with a combined-score bonus.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="is-sets"
-                    checked={leagueIsSets}
-                    onCheckedChange={setLeagueIsSets}
-                  />
-                  <Label htmlFor="is-sets" className="cursor-pointer">Is Sets?</Label>
-                </div>
-                {leagueIsSets && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Number of Ends per Set</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="21"
-                        value={leagueSetsEnds}
-                        onChange={(e) => setLeagueSetsEnds(e.target.value)}
-                        placeholder="e.g. 8"
-                        className="w-32"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        The scorecard will split into sets of this many ends, with a TOTAL row between each set.
-                      </p>
-                    </div>
-                    {/* Scoring Configuration */}
-                    <div className="border rounded-lg p-4 space-y-4 bg-purple-50 border-purple-200">
-                      <p className="text-sm font-semibold text-purple-800">Scoring Configuration</p>
-
-                      {/* Points per set */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id="scoring-per-set"
-                            checked={scoringPointsPerSet}
-                            onCheckedChange={setScoringPointsPerSet}
-                          />
-                          <Label htmlFor="scoring-per-set" className="cursor-pointer">Award points per set win</Label>
-                        </div>
-                        {scoringPointsPerSet && (
-                          <div className="ml-7 flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="0.5"
-                              step="0.5"
-                              value={scoringPointsPerSetValue}
-                              onChange={(e) => setScoringPointsPerSetValue(e.target.value)}
-                              className="w-24"
-                            />
-                            <span className="text-sm text-gray-500">points per set win (draws = half)</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Points for game win */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id="scoring-game-win"
-                            checked={scoringGameWin}
-                            onCheckedChange={setScoringGameWin}
-                          />
-                          <Label htmlFor="scoring-game-win" className="cursor-pointer">Award points for game win (winning more sets)</Label>
-                        </div>
-                        {scoringGameWin && (
-                          <div className="ml-7 flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="0.5"
-                              step="0.5"
-                              value={scoringGameWinValue}
-                              onChange={(e) => setScoringGameWinValue(e.target.value)}
-                              className="w-24"
-                            />
-                            <span className="text-sm text-gray-500">points for game win</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Standard win */}
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          id="scoring-standard-win"
-                          checked={scoringStandardWin}
-                          onCheckedChange={setScoringStandardWin}
-                        />
-                        <Label htmlFor="scoring-standard-win" className="cursor-pointer">Use standard 2 points per win</Label>
-                      </div>
-
-                      {/* Highest overall shots */}
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          id="scoring-highest-shots"
-                          checked={scoringHighestShots}
-                          onCheckedChange={setScoringHighestShots}
-                        />
-                        <Label htmlFor="scoring-highest-shots" className="cursor-pointer">Award 1 point for highest overall shots</Label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={resetLeagueForm}>Cancel</Button>
-              <Button 
-                onClick={handleSaveLeague}
-                disabled={createLeagueMutation.isPending || updateLeagueMutation.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                {(createLeagueMutation.isPending || updateLeagueMutation.isPending) && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                {editingLeague ? 'Update' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <LeagueFormDialog
+          open={leagueDialogOpen}
+          onCancel={resetLeagueForm}
+          editingLeague={editingLeague}
+          club={club}
+          onSave={handleSaveLeague}
+          isSaving={createLeagueMutation.isPending || updateLeagueMutation.isPending}
+          leagueName={leagueName} setLeagueName={setLeagueName}
+          leagueDescription={leagueDescription} setLeagueDescription={setLeagueDescription}
+          leagueStartDate={leagueStartDate} setLeagueStartDate={setLeagueStartDate}
+          leagueEndDate={leagueEndDate} setLeagueEndDate={setLeagueEndDate}
+          leagueCreationMode={leagueCreationMode} setLeagueCreationMode={setLeagueCreationMode}
+          leagueMultiSession={leagueMultiSession} setLeagueMultiSession={setLeagueMultiSession}
+          leagueSelectedSessions={leagueSelectedSessions} setLeagueSelectedSessions={setLeagueSelectedSessions}
+          leagueStartTime={leagueStartTime} setLeagueStartTime={setLeagueStartTime}
+          leagueEndTime={leagueEndTime} setLeagueEndTime={setLeagueEndTime}
+          leagueFormat={leagueFormat} setLeagueFormat={setLeagueFormat}
+          leagueSessionTime={leagueSessionTime} setLeagueSessionTime={setLeagueSessionTime}
+          leagueAdjacentRinks={leagueAdjacentRinks} setLeagueAdjacentRinks={setLeagueAdjacentRinks}
+          leagueAdjacentPeriods={leagueAdjacentPeriods} setLeagueAdjacentPeriods={setLeagueAdjacentPeriods}
+          leagueGreenType={leagueGreenType} setLeagueGreenType={setLeagueGreenType}
+          leagueRinks={leagueRinks} setLeagueRinks={setLeagueRinks}
+          leagueForceEven={leagueForceEven} setLeagueForceEven={setLeagueForceEven}
+          leagueIsDoubleRink={leagueIsDoubleRink} setLeagueIsDoubleRink={setLeagueIsDoubleRink}
+          leagueIsSets={leagueIsSets} setLeagueIsSets={setLeagueIsSets}
+          leagueSetsEnds={leagueSetsEnds} setLeagueSetsEnds={setLeagueSetsEnds}
+          scoringPointsPerSet={scoringPointsPerSet} setScoringPointsPerSet={setScoringPointsPerSet}
+          scoringPointsPerSetValue={scoringPointsPerSetValue} setScoringPointsPerSetValue={setScoringPointsPerSetValue}
+          scoringGameWin={scoringGameWin} setScoringGameWin={setScoringGameWin}
+          scoringGameWinValue={scoringGameWinValue} setScoringGameWinValue={setScoringGameWinValue}
+          scoringStandardWin={scoringStandardWin} setScoringStandardWin={setScoringStandardWin}
+          scoringHighestShots={scoringHighestShots} setScoringHighestShots={setScoringHighestShots}
+        />
 
         {/* Team Dialog */}
         <TeamDialog
@@ -2053,13 +1668,17 @@ export default function LeagueAdmin() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete League?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete this league and all its teams. This action cannot be undone.
+                This will permanently delete this league and all its teams, fixtures and rink bookings. Large leagues are removed in batches of 125 records with a short pause between each batch, so this can take a few minutes — keep this page open until it finishes. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => deleteLeagueMutation.mutate(deleteLeagueId)}
+                onClick={() => {
+                  const leagueIdToDelete = deleteLeagueId;
+                  setDeleteLeagueId(null);
+                  deleteLeagueMutation.mutate(leagueIdToDelete);
+                }}
                 className="bg-red-600 hover:bg-red-700"
               >
                 Delete
@@ -2136,345 +1755,76 @@ export default function LeagueAdmin() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Fixtures Dialog */}
-        <Dialog open={fixturesDialogOpen} onOpenChange={() => setFixturesDialogOpen(false)}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto w-[calc(100%-2rem)] sm:w-full">
-            <DialogHeader>
-              <DialogTitle>{viewingLeague?.name} - Fixtures</DialogTitle>
-            </DialogHeader>
-            {viewingLeague && (() => {
-              const leagueTeamsList = teams.filter(t => t.league_id === viewingLeague.id);
-              const sortedFixtures = fixtures
-                .filter(f => f.league_id === viewingLeague.id &&
-                  (fixturesTeamFilter === 'all' || f.home_team_id === fixturesTeamFilter || f.away_team_id === fixturesTeamFilter))
-                .sort((a, b) => {
-                  const dateCmp = a.match_date.localeCompare(b.match_date);
-                  if (dateCmp !== 0) return dateCmp;
-                  if (a.tie_id && b.tie_id) {
-                    const tieCmp = a.tie_id.localeCompare(b.tie_id);
-                    if (tieCmp !== 0) return tieCmp;
-                    return (a.leg || 1) - (b.leg || 1);
-                  }
-                  return 0;
-                });
-              const selectedTeam = leagueTeamsList.find(t => t.id === fixturesTeamFilter);
-              const printableFixtures = sortedFixtures.filter(f => f.status !== 'cancelled');
-              return (
-                <div className="space-y-4">
-                  <div>
-                    <Label>Team</Label>
-                    <Select value={fixturesTeamFilter} onValueChange={setFixturesTeamFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All teams" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All teams</SelectItem>
-                        {leagueTeamsList.map(t => (
-                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    {sortedFixtures.map(fixture => {
-                      const homeTeam = teams.find(t => t.id === fixture.home_team_id);
-                      const awayTeam = teams.find(t => t.id === fixture.away_team_id);
-                      return (
-                        <div key={fixture.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 w-24">
-                              {format(parseISO(fixture.match_date), 'd MMM yyyy')}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{homeTeam?.name || 'Unknown'}</span>
-                              <span className="text-gray-400">vs</span>
-                              <span className="font-medium">{awayTeam?.name || 'Unknown'}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline">Rink {fixture.rink_number}</Badge>
-                            {viewingLeague?.is_double_rink && fixture.tie_id && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-600">Leg {fixture.leg || 1}</Badge>
-                            )}
-                            {fixture.status === 'completed' ? (
-                              <Badge className="bg-emerald-100 text-emerald-700">
-                                {fixture.home_score} - {fixture.away_score}
-                              </Badge>
-                            ) : null}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openScoreDialog(fixture)}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {sortedFixtures.length === 0 && (
-                      <p className="text-center text-gray-500 py-4">No fixtures generated yet</p>
-                    )}
-                  </div>
-                  {selectedTeam && printableFixtures.length > 0 && (
-                    <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => printTeamBlankRota(viewingLeague, selectedTeam, printableFixtures, teams)}
-                      >
-                        <ClipboardList className="w-4 h-4 mr-2" />
-                        Print Blank Rota
-                      </Button>
-                      <Button
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => printTeamFixtures(viewingLeague, selectedTeam, printableFixtures, teams)}
-                      >
-                        <Printer className="w-4 h-4 mr-2" />
-                        Print Fixtures
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </DialogContent>
-        </Dialog>
-
-        {/* Score Dialog */}
-        <Dialog open={scoreDialogOpen} onOpenChange={() => setScoreDialogOpen(false)}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-            <DialogHeader>
-              <DialogTitle>Enter Score</DialogTitle>
-            </DialogHeader>
-            {editingFixture && (() => {
-              const scoringLeague = viewingLeague || leagues.find(l => l.id === editingFixture.league_id);
-              const isSetsLeague = scoringLeague?.is_sets;
-              const homeTeam = teams.find(t => t.id === editingFixture.home_team_id);
-              const awayTeam = teams.find(t => t.id === editingFixture.away_team_id);
-              return (
-                <div className="space-y-4">
-                  <div className="text-center text-sm text-gray-500">
-                    {format(parseISO(editingFixture.match_date), 'd MMM yyyy')}
-                  </div>
-                  {isSetsLeague && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 text-center mb-2">Sets Won</p>
-                      <div className="grid grid-cols-3 gap-4 items-center">
-                        <div className="text-right">
-                          <Label className="block mb-2 text-xs">{homeTeam?.name}</Label>
-                          <Input type="number" min="0" step="0.5" inputMode="decimal" value={homeSets} onChange={(e) => setHomeSets(e.target.value)} className="text-center" placeholder="0" />
-                        </div>
-                        <div className="text-center text-gray-400 pt-6 text-sm">sets</div>
-                        <div className="text-left">
-                          <Label className="block mb-2 text-xs">{awayTeam?.name}</Label>
-                          <Input type="number" min="0" step="0.5" inputMode="decimal" value={awaySets} onChange={(e) => setAwaySets(e.target.value)} className="text-center" placeholder="0" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400 text-center mt-1">Enter 0.5 for each drawn set (e.g. 2.5 – 1.5 means one set was drawn)</p>
-                      {homeSets !== '' && awaySets !== '' && parseSetsValue(homeSets) === parseSetsValue(awaySets) && (
-                        <p className="text-xs text-red-600 font-medium text-center mt-2">Sets level – add tiebreak winner</p>
-                      )}
-                      <div className="flex flex-col items-center gap-2 mt-3">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs">Tiebreak played</Label>
-                          <Switch
-                            checked={hadTiebreak}
-                            onCheckedChange={(v) => { setHadTiebreak(v); if (!v) setTiebreakWinner(null); }}
-                          />
-                        </div>
-                        {hadTiebreak && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant={tiebreakWinner === 'home' ? 'default' : 'outline'}
-                              className={tiebreakWinner === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                              onClick={() => setTiebreakWinner('home')}
-                            >
-                              {homeTeam?.name || 'Home'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={tiebreakWinner === 'away' ? 'default' : 'outline'}
-                              className={tiebreakWinner === 'away' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                              onClick={() => setTiebreakWinner('away')}
-                            >
-                              {awayTeam?.name || 'Away'}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 text-center mb-2">Total Shots</p>
-                    <div className="grid grid-cols-3 gap-4 items-center">
-                      <div className="text-right">
-                        {!isSetsLeague && <Label className="block mb-2">{homeTeam?.name}</Label>}
-                        <Input type="number" min="0" value={homeScore} onChange={(e) => setHomeScore(e.target.value)} className="text-center" />
-                      </div>
-                      <div className="text-center text-gray-400 pt-6">vs</div>
-                      <div className="text-left">
-                        {!isSetsLeague && <Label className="block mb-2">{awayTeam?.name}</Label>}
-                        <Input type="number" min="0" value={awayScore} onChange={(e) => setAwayScore(e.target.value)} className="text-center" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setScoreDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSaveScore} className="bg-emerald-600 hover:bg-emerald-700">
-                Save Score
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* League Scores Modal */}
-        <LeagueScoresModal
-          open={scoresModalOpen}
-          onClose={() => setScoresModalOpen(false)}
-          league={scoresModalLeague}
-          fixtures={fixtures}
-          teams={teams}
-          clubId={clubId}
-        />
-
-        {/* Rink Distribution Preview Modal */}
-        <RinkDistributionModal
-          open={distributionModalOpen}
-          onClose={() => setDistributionModalOpen(false)}
-          fixtures={pendingFixtures}
-          teams={pendingFixtureTeams}
-          rinkCount={rinkCountForGreen(club, greenForLeague(club, pendingFixtureLeague))}
-          league={pendingFixtureLeague}
-          leagueRinks={pendingFixtureLeague?.league_rinks}
-          onRegenerate={pendingIsRealloc ? handleRegenerateAllocations : handleRegenerateFixtures}
-          onConfirm={handleConfirmFixtures}
-          isRealloc={pendingIsRealloc}
-          isLoading={generatingFixtures}
-        />
-
         {/* Batched booking / cleanup progress overlay */}
         <BookingProgressOverlay progress={bookingProgress} />
 
-        {/* Blacklist Dates Dialog */}
-        <BlacklistDatesDialog
-          open={blacklistDialogOpen}
-          onClose={() => setBlacklistDialogOpen(false)}
-          league={blacklistLeague ? (leagues.find(l => l.id === blacklistLeague.id) || blacklistLeague) : null}
-          clubId={clubId}
-        />
+        {/* Batched league deletion progress overlay */}
+        <BookingProgressOverlay progress={deleteProgress} />
 
-        {/* Rink Clash Modal */}
-        <RinkClashModal
-          open={clashModalOpen}
-          clashes={clashData.clashes}
-          nonClashingBookings={clashData.nonClashingBookings}
-          allBookings={clashData.allExistingBookings}
-          club={club}
-          onProceed={handleLeagueClashProceed}
-          onClose={() => setClashModalOpen(false)}
-          isLoading={bookingRinks}
-        />
-
-        {/* Team Fixtures Dialog */}
-        <TeamFixturesDialog
-          open={!!teamFixtures}
-          onClose={() => setTeamFixtures(null)}
-          league={teamFixtures?.league}
-          team={teamFixtures?.team}
-          fixtures={fixtures}
-          teams={teams}
-        />
-
-        {/* League Table Dialog */}
-        <LeagueTableDialog
-          open={tableDialogOpen}
-          onOpenChange={(open) => { if (!open) setTableDialogOpen(false); }}
-          league={viewingTableLeague}
-          teams={teams}
-          fixtures={fixtures}
+        {/* Fixtures, scores, scorecards and scheduling dialogs */}
+        <LeagueAdminDialogs
           club={club}
           clubId={clubId}
-        />
-
-        {/* Scorecard Date Filter Dialog */}
-        {scorecardDialogLeague && (() => {
-          const leagueFixtureDates = [...new Set(
-            fixtures
-              .filter(f => f.league_id === scorecardDialogLeague.id)
-              .map(f => f.match_date)
-          )].sort();
-          return (
-            <Dialog open={!!scorecardDialogLeague} onOpenChange={(open) => { if (!open) setScorecardDialogLeague(null); }}>
-              <DialogContent className="mx-4 sm:mx-auto max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Print Scorecards — {scorecardDialogLeague.name}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-2">
-                  <p className="text-sm text-gray-600">Print all scorecards, or select a specific fixture date to print only that round.</p>
-                  {leagueFixtureDates.length > 0 && (
-                    <div>
-                      <Label>Fixture Date (optional)</Label>
-                      <Select value={scorecardMatchDate} onValueChange={setScorecardMatchDate}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="All dates" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {leagueFixtureDates.map(d => (
-                            <SelectItem key={d} value={d}>
-                              {format(new Date(d + 'T12:00:00'), 'EEEE d MMM yyyy')}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter className="flex-col sm:flex-row gap-2">
-                  <Button variant="outline" onClick={() => setScorecardDialogLeague(null)}>Cancel</Button>
-                  {scorecardMatchDate && (
-                    <Button
-                      variant="outline"
-                      className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                      onClick={() => handlePrintScorecards(scorecardDialogLeague, scorecardMatchDate)}
-                    >
-                      <Printer className="w-4 h-4 mr-1" />
-                      Print This Date
-                    </Button>
-                  )}
-                  <Button
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => handlePrintScorecards(scorecardDialogLeague, null)}
-                  >
-                    <Printer className="w-4 h-4 mr-1" />
-                    Print All
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          );
-        })()}
-
-        {/* Manual Fixtures Modal */}
-        <ManualFixturesModal
-          open={manualFixturesModalOpen}
-          onClose={(didSave) => {
+          leagues={leagues}
+          teams={teams}
+          fixtures={fixtures}
+          fixturesDialogOpen={fixturesDialogOpen}
+          setFixturesDialogOpen={setFixturesDialogOpen}
+          viewingLeague={viewingLeague}
+          fixturesTeamFilter={fixturesTeamFilter}
+          setFixturesTeamFilter={setFixturesTeamFilter}
+          openScoreDialog={openScoreDialog}
+          scoreDialogOpen={scoreDialogOpen}
+          setScoreDialogOpen={setScoreDialogOpen}
+          editingFixture={editingFixture}
+          homeScore={homeScore} setHomeScore={setHomeScore}
+          awayScore={awayScore} setAwayScore={setAwayScore}
+          homeSets={homeSets} setHomeSets={setHomeSets}
+          awaySets={awaySets} setAwaySets={setAwaySets}
+          hadTiebreak={hadTiebreak} setHadTiebreak={setHadTiebreak}
+          tiebreakWinner={tiebreakWinner} setTiebreakWinner={setTiebreakWinner}
+          handleSaveScore={handleSaveScore}
+          scoresModalOpen={scoresModalOpen}
+          setScoresModalOpen={setScoresModalOpen}
+          scoresModalLeague={scoresModalLeague}
+          distributionModalOpen={distributionModalOpen}
+          setDistributionModalOpen={setDistributionModalOpen}
+          pendingFixtures={pendingFixtures}
+          pendingFixtureTeams={pendingFixtureTeams}
+          pendingFixtureLeague={pendingFixtureLeague}
+          pendingIsRealloc={pendingIsRealloc}
+          handleRegenerateAllocations={handleRegenerateAllocations}
+          handleRegenerateFixtures={handleRegenerateFixtures}
+          handleConfirmFixtures={handleConfirmFixtures}
+          generatingFixtures={generatingFixtures}
+          blacklistDialogOpen={blacklistDialogOpen}
+          setBlacklistDialogOpen={setBlacklistDialogOpen}
+          blacklistLeague={blacklistLeague}
+          clashModalOpen={clashModalOpen}
+          setClashModalOpen={setClashModalOpen}
+          clashData={clashData}
+          handleLeagueClashProceed={handleLeagueClashProceed}
+          bookingRinks={bookingRinks}
+          teamFixtures={teamFixtures}
+          setTeamFixtures={setTeamFixtures}
+          tableDialogOpen={tableDialogOpen}
+          setTableDialogOpen={setTableDialogOpen}
+          viewingTableLeague={viewingTableLeague}
+          scorecardDialogLeague={scorecardDialogLeague}
+          setScorecardDialogLeague={setScorecardDialogLeague}
+          scorecardMatchDate={scorecardMatchDate}
+          setScorecardMatchDate={setScorecardMatchDate}
+          handlePrintScorecards={handlePrintScorecards}
+          manualFixturesModalOpen={manualFixturesModalOpen}
+          setManualFixturesModalOpen={setManualFixturesModalOpen}
+          manualFixturesLeague={manualFixturesLeague}
+          onManualFixturesClose={(didSave) => {
             setManualFixturesModalOpen(false);
             if (didSave) {
               queryClient.invalidateQueries({ queryKey: ['leagueFixtures', clubId] });
               queryClient.invalidateQueries({ queryKey: ['leagues', clubId] });
             }
           }}
-          league={manualFixturesLeague}
-          teams={manualFixturesLeague ? teams.filter(t => t.league_id === manualFixturesLeague.id) : []}
-          clubId={clubId}
-          existingFixtures={fixtures}
-          rinkCount={rinkCountForGreen(club, greenForLeague(club, manualFixturesLeague))}
-          club={club}
         />
       </div>
     </div>
