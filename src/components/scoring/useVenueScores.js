@@ -75,7 +75,7 @@ export default function useVenueScores(selectionId, clubId, matches) {
         [stampField]: saved[stampField],
       }));
       queryClient.invalidateQueries({ queryKey: ['matchScore', selectionId] });
-      if (variables.kind !== 'players') toast.success('Scores saved');
+      toast.success(variables.kind === 'players' ? 'Opposition players saved' : 'Scores saved');
     },
     onError: (_err, variables) => toast.error(variables?.kind === 'players' ? 'Failed to save player names' : 'Failed to save scores'),
   });
@@ -94,9 +94,9 @@ export default function useVenueScores(selectionId, clubId, matches) {
       playerRevision: playerEdits.current[scope],
     });
   };
-  // Saves just the opposition player names for a venue (used when leaving a name box)
+  // Saves just the opposition player names for a venue (used by the dedicated button)
+  const hasUnsavedPlayers = scope => playerEdits.current[scope] !== savedPlayerEdits.current[scope];
   const savePlayers = scope => {
-    if (playerEdits.current[scope] === savedPlayerEdits.current[scope]) return;
     const keys = matches.filter(match => venueOf(match) === scope).map(match => match.key);
     if (!keys.length) return;
     mutation.mutate({
@@ -107,6 +107,6 @@ export default function useVenueScores(selectionId, clubId, matches) {
   return {
     clubScores: values.club_scores, oppositionScores: values.opposition_scores,
     ends: values.ends, oppositionPlayers: values.opposition_players,
-    updateField, saveVenue, savePlayers, isSaving: mutation.isPending || isLoading,
+    updateField, saveVenue, savePlayers, hasUnsavedPlayers, isSaving: mutation.isPending || isLoading,
   };
 }
