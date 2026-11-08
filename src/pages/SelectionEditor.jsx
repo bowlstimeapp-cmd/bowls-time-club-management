@@ -1080,7 +1080,7 @@ export default function SelectionEditor() {
                   value={matchName}
                   onChange={(text, clubPicked) => {
                     setMatchName(text);
-                    setOpponentName(clubPicked ? clubPicked.club_name : '');
+                    setOpponentName(clubPicked ? clubPicked.club_name : text.replace(/^\s*(vs\.?|v)\s+/i, '').trim());
                     setOpponentClub(clubPicked);
                     if (!clubPicked) {
                       // Club removed — clear any auto-filled venue address
