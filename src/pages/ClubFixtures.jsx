@@ -2,14 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Loader2, CalendarDays, Plus, Pencil, Trash2, Calendar, ClipboardList, Star } from 'lucide-react';
+import { Loader2, CalendarDays, Plus, Pencil, Trash2, Calendar, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import FixtureFormModal from '@/components/fixtures/FixtureFormModal';
 import BookRinksModal from '@/components/fixtures/BookRinksModal';
-import FixtureInterestButton from '@/components/fixtures/FixtureInterestButton';
+import FixtureSignUpCell from '@/components/fixtures/FixtureSignUpCell';
+import FixtureBroadcastButton from '@/components/fixtures/FixtureBroadcastButton';
 import useFixtureInterests from '@/hooks/useFixtureInterests';
 import useClubCompetitions from '@/hooks/useClubCompetitions';
 
@@ -133,7 +134,7 @@ export default function ClubFixtures() {
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Venue</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Interested</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Notes</th>
-                {isClubAdmin && <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">Actions</th>}
+                {(isClubAdmin || isSelector) && <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -157,26 +158,15 @@ export default function ClubFixtures() {
                       }`}>{fixture.venue}</span>
                     </td>
                     <td className="px-4 py-3 text-sm align-top">
-                      {canSeeAll ? (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                            {rowInterests.length}
-                          </div>
-                          {rowInterests.length > 0 && (
-                            <p className="text-xs text-gray-500 max-w-[14rem]">
-                              {rowInterests.slice(0, 3).map(i => i.member_name).join(', ')}
-                              {rowInterests.length > 3 ? ` +${rowInterests.length - 3} more` : ''}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <FixtureInterestButton
-                          interested={iAmInterested}
-                          onToggle={() => toggle(fixture.id)}
-                          disabled={isPast}
-                        />
-                      )}
+                      <FixtureSignUpCell
+                        fixture={fixture}
+                        competitionName={comp?.name}
+                        interests={rowInterests}
+                        canSeeAll={canSeeAll}
+                        iAmInterested={iAmInterested}
+                        isPast={isPast}
+                        onToggle={() => toggle(fixture.id)}
+                      />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">{fixture.notes || '—'}</td>
                     {(isClubAdmin || isSelector) && (
@@ -190,12 +180,23 @@ export default function ClubFixtures() {
                             <Calendar className="w-3 h-3 mr-1" /> Book Rinks
                           </Button>
                         )}
-                        <Button size="sm" variant="ghost" className="mr-1" onClick={() => { setEditingFixture(fixture); setShowFormModal(true); }}>
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(fixture)}>
-                          <Trash2 className="w-3 h-3 text-red-500" />
-                        </Button>
+                        {isClubAdmin && !isPast && (
+                          <FixtureBroadcastButton
+                            fixture={fixture}
+                            clubId={clubId}
+                            interestCount={rowInterests.length}
+                          />
+                        )}
+                        {isClubAdmin && (
+                          <>
+                            <Button size="sm" variant="ghost" className="mr-1" onClick={() => { setEditingFixture(fixture); setShowFormModal(true); }}>
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(fixture)}>
+                              <Trash2 className="w-3 h-3 text-red-500" />
+                            </Button>
+                          </>
+                        )}
                       </td>
                     )}
                   </tr>

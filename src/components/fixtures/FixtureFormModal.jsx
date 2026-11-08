@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function FixtureFormModal({ open, onClose, fixture, competitions, clubId, onSaved }) {
-  const [formData, setFormData] = useState({ competition_id: '', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '' });
+  const emptyFixture = { competition_id: '', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '', broadcast: false };
+  const [formData, setFormData] = useState(emptyFixture);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -23,9 +25,10 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
         opponent: fixture.opponent || '',
         venue: fixture.venue || 'Home',
         notes: fixture.notes || '',
+        broadcast: fixture.broadcast === true,
       });
     } else {
-      setFormData({ competition_id: '', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '' });
+      setFormData(emptyFixture);
     }
   }, [fixture, open]);
 
@@ -128,6 +131,17 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
           <div>
             <Label>Notes (optional)</Label>
             <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2} />
+          </div>
+          <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0">
+              <Label htmlFor="broadcast-switch" className="cursor-pointer">Broadcast to members for sign-up</Label>
+              <p className="text-xs text-gray-500 mt-1">Members will see this fixture on their dashboard and can say they're available.</p>
+            </div>
+            <Switch
+              id="broadcast-switch"
+              checked={formData.broadcast}
+              onCheckedChange={(v) => setFormData({ ...formData, broadcast: v })}
+            />
           </div>
         </div>
         <DialogFooter>
