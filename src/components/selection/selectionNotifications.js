@@ -40,14 +40,16 @@ export const buildFormattedTeamList = (selectionsObj, membersArr, namesObj = {})
  * ctx: { club, clubId, user, competition, matchDate, matchName, matchStartTime,
  *        matchEndTime, selections, members, selectionNames, sendSmsEnabled }
  * reserveEntries: array of { slot, email, type: 'home'|'away' } — named reserves only.
+ * onlyEmails: optional — restrict recipients to this list (used when replying to a changed subset).
  */
-export async function sendSelectionEmails(ctx, savedSelectionId, reserveEntries = []) {
+export async function sendSelectionEmails(ctx, savedSelectionId, reserveEntries = [], onlyEmails = null) {
   const { club, clubId, user, competition, matchDate, matchName, matchStartTime, matchEndTime,
     selections, members, selectionNames, sendSmsEnabled } = ctx;
 
   const selectedPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
   const reserveTypeMap = Object.fromEntries(reserveEntries.map((r) => [r.email, r.type]));
-  const notifyEmails = [...selectedPlayerEmails, ...reserveEntries.map((r) => r.email)];
+  const allNotifyEmails = [...selectedPlayerEmails, ...reserveEntries.map((r) => r.email)];
+  const notifyEmails = onlyEmails ? allNotifyEmails.filter((email) => onlyEmails.includes(email)) : allNotifyEmails;
 
   const teamList = buildFormattedTeamList(selections, members, selectionNames);
 

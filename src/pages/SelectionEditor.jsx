@@ -43,6 +43,7 @@ import { getRinkConfig, getGreenTypes, isDualGreens, getBookingGreen } from '@/l
 
 import MemberSearchSelect from '@/components/member/MemberSearchSelect';
 import SmsNotificationControl from '@/components/selection/SmsNotificationControl';
+import RepublishNotifyModal from '@/components/selection/RepublishNotifyModal';
 import sendSelectionPush from '@/components/selection/sendSelectionPush';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ReservesEditor from '@/components/selection/ReservesEditor';
@@ -50,7 +51,6 @@ import useClubCompetitions from '@/hooks/useClubCompetitions';
 import {
   sendSelectionEmails as sendSelectionEmailsFor,
   buildFullPlayerList as buildFullPlayerListFor,
-  sendSmsToMembers as sendSmsFor,
 } from '@/components/selection/selectionNotifications';
 
 const APP_BASE_URL = window.location.origin;
@@ -91,6 +91,7 @@ export default function SelectionEditor() {
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
   const [sendSmsNotification, setSendSmsNotification] = useState(false);
   const [smsResultsModal, setSmsResultsModal] = useState(null);
+  const [republishModalOpen, setRepublishModalOpen] = useState(false);
   const [showRinksOnScorecards, setShowRinksOnScorecards] = useState(true);
   // Reserves state — stored in their own fields, never inside `selections`
   const [pickReserves, setPickReserves] = useState(false);
@@ -363,11 +364,10 @@ export default function SelectionEditor() {
     sendSmsEnabled: sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications,
   });
 
-  const sendSelectionEmails = (savedSelectionId, reserveEntries = []) => sendSelectionEmailsFor(smsContext(), savedSelectionId, reserveEntries);
+  const sendSelectionEmails = (savedSelectionId, reserveEntries = [], onlyEmails = null) => sendSelectionEmailsFor(smsContext(), savedSelectionId, reserveEntries, onlyEmails);
   const buildFullPlayerList = (emailList, smsResults, reserveTypeMap = {}) => buildFullPlayerListFor(smsContext(), emailList, smsResults, reserveTypeMap);
-  const sendSmsToMembers = (emailList, reserveTypeMap = {}) => sendSmsFor(smsContext(), emailList, reserveTypeMap);
 
-  const handleSave = async (publish = false, isRepublish = false) => {
+  const handleSave = async (publish = false, isRepublish = false, notifyMode = 'changed') => {
     if (!competition) {
       toast.error('Please select a match type');
       return;
@@ -493,7 +493,6 @@ export default function SelectionEditor() {
             console.warn(moveErr);
           }
         }
-        // Only notify newly added players (plus new or changed reserves)
         const currentPlayerEmails = [...new Set(Object.values(selections).filter(Boolean))];
         const originalPlayerEmails = [...new Set(Object.values(originalSelections).filter(Boolean))];
         const newlyAddedEmails = currentPlayerEmails.filter((email) => !originalPlayerEmails.includes(email));
@@ -501,12 +500,16 @@ export default function SelectionEditor() {
         const prevReserveMap = new Map((originalReserves || []).filter((r) => r && r.email).map((r) => [r.email, r.type]));
         const newlyAddedReserves = reserveEntries.filter((r) => !prevReserveMap.has(r.email));
         const typeChangedReserves = reserveEntries.filter((r) => prevReserveMap.has(r.email) && prevReserveMap.get(r.email) !== r.type);
-        const reserveNotify = [...newlyAddedReserves, ...typeChangedReserves];
+
+        // Who gets notified: the whole team, or only those changed since the last publication
+        const notifyAll = notifyMode === 'all';
+        const notifyPlayerEmails = notifyAll ? currentPlayerEmails : newlyAddedEmails;
+        const reserveNotify = notifyAll ? reserveEntries : [...newlyAddedReserves, ...typeChangedReserves];
         const reserveNotifyTypeMap = Object.fromEntries(reserveNotify.map((r) => [r.email, r.type]));
 
-        if (newlyAddedEmails.length > 0) {
-          await sendSelectionPush({ emails: newlyAddedEmails, competition, matchName, matchDate, clubId, selectionId });
-          const notificationsToCreate = newlyAddedEmails.map((email) => ({
+        if (notifyPlayerEmails.length > 0) {
+          await sendSelectionPush({ emails: notifyPlayerEmails, competition, matchName, matchDate, clubId, selectionId });
+          const notificationsToCreate = notifyPlayerEmails.map((email) => ({
             user_email: email,
             type: 'team_selection',
             title: 'Selected for Match',
@@ -537,17 +540,12 @@ export default function SelectionEditor() {
           await base44.entities.Notification.bulkCreate(reserveNotifications);
         }
 
-        const notifyEmails = [...newlyAddedEmails, ...reserveNotify.map((r) => r.email)];
+        const notifyEmails = [...notifyPlayerEmails, ...reserveNotify.map((r) => r.email)];
 
         if (notifyEmails.length > 0) {
-          // SMS notifications for newly added players and reserves
-          if (sendSmsNotification && club?.module_sms_notifications && club?.sms_member_notifications) {
-            const smsResults = await sendSmsToMembers(notifyEmails, reserveNotifyTypeMap);
-            const fullList = buildFullPlayerList(notifyEmails, smsResults, reserveNotifyTypeMap);
-            setSmsResultsModal(fullList);
-            return;
-          }
-          setSmsResultsModal(buildFullPlayerList(notifyEmails, null, reserveNotifyTypeMap));
+          // Email the chosen audience (and SMS when the club has it enabled)
+          const smsResults = await sendSelectionEmails(selectionId, reserveNotify, notifyEmails);
+          setSmsResultsModal(buildFullPlayerList(notifyEmails, smsResults, reserveNotifyTypeMap));
           return;
         }
 
@@ -1378,7 +1376,13 @@ export default function SelectionEditor() {
                     Save Draft
                   </Button>
                   <Button
-                    onClick={() => handleSave(true, existingSelection?.status === 'published')}
+                    onClick={() => {
+                      if (existingSelection?.status === 'published') {
+                        setRepublishModalOpen(true);
+                      } else {
+                        handleSave(true, false);
+                      }
+                    }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700"
                     disabled={isSaving || !competition}>
                     
@@ -1502,6 +1506,13 @@ export default function SelectionEditor() {
           </motion.div>
         </div>
       </div>
+
+      {/* Republish — choose who gets notified */}
+      <RepublishNotifyModal
+        open={republishModalOpen}
+        isSaving={isSaving}
+        onClose={() => setRepublishModalOpen(false)}
+        onChoose={(mode) => { setRepublishModalOpen(false); handleSave(true, true, mode); }} />
 
       {/* Publish Results Modal */}
       {smsResultsModal !== null &&
