@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { useLayoutTheme } from '@/lib/layoutTheme.jsx';
+import ScorecardButton from '@/components/selection/ScorecardButton';
 
 const competitionColors = {
   'Bramley': 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -97,6 +98,9 @@ export default function SelectionCard({
             </Button>
           </Link>
         )
+      )}
+      {selection.status === 'published' && selection.id !== 'tour-selection' && (
+        <ScorecardButton selection={selection} clubId={clubId} size={size} />
       )}
       {isSelector && (
         <>

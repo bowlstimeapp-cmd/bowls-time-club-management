@@ -702,6 +702,9 @@ useEffect(() => {
   const handleBulkBooking = async (bulkData) => {
     if (!user || !clubId || !club) return;
 
+    // Close the modal straight away — progress is reported by toasts
+    setBulkModalOpen(false);
+
     const status = club?.auto_approve_bookings ? 'approved' : 'pending';
     const bookerName = user.first_name && user.surname 
       ? `${user.first_name} ${user.surname}` 
@@ -807,7 +810,6 @@ useEffect(() => {
       }
     }
     
-    setBulkModalOpen(false);
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
 
     if (createdBookings.length > 0) {

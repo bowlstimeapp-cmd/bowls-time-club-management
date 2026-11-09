@@ -20,9 +20,9 @@ import {
   Loader2,
   ShieldAlert,
   Home,
-  CalendarPlus,
-  Printer } from
+  CalendarPlus } from
 'lucide-react';
+import ScorecardButton from '@/components/selection/ScorecardButton';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import OpponentClubInput from '@/components/selection/OpponentClubInput';
@@ -50,7 +50,6 @@ import ReservesEditor from '@/components/selection/ReservesEditor';
 import useClubCompetitions from '@/hooks/useClubCompetitions';
 import {
   sendSelectionEmails as sendSelectionEmailsFor,
-  buildFullPlayerList as buildFullPlayerListFor,
 } from '@/components/selection/selectionNotifications';
 
 const APP_BASE_URL = window.location.origin;
@@ -90,7 +89,6 @@ export default function SelectionEditor() {
   const [clashModalOpen, setClashModalOpen] = useState(false);
   const [clashData, setClashData] = useState({ clashes: [], nonClashingBookings: [] });
   const [sendSmsNotification, setSendSmsNotification] = useState(false);
-  const [smsResultsModal, setSmsResultsModal] = useState(null);
   const [republishModalOpen, setRepublishModalOpen] = useState(false);
   const [showRinksOnScorecards, setShowRinksOnScorecards] = useState(true);
   // Reserves state — stored in their own fields, never inside `selections`
@@ -365,7 +363,6 @@ export default function SelectionEditor() {
   });
 
   const sendSelectionEmails = (savedSelectionId, reserveEntries = [], onlyEmails = null) => sendSelectionEmailsFor(smsContext(), savedSelectionId, reserveEntries, onlyEmails);
-  const buildFullPlayerList = (emailList, smsResults, reserveTypeMap = {}) => buildFullPlayerListFor(smsContext(), emailList, smsResults, reserveTypeMap);
 
   const handleSave = async (publish = false, isRepublish = false, notifyMode = 'changed') => {
     if (!competition) {
@@ -458,9 +455,8 @@ export default function SelectionEditor() {
         if (reserveNotifications.length > 0) {
           await base44.entities.Notification.bulkCreate(reserveNotifications);
         }
-        const smsResults = await sendSelectionEmails(selectionId, reserveEntries);
-        const fullList = buildFullPlayerList([...selectedPlayerEmails, ...reserveEntries.map((r) => r.email)], smsResults, reserveTypeMap);
-        setSmsResultsModal(fullList);
+        await sendSelectionEmails(selectionId, reserveEntries);
+        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       } else if (isRepublish) {
         // If the ticked rinks changed since the previous publish, move the
         // previously booked rinks to the newly selected ones
@@ -544,14 +540,9 @@ export default function SelectionEditor() {
 
         if (notifyEmails.length > 0) {
           // Email the chosen audience (and SMS when the club has it enabled)
-          const smsResults = await sendSelectionEmails(selectionId, reserveNotify, notifyEmails);
-          setSmsResultsModal(buildFullPlayerList(notifyEmails, smsResults, reserveNotifyTypeMap));
-          return;
+          await sendSelectionEmails(selectionId, reserveNotify, notifyEmails);
         }
-
-        // Show modal with all current players and reserves, no SMS sent
-        const allSelected = [...new Set([...currentPlayerEmails, ...reserveEntries.map((r) => r.email)])];
-        setSmsResultsModal(buildFullPlayerList(allSelected, null, Object.fromEntries(reserveEntries.map((r) => [r.email, r.type]))));
+        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       }
     } else {
       const result = await createMutation.mutateAsync(data);
@@ -592,9 +583,8 @@ export default function SelectionEditor() {
         if (reserveNotifications2.length > 0) {
           await base44.entities.Notification.bulkCreate(reserveNotifications2);
         }
-        const smsResults2 = await sendSelectionEmails(newId, reserveEntries);
-        const fullList2 = buildFullPlayerList([...selectedPlayerEmails, ...reserveEntries.map((r) => r.email)], smsResults2, reserveTypeMap2);
-        setSmsResultsModal(fullList2);
+        await sendSelectionEmails(newId, reserveEntries);
+        navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
       } else {
         toast.success('Selection saved as draft');
         navigate(createPageUrl('SelectionEditor') + `?clubId=${clubId}&selectionId=${newId}`);
@@ -1327,45 +1317,12 @@ export default function SelectionEditor() {
                     </div>
                     <Switch checked={showRinksOnScorecards} onCheckedChange={setShowRinksOnScorecards} />
                   </div>
-<Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={!competition || !selectionId}
-                    onClick={async () => {
-                      try {
-                        toast.info('Generating scorecards...');
-                        const functionName = club?.module_custom_branding && club?.use_custom_scorecard_layout ?
-                        'generateCustomScorecards' :
-                        'generateSelectionScorecards';
-                        const result = await base44.functions.invoke(functionName, {
-                          selectionId: selectionId,
-                          clubId: clubId,
-                          showRinks: showRinksOnScorecards
-                        });
-                        const html = typeof result === 'string' ? result : result?.html || result?.data;
-                        if (!html) {
-                          toast.error('No scorecard data returned');
-                          return;
-                        }
-                        const printWindow = window.open('', '_blank');
-                        printWindow.document.write(html);
-                        printWindow.document.close();
-                        printWindow.onload = () => {
-                          printWindow.focus();
-                          printWindow.print();
-                        };
-                        toast.success('Scorecards ready — use Print > Save as PDF');
-                      } catch (error) {
-                        const errMsg = error?.response?.data?.error || error?.message || 'Unknown error';
-                        toast.error('Failed to generate scorecards: ' + errMsg);
-                        console.error(error);
-                      }
-                    }}>
-                    
-                    <Printer className="w-4 h-4 mr-2" />
-                    Scorecards
-                  </Button>
+<ScorecardButton
+                    selectionId={selectionId}
+                    clubId={clubId}
+                    club={club}
+                    showRinks={showRinksOnScorecards}
+                    className="w-full" />
                   <Button
                     onClick={() => handleSave(false)}
                     variant="outline"
@@ -1513,49 +1470,6 @@ export default function SelectionEditor() {
         isSaving={isSaving}
         onClose={() => setRepublishModalOpen(false)}
         onChoose={(mode) => { setRepublishModalOpen(false); handleSave(true, true, mode); }} />
-
-      {/* Publish Results Modal */}
-      {smsResultsModal !== null &&
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Selection Published</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              {smsResultsModal.filter((r) => r.sent).length} of {smsResultsModal.length} players notified by SMS
-            </p>
-            <div className="overflow-y-auto flex-1 space-y-1.5 mb-4">
-              {smsResultsModal.map((r, i) =>
-            <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${r.sent ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                  <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${r.sent ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                    {r.sent ?
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> :
-
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                }
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {r.name}
-                      {r.reserveLabel && <span className="ml-2 text-xs font-semibold text-blue-700">{r.reserveLabel}</span>}
-                    </p>
-                    {!r.sent &&
-                <p className="text-xs text-gray-500">{r.reason}</p>
-                }
-                  </div>
-                </div>
-            )}
-            </div>
-            <Button
-            className="w-full bg-emerald-600 hover:bg-emerald-700"
-            onClick={() => {
-              setSmsResultsModal(null);
-              navigate(createPageUrl('Selection') + `?clubId=${clubId}`);
-            }}>
-            
-              Close
-            </Button>
-          </div>
-        </div>
-      }
 
       <RinkClashModal
         open={clashModalOpen}
