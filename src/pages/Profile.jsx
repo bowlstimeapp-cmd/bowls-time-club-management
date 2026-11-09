@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert, MessageSquare } from 'lucide-react';
+import { Loader2, User, Save, Calendar, Trash2, Plus, Bell, CalendarCheck, ClipboardList, Trophy, Table2, Users, TriangleAlert, MessageSquare, ChevronDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import PayMembershipFeeCard from '@/components/payments/PayMembershipFeeCard';
@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { format, parseISO } from 'date-fns';
 import { useSearchParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import FeedbackThread from '@/components/feedback/FeedbackThread';
+import { sortByActivity, lastActivityDate, formatMessageTime } from '@/components/feedback/feedbackActivity';
 
 export default function Profile() {
   const [searchParams] = useSearchParams();
@@ -29,6 +31,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const clubId = searchParams.get('clubId');
   const tabParam = searchParams.get('tab');
+  const feedbackIdParam = searchParams.get('feedbackId');
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
@@ -50,6 +53,7 @@ export default function Profile() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [activeTab, setActiveTab] = useState(tabParam === 'feedback' ? 'feedback' : 'profile');
+  const [openFeedbackId, setOpenFeedbackId] = useState(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -70,6 +74,31 @@ export default function Profile() {
     queryFn: () => base44.entities.Feedback.filter({ user_email: user.email }, '-created_date'),
     enabled: !!user?.email,
   });
+
+  // Most recent activity first
+  const sortedFeedback = sortByActivity(myFeedback);
+  const unreadFeedbackCount = myFeedback.filter(f => f.unread_by_user === true).length;
+
+  const markFeedbackRead = (feedbackId) => {
+    base44.functions.invoke('markFeedbackRead', { feedback_id: feedbackId })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['myFeedback'] }))
+      .catch(() => {});
+  };
+
+  // Deep link from a notification or email: ?tab=feedback&feedbackId=<id>
+  useEffect(() => {
+    if (tabParam === 'feedback') setActiveTab('feedback');
+    if (!feedbackIdParam) return;
+    setOpenFeedbackId(feedbackIdParam);
+    markFeedbackRead(feedbackIdParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabParam, feedbackIdParam]);
+
+  const toggleFeedback = (id) => {
+    const next = openFeedbackId === id ? null : id;
+    setOpenFeedbackId(next);
+    if (next) markFeedbackRead(next);
+  };
 
   const { data: unavailabilities = [], isLoading: loadingUnavailabilities } = useQuery({
     queryKey: ['myUnavailabilities', user?.email],
@@ -312,9 +341,9 @@ export default function Profile() {
               </TabsTrigger>
               <TabsTrigger value="feedback" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />My Feedback
-                {myFeedback.filter(f => f.admin_response).length > 0 && (
+                {unreadFeedbackCount > 0 && (
                   <span className="ml-1 bg-emerald-500 text-white text-xs rounded-full w-4 h-4 inline-flex items-center justify-center">
-                    {myFeedback.filter(f => f.admin_response).length}
+                    {unreadFeedbackCount}
                   </span>
                 )}
               </TabsTrigger>
@@ -590,35 +619,45 @@ export default function Profile() {
                     </CardContent>
                   </Card>
                 ) : (
-                  myFeedback.map(fb => (
-                    <Card key={fb.id} className="shadow-lg">
-                      <CardContent className="p-5 space-y-3">
-                        <div className="flex items-start justify-between gap-3 flex-wrap">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={fb.category === 'bug' ? 'destructive' : fb.category === 'feature' ? 'default' : 'secondary'}>
-                              {fb.category}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {(fb.status || 'new_feedback').replace('_', ' ')}
-                            </Badge>
-                          </div>
-                          <span className="text-xs text-gray-400">{new Date(fb.created_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{fb.title}</p>
-                          <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{fb.description}</p>
-                        </div>
-                        {fb.admin_response && (
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-emerald-700 mb-1 flex items-center gap-1">
-                              <MessageSquare className="w-3 h-3" /> Admin Response
+                  sortedFeedback.map(fb => {
+                    const isOpen = openFeedbackId === fb.id;
+                    const lastActivity = lastActivityDate(fb);
+                    return (
+                      <Card key={fb.id} className="shadow-lg overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleFeedback(fb.id)}
+                          className="w-full text-left p-5 flex items-start justify-between gap-3 hover:bg-gray-50"
+                        >
+                          <div className="min-w-0 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant={fb.category === 'bug' ? 'destructive' : fb.category === 'feature' ? 'default' : 'secondary'}>
+                                {fb.category}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {(fb.status || 'new_feedback').replace('_', ' ')}
+                              </Badge>
+                              {fb.unread_by_user === true && (
+                                <span className="bg-emerald-500 text-white text-xs font-semibold rounded-full px-2 py-0.5">
+                                  New reply
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-semibold text-gray-900">{fb.title}</p>
+                            <p className="text-xs text-gray-500">
+                              Last activity: {lastActivity ? formatMessageTime(lastActivity) : '—'}
                             </p>
-                            <p className="text-sm text-emerald-800 whitespace-pre-wrap">{fb.admin_response}</p>
                           </div>
+                          <ChevronDown className={`w-5 h-5 shrink-0 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isOpen && (
+                          <CardContent className="border-t border-gray-100 bg-gray-50/60 pt-4">
+                            <FeedbackThread feedback={fb} viewerRole="user" />
+                          </CardContent>
                         )}
-                      </CardContent>
-                    </Card>
-                  ))
+                      </Card>
+                    );
+                  })
                 )}
               </motion.div>
             </TabsContent>

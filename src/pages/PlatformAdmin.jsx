@@ -68,6 +68,7 @@ import TestPushNotification from '@/components/admin/TestPushNotification';
 import CountiesTab from '@/components/admin/CountiesTab';
 import MarketingPlanTab from '@/components/admin/marketing/MarketingPlanTab';
 import EmailClubAdminsTab from '@/components/admin/EmailClubAdminsTab';
+import FeedbackTab from '@/components/admin/FeedbackTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PlatformAdmin() {
@@ -76,9 +77,8 @@ export default function PlatformAdmin() {
   
   const [user, setUser] = useState(null);
   const [emailLogFilter, setEmailLogFilter] = useState('');
-  const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('all');
-  const [selectedFeedback, setSelectedFeedback] = useState(null);
-  const [feedbackResponse, setFeedbackResponse] = useState('');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'clubs');
+  const initialFeedbackId = searchParams.get('feedbackId');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClub, setEditingClub] = useState(null);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -220,14 +220,6 @@ export default function PlatformAdmin() {
     },
     onError: (err) => {
       toast.error('Failed to delete club: ' + (err.message || 'Unknown error'));
-    },
-  });
-
-  const updateFeedbackMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Feedback.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allFeedback'] });
-      toast.success('Feedback updated');
     },
   });
 
@@ -544,13 +536,22 @@ export default function PlatformAdmin() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Tabs defaultValue="clubs" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto mb-6">
               <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-11">
                     <TabsTrigger value="clubs" className="whitespace-nowrap">Clubs</TabsTrigger>
                     <TabsTrigger value="competitions" className="whitespace-nowrap">Competitions</TabsTrigger>
                     <TabsTrigger value="counties" className="whitespace-nowrap">Counties</TabsTrigger>
-                    <TabsTrigger value="feedback" className="whitespace-nowrap">Feedback ({feedbacks.length})</TabsTrigger>
+                    <TabsTrigger value="feedback" className="whitespace-nowrap">
+                      <span className="flex items-center gap-1.5">
+                        Feedback ({feedbacks.length})
+                        {feedbacks.filter(f => f.unread_by_admin === true).length > 0 && (
+                          <span className="bg-red-500 text-white text-xs rounded-full min-w-4 h-4 px-1 inline-flex items-center justify-center">
+                            {feedbacks.filter(f => f.unread_by_admin === true).length}
+                          </span>
+                        )}
+                      </span>
+                    </TabsTrigger>
                    <TabsTrigger value="deletions" className="relative whitespace-nowrap">
                      <span className="hidden sm:inline">Account Deletions</span>
                      <span className="sm:hidden">Deletions</span>
@@ -708,79 +709,12 @@ export default function PlatformAdmin() {
 
             {/* ── FEEDBACK ── */}
             <TabsContent value="feedback">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <CardTitle>User Feedback</CardTitle>
-                    <Select value={feedbackStatusFilter} onValueChange={setFeedbackStatusFilter}>
-                      <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="new_feedback">New Feedback</SelectItem>
-                        <SelectItem value="reviewed">Reviewed</SelectItem>
-                        <SelectItem value="implemented">Implemented</SelectItem>
-                        <SelectItem value="abandoned">Abandoned</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {feedbacksLoading ? (
-                    <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
-                  ) : feedbacks.length === 0 ? (
-                    <div className="text-center py-12">
-                      <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="text-gray-500">No feedback submitted yet</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Category</th>
-                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Title</th>
-                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">User</th>
-                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Status</th>
-                            <th className="text-left py-3 px-2 text-sm font-medium text-gray-500">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {feedbacks.filter(f => feedbackStatusFilter === 'all' || f.status === feedbackStatusFilter || (!f.status && feedbackStatusFilter === 'new_feedback')).map(feedback => (
-                            <tr key={feedback.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedFeedback(feedback); setFeedbackResponse(feedback.admin_response || ''); }}>
-                              <td className="py-3 px-2">
-                                {feedback.category === 'paid_enquiry' ? (
-                                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">Paid Enquiry</Badge>
-                                ) : (
-                                  <Badge variant={feedback.category === 'bug' ? 'destructive' : feedback.category === 'feature' ? 'default' : 'secondary'}>
-                                    {feedback.category}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="py-3 px-2 font-medium">{feedback.title}</td>
-                              <td className="py-3 px-2 text-sm">
-                                <div>{feedback.user_name}</div>
-                                <div className="text-xs text-gray-500">{feedback.user_email}</div>
-                              </td>
-                              <td className="py-3 px-2" onClick={e => e.stopPropagation()}>
-                                <Select value={feedback.status || 'new_feedback'} onValueChange={(value) => updateFeedbackMutation.mutate({ id: feedback.id, data: { status: value } })}>
-                                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="new_feedback">New Feedback</SelectItem>
-                                    <SelectItem value="reviewed">Reviewed</SelectItem>
-                                    <SelectItem value="implemented">Implemented</SelectItem>
-                                    <SelectItem value="abandoned">Abandoned</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                              <td className="py-3 px-2 text-sm text-gray-500">{new Date(feedback.created_date).toLocaleDateString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <FeedbackTab
+                feedbacks={feedbacks}
+                isLoading={feedbacksLoading}
+                clubs={clubs}
+                initialFeedbackId={initialFeedbackId}
+              />
             </TabsContent>
 
             {/* ── SENT EMAILS ── */}
@@ -1255,115 +1189,6 @@ export default function PlatformAdmin() {
               >
                 {invoiceTestLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
                 {invoiceTestLoading ? 'Generating...' : 'Generate Test Invoices'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Feedback Detail Modal */}
-        <Dialog open={!!selectedFeedback} onOpenChange={() => { setSelectedFeedback(null); setFeedbackResponse(''); }}>
-          <DialogContent className="max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-emerald-600" />
-                Feedback Detail
-              </DialogTitle>
-            </DialogHeader>
-            {selectedFeedback && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedFeedback.category === 'paid_enquiry' ? (
-                    <Badge className="bg-purple-100 text-purple-800 border-purple-200">Paid Enquiry</Badge>
-                  ) : (
-                    <Badge variant={selectedFeedback.category === 'bug' ? 'destructive' : selectedFeedback.category === 'feature' ? 'default' : 'secondary'}>
-                      {selectedFeedback.category}
-                    </Badge>
-                  )}
-                  <span className="text-xs text-gray-400">{new Date(selectedFeedback.created_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Title</p>
-                  <p className="font-semibold text-gray-900">{selectedFeedback.title}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Description</p>
-                  <p className="text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 text-sm">{selectedFeedback.description}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Submitted By</p>
-                  <p className="text-gray-900">{selectedFeedback.user_name}</p>
-                  <p className="text-sm text-gray-500">{selectedFeedback.user_email}</p>
-                </div>
-                {selectedFeedback.related_club_id && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Related Club</p>
-                    <p className="text-gray-900">{clubs.find(c => c.id === selectedFeedback.related_club_id)?.name || selectedFeedback.related_club_id}</p>
-                  </div>
-                )}
-                {selectedFeedback.related_module && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Related Module</p>
-                    <p className="text-gray-900">{selectedFeedback.related_module}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</p>
-                  <Select
-                    value={selectedFeedback.status || 'new_feedback'}
-                    onValueChange={(value) => {
-                      updateFeedbackMutation.mutate({ id: selectedFeedback.id, data: { status: value } });
-                      setSelectedFeedback({ ...selectedFeedback, status: value });
-                    }}
-                  >
-                    <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new_feedback">New Feedback</SelectItem>
-                      <SelectItem value="reviewed">Reviewed</SelectItem>
-                      <SelectItem value="implemented">Implemented</SelectItem>
-                      <SelectItem value="abandoned">Abandoned</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Admin Response</p>
-                  {selectedFeedback.admin_response && (
-                    <p className="text-xs text-gray-400 mb-2">Current: <span className="italic text-gray-600">{selectedFeedback.admin_response}</span></p>
-                  )}
-                  <Textarea
-                    value={feedbackResponse}
-                    onChange={(e) => setFeedbackResponse(e.target.value)}
-                    placeholder="Write a response to the user... (they will see this in their profile)"
-                    rows={3}
-                    className="text-sm"
-                  />
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setSelectedFeedback(null); setFeedbackResponse(''); }}>Close</Button>
-              <Button
-                className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={async () => {
-                  const responseText = feedbackResponse || null;
-                  updateFeedbackMutation.mutate({ id: selectedFeedback.id, data: { admin_response: responseText } });
-                  setSelectedFeedback({ ...selectedFeedback, admin_response: responseText });
-                  // Send in-app notification to the user if a response was written
-                  if (responseText && selectedFeedback.user_email) {
-                    await base44.entities.Notification.create({
-                      user_email: selectedFeedback.user_email,
-                      type: 'booking_accepted', // reusing a valid enum type as closest match
-                      title: 'Response to your feedback',
-                      message: `An admin has responded to your feedback: "${selectedFeedback.title}"`,
-                      is_read: false,
-                      link_page: 'Profile',
-                      link_params: '?tab=feedback',
-                    });
-                  }
-                  toast.success('Response saved');
-                }}
-                disabled={updateFeedbackMutation.isPending}
-              >
-                {updateFeedbackMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Response'}
               </Button>
             </DialogFooter>
           </DialogContent>

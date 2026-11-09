@@ -19,7 +19,8 @@
         "team_invite_rejected",
         "team_request_accepted",
         "team_request_rejected",
-        "unavailability_conflict"
+        "unavailability_conflict",
+        "feedback_reply"
       ],
       "description": "Type of notification"
     },

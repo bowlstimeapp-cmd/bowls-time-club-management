@@ -1,0 +1,74 @@
+{
+  "name": "FeedbackMessage",
+  "type": "object",
+  "properties": {
+    "feedback_id": {
+      "type": "string",
+      "description": "The Feedback record this message belongs to"
+    },
+    "feedback_owner_email": {
+      "type": "string",
+      "description": "Email of the user who submitted the feedback \u2014 used for access rules"
+    },
+    "sender_role": {
+      "type": "string",
+      "enum": [
+        "user",
+        "admin",
+        "system"
+      ],
+      "description": "Who wrote the message"
+    },
+    "sender_email": {
+      "type": "string",
+      "description": "Email of the person who wrote the message"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Display name of the sender at the time of writing"
+    },
+    "message": {
+      "type": "string",
+      "description": "Plain-text message body"
+    },
+    "system_event": {
+      "type": "string",
+      "description": "Set for system messages only, e.g. 'Status changed to Implemented'"
+    }
+  },
+  "required": [
+    "feedback_id",
+    "feedback_owner_email",
+    "sender_role",
+    "message"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.feedback_owner_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

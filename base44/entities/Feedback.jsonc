@@ -43,7 +43,7 @@
     },
     "admin_response": {
       "type": "string",
-      "description": "Admin response to the feedback, visible to the user"
+      "description": "Legacy single admin response. Kept for old records only; new replies live in FeedbackMessage"
     },
     "related_club_id": {
       "type": "string",
@@ -52,6 +52,39 @@
     "related_module": {
       "type": "string",
       "description": "Which locked module triggered the enquiry (e.g. module_leagues)"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the most recent message in the thread was posted"
+    },
+    "last_message_by": {
+      "type": "string",
+      "enum": [
+        "user",
+        "admin"
+      ],
+      "description": "Who posted the most recent message"
+    },
+    "unread_by_user": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when an admin has replied and the user has not opened the thread"
+    },
+    "unread_by_admin": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the user has replied and the admin has not opened the thread"
+    },
+    "conversation_closed": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true the user can no longer reply, but admins can"
+    },
+    "last_admin_email_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the admin inbox was last emailed about a user reply on this thread (throttled to once per 30 minutes)"
     }
   },
   "required": [
@@ -62,6 +95,28 @@
   "rls": {
     "create": {
       "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
