@@ -32,6 +32,10 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// Small round "C" shown after a captain's name on printed sheets
+const CAPTAIN_STYLE = 'display:inline-block;margin-left:6px;min-width:15px;height:15px;line-height:15px;padding:0 4px;border-radius:8px;background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-size:10px;font-weight:700;text-align:center;vertical-align:middle;font-family:Arial,sans-serif';
+const captainBadge = () => `<span style="${CAPTAIN_STYLE}">C</span>`;
+
 function headerBlock(data) {
   const { clubName, logoUrl, competition, matchName, matchDate, startTime, venue, dressCode,
           primaryColour, fontSize, showStartTime, showVenue, showDressCode, venueLabel } = data;
@@ -68,7 +72,7 @@ function classicTemplate(data) {
         ${c.positions.map(p => `
           <div class="pos-row">
             <span class="pos-label" style="font-size:${fs.pos}">${p.label}</span>
-            <span class="pos-name" style="font-size:${fs.base}">${p.name}</span>
+            <span class="pos-name" style="font-size:${fs.base}">${p.name}${p.isCaptain ? captainBadge() : ''}</span>
           </div>`).join('')}
       </div>
     </div>`).join('');
@@ -125,7 +129,7 @@ function compactTemplate(data) {
     ${c.positions.map(p => `
       <tr>
         <td style="padding:3px 10px;color:#888;font-size:${fs.pos};width:80px">${p.label}</td>
-        <td style="padding:3px 10px;font-weight:600;font-size:${fs.base}">${p.name}</td>
+        <td style="padding:3px 10px;font-weight:600;font-size:${fs.base}">${p.name}${p.isCaptain ? captainBadge() : ''}</td>
       </tr>`).join('')}`).join('');
 
   const reservesRows = data.reservesEnabled ? `
@@ -174,7 +178,7 @@ function modernTemplate(data) {
         ${c.positions.map(p => `
           <div class="pos-row">
             <div class="pos-chip" style="background:rgba(${rgb},0.1);color:${primaryColour}">${p.label}</div>
-            <div class="pos-name" style="font-size:${fs.base}">${p.name}</div>
+            <div class="pos-name" style="font-size:${fs.base}">${p.name}${p.isCaptain ? captainBadge() : ''}</div>
           </div>`).join('')}
       </div>
     </div>`).join('');
@@ -236,7 +240,7 @@ function bowlsTemplate(data) {
           ${b.positions.map(p => `
             <tr>
               <td class="player-pos" style="font-size:${fs.pos}">${p.label}</td>
-              <td class="player-name" style="font-size:${fs.base}">${p.name}</td>
+              <td class="player-name" style="font-size:${fs.base}">${p.name}${p.isCaptain ? captainBadge() : ''}</td>
             </tr>`).join('')}
         </table>
       </div>
@@ -302,11 +306,11 @@ function renderCustomHtml(template, data) {
   }
   data.rinks.forEach(rink => {
     flatData[`rink${rink.number}_tag`] = rink.tag;
-    rink.positions.forEach(p => { flatData[`rink${rink.number}_${p.label}`] = p.name; });
+    rink.positions.forEach(p => { flatData[`rink${rink.number}_${p.label}`] = p.isCaptain ? `${p.name} (C)` : p.name; });
   });
   data.topClubEvents.forEach(ev => {
     ev.positions.forEach(p => {
-      flatData[`${ev.name.toLowerCase().replace(/\s+/g,'_')}_${p.label}`] = p.name;
+      flatData[`${ev.name.toLowerCase().replace(/\s+/g,'_')}_${p.label}`] = p.isCaptain ? `${p.name} (C)` : p.name;
     });
   });
 
@@ -374,6 +378,20 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     return member?.user_name || email;
   };
 
+  // Captains — the home or away captain saved on the selection. A player is
+  // marked "C" at whichever position they were picked for.
+  const captainEmails = [selection.home_captain_email, selection.away_captain_email]
+    .map(e => String(e || '').trim().toLowerCase())
+    .filter(Boolean);
+  const isCaptain = (email) => {
+    const e = String(email || '').trim().toLowerCase();
+    return !!e && captainEmails.includes(e);
+  };
+  const posEntry = (label, key) => {
+    const email = sel[key];
+    return { label, name: getMemberName(email, key), isCaptain: isCaptain(email) };
+  };
+
   // Reserves — stored in their own fields, resolved like position names
   const reservesEnabled = selection.pick_reserves === true;
   const reservesMode = selection.reserves_mode === 'named' ? 'named' : 'squad';
@@ -410,12 +428,12 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     ...Array.from({ length: homeRinksCount }, (_, i) => ({
       number: i + 1,
       tag: 'Home',
-      positions: positionLabels.map(pos => ({ label: pos, name: getMemberName(sel[`rink${i+1}_${pos}`], `rink${i+1}_${pos}`) })),
+      positions: positionLabels.map(pos => posEntry(pos, `rink${i+1}_${pos}`)),
     })),
     ...Array.from({ length: awayRinksCount }, (_, i) => ({
       number: homeRinksCount + i + 1,
       tag: 'Away',
-      positions: positionLabels.map(pos => ({ label: pos, name: getMemberName(sel[`rink${homeRinksCount+i+1}_${pos}`], `rink${homeRinksCount+i+1}_${pos}`) })),
+      positions: positionLabels.map(pos => posEntry(pos, `rink${homeRinksCount+i+1}_${pos}`)),
     })),
   ];
 
@@ -428,7 +446,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
   ];
   const topClubEvents = TOP_CLUB_EVENTS.map(ev => ({
     name: ev.name,
-    positions: ev.positions.map(pos => ({ label: pos, name: getMemberName(sel[`${ev.id}_${pos}`], `${ev.id}_${pos}`) })),
+    positions: ev.positions.map(pos => posEntry(pos, `${ev.id}_${pos}`)),
   }));
 
   const isFantastic5s = selection.competition === 'Fantastic 5s';
@@ -442,7 +460,7 @@ export function buildTeamSheetData({ club, selection, members, allCompetitions }
     const f5RinkData = f5Rinks.map(r => ({
       number: r.number,
       tag: r.tag,
-      positions: r.positions.map(pos => ({ label: pos, name: getMemberName(sel[`rink${r.number}_${pos}`], `rink${r.number}_${pos}`) })),
+      positions: r.positions.map(pos => posEntry(pos, `rink${r.number}_${pos}`)),
     }));
     let matchDate = selection.match_date;
     try { matchDate = format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy'); } catch {}
