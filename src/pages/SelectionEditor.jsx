@@ -807,7 +807,6 @@ export default function SelectionEditor() {
 
   const handleCompetitionChange = (compName) => {
     setCompetition(compName);
-    setSelections({});
     // Rink-print default: from the matching Competition record, or true for the built-ins
     const compForRinks = competitions.find((c) => c.name === compName);
     setShowRinksOnScorecards(compForRinks ? compForRinks.show_rinks_on_scorecards !== false : true);
