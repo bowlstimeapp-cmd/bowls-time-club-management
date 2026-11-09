@@ -1113,45 +1113,29 @@ export default function LeagueAdmin() {
   const handlePrintScorecards = async (league, matchDate) => {
     try {
       const dateFilter = (matchDate && typeof matchDate === 'string' && matchDate.length > 0) ? matchDate : null;
-      if (club?.scorecard_format === 'xlsx') {
-        toast.info('Generating CSV scorecards...');
-        const result = await base44.functions.invoke('generateLeagueScorecardsXlsx', { leagueId: league.id, clubId, matchDate: dateFilter });
-        const csv = result?.data?.csv;
-        const filename = result?.data?.filename || `${league.name}-scorecards.csv`;
-        if (!csv) { toast.error('No CSV data returned'); return; }
-        const blob = new Blob([csv], { type: 'text/csv' });
+      toast.info('Generating scorecards...');
+      const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: dateFilter });
+      const html = result?.data?.html;
+      if (!html) { toast.error('No scorecard data returned'); return; }
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
+      } else {
+        const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = `${league.name}-scorecards.html`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success('CSV scorecards downloaded');
-      } else {
-        toast.info('Generating scorecards...');
-        const result = await base44.functions.invoke('generateLeagueScorecards', { leagueId: league.id, clubId, matchDate: dateFilter });
-        const html = result?.data?.html;
-        if (!html) { toast.error('No scorecard data returned'); return; }
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.open();
-          printWindow.document.write(html);
-          printWindow.document.close();
-          setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
-        } else {
-          const blob = new Blob([html], { type: 'text/html' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${league.name}-scorecards.html`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
-        setScorecardDialogLeague(null);
-        toast.success('Scorecards ready — use Print > Save as PDF');
       }
+      setScorecardDialogLeague(null);
+      toast.success('Scorecards ready — use Print > Save as PDF');
     } catch (error) {
       console.error('Scorecard error:', error);
       toast.error('Failed to generate scorecards: ' + (error?.message || error));
