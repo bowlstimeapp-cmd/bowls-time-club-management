@@ -106,6 +106,8 @@ export default function SelectionEditor() {
   const venueAddressRef = useRef('');
   // Id of the club fixture this selection belongs to (set when picked from Fixtures)
   const [linkedFixtureId, setLinkedFixtureId] = useState(null);
+  // When a fixture has sign-ups, restrict the team dropdowns to those members unless the selector opts out
+  const [showAllMembers, setShowAllMembers] = useState(false);
   const fixturePrefilledRef = useRef(false);
 
   useEffect(() => {
@@ -845,7 +847,12 @@ export default function SelectionEditor() {
     const fromFixture = (linkedFixtureInterests?.interests || []).map((i) => i.user_email);
     return new Set([...fromCompetition, ...fromFixture]);
   }, [activeCompetition, competitionInterests, linkedFixtureInterests]);
-  const filteredMembers = React.useMemo(() => {
+  const signedUpEmails = useMemo(
+    () => new Set((linkedFixtureInterests?.interests || []).map((i) => i.user_email)),
+    [linkedFixtureInterests]
+  );
+
+  const baseFilteredMembers = React.useMemo(() => {
     // Always exclude social-only members from selection
     const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
     if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Top Club (Outdoor)' || competition === 'Fantastic 5s') return nonSocialMembers;
@@ -883,6 +890,16 @@ export default function SelectionEditor() {
 
     return filtered;
   }, [members, activeCompetition, competition]);
+
+  // Only offer members who signed up for the linked fixture — plus anyone already picked,
+  // so saved selections being re-opened never lose a player or their name
+  const restrictToSignUps = !!linkedFixtureId && signedUpEmails.size > 0 && !showAllMembers;
+  const filteredMembers = useMemo(() => {
+    if (!restrictToSignUps) return baseFilteredMembers;
+    return baseFilteredMembers.filter(
+      (m) => signedUpEmails.has(m.user_email) || selectedEmails.includes(m.user_email)
+    );
+  }, [baseFilteredMembers, restrictToSignUps, signedUpEmails, selectedEmails]);
 
   // Derive home/away player lists for captain dropdowns using rink numbers
   // Home rinks: 1..effectiveHomeRinks, Away rinks: effectiveHomeRinks+1..effectiveHomeRinks+effectiveAwayRinks
@@ -1357,6 +1374,21 @@ export default function SelectionEditor() {
             transition={{ delay: 0.2 }}
             className="lg:col-span-2">
             
+            {!!linkedFixtureId && signedUpEmails.size > 0 && (
+              <p className="mb-3 text-xs text-gray-500">
+                {restrictToSignUps
+                  ? `Showing members who signed up for this fixture (${signedUpEmails.size}). `
+                  : 'Showing all members. '}
+                <button
+                  type="button"
+                  onClick={() => setShowAllMembers((v) => !v)}
+                  className="font-medium text-emerald-700 hover:underline"
+                >
+                  {restrictToSignUps ? 'Show all members' : 'Show sign-ups only'}
+                </button>
+              </p>
+            )}
+
             {competition ?
             isFantastic5s ?
             <Fantastic5sSelectionGrid
