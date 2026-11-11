@@ -837,8 +837,12 @@ export default function SelectionEditor() {
 
   // Filter members based on the fixture's gender (when linked) or the competition's
   const activeCompetition = competitions.find((c) => c.name === competition);
-  const linkedFixtureGender =
-    linkedFixture?.gender === 'men' || linkedFixture?.gender === 'women' ? linkedFixture.gender : null;
+  // A linked fixture's own gender fully governs eligibility — Mixed opens the list to
+  // everyone, even when the match type itself is a men's or women's competition
+  const hasLinkedFixture = !!linkedFixture;
+  const linkedFixtureGender = linkedFixture
+    ? (linkedFixture.gender === 'men' || linkedFixture.gender === 'women' ? linkedFixture.gender : 'mixed')
+    : null;
   const eligibilityGender = linkedFixtureGender || activeCompetition?.gender || 'mixed';
   const eligibilityAgeGroup = activeCompetition?.age_group;
 
@@ -862,8 +866,8 @@ export default function SelectionEditor() {
     // Always exclude social-only members from selection
     const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
     const isSpecialFormat = competition === 'Friendly' || competition === 'Top Club' || competition === 'Top Club (Outdoor)' || competition === 'Fantastic 5s';
-    if (!activeCompetition && !linkedFixtureGender) return nonSocialMembers;
-    if (isSpecialFormat && !linkedFixtureGender) return nonSocialMembers;
+    if (!activeCompetition && !hasLinkedFixture) return nonSocialMembers;
+    if (isSpecialFormat && !hasLinkedFixture) return nonSocialMembers;
     let filtered = [...nonSocialMembers];
 
     // Gender filter — a linked fixture's gender wins over the match type's
@@ -897,7 +901,7 @@ export default function SelectionEditor() {
     }
 
     return filtered;
-  }, [members, activeCompetition, competition, linkedFixtureGender, eligibilityGender, eligibilityAgeGroup]);
+  }, [members, activeCompetition, competition, hasLinkedFixture, eligibilityGender, eligibilityAgeGroup]);
 
   // Only offer members who signed up for the linked fixture — plus anyone already picked,
   // so saved selections being re-opened never lose a player or their name
