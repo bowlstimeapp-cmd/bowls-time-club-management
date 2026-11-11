@@ -10,6 +10,16 @@
       "type": "string",
       "description": "Reference to the Competition entity"
     },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "mixed",
+        "men",
+        "women"
+      ],
+      "default": "mixed",
+      "description": "Which players this fixture is open to. men = male members only, women = female members only, mixed = all members. Controls both who can sign up and who appears in the team selection dropdowns"
+    },
     "date": {
       "type": "string",
       "format": "date",

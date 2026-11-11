@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { verifyClubAdmin, verifyBelongsToClub, SELECTION_ENUM } from '../../shared/fixtureHelpers.ts';
+import { verifyClubAdmin, verifyBelongsToClub, SELECTION_ENUM, normaliseFixtureGender } from '../../shared/fixtureHelpers.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     }
 
     // Only allow editable fields
-    const allowedFields = ['competition_id', 'date', 'time', 'finish_time', 'opponent', 'venue', 'notes', 'broadcast'];
+    const allowedFields = ['competition_id', 'date', 'time', 'finish_time', 'opponent', 'venue', 'notes', 'broadcast', 'gender'];
     const safeUpdates = {};
     for (const field of allowedFields) {
       if (field in updates) safeUpdates[field] = updates[field];
@@ -32,6 +32,8 @@ Deno.serve(async (req) => {
 
     // Broadcast is a plain on/off flag — never store a truthy non-boolean
     if ('broadcast' in safeUpdates) safeUpdates.broadcast = Boolean(safeUpdates.broadcast);
+
+    if ('gender' in safeUpdates) safeUpdates.gender = normaliseFixtureGender(safeUpdates.gender);
 
     if (Object.keys(safeUpdates).length === 0) {
       return Response.json({ error: 'No valid fields to update' }, { status: 400 });

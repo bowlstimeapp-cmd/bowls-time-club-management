@@ -9,9 +9,10 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { FIXTURE_GENDER_OPTIONS, fixtureGender } from '@/lib/fixtureGender';
 
 export default function FixtureFormModal({ open, onClose, fixture, competitions, clubId, onSaved }) {
-  const emptyFixture = { competition_id: '', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '', broadcast: false };
+  const emptyFixture = { competition_id: '', gender: 'mixed', date: '', time: '', finish_time: '', opponent: '', venue: 'Home', notes: '', broadcast: false };
   const [formData, setFormData] = useState(emptyFixture);
   const [saving, setSaving] = useState(false);
 
@@ -19,6 +20,7 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
     if (fixture) {
       setFormData({
         competition_id: fixture.competition_id || '',
+        gender: fixtureGender(fixture.gender),
         date: fixture.date || '',
         time: fixture.time || '',
         finish_time: fixture.finish_time || '',
@@ -74,7 +76,14 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
         <div className="space-y-4 py-4">
           <div>
             <Label>Competition</Label>
-            <Select value={formData.competition_id} onValueChange={(v) => setFormData({ ...formData, competition_id: v })}>
+            <Select
+              value={formData.competition_id}
+              onValueChange={(v) => {
+                // Default the fixture's gender to the match type's, still editable
+                const comp = competitions.find(c => c.id === v);
+                setFormData({ ...formData, competition_id: v, gender: fixtureGender(comp?.gender) });
+              }}
+            >
               <SelectTrigger><SelectValue placeholder="Select competition" /></SelectTrigger>
               <SelectContent>
                 {(() => {
@@ -99,6 +108,18 @@ export default function FixtureFormModal({ open, onClose, fixture, competitions,
                 })()}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label>Open to</Label>
+            <Select value={formData.gender} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {FIXTURE_GENDER_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">Sets who can sign up and who appears in the team selection dropdown.</p>
           </div>
           <div>
             <Label>Opponent (optional)</Label>

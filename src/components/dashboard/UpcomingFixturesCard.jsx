@@ -11,16 +11,17 @@ import { createPageUrl } from '@/utils';
 import FixtureInterestButton from '@/components/fixtures/FixtureInterestButton';
 import useFixtureInterests from '@/hooks/useFixtureInterests';
 import useClubCompetitions from '@/hooks/useClubCompetitions';
+import { memberMatchesFixtureGender } from '@/lib/fixtureGender';
 
 /** Upcoming club fixtures with the member's "I'm available" star. */
-export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
+export default function UpcomingFixturesCard({ clubId, userEmail, memberGender, dragging }) {
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
   const { data: fixtures = [], isLoading } = useQuery({
     queryKey: ['upcomingClubFixtures', clubId],
     queryFn: async () => {
       const all = await base44.entities.ClubFixture.filter({ club_id: clubId }, 'date', 200);
-      return all.filter(f => f.date >= todayStr && f.broadcast === true).slice(0, 5);
+      return all.filter(f => f.date >= todayStr && f.broadcast === true);
     },
     enabled: !!clubId,
   });
@@ -46,6 +47,14 @@ export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
     [interests, userEmail]
   );
 
+  // Members only see fixtures open to their gender; admins and selectors see all
+  const visibleFixtures = useMemo(() => {
+    const open = canSeeAll
+      ? fixtures
+      : fixtures.filter(f => memberMatchesFixtureGender(f.gender, memberGender));
+    return open.slice(0, 5);
+  }, [fixtures, canSeeAll, memberGender]);
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -58,11 +67,11 @@ export default function UpcomingFixturesCard({ clubId, userEmail, dragging }) {
       <CardContent className="p-0">
         {isLoading ? (
           <div className="p-4 space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
-        ) : fixtures.length === 0 ? (
+        ) : visibleFixtures.length === 0 ? (
           <div className="p-5 text-center text-sm text-gray-400">No fixtures are open for sign-up right now.</div>
         ) : (
           <div className="divide-y">
-            {fixtures.map(fixture => (
+            {visibleFixtures.map(fixture => (
               <div key={fixture.id} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

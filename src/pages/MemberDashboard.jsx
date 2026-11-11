@@ -545,7 +545,7 @@ export default function MemberDashboard() {
 
   const renderClubFixtures = (dragging) => {
     if (club?.module_leagues === false) return null;
-    return <UpcomingFixturesCard clubId={clubId} userEmail={user.email} dragging={dragging} />;
+    return <UpcomingFixturesCard clubId={clubId} userEmail={user.email} memberGender={myMembership?.gender} dragging={dragging} />;
   };
 
   const sectionRenderers = {

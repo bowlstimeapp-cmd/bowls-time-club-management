@@ -42,6 +42,21 @@ export async function verifySelectorAccess(base44, user, clubId) {
   return !!(membership && (membership.role === 'admin' || membership.role === 'selector'));
 }
 
+/** Which players a fixture is open to. */
+export const FIXTURE_GENDERS = ['mixed', 'men', 'women'];
+
+export function normaliseFixtureGender(value) {
+  return FIXTURE_GENDERS.includes(value) ? value : 'mixed';
+}
+
+/** True when a member with this recorded gender may sign up for / be picked in the fixture. */
+export function memberMatchesFixtureGender(fixtureGender, memberGender) {
+  const g = normaliseFixtureGender(fixtureGender);
+  if (g === 'mixed') return true;
+  const m = String(memberGender || '').toLowerCase();
+  return g === 'men' ? m === 'male' : m === 'female';
+}
+
 export function memberDisplayName(membership) {
   if (!membership) return '';
   if (membership.first_name && membership.surname) return `${membership.first_name} ${membership.surname}`;

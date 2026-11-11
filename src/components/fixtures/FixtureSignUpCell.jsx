@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 import FixtureInterestButton from '@/components/fixtures/FixtureInterestButton';
 import FixtureSignUpDialog from '@/components/fixtures/FixtureSignUpDialog';
+import { memberMatchesFixtureGender, fixtureGenderLabel } from '@/lib/fixtureGender';
 
 /**
  * The "Interested" cell of one fixture row.
@@ -16,12 +17,21 @@ export default function FixtureSignUpCell({
   iAmInterested,
   isPast,
   onToggle,
+  memberGender,
 }) {
   const [showList, setShowList] = useState(false);
   const isBroadcast = fixture.broadcast === true;
 
   if (!canSeeAll) {
     if (isBroadcast && !isPast) {
+      // Sign-up is only offered when the fixture's gender matches the member's
+      if (!memberMatchesFixtureGender(fixture.gender, memberGender)) {
+        return (
+          <span className="text-xs text-gray-400" title={`This fixture is open to ${fixture.gender} only`}>
+            {fixtureGenderLabel(fixture.gender)}
+          </span>
+        );
+      }
       return <FixtureInterestButton interested={iAmInterested} onToggle={onToggle} disabled={isPast} />;
     }
     return (

@@ -247,13 +247,15 @@ export default function SelectionEditor() {
   const activeRinkCount = activeRinkConfig.rink_count || 6;
 
   // Opened from a fixture (?fixtureId=) — pre-fill the match from it
+  // Also loaded for an existing selection so its fixture's gender applies
+  const linkedFixtureLookupId = fixtureId || existingSelection?.fixture_id || null;
   const { data: linkedFixture } = useQuery({
-    queryKey: ['clubFixture', fixtureId],
+    queryKey: ['clubFixture', linkedFixtureLookupId],
     queryFn: async () => {
-      const fixtures = await base44.entities.ClubFixture.filter({ id: fixtureId });
+      const fixtures = await base44.entities.ClubFixture.filter({ id: linkedFixtureLookupId });
       return fixtures[0];
     },
-    enabled: !!fixtureId && !selectionId
+    enabled: !!linkedFixtureLookupId
   });
 
   useEffect(() => {
@@ -833,8 +835,12 @@ export default function SelectionEditor() {
 
   const selectedEmails = Object.values(selections).filter(Boolean);
 
-  // Filter members based on competition gender and age_group restrictions
+  // Filter members based on the fixture's gender (when linked) or the competition's
   const activeCompetition = competitions.find((c) => c.name === competition);
+  const linkedFixtureGender =
+    linkedFixture?.gender === 'men' || linkedFixture?.gender === 'women' ? linkedFixture.gender : null;
+  const eligibilityGender = linkedFixtureGender || activeCompetition?.gender || 'mixed';
+  const eligibilityAgeGroup = activeCompetition?.age_group;
 
   const interestedEmails = useMemo(() => {
     const compId = activeCompetition?.id;
@@ -855,18 +861,20 @@ export default function SelectionEditor() {
   const baseFilteredMembers = React.useMemo(() => {
     // Always exclude social-only members from selection
     const nonSocialMembers = filterOutSocialMembers(members, normaliseMembershipTypes(club?.membership_types || []));
-    if (!activeCompetition || competition === 'Friendly' || competition === 'Top Club' || competition === 'Top Club (Outdoor)' || competition === 'Fantastic 5s') return nonSocialMembers;
+    const isSpecialFormat = competition === 'Friendly' || competition === 'Top Club' || competition === 'Top Club (Outdoor)' || competition === 'Fantastic 5s';
+    if (!activeCompetition && !linkedFixtureGender) return nonSocialMembers;
+    if (isSpecialFormat && !linkedFixtureGender) return nonSocialMembers;
     let filtered = [...nonSocialMembers];
 
-    // Gender filter
-    if (activeCompetition.gender === 'men') {
+    // Gender filter — a linked fixture's gender wins over the match type's
+    if (eligibilityGender === 'men') {
       filtered = filtered.filter((m) => (m.gender || '').toLowerCase() === 'male');
-    } else if (activeCompetition.gender === 'women') {
+    } else if (eligibilityGender === 'women') {
       filtered = filtered.filter((m) => (m.gender || '').toLowerCase() === 'female');
     }
 
     // Age filter
-    if (activeCompetition.age_group === 'o60' || activeCompetition.age_group === 'u25') {
+    if (eligibilityAgeGroup === 'o60' || eligibilityAgeGroup === 'u25') {
       const today = new Date();
       // Date of birth may be stored as ISO (yyyy-mm-dd) or UK format (dd/mm/yyyy)
       const parseDob = (dobStr) => {
@@ -882,14 +890,14 @@ export default function SelectionEditor() {
         const dob = parseDob(m.date_of_birth);
         if (!dob || isNaN(dob.getTime())) return false;
         const age = Math.floor((today - dob) / (365.25 * 24 * 60 * 60 * 1000));
-        if (activeCompetition.age_group === 'o60') return age >= 60;
-        if (activeCompetition.age_group === 'u25') return age <= 25;
+        if (eligibilityAgeGroup === 'o60') return age >= 60;
+        if (eligibilityAgeGroup === 'u25') return age <= 25;
         return true;
       });
     }
 
     return filtered;
-  }, [members, activeCompetition, competition]);
+  }, [members, activeCompetition, competition, linkedFixtureGender, eligibilityGender, eligibilityAgeGroup]);
 
   // Only offer members who signed up for the linked fixture — plus anyone already picked,
   // so saved selections being re-opened never lose a player or their name

@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { verifyClubAdmin, verifyBelongsToClub, SELECTION_ENUM } from '../../shared/fixtureHelpers.ts';
+import { verifyClubAdmin, verifyBelongsToClub, SELECTION_ENUM, normaliseFixtureGender } from '../../shared/fixtureHelpers.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { club_id, competition_id, date, time, finish_time, opponent, venue, notes, broadcast } = await req.json();
+    const { club_id, competition_id, date, time, finish_time, opponent, venue, notes, broadcast, gender } = await req.json();
 
     if (!club_id || !competition_id || !date || !time || !venue) {
       return Response.json({ error: 'Missing required fields: club_id, competition_id, date, time, venue' }, { status: 400 });
@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     const fixture = await base44.asServiceRole.entities.ClubFixture.create({
       club_id, competition_id, date, time, finish_time: finish_time || '', opponent: opponent || '', venue, notes: notes || '',
       broadcast: broadcast === true,
+      gender: normaliseFixtureGender(gender),
     });
 
     // Try to match Competition.name against the TeamSelection competition enum

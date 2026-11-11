@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { verifyApprovedMember, verifyBelongsToClub } from '../../shared/fixtureHelpers.ts';
+import { verifyApprovedMember, verifyBelongsToClub, getClubMembership, memberMatchesFixtureGender } from '../../shared/fixtureHelpers.ts';
 
 /**
  * Toggle the signed-in member's interest in one club fixture.
@@ -46,6 +46,16 @@ Deno.serve(async (req) => {
 
     if (fixture.broadcast !== true) {
       return Response.json({ error: 'This fixture is not open for sign-up' }, { status: 400 });
+    }
+
+    // Sign-ups must match the fixture's gender (men's, women's or mixed)
+    const membership = await getClubMembership(base44, user.email, club_id);
+    if (membership && !memberMatchesFixtureGender(fixture.gender, membership.gender)) {
+      return Response.json({
+        error: fixture.gender === 'men'
+          ? "This fixture is for male members only"
+          : "This fixture is for female members only",
+      }, { status: 400 });
     }
 
     await base44.asServiceRole.entities.FixtureInterest.create({

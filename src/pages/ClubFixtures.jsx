@@ -166,6 +166,7 @@ export default function ClubFixtures() {
                         iAmInterested={iAmInterested}
                         isPast={isPast}
                         onToggle={() => toggle(fixture.id)}
+                        memberGender={membership?.gender}
                       />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">{fixture.notes || '—'}</td>
