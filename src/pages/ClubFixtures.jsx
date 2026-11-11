@@ -13,6 +13,7 @@ import FixtureSignUpCell from '@/components/fixtures/FixtureSignUpCell';
 import FixtureBroadcastButton from '@/components/fixtures/FixtureBroadcastButton';
 import useFixtureInterests from '@/hooks/useFixtureInterests';
 import useClubCompetitions from '@/hooks/useClubCompetitions';
+import { fixtureGender } from '@/lib/fixtureGender';
 
 export default function ClubFixtures() {
   const [searchParams] = useSearchParams();
@@ -140,13 +141,25 @@ export default function ClubFixtures() {
             <tbody className="divide-y">
               {fixtures.map(fixture => {
                 const comp = competitionMap[fixture.competition_id];
+                const genderValue = fixtureGender(fixture.gender);
                 const rowInterests = interestsByFixture[fixture.id] || [];
                 const iAmInterested = rowInterests.some(i => i.user_email === user.email);
                 const isPast = fixture.date < today;
                 const linkedSelection = selectionByFixture[fixture.id];
                 return (
                   <tr key={fixture.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium">{comp?.name || '—'}</td>
+                    <td className="px-4 py-3 text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{comp?.name || '—'}</span>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                          genderValue === 'men' ? 'bg-blue-100 text-blue-700' :
+                          genderValue === 'women' ? 'bg-rose-100 text-rose-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {genderValue === 'men' ? "Men's" : genderValue === 'women' ? "Women's" : 'Mixed'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-sm">{fixture.opponent || '—'}</td>
                     <td className="px-4 py-3 text-sm">{format(parseISO(fixture.date), 'EEE d MMM yyyy')}</td>
                     <td className="px-4 py-3 text-sm">{fixture.time}{fixture.finish_time ? ` – ${fixture.finish_time}` : ''}</td>
