@@ -47,6 +47,7 @@ import CountySelections from './pages/CountySelections';
 import CountySquads from './pages/CountySquads';
 import PrivacyNotice from './pages/PrivacyNotice';
 import WebsiteAdmin from './pages/WebsiteAdmin';
+import ClubSite from './pages/ClubSite';
 import TermsOfService from './pages/TermsOfService';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -134,6 +135,9 @@ const AuthenticatedApp = () => {
       <Route path="/SeniorFixtures" element={<SeniorFixtures />} />
       <Route path="/SeniorCompetitions" element={<SeniorCompetitions />} />
       <Route path="/SeniorMembers" element={<SeniorMembers />} />
+      {/* Club website renderer — has its own site chrome, so no app layout wrapper */}
+      <Route path="/site/:siteSlug" element={<ClubSite />} />
+      <Route path="/site/:siteSlug/:pageSlug" element={<ClubSite />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

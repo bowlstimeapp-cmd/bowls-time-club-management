@@ -12,23 +12,8 @@ import {
   stripTags,
   validateSections,
 } from '../../shared/websiteSanitize.ts';
-
-// ---------------------------------------------------------------------------
-// Club authorisation (RLS cannot check ClubMembership.role, so we do it here)
-// ---------------------------------------------------------------------------
-
-function isPlatformAdmin(user) {
-  return user?.role === 'admin';
-}
-
-async function getClubMembership(base44, userEmail, clubId) {
-  const results = await base44.asServiceRole.entities.ClubMembership.filter({
-    club_id: clubId,
-    user_email: userEmail,
-    status: 'approved',
-  });
-  return results[0] || null;
-}
+import { canManageClubWebsite } from '../../shared/websiteAuth.ts';
+import { buildSiteSnapshot } from '../../shared/websiteSnapshot.ts';
 
 function blank(value) {
   if (value === null || value === undefined) return true;
@@ -70,11 +55,9 @@ export default async function (req) {
     }
 
     // ---- Tenant authorisation -------------------------------------------------
-    if (!isPlatformAdmin(user)) {
-      const membership = await getClubMembership(base44, user.email, clubId);
-      if (!membership || membership.role !== 'admin') {
-        return Response.json({ error: 'Forbidden: club admin access required' }, { status: 403 });
-      }
+    const allowed = await canManageClubWebsite(base44, user, clubId);
+    if (!allowed) {
+      return Response.json({ error: 'Forbidden: club admin access required' }, { status: 403 });
     }
 
     const club = await base44.asServiceRole.entities.Club.get(clubId).catch((e) => (e.status === 404 ? null : Promise.reject(e)));
@@ -247,30 +230,7 @@ export default async function (req) {
       await base44.asServiceRole.entities.WebsiteVersion.create({
         website_id: target.id,
         club_id: clubId,
-        snapshot: {
-          site: {
-            name: target.name,
-            slug: target.slug,
-            theme: target.theme || {},
-            footer: target.footer || {},
-            site_settings: target.site_settings || {},
-            navigation: target.navigation || [],
-          },
-          pages: existingPages.map((p) => ({
-            title: p.title,
-            slug: p.slug,
-            is_home: !!p.is_home,
-            order: p.order ?? 0,
-            visible: p.visible !== false,
-            seo_title: p.seo_title || '',
-            seo_description: p.seo_description || '',
-            og_image_url: p.og_image_url || '',
-            sections: existingSections
-              .filter((s) => s.page_id === p.id)
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-              .map((s) => ({ type: s.type, visible: s.visible !== false, content: s.content || {} })),
-          })),
-        },
+        snapshot: buildSiteSnapshot(target, existingPages, existingSections),
         created_by: user.email,
         note: `Automatic backup before replace import${filename ? ` (${filename})` : ''}`,
       });
