@@ -19,7 +19,7 @@ import {
   ShieldAlert, Search, Plus, Pencil, Trash2, ArrowLeft, Users,
   Phone, Mail, Globe, MapPin, CheckCircle, XCircle, Clock,
   Star, PhoneCall, RefreshCw, Loader2, Download, Upload, Filter,
-  Send, FileText, MailCheck, Eye, History
+  Send, FileText, MailCheck, Eye, History, RotateCcw
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Link } from 'react-router-dom';
@@ -242,6 +242,8 @@ export default function ProspectCRM() {
   const [allStatusProgress, setAllStatusProgress] = useState({ processed: 0, total: 0 });
   const [backfilling, setBackfilling] = useState(false);
   const [backfillResult, setBackfillResult] = useState(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0 });
   const [bulkSending, setBulkSending] = useState(false);
@@ -350,6 +352,25 @@ export default function ProspectCRM() {
       toast.error('Backfill failed: ' + msg);
     }
     setBackfilling(false);
+  };
+
+  const handleResetAllStatuses = async () => {
+    setResetConfirmOpen(false);
+    setResetting(true);
+    const query = { contact_status: { $ne: 'not_contacted' } };
+    try {
+      let result = await base44.entities.ProspectClub.updateMany(query, { $set: { contact_status: 'not_contacted' } });
+      let guard = 0;
+      while (result?.has_more && guard < 100) {
+        result = await base44.entities.ProspectClub.updateMany(query, { $set: { contact_status: 'not_contacted' } });
+        guard++;
+      }
+      queryClient.invalidateQueries({ queryKey: ['prospects'] });
+      toast.success('All prospect statuses reset to Not Contacted');
+    } catch (e) {
+      toast.error('Failed to reset statuses: ' + (e?.message || 'Unknown error'));
+    }
+    setResetting(false);
   };
 
   // Stats — must be before any conditional return
@@ -708,6 +729,10 @@ export default function ProspectCRM() {
                   <span>{importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}Import CSV</span>
                 </Button>
               </label>
+              <Button variant="outline" size="sm" onClick={() => setResetConfirmOpen(true)} disabled={resetting || !prospects.some(p => p.contact_status !== 'not_contacted')}>
+                {resetting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                {resetting ? 'Resetting...' : 'Reset All Statuses'}
+              </Button>
               <Button variant="outline" size="sm" onClick={handleRefreshAllStatuses} disabled={refreshingAllStatuses}>
                 {refreshingAllStatuses ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                 {refreshingAllStatuses ? `Refreshing ${allStatusProgress.processed}/${allStatusProgress.total}` : 'Refresh Statuses'}
@@ -1219,6 +1244,30 @@ export default function ProspectCRM() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Reset All Statuses Confirmation Dialog */}
+      <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset all statuses to "Not Contacted"?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-gray-600">
+              Every prospect whose status is not already "Not Contacted" will be set back to "Not Contacted". Notes, emails and contact details are not changed.
+            </p>
+            <div className="rounded-lg border p-3">
+              <p className="text-2xl font-bold text-gray-900">{prospects.filter(p => p.contact_status !== 'not_contacted').length}</p>
+              <p className="text-xs text-gray-500 mt-1">Prospects will be reset</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetConfirmOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleResetAllStatuses}>
+              <RotateCcw className="w-4 h-4 mr-2" />Reset Statuses
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Send Confirmation Dialog */}
       <Dialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
