@@ -1,0 +1,71 @@
+{
+  "name": "ImportLog",
+  "type": "object",
+  "properties": {
+    "website_id": {
+      "type": "string",
+      "description": "Reference to the Website the bundle was imported into"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Owning club (tenant)"
+    },
+    "filename": {
+      "type": "string",
+      "description": "Name of the uploaded bundle file"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "new",
+        "replace",
+        "merge"
+      ],
+      "description": "Import mode used"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "partial"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "default": {},
+      "description": "Counts of pages, sections and assets created or updated"
+    },
+    "warnings": {
+      "type": "array",
+      "default": [],
+      "description": "Non-blocking issues found during import",
+      "items": {
+        "type": "object"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "default": [],
+      "description": "Blocking issues found during import",
+      "items": {
+        "type": "object"
+      }
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Email of the person who ran the import"
+    }
+  },
+  "required": [
+    "club_id",
+    "mode",
+    "status"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "MediaAsset",
+  "type": "object",
+  "properties": {
+    "website_id": {
+      "type": "string",
+      "description": "Reference to the Website"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Owning club (tenant)"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "Public URL of the stored file"
+    },
+    "original_filename": {
+      "type": "string"
+    },
+    "alt_text": {
+      "type": "string"
+    },
+    "mime_type": {
+      "type": "string"
+    },
+    "size": {
+      "type": "number",
+      "description": "File size in bytes"
+    },
+    "source_path": {
+      "type": "string",
+      "description": "Path used inside the imported bundle (e.g. assets/hero.jpg) for idempotent re-imports"
+    }
+  },
+  "required": [
+    "website_id",
+    "club_id",
+    "file_url"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

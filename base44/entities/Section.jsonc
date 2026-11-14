@@ -1,0 +1,49 @@
+{
+  "name": "Section",
+  "type": "object",
+  "properties": {
+    "page_id": {
+      "type": "string",
+      "description": "Reference to the Page"
+    },
+    "website_id": {
+      "type": "string",
+      "description": "Reference to the Website"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Owning club (tenant)"
+    },
+    "type": {
+      "type": "string",
+      "description": "Section type key from the section registry (hero, rich_text, gallery, ...)"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order within the page"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Hidden sections are kept in the CMS but not rendered"
+    },
+    "content": {
+      "type": "object",
+      "default": {},
+      "description": "Section content. Shape depends on the section type in the registry."
+    }
+  },
+  "required": [
+    "page_id",
+    "website_id",
+    "club_id",
+    "type"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

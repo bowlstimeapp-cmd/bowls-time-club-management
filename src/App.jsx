@@ -46,6 +46,7 @@ import CountyEntriesAdmin from './pages/county/CountyEntriesAdmin';
 import CountySelections from './pages/CountySelections';
 import CountySquads from './pages/CountySquads';
 import PrivacyNotice from './pages/PrivacyNotice';
+import WebsiteAdmin from './pages/WebsiteAdmin';
 import TermsOfService from './pages/TermsOfService';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -125,6 +126,7 @@ const AuthenticatedApp = () => {
       <Route path="/CountySelections" element={<LayoutWrapper currentPageName="CountySelections"><CountySelections /></LayoutWrapper>} />
       <Route path="/CountySquads" element={<LayoutWrapper currentPageName="CountySquads"><CountySquads /></LayoutWrapper>} />
       <Route path="/PrivacyNotice" element={<LayoutWrapper currentPageName="PrivacyNotice"><PrivacyNotice /></LayoutWrapper>} />
+      <Route path="/WebsiteAdmin" element={<LayoutWrapper currentPageName="WebsiteAdmin"><WebsiteAdmin /></LayoutWrapper>} />
       <Route path="/TermsOfService" element={<LayoutWrapper currentPageName="TermsOfService"><TermsOfService /></LayoutWrapper>} />
       {/* Senior Experience Mode routes — no layout wrapper, they have their own SeniorLayout */}
       <Route path="/SeniorHome" element={<SeniorHome />} />

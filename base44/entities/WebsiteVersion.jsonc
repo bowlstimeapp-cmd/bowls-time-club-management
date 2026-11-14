@@ -1,0 +1,38 @@
+{
+  "name": "WebsiteVersion",
+  "type": "object",
+  "properties": {
+    "website_id": {
+      "type": "string",
+      "description": "Reference to the Website"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Owning club (tenant)"
+    },
+    "snapshot": {
+      "type": "object",
+      "default": {},
+      "description": "Full site snapshot at publish time: site settings, theme, navigation, footer and every page with its sections"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Email of the person who created the version"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional note describing the version"
+    }
+  },
+  "required": [
+    "website_id",
+    "club_id",
+    "snapshot"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

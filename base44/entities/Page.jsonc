@@ -1,0 +1,59 @@
+{
+  "name": "Page",
+  "type": "object",
+  "properties": {
+    "website_id": {
+      "type": "string",
+      "description": "Reference to the Website"
+    },
+    "club_id": {
+      "type": "string",
+      "description": "Owning club (tenant)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Page title"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-safe page slug, unique within the website"
+    },
+    "is_home": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is the website home page"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    },
+    "seo_title": {
+      "type": "string"
+    },
+    "seo_description": {
+      "type": "string"
+    },
+    "og_image_url": {
+      "type": "string",
+      "description": "Open Graph image for this page"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Hidden pages stay in the CMS but are not rendered publicly"
+    }
+  },
+  "required": [
+    "website_id",
+    "club_id",
+    "title",
+    "slug"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

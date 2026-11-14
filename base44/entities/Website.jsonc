@@ -1,0 +1,127 @@
+{
+  "name": "Website",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Owning club (tenant). Every website belongs to exactly one club."
+    },
+    "name": {
+      "type": "string",
+      "description": "Website name"
+    },
+    "slug": {
+      "type": "string",
+      "description": "Unique URL-safe slug for the site, e.g. my-bowls-club"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published"
+      ],
+      "default": "draft",
+      "description": "Draft until the club admin publishes a version"
+    },
+    "theme": {
+      "type": "object",
+      "default": {},
+      "description": "Theme JSON: colors {primary, secondary, accent, background, text}, fonts {heading, body}, radius, button_style"
+    },
+    "navigation": {
+      "type": "array",
+      "default": [],
+      "description": "Ordered navigation items. Each item links to a page_slug or an external_url and may have children.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "page_slug": {
+            "type": "string"
+          },
+          "external_url": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "page_slug": {
+                  "type": "string"
+                },
+                "external_url": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "default": {},
+      "description": "Footer JSON: text, columns of links, social links, copyright"
+    },
+    "site_settings": {
+      "type": "object",
+      "default": {},
+      "description": "Site-level settings used by the renderer and CMS",
+      "properties": {
+        "site_title": {
+          "type": "string"
+        },
+        "logo_url": {
+          "type": "string"
+        },
+        "favicon_url": {
+          "type": "string"
+        },
+        "seo_title": {
+          "type": "string"
+        },
+        "seo_description": {
+          "type": "string"
+        },
+        "social_links": {
+          "type": "object"
+        },
+        "contact_email": {
+          "type": "string"
+        },
+        "contact_phone": {
+          "type": "string"
+        },
+        "contact_address": {
+          "type": "string"
+        }
+      }
+    },
+    "published_version_id": {
+      "type": "string",
+      "description": "Id of the WebsiteVersion currently published to the public site"
+    },
+    "last_imported_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When a site bundle was last imported into this website"
+    }
+  },
+  "required": [
+    "club_id",
+    "name",
+    "slug"
+  ],
+  "rls": {
+    "read": {},
+    "create": false,
+    "update": false,
+    "delete": false
+  }
+}

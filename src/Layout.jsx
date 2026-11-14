@@ -47,7 +47,8 @@ import {
   Star,
   MoreHorizontal,
   ChevronUp,
-  Coffee
+  Coffee,
+  Globe
 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { usePlatformSetting } from '@/hooks/usePlatformSetting';
@@ -284,6 +285,7 @@ export default function Layout({ children, currentPageName }) {
         { name: 'TV Display', href: createPageUrl('RinkDisplayTV') + `?clubId=${clubId}`, icon: Calendar },
         { name: 'Members', href: createPageUrl('ClubAdmin') + `?clubId=${clubId}`, icon: Users },
         { name: 'Open Competitions', href: createPageUrl('OpenCompetitions') + `?clubId=${clubId}`, icon: Trophy },
+        { name: 'Website', href: createPageUrl('WebsiteAdmin') + `?clubId=${clubId}`, icon: Globe },
         ...((club?.module_function_rooms || isFreeClub) ? [{ name: 'Function Rooms', href: createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`, icon: Building2 }] : []),
         { name: 'Dashboard', href: createPageUrl('AdminDashboard') + `?clubId=${clubId}`, icon: LayoutDashboard },
         { name: 'Club Admin', href: createPageUrl('Clubsettings') + `?clubId=${clubId}`, icon: Settings },
@@ -374,6 +376,7 @@ export default function Layout({ children, currentPageName }) {
           { name: 'Bookings Admin', href: createPageUrl('AdminBookings') + `?clubId=${clubId}`, icon: ShieldCheck },
           { name: 'Members', href: createPageUrl('ClubAdmin') + `?clubId=${clubId}`, icon: Users },
           { name: 'Open Competitions', href: createPageUrl('OpenCompetitions') + `?clubId=${clubId}`, icon: Trophy },
+        { name: 'Website', href: createPageUrl('WebsiteAdmin') + `?clubId=${clubId}`, icon: Globe },
           ...((club?.module_function_rooms || isFreeClub) ? [{ name: 'Function Rooms', href: createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`, icon: Building2 }] : []),
           { name: 'Dashboard', href: createPageUrl('AdminDashboard') + `?clubId=${clubId}`, icon: LayoutDashboard },
         ] : []),
@@ -720,6 +723,12 @@ export default function Layout({ children, currentPageName }) {
                         <Link to={createPageUrl('OpenCompetitions') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Trophy className="w-4 h-4 mr-2" />
                           Open Competitions
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('WebsiteAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Globe className="w-4 h-4 mr-2" />
+                          Website
                         </Link>
                       </DropdownMenuItem>
                       {(club?.module_function_rooms || isFreeClub) && (
