@@ -143,7 +143,24 @@ export default function MyLeagueTeam() {
     const l = leagues.find(x => x.id === leagueId);
     return l?.status === 'completed';
   };
-  const myTeams = [...captainTeams, ...playerTeams].filter(t => !isArchivedLeague(t.league_id));
+  // Teams are listed in day-of-week order (derived from their league's start date)
+  const leagueDayIndex = (leagueId) => {
+    const l = leagues.find(x => x.id === leagueId);
+    if (!l?.start_date) return 7;
+    const d = new Date(`${l.start_date}T00:00:00`);
+    return isNaN(d.getTime()) ? 7 : (d.getDay() + 6) % 7; // Monday = 0
+  };
+  const myTeams = [...captainTeams, ...playerTeams]
+    .filter(t => !isArchivedLeague(t.league_id))
+    .sort((a, b) => {
+      const dayDiff = leagueDayIndex(a.league_id) - leagueDayIndex(b.league_id);
+      if (dayDiff !== 0) return dayDiff;
+      const aLeague = leagues.find(l => l.id === a.league_id);
+      const bLeague = leagues.find(l => l.id === b.league_id);
+      const timeDiff = (aLeague?.start_time || '').localeCompare(bLeague?.start_time || '');
+      if (timeDiff !== 0) return timeDiff;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   
   // Get unique leagues from my teams
   const myLeagueIds = [...new Set(myTeams.map(t => t.league_id))];

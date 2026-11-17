@@ -248,6 +248,9 @@ export default function SelectionView() {
               <p className="text-gray-600 flex items-center gap-2 mt-1">
                 <Calendar className="w-4 h-4" />
                 {format(parseISO(selection.match_date), 'EEEE, d MMMM yyyy')}
+                {selection.match_start_time && (
+                  <span className="text-gray-500">• {selection.match_start_time}</span>
+                )}
               </p>
               {selection.show_venue_address === true && selection.venue_address && (
                 <div className="mt-2 flex items-start gap-2 text-sm text-gray-600">
