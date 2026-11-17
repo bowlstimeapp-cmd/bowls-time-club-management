@@ -164,7 +164,14 @@ export default function MyLeagueTeam() {
   
   // Get unique leagues from my teams
   const myLeagueIds = [...new Set(myTeams.map(t => t.league_id))];
-  const myLeagues = leagues.filter(l => myLeagueIds.includes(l.id));
+  const myLeagues = leagues
+    .filter(l => myLeagueIds.includes(l.id))
+    .sort((a, b) => {
+      const dayDiff = leagueDayIndex(a.id) - leagueDayIndex(b.id);
+      if (dayDiff !== 0) return dayDiff;
+      const timeDiff = (a.start_time || '').localeCompare(b.start_time || '');
+      return timeDiff !== 0 ? timeDiff : (a.name || '').localeCompare(b.name || '');
+    });
   
   const filteredTeams = selectedLeagueFilter === 'all' 
     ? myTeams 
