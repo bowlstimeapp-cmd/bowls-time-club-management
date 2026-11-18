@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { hasElevatedSelectorAccess, normEmail } from '../../shared/selectionElevation.ts';
 
 // ---------------------------------------------------------------------------
 // Auth helpers (inlined — no local imports in Deno Deploy)
@@ -11,6 +12,92 @@ async function getClubMembership(base44, userEmail, clubId) {
     club_id: clubId, user_email: userEmail, status: 'approved',
   });
   return results[0] || null;
+}
+
+function memberDisplayName(m) {
+  if (!m) return '';
+  return m.first_name && m.surname ? `${m.first_name} ${m.surname}` : (m.user_name || m.user_email || '');
+}
+
+/**
+ * Per-selection access lists (additional_selectors / additional_live_scorers).
+ * Emails are validated against approved, non-left memberships of this club —
+ * invalid ones are silently dropped. Each item is rebuilt server-side, keeping
+ * granted_by / granted_at for people who already had access.
+ */
+async function buildAccessList(base44, clubId, emails, existingList, performerEmail) {
+  const wanted = [...new Set(
+    (Array.isArray(emails) ? emails : [])
+      .map((e) => normEmail(typeof e === 'string' ? e : e?.email))
+      .filter(Boolean)
+  )];
+  if (wanted.length === 0) return [];
+
+  const memberships = await base44.asServiceRole.entities.ClubMembership.filter({
+    club_id: clubId, status: 'approved',
+  });
+  const valid = new Map(
+    memberships
+      .filter((m) => m.user_email && m.member_status !== 'left')
+      .map((m) => [normEmail(m.user_email), m])
+  );
+  const previous = new Map(
+    (Array.isArray(existingList) ? existingList : []).map((e) => [normEmail(e?.email), e])
+  );
+  const now = new Date().toISOString();
+
+  return wanted.filter((email) => valid.has(email)).map((email) => {
+    const before = previous.get(email);
+    const membership = valid.get(email);
+    return {
+      email: membership.user_email,
+      name: memberDisplayName(membership),
+      granted_by_email: before?.granted_by_email || performerEmail,
+      granted_at: before?.granted_at || now,
+    };
+  });
+}
+
+/**
+ * Audit entries for access granted / revoked, in the same SelectionAuditLog.
+ * position is 'additional_selector' or 'additional_live_scorer'.
+ */
+async function logAccessChanges(base44, user, clubId, selection, position, before, after) {
+  const prev = new Map((Array.isArray(before) ? before : []).map((e) => [normEmail(e?.email), e]));
+  const next = new Map((Array.isArray(after) ? after : []).map((e) => [normEmail(e?.email), e]));
+  const base = {
+    club_id: clubId,
+    selection_id: selection.id,
+    competition: selection.competition || null,
+    match_date: selection.match_date || null,
+    match_name: selection.match_name || null,
+    position,
+    performed_by_email: user.email,
+    performed_by_name: user.full_name || user.email,
+  };
+  const entries = [];
+  next.forEach((entry, email) => {
+    if (prev.has(email)) return;
+    entries.push({
+      ...base,
+      change: 'access_granted',
+      member_name: entry.name || entry.email,
+      member_email: entry.email,
+    });
+  });
+  prev.forEach((entry, email) => {
+    if (next.has(email)) return;
+    entries.push({
+      ...base,
+      change: 'access_revoked',
+      member_name: entry.name || entry.email,
+      member_email: null,
+      previous_member_email: entry.email,
+    });
+  });
+  if (entries.length > 0) {
+    await base44.asServiceRole.entities.SelectionAuditLog.bulkCreate(entries);
+  }
 }
 
 /**
@@ -161,31 +248,78 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Forbidden: requires selector or admin role' }, { status: 403 });
       }
       if (!data) return Response.json({ error: 'Missing data for create' }, { status: 400 });
-      const created = await base44.asServiceRole.entities.TeamSelection.create({ ...data, club_id: clubId });
+      // Access lists are rebuilt server-side — granted_by / granted_at from the
+      // client are never trusted, and only real members of this club survive.
+      const payload = {
+        ...data,
+        club_id: clubId,
+        additional_selectors: await buildAccessList(base44, clubId, data.additional_selectors, [], user.email),
+        additional_live_scorers: await buildAccessList(base44, clubId, data.additional_live_scorers, [], user.email),
+      };
+      const created = await base44.asServiceRole.entities.TeamSelection.create(payload);
       await logSelectionChanges(base44, user, clubId, created.id, {}, data.selections, data);
       await logReserveChanges(base44, user, clubId, created.id, [], data.reserves || [], data);
+      await logAccessChanges(base44, user, clubId, created, 'additional_selector', [], payload.additional_selectors);
+      await logAccessChanges(base44, user, clubId, created, 'additional_live_scorer', [], payload.additional_live_scorers);
       return Response.json({ success: true, id: created.id, record: created });
     }
 
     if (action === 'update') {
-      if (!isSelectorLevel) {
-        return Response.json({ error: 'Forbidden: requires selector or admin role' }, { status: 403 });
-      }
       if (!selectionId || !data) return Response.json({ error: 'Missing selectionId or data' }, { status: 400 });
       const existing = await base44.asServiceRole.entities.TeamSelection.filter({ id: selectionId });
       if (!existing[0] || existing[0].club_id !== clubId) {
         return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
       }
-      await base44.asServiceRole.entities.TeamSelection.update(selectionId, data);
-      await logSelectionChanges(base44, user, clubId, selectionId, existing[0].selections, data.selections, data, existing[0].selection_names);
-      await logReserveChanges(base44, user, clubId, selectionId, existing[0].reserves || [], data.reserves || [], data);
+      // A member granted selector access to THIS selection may edit it, but only
+      // until the end of match day and only for as long as the grant exists.
+      const elevatedOnly = !isSelectorLevel && hasElevatedSelectorAccess(existing[0], user.email);
+      if (!isSelectorLevel && !elevatedOnly) {
+        return Response.json({ error: 'Forbidden: requires selector or admin role for this match' }, { status: 403 });
+      }
+      // An elevated selector can never grant or remove anyone's access.
+      let patch = data;
+      if (elevatedOnly) {
+        const { additional_selectors, additional_live_scorers, ...rest } = data;
+        patch = rest;
+      }
+      await base44.asServiceRole.entities.TeamSelection.update(selectionId, patch);
+      await logSelectionChanges(base44, user, clubId, selectionId, existing[0].selections, patch.selections, patch, existing[0].selection_names);
+      await logReserveChanges(base44, user, clubId, selectionId, existing[0].reserves || [], patch.reserves || [], patch);
       return Response.json({ success: true });
     }
 
-    if (action === 'move_bookings') {
+    // Full replacement of this selection's extra access lists. Role only —
+    // an elevated selector can never call this.
+    if (action === 'set_elevated_access') {
       if (!isSelectorLevel) {
         return Response.json({ error: 'Forbidden: requires selector or admin role' }, { status: 403 });
       }
+      if (!selectionId) return Response.json({ error: 'Missing selectionId' }, { status: 400 });
+      const existing = await base44.asServiceRole.entities.TeamSelection.filter({ id: selectionId });
+      const selection = existing[0];
+      if (!selection || selection.club_id !== clubId) {
+        return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
+      }
+      const nextSelectors = await buildAccessList(
+        base44, clubId, data?.additional_selectors, selection.additional_selectors, user.email
+      );
+      const nextScorers = await buildAccessList(
+        base44, clubId, data?.additional_live_scorers, selection.additional_live_scorers, user.email
+      );
+      await base44.asServiceRole.entities.TeamSelection.update(selectionId, {
+        additional_selectors: nextSelectors,
+        additional_live_scorers: nextScorers,
+      });
+      await logAccessChanges(base44, user, clubId, selection, 'additional_selector', selection.additional_selectors, nextSelectors);
+      await logAccessChanges(base44, user, clubId, selection, 'additional_live_scorer', selection.additional_live_scorers, nextScorers);
+      return Response.json({
+        success: true,
+        additional_selectors: nextSelectors,
+        additional_live_scorers: nextScorers,
+      });
+    }
+
+    if (action === 'move_bookings') {
       const { oldRinks, newRinks, bookingDate, startTime, endTime } = data || {};
       if (!selectionId || !Array.isArray(oldRinks) || !Array.isArray(newRinks)) {
         return Response.json({ error: 'Missing selectionId, oldRinks or newRinks' }, { status: 400 });
@@ -193,6 +327,9 @@ Deno.serve(async (req) => {
       const existing = await base44.asServiceRole.entities.TeamSelection.filter({ id: selectionId });
       if (!existing[0] || existing[0].club_id !== clubId) {
         return Response.json({ error: 'Selection not found or does not belong to this club' }, { status: 404 });
+      }
+      if (!isSelectorLevel && !hasElevatedSelectorAccess(existing[0], user.email)) {
+        return Response.json({ error: 'Forbidden: requires selector or admin role for this match' }, { status: 403 });
       }
       const date = bookingDate || existing[0].match_date;
       const start = startTime || existing[0].match_start_time;

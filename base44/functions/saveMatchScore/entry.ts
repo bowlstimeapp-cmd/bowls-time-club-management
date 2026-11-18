@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { waitUntil } from 'base44:runtime';
 import { sendPushToEmails } from '../../shared/webPush.ts';
+import { hasElevatedScorerAccess } from '../../shared/selectionElevation.ts';
 
 // Saves live match scores for a team selection.
 // Permission is based on the caller's club membership role (admin/selector/live_scorer),
@@ -23,20 +24,23 @@ export default async function(req) {
       return Response.json({ error: 'selectionId and clubId are required' }, { status: 400 });
     }
 
+    const service = base44.asServiceRole;
+    const { items: selections } = await service.entities.TeamSelection.filter({ id: selectionId, club_id: clubId }, { limit: 1 });
+    const selection = selections[0];
+    if (!selection) return Response.json({ error: 'Selection not found for this club' }, { status: 404 });
+
+    // Club role (admin/selector/live_scorer), or temporary live scoring access
+    // granted on THIS selection — which stops at the end of match day.
     const memberships = await base44.entities.ClubMembership.filter({
       club_id: clubId,
       user_email: user.email,
       status: 'approved',
     });
     const membership = memberships[0];
-    if (!membership || !['admin', 'selector', 'live_scorer'].includes(membership.role)) {
+    const hasScoringRole = !!membership && ['admin', 'selector', 'live_scorer'].includes(membership.role);
+    if (!hasScoringRole && !hasElevatedScorerAccess(selection, user.email)) {
       return Response.json({ error: 'Not permitted to save scores' }, { status: 403 });
     }
-
-    const service = base44.asServiceRole;
-    const { items: selections } = await service.entities.TeamSelection.filter({ id: selectionId, club_id: clubId }, { limit: 1 });
-    const selection = selections[0];
-    if (!selection) return Response.json({ error: 'Selection not found for this club' }, { status: 404 });
     const scoped = scope === 'home' || scope === 'away';
     if (scoped && (!Array.isArray(match_keys) || !match_keys.length || match_keys.some(key =>
       typeof key !== 'string' || !/^[a-zA-Z0-9_]+$/.test(key) ||

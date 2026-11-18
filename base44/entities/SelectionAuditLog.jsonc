@@ -28,13 +28,15 @@
       "enum": [
         "added",
         "removed",
-        "replaced"
+        "replaced",
+        "access_granted",
+        "access_revoked"
       ],
-      "description": "Type of change made to the team sheet"
+      "description": "Type of change made to the team sheet, or to a member's access to this selection"
     },
     "position": {
       "type": "string",
-      "description": "Team sheet position key the change applied to (e.g. rink4_Lead)"
+      "description": "Team sheet position key the change applied to (e.g. rink4_Lead), or additional_selector / additional_live_scorer for access changes"
     },
     "member_name": {
       "type": "string",

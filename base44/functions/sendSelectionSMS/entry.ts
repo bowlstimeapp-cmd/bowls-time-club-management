@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { format } from 'npm:date-fns@3.6.0';
+import { hasElevatedSelectorAccess } from '../../shared/selectionElevation.ts';
 
 // Auth helpers (inlined — no local imports in Deno Deploy; see clubAuth/entry.ts)
 function isPlatformAdmin(user) {
@@ -32,7 +33,18 @@ Deno.serve(async (req) => {
     // Authorization: caller must be a platform admin or hold admin/selector role
     // at this club (matching updateTeamSelection's publish permission).
     const user = await base44.auth.me().catch(() => null);
-    if (!user || !(isPlatformAdmin(user) || await hasClubRole(base44, user.email, clubId, ['admin', 'selector']))) {
+    if (!user) {
+      return Response.json({ error: 'Forbidden: requires admin or selector role' }, { status: 403 });
+    }
+    let permitted = isPlatformAdmin(user) || await hasClubRole(base44, user.email, clubId, ['admin', 'selector']);
+    // A member given selector access to this selection may notify its players too.
+    if (!permitted) {
+      const { items } = await base44.asServiceRole.entities.TeamSelection.filter(
+        { id: data.id, club_id: clubId }, { limit: 1 }
+      );
+      permitted = hasElevatedSelectorAccess(items[0] || data, user.email);
+    }
+    if (!permitted) {
       return Response.json({ error: 'Forbidden: requires admin or selector role' }, { status: 403 });
     }
 

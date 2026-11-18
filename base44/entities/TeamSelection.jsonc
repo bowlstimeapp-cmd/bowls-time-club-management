@@ -177,6 +177,60 @@
     "venue_address": {
       "type": "string",
       "description": "Snapshot of the venue address, shown on SelectionView and team sheets"
+    },
+    "additional_selectors": {
+      "type": "array",
+      "default": [],
+      "description": "Members given selector access to THIS selection only, until the end of match day. ClubMembership.role is never changed.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Member email"
+          },
+          "name": {
+            "type": "string",
+            "description": "Member display name at the time access was granted"
+          },
+          "granted_by_email": {
+            "type": "string",
+            "description": "Who granted the access"
+          },
+          "granted_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the access was granted"
+          }
+        }
+      }
+    },
+    "additional_live_scorers": {
+      "type": "array",
+      "default": [],
+      "description": "Members given live scoring access to THIS selection only, until the end of match day. ClubMembership.role is never changed.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Member email"
+          },
+          "name": {
+            "type": "string",
+            "description": "Member display name at the time access was granted"
+          },
+          "granted_by_email": {
+            "type": "string",
+            "description": "Who granted the access"
+          },
+          "granted_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the access was granted"
+          }
+        }
+      }
     }
   },
   "required": [

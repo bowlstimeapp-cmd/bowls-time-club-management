@@ -47,6 +47,8 @@ import RepublishNotifyModal from '@/components/selection/RepublishNotifyModal';
 import sendSelectionPush from '@/components/selection/sendSelectionPush';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ReservesEditor from '@/components/selection/ReservesEditor';
+import ElevatedAccessEditor from '@/components/selection/ElevatedAccessEditor';
+import { hasElevatedSelectorAccess } from '@/lib/selectionAccess';
 import useClubCompetitions from '@/hooks/useClubCompetitions';
 import {
   sendSelectionEmails as sendSelectionEmailsFor,
@@ -97,6 +99,10 @@ export default function SelectionEditor() {
   const [reserves, setReserves] = useState([]);
   const [originalReserves, setOriginalReserves] = useState([]);
   // Opponent club + venue address state
+  // Per-selection, time-bound access (never a club role change)
+  const [additionalSelectors, setAdditionalSelectors] = useState([]);
+  const [additionalScorers, setAdditionalScorers] = useState([]);
+  const [savingAccess, setSavingAccess] = useState(false);
   const [opponentName, setOpponentName] = useState('');
   const [opponentClub, setOpponentClub] = useState(null);
   const [showVenueAddress, setShowVenueAddress] = useState(false);
@@ -124,7 +130,7 @@ export default function SelectionEditor() {
     }
   }, [clubId, navigate]);
 
-  const { data: membership } = useQuery({
+  const { data: membership, isLoading: membershipLoading } = useQuery({
     queryKey: ['myMembership', clubId, user?.email],
     queryFn: async () => {
       const memberships = await base44.entities.ClubMembership.filter({
@@ -136,7 +142,7 @@ export default function SelectionEditor() {
     enabled: !!clubId && !!user?.email
   });
 
-  const { data: existingSelection } = useQuery({
+  const { data: existingSelection, isLoading: selectionLoading } = useQuery({
     queryKey: ['selection', selectionId],
     queryFn: async () => {
       const selections = await base44.entities.TeamSelection.filter({ id: selectionId });
@@ -170,6 +176,8 @@ export default function SelectionEditor() {
       setShowVenueAddress(existingSelection.show_venue_address === true);
       setVenueLocation(existingSelection.venue_location === 'away' ? 'away' : 'home');
       setVenueAddress(existingSelection.venue_address || '');
+      setAdditionalSelectors((existingSelection.additional_selectors || []).filter((p) => p && p.email));
+      setAdditionalScorers((existingSelection.additional_live_scorers || []).filter((p) => p && p.email));
       lastAutoFillRef.current = '';
       if (existingSelection.competition === 'Friendly') {
         setFriendlyLocation(existingSelection.friendly_location || '');
@@ -295,7 +303,7 @@ export default function SelectionEditor() {
   });
 
   const createBookingMutation = useMutation({
-    mutationFn: (data) => base44.functions.invoke('createBooking', { ...data, clubId }),
+    mutationFn: (data) => base44.functions.invoke('createBooking', { ...data, clubId, selection_id: selectionId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     }
@@ -320,6 +328,9 @@ export default function SelectionEditor() {
   });
 
   const isSelector = membership?.role === 'selector' || membership?.role === 'admin';
+  // Given selector access to THIS selection only — never a club-wide role
+  const isElevatedSelector = !isSelector && hasElevatedSelectorAccess(existingSelection, user?.email);
+  const canEditSelection = isSelector || isElevatedSelector;
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.functions.invoke('updateTeamSelection', { action: 'create', clubId, data }),
@@ -410,6 +421,12 @@ export default function SelectionEditor() {
       reserves: pickReserves ? reserveEntries : [],
       home_captain_email: homeCaptainEmail || null,
       away_captain_email: awayCaptainEmail || null,
+      // Only sent on create — an existing selection's access lists are managed
+      // through set_elevated_access and must never be overwritten by a save
+      ...(selectionId ? {} : {
+        additional_selectors: additionalSelectors.map((p) => p.email),
+        additional_live_scorers: additionalScorers.map((p) => p.email),
+      }),
       ...(competition === 'Friendly' ? {
         friendly_location: friendlyLocation,
         friendly_num_rinks: friendlyNumRinks,
@@ -797,6 +814,105 @@ export default function SelectionEditor() {
     setPickReserves(next);
   };
 
+  // ── Extra access for this match (additional selectors / live scorers) ──
+  const memberNameOf = (m) =>
+    m?.first_name && m?.surname ? `${m.first_name} ${m.surname}` : (m?.user_name || m?.user_email || '');
+
+  const notifyAccessGranted = async (person, label) => {
+    const opponentLabel = opponentName || matchName;
+    const message = `You've been given ${label} for ${competition}${opponentLabel ? ' vs ' + opponentLabel : ''} on ${format(new Date(matchDate), 'd MMMM yyyy')}`;
+    await sendSelectionPush({
+      emails: [person.email],
+      competition,
+      matchName: opponentLabel,
+      matchDate,
+      clubId,
+      selectionId,
+      message,
+    });
+    await base44.entities.Notification.bulkCreate([{
+      user_email: person.email,
+      type: 'team_selection',
+      title: 'Match Access Granted',
+      message,
+      link_page: 'Selection',
+      link_params: `clubId=${clubId}`,
+      related_id: selectionId,
+    }]);
+  };
+
+  // Full replacement lists — the backend validates every email and keeps the
+  // original granted_by / granted_at for people who already had access
+  const persistAccess = async (nextSelectors, nextScorers, added = null) => {
+    setSavingAccess(true);
+    try {
+      const res = await base44.functions.invoke('updateTeamSelection', {
+        action: 'set_elevated_access',
+        clubId,
+        selectionId,
+        data: {
+          additional_selectors: nextSelectors.map((p) => p.email),
+          additional_live_scorers: nextScorers.map((p) => p.email),
+        },
+      });
+      if (res?.data?.error) throw new Error(res.data.error);
+      setAdditionalSelectors(res?.data?.additional_selectors || nextSelectors);
+      setAdditionalScorers(res?.data?.additional_live_scorers || nextScorers);
+      queryClient.invalidateQueries({ queryKey: ['selection', selectionId] });
+      queryClient.invalidateQueries({ queryKey: ['selections'] });
+      if (added) await notifyAccessGranted(added.person, added.label);
+      toast.success('Match access updated');
+    } catch (error) {
+      toast.error(error?.response?.data?.error || error.message || 'Could not update match access');
+    } finally {
+      setSavingAccess(false);
+    }
+  };
+
+  const handleAddSelector = (email) => {
+    const member = members.find((m) => m.user_email === email);
+    if (!member || additionalSelectors.some((p) => p.email === email)) return;
+    const person = { email, name: memberNameOf(member) };
+    const next = [...additionalSelectors, person];
+    if (!selectionId) {
+      setAdditionalSelectors(next);
+      return;
+    }
+    persistAccess(next, additionalScorers, { person, label: 'selector access' });
+  };
+
+  const handleAddScorer = (email) => {
+    const member = members.find((m) => m.user_email === email);
+    if (!member || additionalScorers.some((p) => p.email === email)) return;
+    const person = { email, name: memberNameOf(member) };
+    const next = [...additionalScorers, person];
+    if (!selectionId) {
+      setAdditionalScorers(next);
+      return;
+    }
+    persistAccess(additionalSelectors, next, { person, label: 'live scoring access' });
+  };
+
+  const handleRemoveSelector = (person) => {
+    if (!confirm(`Remove selector access for ${person.name || person.email}? They will lose access immediately.`)) return;
+    const next = additionalSelectors.filter((p) => p.email !== person.email);
+    if (!selectionId) {
+      setAdditionalSelectors(next);
+      return;
+    }
+    persistAccess(next, additionalScorers);
+  };
+
+  const handleRemoveScorer = (person) => {
+    if (!confirm(`Remove live scoring access for ${person.name || person.email}? They will lose access immediately.`)) return;
+    const next = additionalScorers.filter((p) => p.email !== person.email);
+    if (!selectionId) {
+      setAdditionalScorers(next);
+      return;
+    }
+    persistAccess(additionalSelectors, next);
+  };
+
   const handleCompetitionChange = (compName) => {
     setCompetition(compName);
     // Rink-print default: from the matching Competition record, or true for the built-ins
@@ -913,6 +1029,28 @@ export default function SelectionEditor() {
     );
   }, [baseFilteredMembers, restrictToSignUps, signedUpEmails, selectedEmails]);
 
+  // Extra-access candidates: the full approved, non-left member list — never the
+  // gender/sign-up filtered team list. Anyone who already holds the role
+  // club-wide, or is already listed, is left out.
+  const accessCandidates = useMemo(
+    () => members.filter((m) => m.member_status !== 'left'),
+    [members]
+  );
+  const selectorCandidates = useMemo(
+    () => accessCandidates.filter((m) =>
+      !['admin', 'selector'].includes(m.role) &&
+      !additionalSelectors.some((p) => p.email === m.user_email)
+    ),
+    [accessCandidates, additionalSelectors]
+  );
+  const scorerCandidates = useMemo(
+    () => accessCandidates.filter((m) =>
+      !['admin', 'selector', 'live_scorer'].includes(m.role) &&
+      !additionalScorers.some((p) => p.email === m.user_email)
+    ),
+    [accessCandidates, additionalScorers]
+  );
+
   // Derive home/away player lists for captain dropdowns using rink numbers
   // Home rinks: 1..effectiveHomeRinks, Away rinks: effectiveHomeRinks+1..effectiveHomeRinks+effectiveAwayRinks
   // Note: effectiveHomeRinks/effectiveAwayRinks are defined below, so we compute inline here
@@ -946,7 +1084,10 @@ export default function SelectionEditor() {
     return m?.first_name && m?.surname ? `${m.first_name} ${m.surname}` : m?.user_name || email;
   };
 
-  if (!isSelector && user) {
+  // Wait for the membership and the selection to load, so an additional selector
+  // is never shown "Access Denied" while their grant is still arriving
+  const accessPending = !!user && (membershipLoading || (!!selectionId && selectionLoading));
+  if (!canEditSelection && user && !accessPending) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
         <motion.div
@@ -1479,6 +1620,23 @@ export default function SelectionEditor() {
                   Select a competition to start building your team
                 </CardContent>
               </Card>
+            }
+
+            {/* Extra access for this match — role selectors/admins only */}
+            {isSelector &&
+            <div className="mt-4">
+              <ElevatedAccessEditor
+                selectorCandidates={selectorCandidates}
+                scorerCandidates={scorerCandidates}
+                selectors={additionalSelectors}
+                scorers={additionalScorers}
+                onAddSelector={handleAddSelector}
+                onRemoveSelector={handleRemoveSelector}
+                onAddScorer={handleAddScorer}
+                onRemoveScorer={handleRemoveScorer}
+                saving={savingAccess}
+              />
+            </div>
             }
 
             {/* Reserves card — sits directly below the team grid, every competition type */}

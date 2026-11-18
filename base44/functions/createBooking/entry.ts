@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { resolveGreen, greenConfig, greensClash, isDualGreens } from '../../shared/rinkConfig.ts';
+import { hasElevatedSelectorAccess } from '../../shared/selectionElevation.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -9,7 +10,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { club_id, rink_number, date, start_time, end_time, competition_type, competition_other, booking_format, notes, rollup_members, booker_name, booker_email, green_type } = body;
+    const { club_id, rink_number, date, start_time, end_time, competition_type, competition_other, booking_format, notes, rollup_members, booker_name, booker_email, green_type, selection_id } = body;
 
     if (!club_id || !rink_number || !date || !start_time || !end_time) {
       return Response.json({ error: 'Missing required booking fields' }, { status: 400 });
@@ -97,8 +98,18 @@ Deno.serve(async (req) => {
       finalBookerName = booker_name || kioskMemberships[0].user_name || booker_email;
     }
 
+    // A member given selector access to one selection books that match's rinks as
+    // approved, exactly like a club selector — until the end of match day.
+    let elevatedSelector = false;
+    if (selection_id) {
+      const { items: selections } = await base44.asServiceRole.entities.TeamSelection.filter(
+        { id: selection_id, club_id }, { limit: 1 }
+      );
+      elevatedSelector = hasElevatedSelectorAccess(selections[0], user.email);
+    }
+
     // Status: admins/stewards/selectors can create as approved; regular members always get pending (unless auto_approve)
-    const isPrivileged = membership.role === 'admin' || membership.role === 'steward' || membership.role === 'selector';
+    const isPrivileged = elevatedSelector || membership.role === 'admin' || membership.role === 'steward' || membership.role === 'selector';
     const status = (club.auto_approve_bookings || isPrivileged) ? 'approved' : 'pending';
 
     const booking = await base44.asServiceRole.entities.Booking.create({
