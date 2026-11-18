@@ -41,6 +41,7 @@ import SelectionTour from '@/components/tour/SelectionTour';
 import { getTourPausedStep, clearTourPause, dismissTour, hasTourBeenDismissed } from '@/components/tour/NewUserTour';
 import SelectionColourSettings from '@/components/selection/SelectionColourSettings';
 import SelectionAuditLogDialog from '@/components/selection/SelectionAuditLogDialog';
+import AssignedMatchesCard from '@/components/selection/AssignedMatchesCard';
 import useClubCompetitions from '@/hooks/useClubCompetitions';
 
 export default function Selection() {
@@ -361,8 +362,9 @@ export default function Selection() {
           )}
         </motion.div>
 
-        {/* Competition Filter */}
-        <motion.div
+        <AssignedMatchesCard selections={selections} userEmail={user?.email} clubId={clubId} />
+
+        {/* Competition Filter */}        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}

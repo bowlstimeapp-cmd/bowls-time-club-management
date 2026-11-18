@@ -1634,7 +1634,6 @@ export default function SelectionEditor() {
                 onRemoveSelector={handleRemoveSelector}
                 onAddScorer={handleAddScorer}
                 onRemoveScorer={handleRemoveScorer}
-                saving={savingAccess}
               />
             </div>
             }

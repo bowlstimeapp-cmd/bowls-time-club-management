@@ -10,6 +10,21 @@ const CHANGE_STYLES = {
   added: 'bg-emerald-100 text-emerald-700',
   removed: 'bg-red-100 text-red-700',
   replaced: 'bg-amber-100 text-amber-700',
+  access_granted: 'bg-emerald-100 text-emerald-700',
+  access_revoked: 'bg-red-100 text-red-700',
+};
+
+const CHANGE_LABELS = {
+  added: 'added',
+  removed: 'removed',
+  replaced: 'replaced',
+  access_granted: 'access given',
+  access_revoked: 'access removed',
+};
+
+const ACCESS_POSITIONS = {
+  additional_selector: 'Additional Selector',
+  additional_live_scorer: 'Additional Live Scorer',
 };
 
 export default function SelectionAuditLogDialog({ open, onOpenChange, clubId }) {
@@ -58,15 +73,26 @@ export default function SelectionAuditLogDialog({ open, onOpenChange, clubId }) 
               {entries.map((e) => (
                 <div key={e.id} className="flex items-start gap-3 p-3 border rounded-lg text-sm">
                   <Badge className={`shrink-0 capitalize ${CHANGE_STYLES[e.change] || 'bg-gray-100 text-gray-700'}`}>
-                    {e.change}
+                    {CHANGE_LABELS[e.change] || e.change}
                   </Badge>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-gray-900 truncate">
                       {e.member_name || e.member_email || e.previous_member_email}
-                      {' '}
-                      <span className="font-normal text-gray-500">at</span>
-                      {' '}
-                      <span className="font-mono text-xs">{(e.position || '').replace(/_/g, ' ')}</span>
+                      {ACCESS_POSITIONS[e.position] ? (
+                        <>
+                          {' '}
+                          <span className="font-normal text-gray-500">as</span>
+                          {' '}
+                          {ACCESS_POSITIONS[e.position]}
+                        </>
+                      ) : (
+                        <>
+                          {' '}
+                          <span className="font-normal text-gray-500">at</span>
+                          {' '}
+                          <span className="font-mono text-xs">{(e.position || '').replace(/_/g, ' ')}</span>
+                        </>
+                      )}
                     </div>
                     <div className="text-gray-500 text-xs mt-0.5">
                       {e.competition}

@@ -28,6 +28,7 @@ import { format, parseISO, isToday } from 'date-fns';
 import scoringMatches from '@/components/scoring/scoringMatches';
 import useVenueScores from '@/components/scoring/useVenueScores';
 import { venueOf } from '@/components/scoring/venueScoreData';
+import { hasElevatedSelectorAccess, hasElevatedScorerAccess } from '@/lib/selectionAccess';
 
 export default function LiveScoring() {
   const [searchParams] = useSearchParams();
@@ -106,23 +107,38 @@ export default function LiveScoring() {
 
 
 
+  // Saves go through the backend so a member with temporary access for this
+  // match is allowed through, and every change is written to the audit log
   const updateSelectionMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.TeamSelection.update(id, data),
+    mutationFn: async (data) => {
+      const res = await base44.functions.invoke('updateTeamSelection', {
+        action: 'update',
+        clubId,
+        selectionId,
+        data,
+      });
+      if (res?.data?.error) throw new Error(res.data.error);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['selection', selectionId] });
       toast.success('Team selection updated');
       setEditTeamOpen(false);
     },
+    onError: (error) => {
+      toast.error(error?.response?.data?.error || error.message || 'Could not update the team');
+    },
   });
 
   const handleSaveTeamEdit = () => {
-    updateSelectionMutation.mutate({
-      id: selectionId,
-      data: { selections: editedSelections, selection_names: editedNames }
-    });
+    updateSelectionMutation.mutate({ selections: editedSelections, selection_names: editedNames });
   };
 
-  const canEdit = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
+  const hasRoleScores = membership?.role === 'admin' || membership?.role === 'live_scorer' || membership?.role === 'selector';
+  const hasRoleTeam = membership?.role === 'admin' || membership?.role === 'selector';
+  const elevatedScores = !hasRoleScores && hasElevatedScorerAccess(selection, user?.email);
+  const canEdit = hasRoleScores || elevatedScores;
+  const canEditTeam = hasRoleTeam || hasElevatedSelectorAccess(selection, user?.email);
   const isTopClub = selection?.competition === 'Top Club';
   // Prefer the opponent saved in the selection; fall back to the match name (minus any "vs ") for older selections
   const opponentName = selection?.opponent?.trim()
@@ -236,6 +252,17 @@ export default function LiveScoring() {
             )}
           </div>
         </motion.div>
+
+        {/* Temporary access notice — only for members given access to this match */}
+        {elevatedScores && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+            <Calendar className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              You have temporary access to score this match. It ends after match day
+              {canEditTeam ? '' : ', and you cannot change the team'}.
+            </span>
+          </div>
+        )}
 
         {/* Live scoring totals */}
         <motion.div
@@ -429,7 +456,7 @@ export default function LiveScoring() {
             })}
           </div>
 
-          {canEdit && (
+          {canEditTeam && (
             <div className="mt-4 pt-4 border-t flex justify-end">
               <Button
                 variant="outline"
