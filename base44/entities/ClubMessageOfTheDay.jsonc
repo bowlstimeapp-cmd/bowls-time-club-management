@@ -1,0 +1,73 @@
+{
+  "name": "ClubMessageOfTheDay",
+  "type": "object",
+  "properties": {
+    "club_id": {
+      "type": "string",
+      "description": "Reference to the club"
+    },
+    "message": {
+      "type": "string",
+      "description": "The message shown to members in the banner"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "First day the message is shown (YYYY-MM-DD)"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last day the message is shown (YYYY-MM-DD)"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the message is shown at all"
+    },
+    "link_type": {
+      "type": "string",
+      "enum": [
+        "none",
+        "fixtures",
+        "selection",
+        "selection_specific",
+        "competition_entries",
+        "competition_entry_specific",
+        "draw",
+        "draw_specific"
+      ],
+      "enumColors": [
+        "gray",
+        "blue",
+        "green",
+        "green",
+        "purple",
+        "purple",
+        "yellow",
+        "yellow"
+      ],
+      "default": "none",
+      "description": "Where tapping the banner takes the member"
+    },
+    "link_target_id": {
+      "type": "string",
+      "description": "Id of the specific selection, competition or draw when a specific link type is chosen"
+    }
+  },
+  "required": [
+    "club_id"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {},
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

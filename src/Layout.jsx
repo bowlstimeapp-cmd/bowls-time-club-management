@@ -48,7 +48,8 @@ import {
   MoreHorizontal,
   ChevronUp,
   Coffee,
-  Globe
+  Globe,
+  Megaphone
 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { usePlatformSetting } from '@/hooks/usePlatformSetting';
@@ -61,6 +62,7 @@ import { useKiosk } from '@/lib/KioskContext';
 import ModuleLockedNotice from '@/components/club/ModuleLockedNotice';
 import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
 import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
+import MessageOfTheDayBanner from '@/components/MessageOfTheDayBanner';
 
 const MODULE_PAGE_MAP = {
   BookRink: { key: 'module_rink_booking', name: 'Rink Booking', desc: 'Book rinks, manage sessions, and track availability across your club facilities.' },
@@ -286,6 +288,7 @@ export default function Layout({ children, currentPageName }) {
         { name: 'Members', href: createPageUrl('ClubAdmin') + `?clubId=${clubId}`, icon: Users },
         { name: 'Open Competitions', href: createPageUrl('OpenCompetitions') + `?clubId=${clubId}`, icon: Trophy },
         { name: 'Website', href: createPageUrl('WebsiteAdmin') + `?clubId=${clubId}`, icon: Globe },
+        { name: 'Message of the Day', href: createPageUrl('MessageOfTheDayAdmin') + `?clubId=${clubId}`, icon: Megaphone },
         ...((club?.module_function_rooms || isFreeClub) ? [{ name: 'Function Rooms', href: createPageUrl('FunctionRoomAdmin') + `?clubId=${clubId}`, icon: Building2 }] : []),
         { name: 'Dashboard', href: createPageUrl('AdminDashboard') + `?clubId=${clubId}`, icon: LayoutDashboard },
         { name: 'Club Admin', href: createPageUrl('Clubsettings') + `?clubId=${clubId}`, icon: Settings },
@@ -404,6 +407,9 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* Message of the Day — always above the live match banner */}
+      <MessageOfTheDayBanner clubId={clubId} />
+
       {/* Live Match Banner */}
       <LiveMatchBanner clubId={clubId} />
       
@@ -729,6 +735,12 @@ export default function Layout({ children, currentPageName }) {
                         <Link to={createPageUrl('WebsiteAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
                           <Globe className="w-4 h-4 mr-2" />
                           Website
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={createPageUrl('MessageOfTheDayAdmin') + `?clubId=${clubId}`} className="cursor-pointer">
+                          <Megaphone className="w-4 h-4 mr-2" />
+                          Message of the Day
                         </Link>
                       </DropdownMenuItem>
                       {(club?.module_function_rooms || isFreeClub) && (

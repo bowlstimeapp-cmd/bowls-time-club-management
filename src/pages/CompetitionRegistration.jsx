@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -372,6 +372,21 @@ export default function CompetitionRegistration() {
     return a.registration_deadline.localeCompare(b.registration_deadline);
   });
 
+  // Deep link from the Message of the Day banner: scroll to the competition and highlight it briefly
+  const competitionId = searchParams.get('competitionId');
+  const [highlightId, setHighlightId] = useState(null);
+  const highlightDone = useRef(false);
+  useEffect(() => {
+    if (!competitionId || highlightDone.current) return;
+    const el = document.getElementById(`competition-${competitionId}`);
+    if (!el) return;
+    highlightDone.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightId(competitionId);
+    const timer = setTimeout(() => setHighlightId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [competitionId, sortedComps.length]);
+
   const selectedEntries = selectedComp
     ? allEntries.filter(e => e.competition_id === selectedComp.id)
     : [];
@@ -515,7 +530,11 @@ export default function CompetitionRegistration() {
                       (e.user_email === user?.email || (e.team_members || []).some(m => m.email === user?.email))
                     );
                     return (
-                      <Card key={comp.id} className="hover:shadow-md transition-shadow">
+                      <Card
+                        key={comp.id}
+                        id={`competition-${comp.id}`}
+                        className={`hover:shadow-md transition-shadow ${highlightId === comp.id ? 'ring-2 ring-amber-400' : ''}`}
+                      >
                         <CardContent className="p-5">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
