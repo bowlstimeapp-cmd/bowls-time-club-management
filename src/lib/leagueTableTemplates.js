@@ -41,19 +41,27 @@ function buildTableRows(tableData, isSets) {
 function headerBlock(data) {
   const { clubName, logoUrl, headerImgUrl, leagueName, leagueFormat,
     startDate, endDate, sessionTime, datePrinted,
-    showAccurateAsOf, showSessionTime, showLeagueDates, fontSize } = data;
+    showAccurateAsOf, showSessionTime, showLeagueDates, fontSize, headerLeftAlign } = data;
   const fs = FONT_SIZES[fontSize] || FONT_SIZES.medium;
+
+  const metaRows = [
+    showLeagueDates && startDate && endDate ? `<div class="meta-row">📅 ${formatDate(startDate)} – ${formatDate(endDate)}</div>` : '',
+    showSessionTime && sessionTime ? `<div class="meta-row">⏰ Session: <strong>${sessionTime}</strong></div>` : '',
+    showAccurateAsOf ? `<div class="meta-row accurate-as-of">Accurate as of ${datePrinted}</div>` : '',
+  ].filter(Boolean).join('');
 
   return `
     ${headerImgUrl ? `<img src="${headerImgUrl}" class="header-img" alt="Club header" />` : ''}
-    <div class="sheet-header">
-      ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="${clubName}" />` : ''}
-      <div class="club-name" style="font-size:${fs.heading}">${clubName}</div>
-      <div class="league-name" style="font-size:${fs.sub}">${leagueName}</div>
-      ${leagueFormat ? `<div class="format-badge">${leagueFormat}</div>` : ''}
-      ${showLeagueDates && startDate && endDate ? `<div class="meta-row">📅 ${formatDate(startDate)} – ${formatDate(endDate)}</div>` : ''}
-      ${showSessionTime && sessionTime ? `<div class="meta-row">⏰ Session: <strong>${sessionTime}</strong></div>` : ''}
-      ${showAccurateAsOf ? `<div class="meta-row accurate-as-of">Accurate as of ${datePrinted}</div>` : ''}
+    <div class="sheet-header ${headerLeftAlign ? 'align-left' : 'align-center'}">
+      <div class="header-row">
+        <div class="header-identity">
+          ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="${clubName}" />` : ''}
+          <div class="club-name" style="font-size:${fs.heading}">${clubName}</div>
+          <div class="league-name" style="font-size:${fs.sub}">${leagueName}</div>
+          ${leagueFormat ? `<div class="format-badge">${leagueFormat}</div>` : ''}
+        </div>
+        ${metaRows ? `<div class="header-meta">${metaRows}</div>` : ''}
+      </div>
     </div>`;
 }
 
@@ -68,7 +76,15 @@ function classicTemplate(data) {
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Georgia,serif;padding:24px;color:#111;font-size:${fs.base}}
     .header-img{width:100%;max-height:100px;object-fit:cover;display:block;margin-bottom:0}
-    .sheet-header{text-align:center;margin-bottom:20px;padding-top:12px}
+    .sheet-header{margin-bottom:20px;padding-top:12px}
+    .header-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+    .header-identity,.header-meta{display:flex;flex-direction:column}
+    .align-center{text-align:center}
+    .align-center .header-row{justify-content:center}
+    .align-center .header-identity,.align-center .header-meta{align-items:center}
+    .align-left{text-align:left}
+    .align-left .header-row{justify-content:flex-start}
+    .align-left .header-identity,.align-left .header-meta{align-items:flex-start}
     .logo{max-height:64px;margin-bottom:8px}
     .club-name{font-weight:bold;margin-bottom:4px}
     .league-name{font-weight:600;font-size:${fs.sub};margin-bottom:4px}
@@ -115,6 +131,14 @@ function modernTemplate(data) {
     body{font-family:system-ui,Arial,sans-serif;padding:24px;color:#111;font-size:${fs.base}}
     .header-img{width:100%;max-height:100px;object-fit:cover;display:block;margin-bottom:0}
     .sheet-header{margin-bottom:20px;padding:16px 20px;border-left:5px solid ${primaryColour};background:#fafafa}
+    .header-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+    .header-identity,.header-meta{display:flex;flex-direction:column}
+    .align-center{text-align:center}
+    .align-center .header-row{justify-content:center}
+    .align-center .header-identity,.align-center .header-meta{align-items:center}
+    .align-left{text-align:left}
+    .align-left .header-row{justify-content:flex-start}
+    .align-left .header-identity,.align-left .header-meta{align-items:flex-start}
     .logo{max-height:56px;margin-bottom:6px;display:block}
     .club-name{font-weight:800;font-size:${fs.heading};letter-spacing:-0.5px}
     .league-name{font-size:${fs.sub};font-weight:600;color:#333;margin-top:2px}
@@ -159,7 +183,15 @@ function minimalTemplate(data) {
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;padding:24px;color:#000;font-size:${fs.base}}
     .header-img{width:100%;max-height:90px;object-fit:cover;display:block;margin-bottom:0}
-    .sheet-header{text-align:center;margin-bottom:20px;padding-top:10px}
+    .sheet-header{margin-bottom:20px;padding-top:10px}
+    .header-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+    .header-identity,.header-meta{display:flex;flex-direction:column}
+    .align-center{text-align:center}
+    .align-center .header-row{justify-content:center}
+    .align-center .header-identity,.align-center .header-meta{align-items:center}
+    .align-left{text-align:left}
+    .align-left .header-row{justify-content:flex-start}
+    .align-left .header-identity,.align-left .header-meta{align-items:flex-start}
     .logo{max-height:54px;margin-bottom:6px}
     .club-name{font-weight:bold;font-size:${fs.heading}}
     .league-name{font-weight:600;font-size:${fs.sub};margin-top:2px}
@@ -292,6 +324,7 @@ export function buildLeagueTableData({ league, club, tableEntries }) {
     showAccurateAsOf:  club?.league_table_show_accurate_as_of !== false,
     showSessionTime:   club?.league_table_show_session_time !== false,
     showLeagueDates:   club?.league_table_show_league_dates !== false,
+    headerLeftAlign:   !!club?.league_table_header_left_align,
     showFooter:        club?.league_table_show_footer || false,
     footerText:        club?.league_table_footer_text || '',
     template:          club?.league_table_template || 'classic',

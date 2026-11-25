@@ -427,6 +427,11 @@
       "type": "string",
       "description": "Uploaded header image URL for use in league table print templates"
     },
+    "league_table_header_left_align": {
+      "type": "boolean",
+      "default": false,
+      "description": "Left align the header block on printed league tables instead of centring it"
+    },
     "club_theme": {
       "type": "string",
       "enum": [

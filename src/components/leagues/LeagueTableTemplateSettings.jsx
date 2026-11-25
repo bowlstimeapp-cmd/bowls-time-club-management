@@ -34,6 +34,7 @@ export default function LeagueTableTemplateSettings({ club, onChange }) {
   const [customHtml,          setCustomHtml]          = useState(club?.league_table_custom_html || '');
   const [htmlError,           setHtmlError]           = useState('');
   const [headerImgUrl,        setHeaderImgUrl]        = useState(club?.league_table_header_img_url || '');
+  const [leftAlignHeader,     setLeftAlignHeader]     = useState(club?.league_table_header_left_align || false);
   const [uploadingHeader,     setUploadingHeader]     = useState(false);
 
   useEffect(() => {
@@ -49,10 +50,11 @@ export default function LeagueTableTemplateSettings({ club, onChange }) {
       league_table_advanced_mode:       advancedMode,
       league_table_custom_html:         customHtml,
       league_table_header_img_url:      headerImgUrl,
+      league_table_header_left_align:   leftAlignHeader,
     });
   }, [template, primaryColour, customColour, fontSize, showAccurateAsOf,
       showSessionTime, showLeagueDates, showFooter, footerText,
-      advancedMode, customHtml, headerImgUrl]);
+      advancedMode, customHtml, headerImgUrl, leftAlignHeader]);
 
   const handleHeaderImgUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -148,6 +150,17 @@ export default function LeagueTableTemplateSettings({ club, onChange }) {
                 {size}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Header alignment */}
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Left align header</p>
+              <p className="text-xs text-gray-500">Line the logo, club and league name up on the left instead of centring them</p>
+            </div>
+            <Switch checked={leftAlignHeader} onCheckedChange={setLeftAlignHeader} />
           </div>
         </div>
 

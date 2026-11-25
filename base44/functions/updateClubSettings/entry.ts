@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       'league_table_show_accurate_as_of', 'league_table_show_session_time',
       'league_table_show_league_dates', 'league_table_show_footer',
       'league_table_footer_text', 'league_table_advanced_mode',
-      'league_table_custom_html', 'league_table_header_img_url',
+      'league_table_custom_html', 'league_table_header_img_url', 'league_table_header_left_align',
       'selection_competition_colours',
       'member_landing_page_enabled',
       'excluded_platform_competition_ids', 'show_platform_competitions',
