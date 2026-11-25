@@ -217,32 +217,134 @@ export default function TimeSlotGrid({
     }
   };
 
+  const lastDropAt = useRef(0);
+
+  // Shared drop logic — used by mouse drag and by finger drag on touch screens
+  const performDrop = (booking, rink, slotStart) => {
+    if (!booking) return;
+    const now = Date.now();
+    // Ignore a duplicate drop from the same gesture (some touch browsers fire both paths)
+    if (now - lastDropAt.current < 600) return;
+    lastDropAt.current = now;
+
+    justDropped.current = true;
+    setTimeout(() => { justDropped.current = false; }, 400);
+
+    const targetBooking = getBookingForSlot(rink, slotStart);
+
+    if (copyMode) {
+      // Copy mode: only drop onto empty slots
+      if (!targetBooking && !isSlotInPast(slotStart)) {
+        onCopyBooking && onCopyBooking(booking, rink, slotStart);
+      }
+    } else if (targetBooking && isAdmin && onSwapBookings && targetBooking.id !== booking.id) {
+      // Admin swap: dropping onto another booking
+      onSwapBookings(booking, targetBooking);
+    } else if (!targetBooking && !isSlotInPast(slotStart)) {
+      onMoveBooking && onMoveBooking(booking, rink, slotStart);
+    }
+  };
+
   const handleDrop = (e, rink, slot) => {
     e.preventDefault();
     const bookingId = e.dataTransfer.getData('text/plain');
     const booking = bookings.find(b => b.id === bookingId) || draggingBooking;
-    if (!booking) return;
-
-    justDropped.current = true;
-    setTimeout(() => { justDropped.current = false; }, 300);
-
-    const targetBooking = getBookingForSlot(rink, slot.start);
-
-    if (copyMode) {
-      // Copy mode: only drop onto empty slots
-      if (!targetBooking && !isSlotInPast(slot.start)) {
-        onCopyBooking && onCopyBooking(booking, rink, slot.start);
-      }
-    } else if (targetBooking && isAdmin && onSwapBookings && targetBooking.id !== booking.id) {
-      // Admin swap: dragging onto another booking
-      onSwapBookings(booking, targetBooking);
-    } else if (!targetBooking && !isSlotInPast(slot.start)) {
-      onMoveBooking && onMoveBooking(booking, rink, slot.start);
-    }
-
+    performDrop(booking, rink, slot.start);
     setDraggingBooking(null);
     setDropTarget(null);
   };
+
+  // Touch screens don't fire HTML5 drag events, so a long-press starts a finger drag
+  const gridRef = useRef(null);
+  const touchDrag = useRef(null);
+
+  const canDragBooking = (booking, slotStart) =>
+    !!booking &&
+    !booking.affiliated_club_id &&
+    (booking.booker_email === currentUserEmail || isAdmin) &&
+    !isSlotInPast(slotStart) &&
+    (copyMode ? isAdmin : true);
+
+  const cellAtPoint = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    const cell = el && el.closest ? el.closest('[data-slot-rink]') : null;
+    if (!cell) return null;
+    return { rink: Number(cell.dataset.slotRink), start: cell.dataset.slotStart };
+  };
+
+  useEffect(() => {
+    const node = gridRef.current;
+    if (!node || !window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return;
+
+    const cancelTouchDrag = () => {
+      if (touchDrag.current?.timer) clearTimeout(touchDrag.current.timer);
+      touchDrag.current = null;
+      setDraggingBooking(null);
+      setDropTarget(null);
+    };
+
+    const onTouchStart = (e) => {
+      if (bulkDeleteMode || e.touches.length !== 1) return;
+      const cell = e.target.closest ? e.target.closest('[data-slot-rink]') : null;
+      if (!cell) return;
+      const rink = Number(cell.dataset.slotRink);
+      const start = cell.dataset.slotStart;
+      const booking = getBookingForSlot(rink, start);
+      if (!canDragBooking(booking, start)) return;
+
+      const touch = e.touches[0];
+      const state = { booking, startX: touch.clientX, startY: touch.clientY, active: false, target: null };
+      state.timer = setTimeout(() => {
+        state.active = true;
+        setDraggingBooking(booking);
+      }, 200);
+      touchDrag.current = state;
+    };
+
+    const onTouchMove = (e) => {
+      const state = touchDrag.current;
+      if (!state) return;
+      const touch = e.touches[0];
+      if (!state.active) {
+        // Let the page scroll unless the finger is held still long enough to pick the booking up
+        if (Math.hypot(touch.clientX - state.startX, touch.clientY - state.startY) > 10) cancelTouchDrag();
+        return;
+      }
+      e.preventDefault();
+      const target = cellAtPoint(touch.clientX, touch.clientY);
+      if (target && (!state.target || state.target.rink !== target.rink || state.target.start !== target.start)) {
+        state.target = target;
+        setDropTarget(`${target.rink}:${target.start}`);
+      }
+    };
+
+    const onTouchEnd = (e) => {
+      const state = touchDrag.current;
+      if (!state) return;
+      clearTimeout(state.timer);
+      touchDrag.current = null;
+      if (!state.active) return;
+      e.preventDefault();
+      const touch = e.changedTouches[0];
+      const target = state.target || cellAtPoint(touch.clientX, touch.clientY);
+      setDraggingBooking(null);
+      setDropTarget(null);
+      if (target && !(target.rink === state.booking.rink_number && target.start === state.booking.start_time)) {
+        performDrop(state.booking, target.rink, target.start);
+      }
+    };
+
+    node.addEventListener('touchstart', onTouchStart, { passive: true });
+    node.addEventListener('touchmove', onTouchMove, { passive: false });
+    node.addEventListener('touchend', onTouchEnd, { passive: false });
+    node.addEventListener('touchcancel', cancelTouchDrag);
+    return () => {
+      node.removeEventListener('touchstart', onTouchStart);
+      node.removeEventListener('touchmove', onTouchMove);
+      node.removeEventListener('touchend', onTouchEnd);
+      node.removeEventListener('touchcancel', cancelTouchDrag);
+    };
+  }, [bookings, club, copyMode, isAdmin, bulkDeleteMode, currentUserEmail, selectedDate, onMoveBooking, onSwapBookings, onCopyBooking]);
 
   const openRollupsEnabled = club?.open_rollups;
   const isDragging = !!draggingBooking;
@@ -267,7 +369,7 @@ export default function TimeSlotGrid({
           )}
         </div>
       )}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div ref={gridRef} className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <div style={{ minWidth: `${timeColWidth + RINKS.length * 80}px` }}>
           {/* Header */}
           <div className="grid mb-3" style={{ gridTemplateColumns: `${timeColWidth}px repeat(${RINKS.length}, minmax(70px, 1fr))`, gap: `${gridGap}px` }}>
@@ -339,6 +441,8 @@ export default function TimeSlotGrid({
                     <Tooltip key={rink}>
                       <TooltipTrigger asChild>
                         <button
+                        data-slot-rink={rink}
+                        data-slot-start={slot.start}
                         ref={isTourSlot1 ? tourSlot1Ref : isTourSlot2 ? tourSlot2Ref : isTourSlot1_10 ? tourSlot1_10Ref : isTourBookingCell ? tourBookingCellRef : undefined}
                         onClick={() => {
                           if (bulkDeleteMode && !available && booking) {

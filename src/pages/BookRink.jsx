@@ -471,15 +471,6 @@ useEffect(() => {
 
     const shouldOfferEmail = isPrivileged && !!booking.booker_email && booking.booker_email !== user?.email;
 
-    if (isPrivileged && booking.booker_email !== user?.email) {
-      await sendBookingChangeNotification(
-        originalBooking, 'moved',
-        ` It has been moved to Rink ${newRink} at ${newStartTime}.`,
-        { sendEmail: false }
-      );
-    }
-
-    await writeAuditLog(originalBooking, 'moved', `Moved to Rink ${newRink} at ${newStartTime}`);
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`Booking moved to Rink ${newRink} at ${newStartTime}`);
 
@@ -487,6 +478,17 @@ useEffect(() => {
     if (shouldOfferEmail) {
       setPendingMove({ booking: originalBooking, newRink, newStartTime });
     }
+
+    // In-app notification + audit log run in the background so a slow or failed
+    // write can never hold up the prompt
+    if (isPrivileged && booking.booker_email !== user?.email) {
+      sendBookingChangeNotification(
+        originalBooking, 'moved',
+        ` It has been moved to Rink ${newRink} at ${newStartTime}.`,
+        { sendEmail: false }
+      ).catch(() => {});
+    }
+    writeAuditLog(originalBooking, 'moved', `Moved to Rink ${newRink} at ${newStartTime}`).catch(() => {});
   };
 
   const handleSendMoveEmail = async (justification) => {
