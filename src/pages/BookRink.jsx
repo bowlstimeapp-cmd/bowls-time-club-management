@@ -34,6 +34,7 @@ import { useKiosk } from '@/lib/KioskContext';
 import LeagueResultModal from '@/components/leagues/LeagueResultModal';
 import OnboardingModal from '@/components/club/NewClubWelcomeModal';
 import { ONBOARDING_ITEMS } from '@/lib/onboardingChecklist';
+import MoveJustificationDialog from '@/components/booking/MoveJustificationDialog';
 
 export default function BookRink() {
   const [searchParams] = useSearchParams();
@@ -55,6 +56,8 @@ export default function BookRink() {
   const [bulkDeleteSelected, setBulkDeleteSelected] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
+  const [pendingMove, setPendingMove] = useState(null);
+  const [sendingMoveEmail, setSendingMoveEmail] = useState(false);
   const { kioskMember, setKioskMember } = useKiosk();
   const [resultPrompt, setResultPrompt] = useState(null); // { fixture, league, homeTeam, awayTeam, userTeamId }
 
@@ -349,8 +352,14 @@ useEffect(() => {
     });
   };
 
-  const sendBookingChangeNotification = async (booking, type, extraMessage = '') => {
-    if (!booking?.booker_email || booking.booker_email === user?.email) return;
+  const escapeHtml = (value = '') => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const buildBookingChangeContent = (booking, type, extraMessage = '') => {
     // Dual-green clubs name the green so the member knows which rink moved
     const greenLabel = isDualGreens(club) ? `${GREEN_LABELS[getBookingGreen(booking, club)]} ` : '';
     const messages = {
@@ -359,22 +368,39 @@ useEffect(() => {
       swapped: `Your booking on ${greenLabel}Rink ${booking.rink_number} at ${booking.start_time} on ${booking.date} has been swapped with another booking by a club admin.${extraMessage}`,
     };
     const titles = { moved: 'Booking moved by admin', deleted: 'Booking cancelled by admin', swapped: 'Booking swapped by admin' };
-    await Promise.all([
+    return { title: titles[type], message: messages[type] };
+  };
+
+  const sendBookingChangeEmail = async (booking, type, extraMessage = '', justification = '') => {
+    if (!booking?.booker_email || booking.booker_email === user?.email) return;
+    const { title, message } = buildBookingChangeContent(booking, type, extraMessage);
+    const reasonHtml = justification.trim()
+      ? `<p><strong>Reason:</strong> ${escapeHtml(justification.trim()).replace(/\r?\n/g, '<br>')}</p>`
+      : '';
+    await base44.integrations.Core.SendEmail({
+      to: booking.booker_email,
+      subject: title,
+      body: `<p>Hi ${booking.booker_name},</p><p>${message}</p>${reasonHtml}<p>Please log in to the app to check your bookings.</p>`,
+    });
+  };
+
+  const sendBookingChangeNotification = async (booking, type, extraMessage = '', options = {}) => {
+    const { sendEmail = true, justification = '' } = options;
+    if (!booking?.booker_email || booking.booker_email === user?.email) return;
+    const { title, message } = buildBookingChangeContent(booking, type, extraMessage);
+    const tasks = [
       base44.entities.Notification.create({
         user_email: booking.booker_email,
         type: 'booking_moved',
-        title: titles[type],
-        message: messages[type],
+        title,
+        message,
         related_id: booking.id,
         link_page: 'BookRink',
         link_params: `clubId=${clubId}`,
       }),
-      base44.integrations.Core.SendEmail({
-        to: booking.booker_email,
-        subject: titles[type],
-        body: `<p>Hi ${booking.booker_name},</p><p>${messages[type]}</p><p>Please log in to the app to check your bookings.</p>`,
-      }),
-    ]);
+    ];
+    if (sendEmail) tasks.push(sendBookingChangeEmail(booking, type, extraMessage, justification));
+    await Promise.all(tasks);
   };
 
   const handleDeleteBooking = async (booking) => {
@@ -433,6 +459,9 @@ useEffect(() => {
     // End time comes from the green's own session settings
     const newEndTime = endTimeForStart(club, getBookingGreen(booking, club), newStartTime);
 
+    // Keep the original values — the optimistic cache update below changes the cached copy
+    const originalBooking = { ...booking };
+
     // Optimistic update — reflect the move immediately in the UI
     queryClient.setQueryData(['bookings', clubId, dateString], (old) =>
       old ? old.map(b => b.id === booking.id ? { ...b, rink_number: newRink, start_time: newStartTime, end_time: newEndTime } : b) : old
@@ -440,16 +469,44 @@ useEffect(() => {
 
     await base44.functions.invoke('updateClubData', { entity: 'Booking', action: 'update', clubId, id: booking.id, data: { rink_number: newRink, start_time: newStartTime, end_time: newEndTime, green_type: getBookingGreen(booking, club) } });
 
+    const shouldOfferEmail = isPrivileged && !!booking.booker_email && booking.booker_email !== user?.email;
+
     if (isPrivileged && booking.booker_email !== user?.email) {
       await sendBookingChangeNotification(
-        booking, 'moved',
-        ` It has been moved to Rink ${newRink} at ${newStartTime}.`
+        originalBooking, 'moved',
+        ` It has been moved to Rink ${newRink} at ${newStartTime}.`,
+        { sendEmail: false }
       );
     }
 
-    await writeAuditLog(booking, 'moved', `Moved to Rink ${newRink} at ${newStartTime}`);
+    await writeAuditLog(originalBooking, 'moved', `Moved to Rink ${newRink} at ${newStartTime}`);
     queryClient.invalidateQueries({ queryKey: ['bookings'] });
     toast.success(`Booking moved to Rink ${newRink} at ${newStartTime}`);
+
+    // Ask the admin whether to email the member — nothing is sent unless they confirm
+    if (shouldOfferEmail) {
+      setPendingMove({ booking: originalBooking, newRink, newStartTime });
+    }
+  };
+
+  const handleSendMoveEmail = async (justification) => {
+    if (!pendingMove) return;
+    const { booking: movedBooking, newRink, newStartTime } = pendingMove;
+    setSendingMoveEmail(true);
+    try {
+      await sendBookingChangeEmail(
+        movedBooking, 'moved',
+        ` It has been moved to Rink ${newRink} at ${newStartTime}.`,
+        justification
+      );
+      writeAuditLog(movedBooking, 'moved', `Emailed ${movedBooking.booker_name} with reason: ${justification}`).catch(() => {});
+      toast.success(`Email sent to ${movedBooking.booker_name}`);
+      setPendingMove(null);
+    } catch (err) {
+      toast.error(err?.message || 'Could not send the email');
+    } finally {
+      setSendingMoveEmail(false);
+    }
   };
 
   const handleSwapBookings = async (bookingA, bookingB) => {
@@ -1243,6 +1300,17 @@ useEffect(() => {
           deleteLoading={deletingBooking}
           isPrivileged={isPrivileged}
           cancelBtnRef={tourStep === 8 ? tourCancelBtnRef : undefined}
+        />
+
+        {/* Ask before emailing the member about a drag-and-drop move */}
+        <MoveJustificationDialog
+          open={!!pendingMove}
+          booking={pendingMove?.booking}
+          newRink={pendingMove?.newRink}
+          newStartTime={pendingMove?.newStartTime}
+          onSend={handleSendMoveEmail}
+          onSkip={() => setPendingMove(null)}
+          isSending={sendingMoveEmail}
         />
 
         {/* Tour Booking Modals */}
