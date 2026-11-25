@@ -17,8 +17,11 @@ export default function LeagueTableDialog({ open, onOpenChange, league, teams, f
   const [pendingSettings, setPendingSettings] = useState(null);
   const queryClient = useQueryClient();
 
+  const savePrintSettings = (updates) =>
+    base44.functions.invoke('updateClubSettings', { clubId, updates });
+
   const updateClubMutation = useMutation({
-    mutationFn: (data) => base44.entities.Club.update(clubId, data),
+    mutationFn: (data) => savePrintSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['club', clubId] });
       toast.success('Print settings saved');
@@ -37,11 +40,16 @@ export default function LeagueTableDialog({ open, onOpenChange, league, teams, f
   const handlePrint = async () => {
     setIsPrinting(true);
     try {
-      // Save settings first if there are pending changes
+      // Save settings first if there are pending changes — a failure here must
+      // never stop the table from printing
       if (pendingSettings) {
-        await base44.entities.Club.update(clubId, pendingSettings);
-        queryClient.invalidateQueries({ queryKey: ['club', clubId] });
-        setPendingSettings(null);
+        try {
+          await savePrintSettings(pendingSettings);
+          queryClient.invalidateQueries({ queryKey: ['club', clubId] });
+          setPendingSettings(null);
+        } catch (err) {
+          console.error('Could not save league table print settings', err);
+        }
       }
       const data = buildLeagueTableData({ league, club: effectiveClub, tableEntries: table });
       await printLeagueTable(data, effectiveClub);
